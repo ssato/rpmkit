@@ -18,9 +18,10 @@ if test -z "$package_name"; then
 fi
 
 
-# search from files
+# search from 'files' table
 sql="SELECT DISTINCT pkg.name FROM packages AS pkg, files AS f WHERE pkg.pid = f.pid AND f.path IN (SELECT DISTINCT r.name FROM requires AS r, packages AS p WHERE r.pid = p.pid AND p.name = \"$package_name\" AND SUBSTR(r.name,1,1) = '/')"
 reqs=$($sqlite $sqldb "$sql")
+
 
 # search from 'packages' table
 sql="SELECT DISTINCT r.name FROM requires AS r, packages AS p WHERE r.pid = p.pid AND p.name = \"$package_name\" AND r.name IN (SELECT name FROM packages)"
