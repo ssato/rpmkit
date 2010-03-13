@@ -6,7 +6,7 @@ sqlite="/usr/bin/sqlite3"
 usage="Usage: $0 sqldb filename or $0 sqldb file_basename"
 
 if test ! -x $sqlite; then
-    echo $usage
+    echo "$sqlite is not found in your system. Install it first"
     exit 1
 fi
 
