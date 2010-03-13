@@ -17,8 +17,21 @@ if test -z "$package_name"; then
     exit 1
 fi
 
-sql="SELECT DISTINCT p.name from requires as r, provides as pro, packages as p where r.name = pro.name and pro.pid = p.pid and p.name <> \"$package_name\" and r.pid = (select pid from packages where name = \"$package_name\")"
 
-$sqlite $sqldb "$sql"
+# search from files
+sql="SELECT DISTINCT pkg.name FROM packages AS pkg, files AS f WHERE pkg.pid = f.pid AND f.path IN (SELECT DISTINCT r.name FROM requires AS r, packages AS p WHERE r.pid = p.pid AND p.name = \"$package_name\" AND SUBSTR(r.name,1,1) = '/')"
+reqs=$($sqlite $sqldb "$sql")
+
+# search from 'packages' table
+sql="SELECT DISTINCT r.name FROM requires AS r, packages AS p WHERE r.pid = p.pid AND p.name = \"$package_name\" AND r.name IN (SELECT name FROM packages)"
+reqs="$reqs "$($sqlite $sqldb "$sql")
+
+
+# search from 'provides' table
+sql="SELECT DISTINCT p.name FROM requires AS r, provides AS pro, packages AS p WHERE r.name = pro.name AND pro.pid = p.pid AND p.name <> \"$package_name\" AND r.pid = (SELECT pid FROM packages WHERE name = \"$package_name\")"
+reqs="$reqs "$($sqlite $sqldb "$sql")
+
+
+for r in $reqs; do echo $r; done | sort | uniq
 
 # vim: set sw=4 ts=4 et:
