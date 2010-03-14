@@ -22,6 +22,7 @@
 
 import datetime
 import glob
+import logging
 import optparse
 import os
 import pprint
@@ -123,6 +124,61 @@ def concat(xss):
             ys.append(xs)
 
     return ys
+
+
+def foreach_rpms(topdir='.'):
+    """Equal to `find $topdir -name '*.rpm'`
+    """
+    for f in concat([[os.path.join(dirpath, f) for f in fs if f.endswith('.rpm')] for dirpath, _dirs, fs in os.walk(topdir)]):
+        yield f
+
+
+def list_pids_of_require(req, files, packages, provides):
+    """Find package ids of given equrie.
+
+    @param req:  Package require; {'name', 'version', 'flag'}
+    @param files:  All file paths list
+    @param packages:  All (unique) packages list
+    @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
+
+    @return: pid list
+    """
+    if req['name'].startswith('/'):  # it's a file path.
+        pids = [f['pid'] for f in files if f['path'] == req['name']]
+        if pids:
+            logging.debug("Found '%s' in files. reqs = %s" % (req['name'], str(pids)))
+        else:
+            logging.warn("Could not find '%s' in files" % req['name'])
+    else:
+        pids = [p['pid'] for p in provides if p['name'] == req['name']]
+        if pids:
+            logging.debug("Found '%s' in provides. reqs = %s" % (req['name'], str(pids)))
+        else:
+            pids = [p['pid'] for p in packages if p['name'] == req['name']]
+            if pids:
+                logging.debug("Found '%s' in packages. reqs = %s" % (req['name'], str(pids)))
+            else:
+                logging.warn("Could not find '%s' in files, provides and packages" % req['name'])
+
+    return pids
+
+
+def resolve_requires_1(pkg, files, packages, provides):
+    """Resolve required packages for given package (depth 1).
+
+    @param pkg:  Package metadata to resolve required packages (type: PackageMetadata)
+    @param files:  All file paths list
+    @param packages:  All (unique) packages list
+    @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
+    """
+    reqs = []
+
+    for r in pkg.get('requires', []):
+        pids = list_pids_of_require(r, files, packages, provides)
+        rreqs = [{'name':r['name'], 'version':r['version'], 'flags':r['flags'], 'rpid':pid} for pid in pids]
+        reqs.append(rreqs)
+
+    return reqs
 
 
 
@@ -245,7 +301,7 @@ class RpmDB(object):
     def collect(self, rpmdir='./'):
         dists = {}
 
-        for f in glob.glob("%s/*.rpm" % rpmdir):
+        for f in foreach_rpms(rpmdir):
             p = PackageMetadata(f)
             osver = p['os_version']
 
