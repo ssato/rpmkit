@@ -1,4 +1,9 @@
 #! /bin/bash
+#
+# Copyright (C) 2010 Satoru SATOH <satoru.satoh@gmail.com>
+# Lincense: GPLv3+
+#
+
 set -e
 #set -x
 
