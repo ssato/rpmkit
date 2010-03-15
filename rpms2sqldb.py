@@ -126,6 +126,32 @@ def concat(xss):
     return ys
 
 
+def unique(xs, cmp_f=cmp):
+    """Returns sorted list of no duplicated items.
+
+    @param xs:  list of object (x)
+    @param cmp_f:  comparison function for x
+
+    >>> unique([0, 3, 1, 2, 1, 0, 4, 5])
+    [0, 1, 2, 3, 4, 5]
+    """
+    if xs == []:
+        return xs
+
+    ys = sorted(xs, cmp=cmp_f)
+    if ys == []:
+        return ys
+
+    rs = [ys[0]]
+
+    for y in ys[1:]:
+        if y == rs[-1]:
+            continue
+        rs.append(y)
+
+    return rs
+
+
 def foreach_rpms(topdir='.'):
     """Equal to `find $topdir -name '*.rpm'`
     """
@@ -160,25 +186,46 @@ def list_pids_of_require(req, files, packages, provides):
             else:
                 logging.warn("Could not find '%s' in files, provides and packages" % req['name'])
 
-    return pids
+    return unique(pids)
 
 
-def resolve_requires_1(pkg, files, packages, provides):
-    """Resolve required packages for given package (depth 1).
+def list_requires_for_require_1(req, files, packages, provides):
+    """List requires for given require (depth 1).
 
-    @param pkg:  Package metadata to resolve required packages (type: PackageMetadata)
+    @param req:  package require :: {'name', 'version', 'flags', 'rpid'}
     @param files:  All file paths list
     @param packages:  All (unique) packages list
     @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
+
+    @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
     """
-    reqs = []
+    pids = list_pids_of_require(req, files, packages, provides)
+    return [{'name':req['name'], 'version':req['version'], 'flags':req['flags'], 'rpid':pid} for pid in pids]
 
-    for r in pkg.get('requires', []):
-        pids = list_pids_of_require(r, files, packages, provides)
-        rreqs = [{'name':r['name'], 'version':r['version'], 'flags':r['flags'], 'rpid':pid} for pid in pids]
-        reqs.append(rreqs)
 
-    return reqs
+def list_requires_for_requires(reqs, files, packages, provides, results=[], max_depth=-1):
+    """List requires for given require recursively.
+
+    @param reqs:  requires :: [{'name', 'version', 'flags', 'rpid'}]
+    @param files:  All file paths list
+    @param packages:  All (unique) packages list
+    @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
+    @param results:  requires accumulator
+    @param max_depth:  max recursion limit; -1 indicates no limit
+
+    @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
+    """
+    if max_depth == 0 or not reqs:
+        return results
+
+    if max_depth > 0:
+        max_depth -= 1
+
+    results += reqs
+    rreqs = [r2 for r2 in unique(concat((list_requires_for_require_1(r, files, packages, provides) for r in reqs))) if r2 not in results]
+    results += rreqs
+
+    return list_requires_for_requires(rreqs, files, packages, provides, results, max_depth)
 
 
 
