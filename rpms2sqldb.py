@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS requires (
     flags TEXT,
     version TEXT,
     pid INTEGER,
+    distance INTEGER,
     pre BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS filepath ON files (path);
@@ -207,7 +208,7 @@ def list_requires_for_require_1(req, files, packages, provides, distance=1):
 def list_requires_for_requires(reqs, files, packages, provides, results=[], max_depth=-1, distance=1):
     """List requires for given require recursively.
 
-    @param reqs:  requires :: [{'name', 'version', 'flags', 'rpid'}]
+    @param reqs:  requires :: [{'name', 'version', 'flags', 'rpid', 'distance'}]
     @param files:  All file paths list
     @param packages:  All (unique) packages list
     @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
@@ -222,9 +223,6 @@ def list_requires_for_requires(reqs, files, packages, provides, results=[], max_
 
     if max_depth > 0:
         max_depth -= 1
-
-    for r in reqs:
-        r.update({'distance':distance})
 
     distance += 1
 
@@ -334,7 +332,7 @@ class PackageMetadata(dict):
         ]
 
         self['requires'] = [
-            {'name':n, 'version':v, 'flags':f} for n,v,f in \
+            {'name':n, 'version':v, 'flags':f, 'distance':1} for n,v,f in \
                 zip3(h[rpm.RPMTAG_REQUIRES], h[rpm.RPMTAG_REQUIREFLAGS], h[rpm.RPMTAG_REQUIREVERSION])
         ]
 
@@ -410,7 +408,7 @@ class RpmDB(object):
         cur.executemany("INSERT INTO files(path, basename, type, pid) VALUES(:path, :basename, :type, :pid)", files)
         conn.commit()
 
-        for g in ('conflicts', 'obsoletes', 'provides', 'requires'):
+        for g in ('conflicts', 'obsoletes'):
             xs = concat([
                 [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p[g]] \
                     for p in ps
@@ -421,6 +419,17 @@ class RpmDB(object):
                 xs
             )
             conn.commit()
+
+        provides = concat([[{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p['provides']] for p in ps])
+        cur.executemany("INSERT INTO provides(name, flags, version, pid) VALUES(:name, :flags, :version, :pid)", provides)
+        conn.commit()
+
+        requires = concat([
+            [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid'], 'distance':p['distance']} \
+                for x in p['requires']] for p in ps
+        ])
+        cur.executemany("INSERT INTO requires(name, flags, version, pid) VALUES(:name, :flags, :version, :pid)", requires)
+        conn.commit()
 
         conn.close()
 
