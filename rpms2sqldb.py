@@ -189,21 +189,22 @@ def list_pids_of_require(req, files, packages, provides):
     return unique(pids)
 
 
-def list_requires_for_require_1(req, files, packages, provides):
+def list_requires_for_require_1(req, files, packages, provides, distance=1):
     """List requires for given require (depth 1).
 
     @param req:  package require :: {'name', 'version', 'flags', 'rpid'}
     @param files:  All file paths list
     @param packages:  All (unique) packages list
     @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
+    @param distance:  Distance to requires [1]
 
     @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
     """
     pids = list_pids_of_require(req, files, packages, provides)
-    return [{'name':req['name'], 'version':req['version'], 'flags':req['flags'], 'rpid':pid} for pid in pids]
+    return [{'name':req['name'], 'version':req['version'], 'flags':req['flags'], 'rpid':pid, 'distance':distance} for pid in pids]
 
 
-def list_requires_for_requires(reqs, files, packages, provides, results=[], max_depth=-1):
+def list_requires_for_requires(reqs, files, packages, provides, results=[], max_depth=-1, distance=1):
     """List requires for given require recursively.
 
     @param reqs:  requires :: [{'name', 'version', 'flags', 'rpid'}]
@@ -212,6 +213,7 @@ def list_requires_for_requires(reqs, files, packages, provides, results=[], max_
     @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
     @param results:  requires accumulator
     @param max_depth:  max recursion limit; -1 indicates no limit
+    @param distance:  Distance to requires [1]
 
     @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
     """
@@ -221,11 +223,16 @@ def list_requires_for_requires(reqs, files, packages, provides, results=[], max_
     if max_depth > 0:
         max_depth -= 1
 
+    for r in reqs:
+        r.update({'distance':distance})
+
+    distance += 1
+
     results += reqs
-    rreqs = [r2 for r2 in unique(concat((list_requires_for_require_1(r, files, packages, provides) for r in reqs))) if r2 not in results]
+    rreqs = [r2 for r2 in unique(concat((list_requires_for_require_1(r, files, packages, provides, distance) for r in reqs))) if r2 not in results]
     results += rreqs
 
-    return list_requires_for_requires(rreqs, files, packages, provides, results, max_depth)
+    return list_requires_for_requires(rreqs, files, packages, provides, results, max_depth, distance)
 
 
 
