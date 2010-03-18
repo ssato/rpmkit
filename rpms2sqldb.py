@@ -26,18 +26,15 @@ import logging
 import optparse
 import os
 import pprint
+import re
 import rpm
 import sqlite3 as sqlite
 import sys
 
-try:
-    import hashlib # python 2.5+
-    def hexdigest(s):
-        return hashlib.md5(s).hexdigest()
-except ImportError:
-    import md5
-    def hexdigest(s):
-        return md5.md5(s).hexdigest()
+
+
+# some special dependency names.
+REQ_SPECIALS = re.compile(r'^config\(|rpmlib|rtld')
 
 
 DATABASE_SQL_DDL = \
@@ -80,6 +77,8 @@ CREATE TABLE IF NOT EXISTS requires (
     flags TEXT,
     version TEXT,
     pid INTEGER,
+    rpid INTEGER,
+    distance INTEGER,
     pre BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS filepath ON files (path);
@@ -152,6 +151,21 @@ def unique(xs, cmp_f=cmp):
     return rs
 
 
+def memoize(fn):
+    """memoization decorator.
+    """
+    cache = {}
+
+    def wrapped(*args, **kwargs):
+        key = repr(args) + repr(kwargs)
+        if not cache.has_key(key):
+            cache[key] = fn(*args, **kwargs)
+
+        return cache[key]
+
+    return wrapped
+
+
 def foreach_rpms(topdir='.'):
     """Equal to `find $topdir -name '*.rpm'`
     """
@@ -159,40 +173,49 @@ def foreach_rpms(topdir='.'):
         yield f
 
 
-def list_pids_of_require(req, files, packages, provides):
-    """Find package ids of given equrie.
+#@memoize
+def resolve_req_pids(rn, files, packages, provides):
+    """Resolve package ids of given package requirement.
 
-    @param req:  Package require; {'name', 'version', 'flag'}
+    @param rn: Req. name; req['name']
     @param files:  All file paths list
     @param packages:  All (unique) packages list
     @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
 
-    @return: pid list
+    @return: [pid]
     """
-    if req['name'].startswith('/'):  # it's a file path.
-        pids = [f['pid'] for f in files if f['path'] == req['name']]
+    # Handle special cases.
+    #
+    # TODO: What should be returned?
+    #
+    if REQ_SPECIALS.match(rn):
+        return []
+
+    if rn.startswith('/'):  # it's a file path.
+        pids = [f['pid'] for f in files if f['path'] == rn]
         if pids:
-            logging.debug("Found '%s' in files. reqs = %s" % (req['name'], str(pids)))
+            logging.debug("Found '%s' in files, pids=%s" % (rn, str(pids)))
         else:
-            logging.warn("Could not find '%s' in files" % req['name'])
+            logging.warn("'%s' (file) NOT FOUND" % rn)
     else:
-        pids = [p['pid'] for p in provides if p['name'] == req['name']]
+        pids = [p['pid'] for p in provides if p['name'] == rn]
         if pids:
-            logging.debug("Found '%s' in provides. reqs = %s" % (req['name'], str(pids)))
+            logging.debug("Found '%s' in provides. pids=%s" % (rn, str(pids)))
         else:
-            pids = [p['pid'] for p in packages if p['name'] == req['name']]
+            pids = [p['pid'] for p in packages if p['name'] == rn]
             if pids:
-                logging.debug("Found '%s' in packages. reqs = %s" % (req['name'], str(pids)))
+                logging.debug("Found '%s' in packages. pids=%s" % (rn, str(pids)))
             else:
-                logging.warn("Could not find '%s' in files, provides and packages" % req['name'])
+                logging.warn("'%s' NOT FOUND in files, provides and packages" % rn)
 
     return unique(pids)
 
 
-def list_requires_for_require_1(req, files, packages, provides, distance=1):
-    """List requires for given require (depth 1).
+def list_reqs_1(pid, reqs, files, packages, provides, distance=1):
+    """List required packages for the package of $pid.
 
-    @param req:  package require :: {'name', 'version', 'flags', 'rpid'}
+    @param pid:  Package ID
+    @param reqs:  Package's requires list (type: [{'name', 'version', 'flag', ...}])
     @param files:  All file paths list
     @param packages:  All (unique) packages list
     @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
@@ -200,39 +223,12 @@ def list_requires_for_require_1(req, files, packages, provides, distance=1):
 
     @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
     """
-    pids = list_pids_of_require(req, files, packages, provides)
-    return [{'name':req['name'], 'version':req['version'], 'flags':req['flags'], 'rpid':pid, 'distance':distance} for pid in pids]
+    rs = concat((
+        [{'name':r['name'], 'flags':r['flags'], 'version':r['version'], 'pid':pid, 'distance':distance, 'rpid':rpid} \
+            for rpid in resolve_req_pids(r['name'], files, packages, provides)] for r in reqs
+    ))
 
-
-def list_requires_for_requires(reqs, files, packages, provides, results=[], max_depth=-1, distance=1):
-    """List requires for given require recursively.
-
-    @param reqs:  requires :: [{'name', 'version', 'flags', 'rpid'}]
-    @param files:  All file paths list
-    @param packages:  All (unique) packages list
-    @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
-    @param results:  requires accumulator
-    @param max_depth:  max recursion limit; -1 indicates no limit
-    @param distance:  Distance to requires [1]
-
-    @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
-    """
-    if max_depth == 0 or not reqs:
-        return results
-
-    if max_depth > 0:
-        max_depth -= 1
-
-    for r in reqs:
-        r.update({'distance':distance})
-
-    distance += 1
-
-    results += reqs
-    rreqs = [r2 for r2 in unique(concat((list_requires_for_require_1(r, files, packages, provides, distance) for r in reqs))) if r2 not in results]
-    results += rreqs
-
-    return list_requires_for_requires(rreqs, files, packages, provides, results, max_depth, distance)
+    return rs
 
 
 
@@ -334,7 +330,7 @@ class PackageMetadata(dict):
         ]
 
         self['requires'] = [
-            {'name':n, 'version':v, 'flags':f} for n,v,f in \
+            {'name':n, 'version':v, 'flags':f, 'distance':1} for n,v,f in \
                 zip3(h[rpm.RPMTAG_REQUIRES], h[rpm.RPMTAG_REQUIREFLAGS], h[rpm.RPMTAG_REQUIREVERSION])
         ]
 
@@ -390,37 +386,51 @@ class RpmDB(object):
         cur.execute("SELECT COUNT(*) FROM packages")
         index = cur.fetchone()[0] + 1
 
-        ps = [p for p in packages]
-
-        for p in ps:
+        ps = []
+        for p in packages:
             p['pid'] = index; index += 1
 
+            logging.info("p=%s" % str(p))
             cur.execute(
                 "INSERT INTO packages(pid, name, version, release, arch, epoch, summary, description, url, license, vendor, pgroup, buildhost, sourcerpm, packager, size_package, size_archive, srpmname) VALUES(:pid, :name, :version, :release, :arch, :epoch, :summary, :description, :url, :license, :vendor, :group, :buildhost, :sourcerpm, :packager, :size_package, :size_archive, :srpmname)",
                 p
             )
 
-        conn.commit()
+            pfs = [{'path':f['path'], 'basename':f['basename'], 'type':f['type'], 'pid':p['pid']} for f in p['files']]
+            cur.executemany("INSERT INTO files(path, basename, type, pid) VALUES(:path, :basename, :type, :pid)", pfs)
+            p['files'] = pfs
+            logging.info("pfs=%s" % str(pfs))
 
-        files = concat([
-            [{'path':f['path'], 'basename':f['basename'], 'type':f['type'], 'pid':p['pid']} for f in p['files']] \
-                for p in ps
-        ])
+            for k in ('conflicts', 'obsoletes', 'provides'):
+                xs = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p[k]]
+                cur.executemany("INSERT INTO %s(name, flags, version, pid) VALUES(:name, :flags, :version, :pid)" % k, xs)
+                p[k] = xs
+                logging.info("p[%s]=%s" % (k, str(xs)))
 
-        cur.executemany("INSERT INTO files(path, basename, type, pid) VALUES(:path, :basename, :type, :pid)", files)
-        conn.commit()
+            conn.commit()
 
-        for g in ('conflicts', 'obsoletes', 'provides', 'requires'):
-            xs = concat([
-                [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p[g]] \
-                    for p in ps
-            ])
+            prs = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p['requires']]
+            #p['requires'] = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in prs]
+            p['requires'] = prs
+            logging.info("p[requires]=%s" % prs)
 
+            ps.append(p)
+
+        ps2 = []
+        files = concat((p['files'] for p in ps))
+        provs = concat((p['provides'] for p in ps))
+
+        for p in ps:
+            prs = list_reqs_1(p['pid'], p['requires'], files, ps, provs, 1)
+            logging.info("prs=%s" % prs)
             cur.executemany(
-                "INSERT INTO %s(name, flags, version, pid) VALUES(:name, :flags, :version, :pid)" % g,
-                xs
+                "INSERT INTO requires(name, flags, version, pid, rpid, distance) VALUES(:name, :flags, :version, :pid, :rpid, :distance)",
+                prs
             )
             conn.commit()
+
+            p['requires'] = prs
+            ps2.append(p)
 
         conn.close()
 
@@ -449,6 +459,9 @@ def main():
     if len(args) < 1:
         p.print_usage()
         sys.exit(1)
+
+    loglevel = logging.DEBUG
+    logging.getLogger().setLevel(loglevel)
 
     rpmdirs = args
 
