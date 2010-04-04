@@ -31,15 +31,6 @@ import rpm
 import sqlite3 as sqlite
 import sys
 
-try:
-    import hashlib # python 2.5+
-    def hexdigest(s):
-        return hashlib.md5(s).hexdigest()
-except ImportError:
-    import md5
-    def hexdigest(s):
-        return md5.md5(s).hexdigest()
-
 
 
 # some special dependency names.
