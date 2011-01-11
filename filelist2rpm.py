@@ -40,6 +40,9 @@ import sys
 
 
 
+__version__ = "0.1.1"
+
+
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
 AM_INIT_AUTOMAKE([dist-xz foreign silent-rules subdir-objects])
 
@@ -261,17 +264,16 @@ def gen_buildfiles(pkg):
 def gen_srpm(pkg):
     __run('./configure', workdir=pkg['workdir'])
     __run('make srpm', workdir=pkg['workdir'])
-    __run('mv *.src.rpm ../', workdir=pkg['workdir'])
 
 
 def gen_rpm_with_mock(pkg):
     dist = pkg['dist']
 
     # FIXME: How to specify _single_ src.rpm ?
-    __run("mock -r %s ../*.src.rpm" % dist, workdir=pkg['workdir'])
+    __run("mock -r %s *.src.rpm" % dist, workdir=pkg['workdir'])
 
     for p in glob.glob("/var/lib/mock/%s/result/*.rpm" % dist):
-        __copy(p, pkg['workdir'])
+        __copy(p, os.path.abspath(os.path.join(pkg['workdir'], '../')))
 
 
 def gen_rpm(pkg):
@@ -287,6 +289,9 @@ def do_packaging(pkg, filelist, build_rpm):
 
     if build_rpm:
         gen_rpm_with_mock(pkg)
+    else:
+        for p in glob.glob(os.path.join(pkg['workdir'], "*.src.rpm")):
+            __copy(p, os.path.abspath(os.path.join(pkg['workdir'], '../')))
 
 
 def main():
@@ -353,7 +358,8 @@ Examples:
     locale.setlocale(locale.LC_ALL, "C")
     pkg['timestamp'] = datetime.date.today().strftime("%a %b %_d %Y")
 
-    pkg['filelist_in_makefile'] = " \\\n".join((os.path.join('src', p[1:]) for p in __g_filelist(filelist)))
+    pkg['filelist'] = " ".join((os.path.join('src', p[1:]) for p in __g_filelist(filelist)))
+    pkg['filelist_in_makefile'] = " \\\n".join(pkg['filelist'].split())
 
     if options.summary:
         pkg['summary'] = options.summary
