@@ -27,6 +27,8 @@
 #
 
 from Cheetah.Template import Template
+from itertools import groupby
+
 import datetime
 import glob
 import locale
@@ -40,7 +42,7 @@ import sys
 
 
 
-__version__ = "0.1.1"
+__version__ = "0.2"
 
 
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
@@ -69,17 +71,11 @@ PKG_MAKEFILE_AM_TMPL = """
 EXTRA_DIST = \\
 ${name}.spec \\
 rpm.mk \\
-${filelist_in_makefile} \\
 \$(NULL)
 
 include \$(abs_srcdir)/rpm.mk
 
-#raw
-install-data-hook:
-\tfor x in $(shell find src -type f); do \\
-\t\tdst=`echo $$x | $(SED) 's,src,$(DESTDIR),'`; dir=`dirname $$dst`; \\
-\t\ttest -d $$dir || $(MKDIR_P) $$dir; cp -a $$x $$dst; done
-#end raw
+$filelist_vars_in_makefile_am
 
 """
 
@@ -166,6 +162,12 @@ rm -rf \$RPM_BUILD_ROOT
 """
 
 
+PKG_FILELIST_IN_MAKEFILE_AM_TMPL = """
+pkgdata%(idx)ddir = %(dir)s
+dist_pkgdata%(idx)d_DATA = %(files)s
+"""
+
+
 
 def __copy(src, dst):
     logging.info("Copying %s to %s" % (src, dst))
@@ -223,7 +225,7 @@ def __run(cmd_and_args_s, workdir=""):
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
-    logging.info(" About to perform: %s" % cmd_and_args_s)
+    logging.info(" Try: %s" % cmd_and_args_s)
 
     pipe = subprocess.Popen([cmd_and_args_s], stdout=subprocess.PIPE, shell=True, cwd=workdir)
     (output, errors) = pipe.communicate()
@@ -234,6 +236,19 @@ def __run(cmd_and_args_s, workdir=""):
         return (retcode, output.rstrip())
     else:
         raise RuntimeError(" Failed: %s" % cmd_and_args_s)
+
+
+def __count_sep(path):
+    return path.count(os.path.sep)
+
+
+# FIXME: Ugly
+def __gen_filelist_vars_in_makefile_am(filelist, tmpl=PKG_FILELIST_IN_MAKEFILE_AM_TMPL):
+    fs_am_vars_gen = lambda idx, fs: tmpl % \
+        {'idx':idx, 'files': " \\\n".join(fs), 'dir':os.path.dirname(fs[0]).replace('src', '')}
+
+    return ''.join([fs_am_vars_gen(k, [x for x in grp]) for k,grp in groupby(filelist, __count_sep)])
+
 
 
 def gen_rpm_spec(pkg):
@@ -255,9 +270,13 @@ def copy_files(pkg, filelist):
 
 
 def gen_buildfiles(pkg):
+    pkg['filelist_vars_in_makefile_am'] = __gen_filelist_vars_in_makefile_am(pkg['filelist'])
+
     __tmpl_compile_2(PKG_CONFIGURE_AC_TMPL, pkg, os.path.join(pkg['workdir'], 'configure.ac'))
     __tmpl_compile_2(PKG_MAKEFILE_AM_TMPL,  pkg, os.path.join(pkg['workdir'], 'Makefile.am'))
+
     open(os.path.join(pkg['workdir'], 'rpm.mk'), 'w').write(PKG_MAKEFILE_RPMMK)
+
     __run('autoreconf -vfi', workdir=pkg['workdir'])
 
 
@@ -358,8 +377,8 @@ Examples:
     locale.setlocale(locale.LC_ALL, "C")
     pkg['timestamp'] = datetime.date.today().strftime("%a %b %_d %Y")
 
-    pkg['filelist'] = " ".join((os.path.join('src', p[1:]) for p in __g_filelist(filelist)))
-    pkg['filelist_in_makefile'] = " \\\n".join(pkg['filelist'].split())
+    pkg['filelist'] = [os.path.join('src', p[1:]) for p in __g_filelist(filelist)]
+    pkg['filelist_in_makefile'] = " \\\n".join(pkg['filelist'])
 
     if options.summary:
         pkg['summary'] = options.summary
