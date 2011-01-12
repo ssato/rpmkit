@@ -72,9 +72,7 @@ AC_OUTPUT
 
 
 # FIXME: Ugly hack
-PKG_MAKEFILE_AM_TMPL = """
-
-EXTRA_DIST = \\
+PKG_MAKEFILE_AM_TMPL = """EXTRA_DIST = \\
 ${name}.spec \\
 rpm.mk \\
 \$(NULL)
