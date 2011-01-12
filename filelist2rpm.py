@@ -168,15 +168,20 @@ rm -rf \$RPM_BUILD_ROOT
 """
 
 
-PKG_FILELIST_IN_MAKEFILE_AM_TMPL = """
+PKG_DIST_INST_FILES_TMPL = """
 pkgdata%(idx)ddir = %(dir)s
 dist_pkgdata%(idx)d_DATA = %(files)s
 """
 
 
+PKG_DIST_NOINST_FILES_TMPL = """
+dist_noinst_pkgdata%(idx)d_DATA = %(files)s
+"""
+
+
 
 def __copy(src, dst):
-    logging.info("Copying %s to %s" % (src, dst))
+    logging.info(" Copying %s to %s" % (src, dst))
 
     if os.path.isdir(src):
         if os.path.exists(dst):
@@ -249,7 +254,7 @@ def __count_sep(path):
 
 
 # FIXME: Ugly
-def __gen_filelist_vars_in_makefile_am(filelist, tmpl=PKG_FILELIST_IN_MAKEFILE_AM_TMPL):
+def __gen_filelist_vars_in_makefile_am(filelist, tmpl=PKG_DIST_INST_FILES_TMPL):
     fs_am_vars_gen = lambda idx, fs: tmpl % \
         {'idx':idx, 'files': " \\\n".join(fs), 'dir':os.path.dirname(fs[0]).replace('src', '')}
 
@@ -435,7 +440,7 @@ Examples:
                 logging.info("%s is owned by %s. Skip it." % (f, p))
                 continue
             else:
-                logging.warn("%s is owned by %s." % (f, p))
+                logging.warn("%s is owned by %s and this package will be conflict with it." % (f, p))
 
         files.append(f)
 
