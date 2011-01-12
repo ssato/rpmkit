@@ -150,16 +150,20 @@ rm -rf \$RPM_BUILD_ROOT
 #cp -a src/* \$RPM_BUILD_ROOT/
 make install DESTDIR=\$RPM_BUILD_ROOT
 
-find \$RPM_BUILD_ROOT -type f | sed "s,^\$RPM_BUILD_ROOT,,g" > files.list
+# s,%files,%files -f files.list, if enable the following:
+#find \$RPM_BUILD_ROOT -type f | sed "s,^\$RPM_BUILD_ROOT,,g" > files.list
 
 
 %clean
 rm -rf \$RPM_BUILD_ROOT
 
 
-%files -f files.list
+%files
 %defattr(-,root,root,-)
 %doc README
+#for $f in $target_filelist
+$f
+#end for
 
 
 %changelog
