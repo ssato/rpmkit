@@ -28,6 +28,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # SEE ALSO: http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-creating-rpms.html
+# SEE ALSO: http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-rpm-programming-python.html
 #
 
 from Cheetah.Template import Template
@@ -40,13 +41,14 @@ import logging
 import optparse
 import os
 import os.path
+import rpm
 import shutil
 import subprocess
 import sys
 
 
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
@@ -217,8 +219,8 @@ def __tmpl_compile_2(template_src, params, output):
     open(output, 'w').write(tmpl.respond())
 
 
-def __g_filelist(filelist_file):
-    return (l.rstrip() for l in open(filelist_file).readlines() if not l.startswith('#'))
+def __g_filelist(filelist):
+    return (l.rstrip() for l in filelist.readlines() if not l.startswith('#'))
 
 
 def __run(cmd_and_args_s, workdir=""):
@@ -254,6 +256,24 @@ def __gen_filelist_vars_in_makefile_am(filelist, tmpl=PKG_FILELIST_IN_MAKEFILE_A
     return ''.join([fs_am_vars_gen(k, [x for x in grp]) for k,grp in groupby(filelist, __count_sep)])
 
 
+def flattern(xss):
+    ret = []
+    for xs in xss:
+        if isinstance(xs, list):
+            ys = flattern(xs)
+            ret += ys
+        else:
+            ret.append(xs)
+    return ret
+
+
+def rpmdb_mi():
+    return rpm.TransactionSet().dbMatch()
+
+
+def rpmdb_filelist():
+    return dict(flattern([[(f, h[rpm.RPMTAG_NAME]) for f in h[rpm.RPMTAG_FILENAMES]] for h in rpmdb_mi()]))
+
 
 def gen_rpm_spec(pkg):
     spec_f = os.path.join(pkg['workdir'], "%s.spec" % pkg['name'])
@@ -266,11 +286,9 @@ def setup_dirs(pkg):
     __setup_dir(pkg['srcdir'])
 
 
-def copy_files(pkg, filelist):
-    srcs = (l.rstrip() for l in open(filelist).readlines() if not l.startswith('#'))
-
-    for s in srcs:
-        __copy(s, os.path.join(pkg['srcdir'], s[1:]))
+def copy_files(pkg):
+    for src,dst_subdir in zip(pkg['target_filelist'], pkg['filelist']):
+        __copy(src, os.path.join(pkg['workdir'], dst_subdir))
 
 
 def gen_buildfiles(pkg):
@@ -303,14 +321,14 @@ def gen_rpm(pkg):
     raise NotImplementedError("TBD")
 
 
-def do_packaging(pkg, filelist, build_rpm):
+def do_packaging(pkg, options):
     setup_dirs(pkg)
-    copy_files(pkg, filelist)
+    copy_files(pkg)
     gen_rpm_spec(pkg)
     gen_buildfiles(pkg)
     gen_srpm(pkg)
 
-    if build_rpm:
+    if options.build_rpm:
         gen_rpm_with_mock(pkg)
     else:
         for p in glob.glob(os.path.join(pkg['workdir'], "*.src.rpm")):
@@ -336,6 +354,8 @@ def main(V=__version__):
 
 Examples:
   %prog -n foo files.list
+  cat files.list | %prog -n foo -  # same as above.
+
   %prog -n foo -v 0.2 -l GPLv3+ files.list
   %prog -n foo --requires httpd,/sbin/service files.list""",
     version=ver_s
@@ -352,6 +372,10 @@ Examples:
     p.add_option('', '--packager-name', default=packager_name, help="Specify packager's name [%default]")
     p.add_option('', '--packager-mail', default=packager_mail, help="Specify packager's mail address [%default]")
     p.add_option('', '--package-version', default='0.1', help='Specify the package version [%default]')
+
+    rog = optparse.OptionGroup(p, "Rpm DB options")
+    rog.add_option('', '--skip-owned', default=False, action='store_true', help='Skip files owned by other package')
+    p.add_option_group(rog)
 
     bog = optparse.OptionGroup(p, "Build options")
     bog.add_option('', '--workdir', default=workdir, help='Specify working dir to dump outputs in absolute path [%default]')
@@ -395,8 +419,28 @@ Examples:
     locale.setlocale(locale.LC_ALL, "C")
     pkg['timestamp'] = datetime.date.today().strftime("%a %b %_d %Y")
 
-    pkg['filelist'] = [os.path.join('src', p[1:]) for p in __g_filelist(filelist)]
-    pkg['filelist_in_makefile'] = " \\\n".join(pkg['filelist'])
+    if filelist == '-':
+        list_f = sys.stdin
+    else:
+        list_f = open(filelist)
+
+    filelist_db = rpmdb_filelist()
+    files = []
+
+    for f in __g_filelist(list_f):
+        p = filelist_db.get(f, False)
+
+        if p and p != pkg['name']:
+            if options.skip_owned:
+                logging.info("%s is owned by %s. Skip it." % (f, p))
+                continue
+            else:
+                logging.warn("%s is owned by %s." % (f, p))
+
+        files.append(f)
+
+    pkg['target_filelist'] = files
+    pkg['filelist'] = [os.path.join('src', p[1:]) for p in files]
 
     if options.summary:
         pkg['summary'] = options.summary
@@ -408,7 +452,7 @@ Examples:
     else:
         pkg['requires'] = []
 
-    do_packaging(pkg, filelist, build_rpm=options.build_rpm)
+    do_packaging(pkg, options)
 
 
 if __name__ == '__main__':
