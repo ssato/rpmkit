@@ -50,7 +50,7 @@ __version__ = "0.2"
 
 
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
-AM_INIT_AUTOMAKE([dist-xz foreign silent-rules subdir-objects])
+AM_INIT_AUTOMAKE([$compress_am_opt foreign silent-rules subdir-objects])
 
 dnl http://www.flameeyes.eu/autotools-mythbuster/automake/silent.html
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -99,7 +99,7 @@ $(NULL)
 $(rpmdirs):
 \t$(MKDIR_P) $@
 
-rpm srpm: $(PACKAGE).spec dist-xz $(rpmdirs)
+rpm srpm: $(PACKAGE).spec dist $(rpmdirs)
 
 rpm:
 \t$(rpmbuild) -bb $< && mv $(rpmdir)/RPMS/*/* $(abs_builddir)
@@ -119,7 +119,7 @@ Summary:        ${summary}
 Group:          ${group}
 License:        ${license}
 URL:            file:///${workdir}
-Source0:        %{name}-%{version}.tar.xz
+Source0:        %{name}-%{version}.tar.$compress_ext
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 #for $req in $requires
 Requires: $req
@@ -317,31 +317,41 @@ def do_packaging(pkg, filelist, build_rpm):
             __copy(p, os.path.abspath(os.path.join(pkg['workdir'], '../')))
 
 
-def main():
+def main(V=__version__):
     pkg = dict()
+    ver_s = "%prog " + V
 
     workdir = os.path.join(os.path.abspath(os.curdir), 'workdir')
     packager_name = os.environ.get('USER', 'root')
     packager_mail = "%s@localhost.localdomain" % packager_name
+
+    compress_map = {
+        # extension: am_option,
+        'xz'    : 'dist-xz',
+        'bz2'   : 'dist-bzip2',
+        'gz'    : '',
+    }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
 
 Examples:
   %prog -n foo files.list
   %prog -n foo -v 0.2 -l GPLv3+ files.list
-  %prog -n foo --requires httpd,/sbin/service files.list"""
+  %prog -n foo --requires httpd,/sbin/service files.list""",
+    version=ver_s
     )
-    p.add_option('-n', '--name', default='foo', help='Specify the package name [%default]')
-    p.add_option('-v', '--version', default='0.1', help='Specify the package version [%default]')
-    p.add_option('-g', '--group', default='System Environment/Base', help='Specify the group of the package [%default]')
-    p.add_option('-l', '--license', default='GPLv3+', help='Specify the license of the package [%default]')
-    p.add_option('-s', '--summary', help='Specify the summary of the package')
+    p.add_option('-n', '--name', default='foo', help='Package name [%default]')
+    p.add_option('-g', '--group', default='System Environment/Base', help='The group of the package [%default]')
+    p.add_option('-l', '--license', default='GPLv3+', help='The license of the package [%default]')
+    p.add_option('-s', '--summary', help='The summary of the package')
+    p.add_option('-z', '--compress', default='xz', type="choice", choices=compress_map.keys(),
+        help="Which to used for compressing the src archive [%default]")
 
     p.add_option('', '--noarch', default=False, action='store_true', help='Build packaeg as noarch')
     p.add_option('', '--requires', default=[], help='Specify the package requirements as comma separated list')
-
     p.add_option('', '--packager-name', default=packager_name, help="Specify packager's name [%default]")
     p.add_option('', '--packager-mail', default=packager_mail, help="Specify packager's mail address [%default]")
+    p.add_option('', '--package-version', default='0.1', help='Specify the package version [%default]')
 
     bog = optparse.OptionGroup(p, "Build options")
     bog.add_option('', '--workdir', default=workdir, help='Specify working dir to dump outputs in absolute path [%default]')
@@ -364,16 +374,20 @@ Examples:
         logging.basicConfig(level=logging.DEBUG)
 
     pkg['name'] = options.name
-    pkg['version'] = options.version
     pkg['release'] = '1'
     pkg['group'] = options.group
     pkg['license'] = options.license
     pkg['noarch'] = options.noarch
+
+    pkg['version'] = options.package_version
+    pkg['packager_name'] = options.packager_name
+    pkg['packager_mail'] = options.packager_mail
+
     pkg['workdir'] = os.path.join(options.workdir, "%(name)s-%(version)s" % pkg)
     pkg['srcdir'] = os.path.join(pkg['workdir'], 'src')
 
-    pkg['packager_name'] = options.packager_name
-    pkg['packager_mail'] = options.packager_mail
+    pkg['compress_ext'] = options.compress
+    pkg['compress_am_opt'] = compress_map.get(options.compress)
 
     pkg['dist'] = options.dist
 
