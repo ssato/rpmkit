@@ -46,7 +46,7 @@ import sys
 
 
 
-__version__ = "0.2"
+__version__ = "0.2.1"
 
 
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
