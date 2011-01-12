@@ -2,8 +2,12 @@
 #
 # filelist2rpm.py - Create RPM from given file list.
 #
-# It will try gather files and arrange src tree, generate RPM SPEC and src.rpm
-# from the given file list.
+# It will try gathering files, and then do the followings:
+#
+# * arrange src tree contains these files with these relative path kept
+# * generate RPM SPEC
+# * generate source rpm
+# * generate binarry rpm [option]
 #
 # It's based on the idea by Masatake YAMATO <yamato&#64;redhat.com>.
 #
