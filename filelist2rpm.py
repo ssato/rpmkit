@@ -357,7 +357,7 @@ def do_packaging(pkg, options):
 def main(V=__version__):
     loglevel = logging.INFO
     logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
-    logformat = '%(asctime)s [%(levelname)-5s] %(message)s'
+    logformat = '%(asctime)s [%(levelname)-4s] %(message)s'
 
     logging.basicConfig(level=loglevel, format=logformat, datefmt=logdatefmt)
 
