@@ -251,7 +251,7 @@ def __run(cmd_and_args_s, workdir=""):
     if pipe.returncode == 0:
         return (output, errors)
     else:
-        raise RuntimeError(" Failed: %s" % cmd_and_args_s)
+        raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_and_args_s, errors))
 
 
 def __count_sep(path):
