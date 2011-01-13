@@ -358,6 +358,11 @@ def main(V=__version__):
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
 
+  where FILE_LIST  = a file contains absolute file paths list or '-' (read
+                     paths list from stdin).
+
+                     The lines starting with '#' in the list file are ignored.
+
 Examples:
   %prog -n foo files.list
   cat files.list | %prog -n foo -  # same as above.
@@ -366,29 +371,28 @@ Examples:
   %prog -n foo --requires httpd,/sbin/service files.list""",
     version=ver_s
     )
-    p.add_option('-n', '--name', default='foo', help='Package name [%default]')
-    p.add_option('-g', '--group', default='System Environment/Base', help='The group of the package [%default]')
-    p.add_option('-l', '--license', default='GPLv3+', help='The license of the package [%default]')
-    p.add_option('-s', '--summary', help='The summary of the package')
-    p.add_option('-z', '--compress', default='xz', type="choice", choices=compress_map.keys(),
+    pog = optparse.OptionGroup(p, "Package metadata options")
+    pog.add_option('-n', '--name', default='foo', help='Package name [%default]')
+    pog.add_option('-g', '--group', default='System Environment/Base', help='The group of the package [%default]')
+    pog.add_option('-l', '--license', default='GPLv3+', help='The license of the package [%default]')
+    pog.add_option('-s', '--summary', help='The summary of the package')
+    pog.add_option('-z', '--compress', default='xz', type="choice", choices=compress_map.keys(),
         help="Which to used for compressing the src archive [%default]")
-
-    p.add_option('', '--noarch', default=False, action='store_true', help='Build packaeg as noarch')
-    p.add_option('', '--requires', default=[], help='Specify the package requirements as comma separated list')
-    p.add_option('', '--packager-name', default=packager_name, help="Specify packager's name [%default]")
-    p.add_option('', '--packager-mail', default=packager_mail, help="Specify packager's mail address [%default]")
-    p.add_option('', '--package-version', default='0.1', help='Specify the package version [%default]')
+    pog.add_option('', '--noarch', default=False, action='store_true', help='Build packaeg as noarch')
+    pog.add_option('', '--requires', default=[], help='Specify the package requirements as comma separated list')
+    pog.add_option('', '--packager-name', default=packager_name, help="Specify packager's name [%default]")
+    pog.add_option('', '--packager-mail', default=packager_mail, help="Specify packager's mail address [%default]")
+    pog.add_option('', '--package-version', default='0.1', help='Specify the package version [%default]')
+    p.add_option_group(pog)
 
     rog = optparse.OptionGroup(p, "Rpm DB options")
     rog.add_option('', '--skip-owned', default=False, action='store_true', help='Skip files owned by other package')
     p.add_option_group(rog)
 
-    bog = optparse.OptionGroup(p, "Build options")
-    bog.add_option('', '--workdir', default=workdir, help='Specify working dir to dump outputs in absolute path [%default]')
-    bog.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
-    bog.add_option('', '--dist', default='default', help='Specify the target distribution such like fedora-13-x86_64 [%default]')
-    bog.add_option('', '--quiet', default=False, action="store_true", help='Run in quiet (less verbose) mode')
-    p.add_option_group(bog)
+    p.add_option('', '--workdir', default=workdir, help='Specify working dir to dump outputs in absolute path [%default]')
+    p.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
+    p.add_option('', '--dist', default='default', help='Specify the target distribution such like fedora-13-x86_64 [%default]')
+    p.add_option('', '--quiet', default=False, action="store_true", help='Run in quiet (less verbose) mode')
 
     (options, args) = p.parse_args()
 
