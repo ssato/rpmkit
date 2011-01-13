@@ -282,6 +282,8 @@ def rpmdb_mi():
 
 
 def rpmdb_filelist():
+    """TODO: It should be a heavy and time-consuming task.
+    """
     return dict(flattern([[(f, h[rpm.RPMTAG_NAME]) for f in h[rpm.RPMTAG_FILENAMES]] for h in rpmdb_mi()]))
 
 
