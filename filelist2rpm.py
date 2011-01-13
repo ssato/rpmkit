@@ -125,6 +125,9 @@ License:        ${license}
 URL:            file:///${workdir}
 Source0:        %{name}-%{version}.tar.$compress_ext
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+#if $noarch
+BuildArch:      noarch
+#end if
 #for $req in $requires
 Requires: $req
 #end for
@@ -136,8 +139,9 @@ ${summary}
 %prep
 %setup -q
 
-# FIXME: arrange contents of README.
-touch README
+cat <<EOF > README
+$summary
+EOF
 
 
 %build
@@ -148,8 +152,6 @@ make
 
 %install
 rm -rf \$RPM_BUILD_ROOT
-
-#cp -a src/* \$RPM_BUILD_ROOT/
 make install DESTDIR=\$RPM_BUILD_ROOT
 
 # s,%files,%files -f files.list, if enable the following:
@@ -327,12 +329,10 @@ def gen_srpm(pkg):
 
 
 def gen_rpm_with_mock(pkg):
-    dist = pkg['dist']
+    # FIXME: Identify the (single) src.rpm
+    __run("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % pkg, workdir=pkg['workdir'])
 
-    # FIXME: How to specify _single_ src.rpm ?
-    __run("mock -r %s *.src.rpm" % dist, workdir=pkg['workdir'])
-
-    for p in glob.glob("/var/lib/mock/%s/result/*.rpm" % dist):
+    for p in glob.glob("/var/lib/mock/%(dist)s/result/*.rpm" % pkg):
         __copy(p, os.path.join(pkg['workdir'], '../'))
 
 
@@ -352,6 +352,12 @@ def do_packaging(pkg, options):
 
 
 def main(V=__version__):
+    loglevel = logging.INFO
+    logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
+    logformat = '%(asctime)s [%(levelname)-5s] %(message)s'
+
+    logging.basicConfig(level=loglevel, format=logformat, datefmt=logdatefmt)
+
     pkg = dict()
     ver_s = "%prog " + V
 
@@ -383,12 +389,12 @@ Examples:
     )
     pog = optparse.OptionGroup(p, "Package metadata options")
     pog.add_option('-n', '--name', default='foo', help='Package name [%default]')
-    pog.add_option('-g', '--group', default='System Environment/Base', help='The group of the package [%default]')
-    pog.add_option('-l', '--license', default='GPLv3+', help='The license of the package [%default]')
-    pog.add_option('-s', '--summary', help='The summary of the package')
+    pog.add_option('', '--group', default='System Environment/Base', help='The group of the package [%default]')
+    pog.add_option('', '--license', default='GPLv3+', help='The license of the package [%default]')
+    pog.add_option('-S', '--summary', help='The summary of the package')
     pog.add_option('-z', '--compress', default='xz', type="choice", choices=compress_map.keys(),
         help="Which to used for compressing the src archive [%default]")
-    pog.add_option('', '--noarch', default=False, action='store_true', help='Build packaeg as noarch')
+    pog.add_option('', '--arch', default=False, action='store_true', help='Make package arch-dependent [false - noarch]')
     pog.add_option('', '--requires', default=[], help='Specify the package requirements as comma separated list')
     pog.add_option('', '--packager-name', default=packager_name, help="Specify packager's name [%default]")
     pog.add_option('', '--packager-mail', default=packager_mail, help="Specify packager's mail address [%default]")
@@ -399,10 +405,11 @@ Examples:
     rog.add_option('', '--skip-owned', default=False, action='store_true', help='Skip files owned by other package')
     p.add_option_group(rog)
 
-    p.add_option('', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
+    p.add_option('-w', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
+    p.add_option('-D', '--debug', default=False, action="store_true", help='Debug mode')
+    p.add_option('-q', '--quiet', default=False, action="store_true", help='Quiet mode')
     p.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
     p.add_option('', '--dist', default=DIST_DEFAULT, help='Target distribution (for mock) [%default]')
-    p.add_option('', '--quiet', default=False, action="store_true", help='Run in quiet (less verbose) mode')
 
     (options, args) = p.parse_args()
 
@@ -413,15 +420,20 @@ Examples:
     filelist = args[0]
 
     if options.quiet:
-        logging.basicConfig(level=logging.INFO)
+        logging.getLogger().setLevel(logging.WARN)
+
+    if options.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    if options.arch:
+        pkg['noarch'] = False
     else:
-        logging.basicConfig(level=logging.DEBUG)
+        pkg['noarch'] = True
 
     pkg['name'] = options.name
     pkg['release'] = '1'
     pkg['group'] = options.group
     pkg['license'] = options.license
-    pkg['noarch'] = options.noarch
 
     pkg['version'] = options.package_version
     pkg['packager_name'] = options.packager_name
