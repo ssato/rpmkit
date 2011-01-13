@@ -212,7 +212,7 @@ def __copy(src, dst):
     # at present.
     #
     #shutil.copy2(src, dst)
-    __run("cp -a %s %s" % (src, dst))
+    __run("cp -a %s %s" % (src, dst), log=False)
 
 
 def __setup_dir(dir):
@@ -241,7 +241,7 @@ def __g_filelist(filelist):
     return (l.rstrip() for l in filelist.readlines() if not l.startswith('#'))
 
 
-def __run(cmd_and_args_s, workdir=""):
+def __run(cmd_and_args_s, workdir="", log=True):
     """
     >>> __run('ls /dev/null')
     (0, '/dev/null')
@@ -249,7 +249,8 @@ def __run(cmd_and_args_s, workdir=""):
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
-    logging.info(" Run: %s" % cmd_and_args_s)
+    if log:
+        logging.info(" Run: %s" % cmd_and_args_s)
 
     pipe = subprocess.Popen([cmd_and_args_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
     (output, errors) = pipe.communicate()  # TODO: It might be blocked. Use Popen.wait() instead?
@@ -294,9 +295,11 @@ def rpmdb_filelist():
 
 
 def gen_rpm_spec(pkg):
-    spec_f = os.path.join(pkg['workdir'], "%s.spec" % pkg['name'])
+    wdir = pkg['workdir']
+
+    spec_f = os.path.join(wdir, "%s.spec" % pkg['name'])
     __tmpl_compile_2(PKG_RPM_SPEC_TMPL, pkg, spec_f)
-    __run("cp %s.spec ../" % pkg['name'], workdir=pkg['workdir'])
+    __copy(spec_f, os.path.join(wdir, '..'))
 
 
 def setup_dirs(pkg):
