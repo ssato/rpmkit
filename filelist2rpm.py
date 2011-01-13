@@ -238,15 +238,14 @@ def __run(cmd_and_args_s, workdir=""):
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
-    logging.info(" Try: %s" % cmd_and_args_s)
+    logging.info(" Run: %s" % cmd_and_args_s)
 
-    pipe = subprocess.Popen([cmd_and_args_s], stdout=subprocess.PIPE, shell=True, cwd=workdir)
-    (output, errors) = pipe.communicate()
-    retcode = pipe.returncode
+    pipe = subprocess.Popen([cmd_and_args_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
+    (output, errors) = pipe.communicate()  # TODO: It might be blocked. Use Popen.wait() instead?
 
-    if retcode == 0:
-        logging.info(" Done")
-        return (retcode, output.rstrip())
+    if pipe.returncode == 0:
+        logging.info(" ...done")
+        return (output, errors)
     else:
         raise RuntimeError(" Failed: %s" % cmd_and_args_s)
 
@@ -438,11 +437,12 @@ Examples:
         p = filelist_db.get(f, False)
 
         if p and p != pkg['name']:
+            logging.info(" %s is owned by %s." % (f, p))
             if options.skip_owned:
-                logging.info("%s is owned by %s. Skip it." % (f, p))
+                logging.info(" ...skipped: %s" % f)
                 continue
             else:
-                logging.warn("%s is owned by %s and this package will be conflict with it." % (f, p))
+                logging.warn(" ...This package will be conflict with %s." % p)
 
         files.append(f)
 
