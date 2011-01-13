@@ -51,6 +51,9 @@ import sys
 __version__ = "0.2.2"
 
 
+DIST_DEFAULT = 'fedora-14-i386'
+
+
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
 AM_INIT_AUTOMAKE([$compress_am_opt foreign silent-rules subdir-objects])
 
@@ -317,6 +320,9 @@ def gen_buildfiles(pkg):
 def gen_srpm(pkg):
     __run('./configure', workdir=pkg['workdir'])
     __run('make srpm', workdir=pkg['workdir'])
+    for p in glob.glob(os.path.join(pkg['workdir'], "*.src.rpm")):
+        __copy(p, os.path.join(pkg['workdir'], '../'))
+
 
 
 def gen_rpm_with_mock(pkg):
@@ -326,7 +332,7 @@ def gen_rpm_with_mock(pkg):
     __run("mock -r %s *.src.rpm" % dist, workdir=pkg['workdir'])
 
     for p in glob.glob("/var/lib/mock/%s/result/*.rpm" % dist):
-        __copy(p, os.path.abspath(os.path.join(pkg['workdir'], '../')))
+        __copy(p, os.path.join(pkg['workdir'], '../'))
 
 
 def gen_rpm(pkg):
@@ -342,9 +348,6 @@ def do_packaging(pkg, options):
 
     if options.build_rpm:
         gen_rpm_with_mock(pkg)
-    else:
-        for p in glob.glob(os.path.join(pkg['workdir'], "*.src.rpm")):
-            __copy(p, os.path.abspath(os.path.join(pkg['workdir'], '../')))
 
 
 def main(V=__version__):
@@ -397,7 +400,8 @@ Examples:
 
     p.add_option('', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
     p.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
-    p.add_option('', '--dist', default='default', help='Specify the target distribution such like fedora-13-x86_64 [%default]')
+    # TODO: Detect appropriate distribution automatically.
+    p.add_option('', '--dist', default=DIST_DEFAULT, help='Target distribution (for mock) [%default]')
     p.add_option('', '--quiet', default=False, action="store_true", help='Run in quiet (less verbose) mode')
 
     (options, args) = p.parse_args()
