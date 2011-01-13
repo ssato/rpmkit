@@ -389,7 +389,7 @@ Examples:
     rog.add_option('', '--skip-owned', default=False, action='store_true', help='Skip files owned by other package')
     p.add_option_group(rog)
 
-    p.add_option('', '--workdir', default=workdir, help='Specify working dir to dump outputs in absolute path [%default]')
+    p.add_option('', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
     p.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
     p.add_option('', '--dist', default='default', help='Specify the target distribution such like fedora-13-x86_64 [%default]')
     p.add_option('', '--quiet', default=False, action="store_true", help='Run in quiet (less verbose) mode')
