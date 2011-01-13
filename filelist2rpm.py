@@ -51,6 +51,7 @@ import sys
 __version__ = "0.2.2"
 
 
+# TODO: Detect appropriate distribution (for mock) automatically.
 DIST_DEFAULT = 'fedora-14-i386'
 
 
@@ -400,7 +401,6 @@ Examples:
 
     p.add_option('', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
     p.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
-    # TODO: Detect appropriate distribution automatically.
     p.add_option('', '--dist', default=DIST_DEFAULT, help='Target distribution (for mock) [%default]')
     p.add_option('', '--quiet', default=False, action="store_true", help='Run in quiet (less verbose) mode')
 
