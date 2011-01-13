@@ -201,7 +201,12 @@ def __copy(src, dst):
     else:
         os.makedirs(dstdir, 0755)
 
-    shutil.copy2(src, dst)
+    # NOTE: shutil.copy2 is corresponding to 'cp --preserve=mode,ownership,timestamps'
+    # and sufficient for most cases, I guess. But to make safer, choose 'cp --preserve=all'
+    # at present.
+    #
+    #shutil.copy2(src, dst)
+    __run("cp -a %s %s" % (src, dst))
 
 
 def __setup_dir(dir):
