@@ -249,7 +249,6 @@ def __run(cmd_and_args_s, workdir=""):
     (output, errors) = pipe.communicate()  # TODO: It might be blocked. Use Popen.wait() instead?
 
     if pipe.returncode == 0:
-        logging.info(" ...done")
         return (output, errors)
     else:
         raise RuntimeError(" Failed: %s" % cmd_and_args_s)
