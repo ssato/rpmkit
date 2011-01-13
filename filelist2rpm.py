@@ -413,7 +413,7 @@ Examples:
     pkg['packager_name'] = options.packager_name
     pkg['packager_mail'] = options.packager_mail
 
-    pkg['workdir'] = os.path.join(options.workdir, "%(name)s-%(version)s" % pkg)
+    pkg['workdir'] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
     pkg['srcdir'] = os.path.join(pkg['workdir'], 'src')
 
     pkg['compress_ext'] = options.compress
