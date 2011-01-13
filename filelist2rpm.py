@@ -290,7 +290,7 @@ def rpmdb_filelist():
 def gen_rpm_spec(pkg):
     spec_f = os.path.join(pkg['workdir'], "%s.spec" % pkg['name'])
     __tmpl_compile_2(PKG_RPM_SPEC_TMPL, pkg, spec_f)
-    __run('cp *.spec ../', workdir=pkg['workdir'])
+    __run("cp %s.spec ../" % pkg['name'], workdir=pkg['workdir'])
 
 
 def setup_dirs(pkg):
