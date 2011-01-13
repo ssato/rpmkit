@@ -129,8 +129,11 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 #end if
 #for $req in $requires
-Requires: $req
+Requires:       $req
 #end for
+#for $c in $conflicts
+Conflicts:      $c
+#end for 
 
 %description
 ${summary}
@@ -282,6 +285,32 @@ def flattern(xss):
         else:
             ret.append(xs)
     return ret
+
+
+def unique(xs, cmp_f=cmp, key=None):
+    """Returns (sorted) list of no duplicated items.
+
+    @xs     list of object (x)
+    @cmp_f  comparison function for x
+
+    >>> unique([0, 3, 1, 2, 1, 0, 4, 5])
+    [0, 1, 2, 3, 4, 5]
+    """
+    if xs == []:
+        return xs
+
+    ys = sorted(xs, cmp=cmp_f, key=key)
+    if ys == []:
+        return ys
+
+    rs = [ys[0]]
+
+    for y in ys[1:]:
+        if y == rs[-1]:
+            continue
+        rs.append(y)
+
+    return rs
 
 
 def rpmdb_mi():
@@ -461,6 +490,7 @@ Examples:
 
     filelist_db = rpmdb_filelist()
     files = []
+    conflicts = []
 
     for f in __g_filelist(list_f):
         p = filelist_db.get(f, False)
@@ -472,12 +502,17 @@ Examples:
                 continue
             else:
                 logging.warn(" ...This package will be conflict with %s." % p)
+                conflicts.append(p)
 
         files.append(f)
 
     # sorted it by counting '/' in paths:
-    files2 = sorted(files, key=__count_sep)
+    files2 = unique(files, key=__count_sep)
+    conflicts2 = unique(conflicts)
+
     pkg['target_filelist'] = files2
+    pkg['conflicts'] = conflicts2
+
     pkg['filelist'] = [os.path.join('src', p[1:]) for p in files2]
 
     if options.summary:
