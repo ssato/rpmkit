@@ -135,6 +135,7 @@ Requires:       $req
 Conflicts:      $c
 #end for 
 
+
 %description
 ${summary}
 
@@ -192,14 +193,14 @@ dist_noinst_pkgdata%(idx)d_DATA = %(files)s
 
 
 def __copy(src, dst):
-    logging.info(" Copying %s to %s" % (src, dst))
+    logging.info(" Copying: %s -> %s" % (src, dst))
 
     if os.path.isdir(src):
         if os.path.exists(dst):
             if not os.path.isdir(dst):
                 raise RuntimeError(" '%s' already exists and it's not a directory! Aborting..." % dst)
         else:
-            logging.info(" Copying target is a directory")
+            logging.info(" The target is a directory")
         return
 
     dstdir = os.path.dirname(dst)
@@ -219,11 +220,11 @@ def __copy(src, dst):
 
 
 def __setup_dir(dir):
-    logging.info(" Creating the directory: %s" % dir)
+    logging.info(" Creating a directory: %s" % dir)
 
     if os.path.exists(dir):
         if os.path.isdir(dir):
-            logging.warn(" Target directory '%s' already exists! Skip creation" % dir)
+            logging.warn(" Target directory already exists! Skipping: %s" % dir)
         else:
             raise RuntimeError(" '%s' already exists and it's not a directory! Aborting..." % dir)
     else:
