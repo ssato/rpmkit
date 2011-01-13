@@ -455,8 +455,10 @@ Examples:
 
         files.append(f)
 
-    pkg['target_filelist'] = files
-    pkg['filelist'] = [os.path.join('src', p[1:]) for p in files]
+    # sorted it by counting '/' in paths:
+    files2 = sorted(files, key=__count_sep)
+    pkg['target_filelist'] = files2
+    pkg['filelist'] = [os.path.join('src', p[1:]) for p in files2]
 
     if options.summary:
         pkg['summary'] = options.summary
