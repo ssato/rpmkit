@@ -463,7 +463,15 @@ def gen_srpm(pkg):
 
 
 def gen_rpm_with_mock(pkg):
-    # FIXME: Identify the (single) src.rpm
+    """TODO: Identify the (single) src.rpm
+    """
+    try:
+        __run("mock --version > /dev/null")
+    except RuntimeError, e:
+        logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
+        gen_rpm_with_rpmbuild(pkg)
+        return
+
     __run("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % pkg, workdir=pkg['workdir'])
 
     for p in glob.glob("/var/lib/mock/%(dist)s/result/*.rpm" % pkg):
@@ -548,14 +556,14 @@ Examples:
 
     bog = optparse.OptionGroup(p, "Build options")
     bog.add_option('-w', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
-    bog.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
+    bog.add_option('', '--build-rpm', default=False, action='store_true', help='Whether to build binary rpm [no - srpm only]')
     bog.add_option('', '--no-mock', default=False, action="store_true",
         help='Build RPM with using rpmbuild instead of mock (not recommended)')
     bog.add_option('', '--dist', default=DIST_DEFAULT, help='Target distribution (for mock) [%default]')
     p.add_option_group(bog)
 
     rog = optparse.OptionGroup(p, "Rpm DB options")
-    rog.add_option('', '--skip-owned', default=False, action='store_true', help='Skip files owned by other package')
+    rog.add_option('', '--skip-owned', default=False, action='store_true', help='Skip files owned by other packages')
     p.add_option_group(rog)
 
     p.add_option('-D', '--debug', default=False, action="store_true", help='Debug mode')
