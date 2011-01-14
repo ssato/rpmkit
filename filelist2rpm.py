@@ -64,16 +64,11 @@ COMPRESS_MAP = {
 
 
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
-#if 'epel-6' in $dist or 'rhel-6' in $dist or 'fedora' in $dist
-AM_INIT_AUTOMAKE([${compress.am_opt} foreign silent-rules subdir-objects])
-
-AM_SILENT_RULES([yes])
-#else
 AM_INIT_AUTOMAKE([${compress.am_opt} foreign subdir-objects])
+##AM_INIT_AUTOMAKE([${compress.am_opt} foreign silent-rules subdir-objects])
 
 dnl http://www.flameeyes.eu/autotools-mythbuster/automake/silent.html
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
-#end if
 
 dnl TODO: fix autoconf macros used.
 AC_PROG_LN_S
