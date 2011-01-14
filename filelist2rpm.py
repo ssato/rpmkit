@@ -64,7 +64,7 @@ COMPRESS_MAP = {
 
 
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
-AM_INIT_AUTOMAKE([$compress_am_opt foreign silent-rules subdir-objects])
+AM_INIT_AUTOMAKE([${compress.am_opt} foreign silent-rules subdir-objects])
 
 dnl http://www.flameeyes.eu/autotools-mythbuster/automake/silent.html
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -131,7 +131,7 @@ Summary:        ${summary}
 Group:          ${group}
 License:        ${license}
 URL:            file:///${workdir}
-Source0:        %{name}-%{version}.tar.$compress_ext
+Source0:        %{name}-%{version}.tar.${compress.ext}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 #if $noarch
 BuildArch:      noarch
@@ -641,8 +641,10 @@ def main(compress_map=COMPRESS_MAP):
     pkg['workdir'] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
     pkg['srcdir'] = os.path.join(pkg['workdir'], 'src')
 
-    pkg['compress_ext'] = options.compress
-    pkg['compress_am_opt'] = compress_map.get(options.compress)
+    pkg['compress'] = {
+        'ext': options.compress,
+        'am_opt': compress_map.get(options.compress),
+    }
 
     pkg['dist'] = options.dist
 
