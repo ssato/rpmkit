@@ -55,6 +55,14 @@ __version__ = "0.2.4"
 DIST_DEFAULT = 'fedora-14-i386'
 
 
+COMPRESS_MAP = {
+    # extension: am_option,
+    'xz'    : 'dist-xz',
+    'bz2'   : 'dist-bzip2',
+    'gz'    : '',
+}
+
+
 PKG_CONFIGURE_AC_TMPL = """AC_INIT([${name}],[${version}])
 AM_INIT_AUTOMAKE([$compress_am_opt foreign silent-rules subdir-objects])
 
@@ -502,25 +510,31 @@ def show_examples(log=EXAMPLE_LOG):
     print >> sys.stdout, log
 
 
-def main(V=__version__):
-    loglevel = logging.INFO
-    logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
-    logformat = '%(asctime)s [%(levelname)-4s] %(message)s'
-
-    logging.basicConfig(level=loglevel, format=logformat, datefmt=logdatefmt)
-
-    pkg = dict()
+def option_parser(compress_map=COMPRESS_MAP, dist_default=DIST_DEFAULT, V=__version__):
     ver_s = "%prog " + V
 
     workdir = os.path.join(os.path.abspath(os.curdir), 'workdir')
-    packager_name = os.environ.get('USER', 'root')
-    packager_mail = "%s@localhost.localdomain" % packager_name
+    packager = os.environ.get('USER', 'root')
 
-    compress_map = {
-        # extension: am_option,
-        'xz'    : 'dist-xz',
-        'bz2'   : 'dist-bzip2',
-        'gz'    : '',
+    defaults = {
+        'name': 'foo',
+        'group': 'System Environment/Base',
+        'license': 'GPLv3+',
+        'compress': 'xz',
+        'arch': False,
+        'requires': [],
+        'packager_name': packager,
+        'packager_mail': "%s@localhost.localdomain" % packager,
+        'package_version': '0.1',
+        'workdir': workdir,
+        'build_rpm': False,
+        'no_mock': False,
+        'dist': dist_default,
+        'destdir': '',
+        'skip_owned': False,
+        'debug': False,
+        'quiet': False,
+        'show_examples': False,
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -540,45 +554,58 @@ Examples:
   see the output of `%prog --show-examples` for more detailed examples.""",
     version=ver_s
     )
+    
+    p.set_defaults(**defaults)
+
     pog = optparse.OptionGroup(p, "Package metadata options")
-    pog.add_option('-n', '--name', default='foo', help='Package name [%default]')
-    pog.add_option('', '--group', default='System Environment/Base', help='The group of the package [%default]')
-    pog.add_option('', '--license', default='GPLv3+', help='The license of the package [%default]')
+    pog.add_option('-n', '--name', help='Package name [%default]')
+    pog.add_option('', '--group', help='The group of the package [%default]')
+    pog.add_option('', '--license', help='The license of the package [%default]')
     pog.add_option('-S', '--summary', help='The summary of the package')
-    pog.add_option('-z', '--compress', default='xz', type="choice", choices=compress_map.keys(),
-        help="Which to used for compressing the src archive [%default]")
-    pog.add_option('', '--arch', default=False, action='store_true', help='Make package arch-dependent [false - noarch]')
-    pog.add_option('', '--requires', default=[], help='Specify the package requirements as comma separated list')
-    pog.add_option('', '--packager-name', default=packager_name, help="Specify packager's name [%default]")
-    pog.add_option('', '--packager-mail', default=packager_mail, help="Specify packager's mail address [%default]")
-    pog.add_option('', '--package-version', default='0.1', help='Specify the package version [%default]')
+    pog.add_option('-z', '--compress', type="choice", choices=compress_map.keys(), help="Tool to compress src archive [%default]")
+    pog.add_option('', '--arch', action='store_true', help='Make package arch-dependent [false - noarch]')
+    pog.add_option('', '--requires', help='Specify the package requirements as comma separated list')
+    pog.add_option('', '--packager-name', help="Specify packager's name [%default]")
+    pog.add_option('', '--packager-mail', help="Specify packager's mail address [%default]")
+    pog.add_option('', '--package-version', help='Specify the package version [%default]')
     p.add_option_group(pog)
 
     bog = optparse.OptionGroup(p, "Build options")
-    bog.add_option('-w', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
-    bog.add_option('', '--build-rpm', default=False, action='store_true', help='Whether to build binary rpm [no - srpm only]')
-    bog.add_option('', '--no-mock', default=False, action="store_true",
+    bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
+    bog.add_option('', '--build-rpm', action='store_true', help='Whether to build binary rpm [no - srpm only]')
+    bog.add_option('', '--no-mock', action="store_true",
         help='Build RPM with using rpmbuild instead of mock (not recommended)')
-    bog.add_option('', '--dist', default=DIST_DEFAULT, help='Target distribution (for mock) [%default]')
-    bog.add_option('', '--destdir', default='',
-        help="""Destdir (prefix) you want to strip from installed path [%default].
-
-        For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat',
-        and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and
-        make it installed as '/usr/share/foo/a.dat' with rpm built, you can accomplish
-        that by specifying this option such as '--destdir=/builddir/destdir'""")
+    bog.add_option('', '--dist', help='Target distribution (for mock) [%default]')
+    bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
+        "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
+        "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
+        "make it installed as '/usr/share/foo/a.dat' with rpm built, you can accomplish "
+        "that by this option: '--destdir=/builddir/destdir'")
 
     p.add_option_group(bog)
 
     rog = optparse.OptionGroup(p, "Rpm DB options")
-    rog.add_option('', '--skip-owned', default=False, action='store_true', help='Skip files owned by other packages')
+    rog.add_option('', '--skip-owned', action='store_true', help='Skip files owned by other packages')
     p.add_option_group(rog)
 
-    p.add_option('-D', '--debug', default=False, action="store_true", help='Debug mode')
-    p.add_option('-q', '--quiet', default=False, action="store_true", help='Quiet mode')
+    p.add_option('-D', '--debug', action="store_true", help='Debug mode')
+    p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
 
-    p.add_option('', '--show-examples', default=False, action="store_true", help='Show examples')
+    p.add_option('', '--show-examples', action="store_true", help='Show examples')
 
+    return p
+
+
+def main(compress_map=COMPRESS_MAP):
+    loglevel = logging.INFO
+    logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
+    logformat = '%(asctime)s [%(levelname)-4s] %(message)s'
+
+    logging.basicConfig(level=loglevel, format=logformat, datefmt=logdatefmt)
+
+    pkg = dict()
+
+    p = option_parser()
     (options, args) = p.parse_args()
 
     if options.show_examples:
