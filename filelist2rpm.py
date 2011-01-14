@@ -560,6 +560,14 @@ Examples:
     bog.add_option('', '--no-mock', default=False, action="store_true",
         help='Build RPM with using rpmbuild instead of mock (not recommended)')
     bog.add_option('', '--dist', default=DIST_DEFAULT, help='Target distribution (for mock) [%default]')
+    bog.add_option('', '--destdir', default='',
+        help="""Destdir (prefix) you want to strip from installed path [%default].
+
+        For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat',
+        and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and
+        make it installed as '/usr/share/foo/a.dat' with rpm built, you can accomplish
+        that by specifying this option such as '--destdir=/builddir/destdir'""")
+
     p.add_option_group(bog)
 
     rog = optparse.OptionGroup(p, "Rpm DB options")
@@ -624,7 +632,17 @@ Examples:
     files = []
     conflicts = []
 
+    destdir = options.destdir.rstrip(os.path.sep)
+
     for f in __g_filelist(list_f):
+        # FIXME: Is there any better way?
+        if destdir:
+            if f.startswith(destdir):
+                f = f.split(destdir)[1]
+            else:
+                logging.error(" The path '%s' does not start with given destdir '%s'" % (f, destdir))
+                raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
+
         p = filelist_db.get(f, False)
 
         if p and p != pkg['name']:
