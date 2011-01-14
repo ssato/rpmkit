@@ -470,8 +470,10 @@ def gen_rpm_with_mock(pkg):
         __copy(p, os.path.join(pkg['workdir'], '../'))
 
 
-def gen_rpm(pkg):
-    raise NotImplementedError("TBD")
+def gen_rpm_with_rpmbuild(pkg):
+    __run('make rpm', workdir=pkg['workdir'])
+    for p in glob.glob(os.path.join(pkg['workdir'], "*.rpm")):
+        __copy(p, os.path.join(pkg['workdir'], '../'))
 
 
 def do_packaging(pkg, options):
@@ -482,7 +484,10 @@ def do_packaging(pkg, options):
     gen_srpm(pkg)
 
     if options.build_rpm:
-        gen_rpm_with_mock(pkg)
+        if options.no_mock:
+            gen_rpm_with_rpmbuild(pkg)
+        else:
+            gen_rpm_with_mock(pkg)
 
 
 def show_examples(log=EXAMPLE_LOG):
@@ -541,15 +546,20 @@ Examples:
     pog.add_option('', '--package-version', default='0.1', help='Specify the package version [%default]')
     p.add_option_group(pog)
 
+    bog = optparse.OptionGroup(p, "Build options")
+    bog.add_option('-w', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
+    bog.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
+    bog.add_option('', '--no-mock', default=False, action="store_true",
+        help='Build RPM with using rpmbuild instead of mock (not recommended)')
+    bog.add_option('', '--dist', default=DIST_DEFAULT, help='Target distribution (for mock) [%default]')
+    p.add_option_group(bog)
+
     rog = optparse.OptionGroup(p, "Rpm DB options")
     rog.add_option('', '--skip-owned', default=False, action='store_true', help='Skip files owned by other package')
     p.add_option_group(rog)
 
-    p.add_option('-w', '--workdir', default=workdir, help='Working dir to dump outputs [%default]')
     p.add_option('-D', '--debug', default=False, action="store_true", help='Debug mode')
     p.add_option('-q', '--quiet', default=False, action="store_true", help='Quiet mode')
-    p.add_option('', '--build-rpm', default=False, action="store_true", help='Build RPM with mock')
-    p.add_option('', '--dist', default=DIST_DEFAULT, help='Target distribution (for mock) [%default]')
 
     p.add_option('', '--show-examples', default=False, action="store_true", help='Show examples')
 
