@@ -115,7 +115,7 @@ $(rpmdirs):
 rpm srpm: $(PACKAGE).spec dist $(rpmdirs)
 
 rpm:
-\t$(rpmbuild) -bb $< && mv $(rpmdir)/RPMS/*/* $(abs_builddir)
+\t$(rpmbuild) -bb $< && mv $(rpmdir)/RPMS/*/*.rpm $(abs_builddir)
 
 srpm:
 \t$(rpmbuild) -bs $<
