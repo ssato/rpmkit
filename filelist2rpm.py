@@ -567,7 +567,7 @@ def option_parser(compress_map=COMPRESS_MAP, dist_default=DIST_DEFAULT, V=__vers
         'no_mock': False,
         'dist': dist_default,
         'destdir': '',
-        'skip_owned': False,
+        'no_rpmdb': False,
         'debug': False,
         'quiet': False,
         'show_examples': False,
@@ -621,7 +621,7 @@ Examples:
     p.add_option_group(bog)
 
     rog = optparse.OptionGroup(p, "Rpm DB options")
-    rog.add_option('', '--skip-owned', action='store_true', help='Skip files owned by other packages')
+    rog.add_option('', '--no-rpmdb', action='store_true', help='Do not refer rpm db to get extra information of target files')
     p.add_option_group(rog)
 
     p.add_option('-D', '--debug', action="store_true", help='Debug mode')
@@ -693,7 +693,11 @@ def main(compress_map=COMPRESS_MAP):
     else:
         list_f = open(filelist)
 
-    filelist_db = rpmdb_filelist()
+    if options.no_rpmdb:
+        filelist_db = dict()
+    else:
+        filelist_db = rpmdb_filelist()
+
     files = []
     conflicts = dict()
 
@@ -711,13 +715,8 @@ def main(compress_map=COMPRESS_MAP):
         p = filelist_db.get(f, False)
 
         if p and p != pkg['name']:
-            logging.info(" %s is owned by %s." % (f, p))
-            if options.skip_owned:
-                logging.info(" ...skipped: %s" % f)
-                continue
-            else:
-                logging.warn(" ...This package will be conflict with %s." % p)
-                conflicts[f] = p
+            logging.info(" %s is owned by %s, that is, it will be conflicts with %s" % (f, p, p))
+            conflicts[f] = p
 
         files.append(f)
 
