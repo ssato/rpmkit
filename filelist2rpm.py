@@ -140,13 +140,24 @@ BuildArch:      noarch
 #for $req in $requires
 Requires:       $req
 #end for
-#for $c in $conflicts
-Conflicts:      $c
-#end for 
 
 
 %description
 ${summary}
+
+
+#if $conflicts.names
+%package        overrides
+Summary:        Some more extra data
+Group:          $group
+Requires:       %{name} = %{version}-%{release}
+#for $p in $conflicts.names
+Conflicts:      $p
+#end for
+
+%description    overrides
+Some more extra data will override and replace other packages'.
+#end if
 
 
 %prep
@@ -156,9 +167,15 @@ cat <<EOF > README
 $summary
 EOF
 
+#if $conflicts.names
+cat /dev/null > MANIFESTS.overrides
+#for $f in $conflicts.files
+echo $f >> MANIFESTS.overrides
+#end for
+#end if
+
 
 %build
-#test -f Makefile.in || autoreconf -vfi
 %configure
 make
 
@@ -178,9 +195,27 @@ rm -rf \$RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc README
+#if $conflicts.names
+#for $f in $target_filelist
+#if $f not in $conflicts.files
+$f
+#end if
+#end for
+#else
 #for $f in $target_filelist
 $f
 #end for
+#end if
+
+
+#if $conflicts.names
+%files          overrides
+%defattr(-,root,root,-)
+%doc MANIFESTS.overrides
+#for $f in $conflicts.files
+$f
+#end for
+#end if
 
 
 %changelog
@@ -351,8 +386,8 @@ def __tmpl_compile_2(template_src, params, output):
     open(output, 'w').write(tmpl.respond())
 
 
-def __g_filelist(filelist):
-    return (l.rstrip() for l in filelist.readlines() if not l.startswith('#'))
+def __filelist(filelist):
+    return unique([l.rstrip() for l in filelist.readlines() if not l.startswith('#')], key=__count_sep)
 
 
 def __run(cmd_and_args_s, workdir="", log=True):
@@ -660,11 +695,11 @@ def main(compress_map=COMPRESS_MAP):
 
     filelist_db = rpmdb_filelist()
     files = []
-    conflicts = []
+    conflicts = dict()
 
     destdir = options.destdir.rstrip(os.path.sep)
 
-    for f in __g_filelist(list_f):
+    for f in __filelist(list_f):
         # FIXME: Is there any better way?
         if destdir:
             if f.startswith(destdir):
@@ -682,18 +717,17 @@ def main(compress_map=COMPRESS_MAP):
                 continue
             else:
                 logging.warn(" ...This package will be conflict with %s." % p)
-                conflicts.append(p)
+                conflicts[f] = p
 
         files.append(f)
 
-    # sorted it by counting '/' in paths:
-    files2 = unique(files, key=__count_sep)
-    conflicts2 = unique(conflicts)
+    pkg['target_filelist'] = files
+    pkg['conflicts'] = {
+        'names': unique(conflicts.values()),
+        'files': conflicts.keys(),
+    }
 
-    pkg['target_filelist'] = files2
-    pkg['conflicts'] = conflicts2
-
-    pkg['filelist'] = [os.path.join('src', p[1:]) for p in files2]
+    pkg['filelist'] = [os.path.join('src', p[1:]) for p in files]
 
     if options.summary:
         pkg['summary'] = options.summary
