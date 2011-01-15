@@ -46,6 +46,10 @@ import shutil
 import subprocess
 import sys
 
+try:
+    import hashlib # python 2.5+
+except ImportError:
+    import md5 as hashlib
 
 
 __version__ = "0.2.4"
@@ -225,13 +229,8 @@ $f
 
 
 PKG_DIST_INST_FILES_TMPL = """
-pkgdata%(idx)ddir = %(dir)s
-dist_pkgdata%(idx)d_DATA = %(files)s
-"""
-
-
-PKG_DIST_NOINST_FILES_TMPL = """
-dist_noinst_pkgdata%(idx)d_DATA = %(files)s
+pkgdata%(id)sdir = %(dir)s
+dist_pkgdata%(id)s_DATA = %(files)s
 """
 
 
@@ -387,7 +386,7 @@ def __tmpl_compile_2(template_src, params, output):
 
 
 def __filelist(filelist):
-    return unique([l.rstrip() for l in filelist.readlines() if not l.startswith('#')], key=__count_sep)
+    return unique([l.rstrip() for l in filelist.readlines() if not l.startswith('#')], key=__dir)
 
 
 def __run(cmd_and_args_s, workdir="", log=True):
@@ -414,16 +413,24 @@ def __count_sep(path):
     return path.count(os.path.sep)
 
 
+def __dir(path):
+    return os.path.dirname(path)
+
+
+def __to_id(s):
+    return hashlib.sha1(s).hexdigest()
+
+
 def __to_srcdir(path, workdir=''):
     return os.path.join(workdir, 'src', path[1:])
 
 
 # FIXME: Ugly
 def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
-    fs_am_vars_gen = lambda idx, fs: tmpl % \
-        {'idx':idx, 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':os.path.dirname(fs[0])}
+    fs_am_vars_gen = lambda dir, fs: tmpl % \
+        {'id':__to_id(dir), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':dir}
 
-    return ''.join([fs_am_vars_gen(k, [x for x in grp]) for k,grp in groupby(files, __count_sep)])
+    return ''.join([fs_am_vars_gen(d, [x for x in grp]) for d,grp in groupby(files, __dir)])
 
 
 def flattern(xss):
