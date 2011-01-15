@@ -92,7 +92,7 @@ rpm.mk \\
 
 include \$(abs_srcdir)/rpm.mk
 
-$filelist_vars_in_makefile_am
+$files_vars_in_makefile_am
 
 """
 
@@ -196,13 +196,13 @@ rm -rf \$RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc README
 #if $conflicts.names
-#for $f in $target_filelist
+#for $f in $files.targets
 #if $f not in $conflicts.files
 $f
 #end if
 #end for
 #else
-#for $f in $target_filelist
+#for $f in $files.targets
 $f
 #end for
 #end if
@@ -414,12 +414,16 @@ def __count_sep(path):
     return path.count(os.path.sep)
 
 
-# FIXME: Ugly
-def __gen_filelist_vars_in_makefile_am(filelist, tmpl=PKG_DIST_INST_FILES_TMPL):
-    fs_am_vars_gen = lambda idx, fs: tmpl % \
-        {'idx':idx, 'files': " \\\n".join(fs), 'dir':os.path.dirname(fs[0]).replace('src', '')}
+def __to_srcdir(path, workdir=''):
+    return os.path.join(workdir, 'src', path[1:])
 
-    return ''.join([fs_am_vars_gen(k, [x for x in grp]) for k,grp in groupby(filelist, __count_sep)])
+
+# FIXME: Ugly
+def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
+    fs_am_vars_gen = lambda idx, fs: tmpl % \
+        {'idx':idx, 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':os.path.dirname(fs[0])}
+
+    return ''.join([fs_am_vars_gen(k, [x for x in grp]) for k,grp in groupby(files, __count_sep)])
 
 
 def flattern(xss):
@@ -483,12 +487,12 @@ def setup_dirs(pkg):
 
 
 def copy_files(pkg):
-    for src,dst_subdir in zip(pkg['target_filelist'], pkg['filelist']):
-        __copy(src, os.path.join(pkg['workdir'], dst_subdir))
+    for t in pkg['files']['targets']:
+        __copy(t, __to_srcdir(t, pkg['workdir']))
 
 
 def gen_buildfiles(pkg):
-    pkg['filelist_vars_in_makefile_am'] = __gen_filelist_vars_in_makefile_am(pkg['filelist'])
+    pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['files']['targets'])
 
     __tmpl_compile_2(PKG_CONFIGURE_AC_TMPL, pkg, os.path.join(pkg['workdir'], 'configure.ac'))
     __tmpl_compile_2(PKG_MAKEFILE_AM_TMPL,  pkg, os.path.join(pkg['workdir'], 'Makefile.am'))
@@ -498,7 +502,7 @@ def gen_buildfiles(pkg):
     __run('autoreconf -vfi', workdir=pkg['workdir'])
 
 
-def gen_srpm(pkg):
+def build_srpm(pkg):
     __run('./configure', workdir=pkg['workdir'])
     __run('make srpm', workdir=pkg['workdir'])
     for p in glob.glob(os.path.join(pkg['workdir'], "*.src.rpm")):
@@ -506,14 +510,14 @@ def gen_srpm(pkg):
 
 
 
-def gen_rpm_with_mock(pkg):
+def build_rpm_with_mock(pkg):
     """TODO: Identify the (single) src.rpm
     """
     try:
         __run("mock --version > /dev/null")
     except RuntimeError, e:
         logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
-        gen_rpm_with_rpmbuild(pkg)
+        build_rpm_with_rpmbuild(pkg)
         return
 
     __run("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % pkg, workdir=pkg['workdir'])
@@ -522,7 +526,7 @@ def gen_rpm_with_mock(pkg):
         __copy(p, os.path.join(pkg['workdir'], '../'))
 
 
-def gen_rpm_with_rpmbuild(pkg):
+def build_rpm_with_rpmbuild(pkg):
     __run('make rpm', workdir=pkg['workdir'])
     for p in glob.glob(os.path.join(pkg['workdir'], "*.rpm")):
         __copy(p, os.path.join(pkg['workdir'], '../'))
@@ -533,13 +537,13 @@ def do_packaging(pkg, options):
     copy_files(pkg)
     gen_rpm_spec(pkg)
     gen_buildfiles(pkg)
-    gen_srpm(pkg)
+    build_srpm(pkg)
 
     if options.build_rpm:
         if options.no_mock:
-            gen_rpm_with_rpmbuild(pkg)
+            build_rpm_with_rpmbuild(pkg)
         else:
-            gen_rpm_with_mock(pkg)
+            build_rpm_with_mock(pkg)
 
 
 def show_examples(log=EXAMPLE_LOG):
@@ -720,7 +724,11 @@ def main(compress_map=COMPRESS_MAP):
 
         files.append(f)
 
-    pkg['target_filelist'] = files
+    pkg['files'] = {
+        'targets': files,
+        'sources': [os.path.join('src', p[1:]) for p in files]
+    }
+
     pkg['conflicts'] = {
         'names': unique(conflicts.values()),
         'files': conflicts.keys(),
