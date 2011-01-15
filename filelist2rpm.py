@@ -52,7 +52,7 @@ except ImportError:
     import md5 as hashlib
 
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 
 
 # TODO: Detect appropriate distribution (for mock) automatically.
