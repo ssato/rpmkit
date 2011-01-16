@@ -520,7 +520,7 @@ def rpmdb_mi():
 def rpmdb_filelist():
     """TODO: It should be a heavy and time-consuming task. Caching the result somewhere?
     """
-    return dict(flattern([[(f, h[rpm.RPMTAG_NAME]) for f in h[rpm.RPMTAG_FILENAMES]] for h in rpmdb_mi()]))
+    return dict(flattern(([(f, h[rpm.RPMTAG_NAME]) for f in h[rpm.RPMTAG_FILENAMES]] for h in rpmdb_mi())))
 
 
 def gen_rpm_spec(pkg):
