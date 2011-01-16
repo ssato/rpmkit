@@ -340,33 +340,6 @@ $
 
 
 
-def __copy(src, dst):
-    logging.info(" Copying: %s -> %s" % (src, dst))
-
-    if os.path.isdir(src):
-        if os.path.exists(dst):
-            if not os.path.isdir(dst):
-                raise RuntimeError(" '%s' already exists and it's not a directory! Aborting..." % dst)
-        else:
-            logging.info(" The target is a directory")
-        return
-
-    dstdir = os.path.dirname(dst)
-
-    if os.path.exists(dstdir):
-        if not os.path.isdir(dstdir):
-            raise RuntimeError(" '%s' (in which %s will be) already exists and it's not a directory! Aborting..." % (dstdir, src))
-    else:
-        os.makedirs(dstdir, 0755)
-
-    # NOTE: shutil.copy2 is corresponding to 'cp --preserve=mode,ownership,timestamps'
-    # and sufficient for most cases, I guess. But to make safer, choose 'cp --preserve=all'
-    # at present.
-    #
-    #shutil.copy2(src, dst)
-    __run("cp -a %s %s" % (src, dst), log=False)
-
-
 def __setup_dir(dir):
     logging.info(" Creating a directory: %s" % dir)
 
@@ -411,6 +384,33 @@ def __run(cmd_and_args_s, workdir="", log=True):
         return (output, errors)
     else:
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_and_args_s, errors))
+
+
+def __copy(src, dst):
+    logging.info(" Copying: %s -> %s" % (src, dst))
+
+    if os.path.isdir(src):
+        if os.path.exists(dst):
+            if not os.path.isdir(dst):
+                raise RuntimeError(" '%s' already exists and it's not a directory! Aborting..." % dst)
+        else:
+            logging.info(" The target is a directory")
+        return
+
+    dstdir = os.path.dirname(dst)
+
+    if os.path.exists(dstdir):
+        if not os.path.isdir(dstdir):
+            raise RuntimeError(" '%s' (in which %s will be) already exists and it's not a directory! Aborting..." % (dstdir, src))
+    else:
+        os.makedirs(dstdir, 0755)
+
+    # NOTE: shutil.copy2 is corresponding to 'cp --preserve=mode,ownership,timestamps'
+    # and sufficient for most cases, I guess. But to make safer, choose 'cp --preserve=all'
+    # at present.
+    #
+    #shutil.copy2(src, dst)
+    __run("cp -a %s %s" % (src, dst), log=False)
 
 
 def __count_sep(path):
