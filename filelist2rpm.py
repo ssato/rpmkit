@@ -32,7 +32,7 @@
 #
 
 from Cheetah.Template import Template
-from itertools import groupby
+from itertools import groupby, count
 
 import datetime
 import glob
@@ -48,8 +48,12 @@ import sys
 
 try:
     import hashlib # python 2.5+
+    def digest(s):
+        return hashlib.sha1(s).hexdigest()
 except ImportError:
-    import md5 as hashlib
+    import sha
+    def digest(s):
+        return sha.sha(s).hexdigest()
 
 
 __version__ = "0.2.5"
@@ -418,7 +422,7 @@ def __dir(path):
 
 
 def __to_id(s):
-    return hashlib.sha1(s).hexdigest()
+    return digest(s)
 
 
 def __to_srcdir(path, workdir=''):
@@ -427,8 +431,9 @@ def __to_srcdir(path, workdir=''):
 
 # FIXME: Ugly
 def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
+    cntr = count()
     fs_am_vars_gen = lambda dir, fs: tmpl % \
-        {'id':__to_id(dir), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':dir}
+        {'id': str(cntr.next()), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':dir}
 
     return ''.join([fs_am_vars_gen(d, [x for x in grp]) for d,grp in groupby(files, __dir)])
 
