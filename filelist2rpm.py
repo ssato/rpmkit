@@ -363,13 +363,16 @@ def __tmpl_compile_2(template_src, params, output):
 
 
 def __filelist(filelist):
-    return unique([l.rstrip() for l in filelist.readlines() if not l.startswith('#')], key=__dir)
+    """Read file path from given list file line by line and returns sorted path
+    list (key = __dir). Empty lines or lines start with '#' are ignored.
+    """
+    return unique([l.rstrip() for l in filelist.readlines() if l and not l.startswith('#')], key=__dir)
 
 
 def __run(cmd_and_args_s, workdir="", log=True):
     """
-    >>> __run('ls /dev/null')
-    (0, '/dev/null')
+    >>> __run("ls /dev/null")
+    ('/dev/null\\n', '')
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
@@ -387,6 +390,8 @@ def __run(cmd_and_args_s, workdir="", log=True):
 
 
 def __copy(src, dst):
+    """Copy $src to $dst.
+    """
     logging.info(" Copying: %s -> %s" % (src, dst))
 
     if os.path.isdir(src):
@@ -414,10 +419,24 @@ def __copy(src, dst):
 
 
 def __count_sep(path):
+    """Count the separator (ex. '/' in Unix like systems) in given path.
+
+    >>> __count_sep('')
+    0
+    >>> __count_sep('/')
+    1
+    >>> __count_sep('/a/b/c')
+    3
+    """
     return path.count(os.path.sep)
 
 
 def __dir(path):
+    """dirname.
+
+    >>> __dir('/a/b/c')
+    '/a/b'
+    """
     return os.path.dirname(path)
 
 
@@ -426,19 +445,36 @@ def __to_id(s):
 
 
 def __to_srcdir(path, workdir=''):
-    return os.path.join(workdir, 'src', path[1:])
+    """
+    >>> __to_srcdir('/a/b/c')
+    'src/a/b/c'
+    >>> __to_srcdir('a/b')
+    'src/a/b'
+    >>> __to_srcdir('/')
+    'src/'
+    """
+    assert path != '', "Empty path was given"
+    return os.path.join(workdir, 'src', path.strip(os.path.sep))
 
 
-# FIXME: Ugly
 def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
+    """FIXME: ugly code
+    """
     cntr = count()
-    fs_am_vars_gen = lambda dir, fs: tmpl % \
-        {'id': str(cntr.next()), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':dir}
+    fmt = lambda d, fs: tmpl % {'id': str(cntr.next()), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':d}
 
-    return ''.join([fs_am_vars_gen(d, [x for x in grp]) for d,grp in groupby(files, __dir)])
+    return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(files, __dir)])
 
 
 def flattern(xss):
+    """
+    >>> flattern([])
+    []
+    >>> flattern([[1,2,3],[4,5]])
+    [1, 2, 3, 4, 5]
+    >>> flattern([[1,2,[3]],[4,[5,6]]])
+    [1, 2, 3, 4, 5, 6]
+    """
     ret = []
     for xs in xss:
         if isinstance(xs, list):
@@ -455,6 +491,8 @@ def unique(xs, cmp_f=cmp, key=None):
     @xs     list of object (x)
     @cmp_f  comparison function for x
 
+    >>> unique([])
+    []
     >>> unique([0, 3, 1, 2, 1, 0, 4, 5])
     [0, 1, 2, 3, 4, 5]
     """
@@ -480,7 +518,7 @@ def rpmdb_mi():
 
 
 def rpmdb_filelist():
-    """TODO: It should be a heavy and time-consuming task.
+    """TODO: It should be a heavy and time-consuming task. Caching the result somewhere?
     """
     return dict(flattern([[(f, h[rpm.RPMTAG_NAME]) for f in h[rpm.RPMTAG_FILENAMES]] for h in rpmdb_mi()]))
 
@@ -562,6 +600,11 @@ def show_examples(log=EXAMPLE_LOG):
     print >> sys.stdout, log
 
 
+def run_tests():
+    import doctest
+    doctest.testmod(verbose=True)
+
+
 def option_parser(compress_map=COMPRESS_MAP, dist_default=DIST_DEFAULT, V=__version__):
     ver_s = "%prog " + V
 
@@ -587,6 +630,7 @@ def option_parser(compress_map=COMPRESS_MAP, dist_default=DIST_DEFAULT, V=__vers
         'debug': False,
         'quiet': False,
         'show_examples': False,
+        'test': False,
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -644,6 +688,7 @@ Examples:
     p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
 
     p.add_option('', '--show-examples', action="store_true", help='Show examples')
+    p.add_option('-T', '--test', action="store_true", help='Run tests')
 
     return p
 
@@ -662,6 +707,10 @@ def main(compress_map=COMPRESS_MAP):
 
     if options.show_examples:
         show_examples()
+        sys.exit(0)
+
+    if options.test:
+        run_tests()
         sys.exit(0)
 
     if len(args) < 1:
