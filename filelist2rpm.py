@@ -454,6 +454,7 @@ def __to_srcdir(path, workdir=''):
     'src/'
     """
     assert path != '', "Empty path was given"
+
     return os.path.join(workdir, 'src', path.strip(os.path.sep))
 
 
@@ -538,7 +539,8 @@ def setup_dirs(pkg):
 
 def copy_files(pkg):
     for t in pkg['files']['targets']:
-        __copy(t, __to_srcdir(t, pkg['workdir']))
+        t2 = (pkg['destdir'] and os.path.join(pkg['destdir'], t.strip(os.path.sep)) or t)
+        __copy(t2, __to_srcdir(t, pkg['workdir']))
 
 
 def gen_buildfiles(pkg):
@@ -767,6 +769,7 @@ def main(compress_map=COMPRESS_MAP):
     conflicts = dict()
 
     destdir = options.destdir.rstrip(os.path.sep)
+    pkg['destdir'] = destdir
 
     for f in __filelist(list_f):
         # FIXME: Is there any better way?
