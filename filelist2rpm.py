@@ -335,7 +335,36 @@ $ rpm -qlp 2/resolvconf-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
 /usr/share/doc/resolvconf-0.1
 /usr/share/doc/resolvconf-0.1/README
-$ 
+$
+$ ls
+filelist2rpm.py  srv
+$ ls srv/isos/
+rhel-server-5.6-i386-dvd.iso
+$ echo /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso | \                                                                                                        > python filelist2rpm.py -n rhel-server-5-6-i386-dvd-iso -w ./w \
+> --destdir /tmp/t/ --build-rpm --no-mock -
+10:50:44 [INFO]  Creating a directory: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1
+10:50:44 [INFO]  Creating a directory: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/src
+10:50:44 [INFO]  Copying: /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/src/srv/isos/rhel-server-5.6-i386-dvd.iso
+10:50:44 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso.spec -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/..
+10:50:44 [INFO]  Run: autoreconf -vfi
+10:50:52 [INFO]  Run: ./configure
+10:50:54 [INFO]  Run: make srpm
+10:50:57 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.src.rpm -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/../
+10:50:57 [INFO]  Run: make rpm
+10:51:03 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/../
+10:51:03 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.src.rpm -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/../
+$ ls
+filelist2rpm.py  srv  w
+$ ls w/rhel-server-5-6-i386-dvd-iso-0.1
+Makefile     autom4te.cache  configure.ac                                        rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.src.rpm  rpm
+Makefile.am  config.log      install-sh                                          rhel-server-5-6-i386-dvd-iso-0.1.tar.gz          rpm.mk
+Makefile.in  config.status   missing                                             rhel-server-5-6-i386-dvd-iso-0.1.tar.xz          src
+aclocal.m4   configure       rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm  rhel-server-5-6-i386-dvd-iso.spec
+$ rpm -qlp w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm
+/srv/isos/rhel-server-5.6-i386-dvd.iso
+/usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1
+/usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1/README
+$
 """
 
 
