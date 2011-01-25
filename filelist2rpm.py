@@ -36,24 +36,32 @@ from itertools import groupby, count
 
 import datetime
 import glob
+import grp
 import locale
 import logging
 import optparse
 import os
 import os.path
+import pwd
 import rpm
 import shutil
+import stat
 import subprocess
 import sys
 
 try:
-    import hashlib # python 2.5+
-    def digest(s):
-        return hashlib.sha1(s).hexdigest()
+    import xattr   # pyxattr
 except ImportError:
-    import sha
-    def digest(s):
-        return sha.sha(s).hexdigest()
+    # Make up a 'Null-Object' like class mimics xattr module.
+    class xattr:
+        def get_all(*args):
+            return ()
+        def set(*args):
+            return ()
+
+        get_all = classmethod(get_all)
+        set = classmethod(set)
+
 
 
 __version__ = "0.2.5"
@@ -368,6 +376,199 @@ $
 """
 
 
+CHECKSUM_NONE = '0000000000000000000000000000000000000000'
+(TYPE_FILE, TYPE_DIR, TYPE_SYMLINK, TYPE_OTHER) = range(0,4)
+
+
+
+class ODict(dict):
+    """
+    Dict class works like object.
+
+    >>> o = ODict()
+    >>> o['a'] = 'aaa'
+    >>> assert o.a == o['a']
+    >>> assert o.a == 'aaa'
+    >>> o.a = 'bbb'
+    >>> assert o.a == 'bbb'
+    >>> assert o['a'] == o.a
+    """
+
+    def __getattr__(self, key):
+        return self.get(key, None)
+
+    def __setattr__(self, key, val):
+        self[key] = val
+
+
+
+class FileInfo(ODict):
+    """The class of which objects will hold meta data of regular files, dirs
+    and symlinks. This class is for regular file and the super class for other
+    object types at once.
+    """
+    __ftype = TYPE_FILE
+
+    def __init__(self, path, mode, uid, gid, checksum, xattrs, **kwargs):
+        self['path'] = path
+        self['mode'] = mode
+        (self['uid'], self['gid']) = (uid, gid)
+        self['checksum'] = checksum
+        self['xattrs'] = xattrs or {}
+
+        self['filetype'] = self.__ftype
+
+        if kwargs:
+            self.update(kwargs)
+
+    def _remove(self, target):
+        os.remove(target)
+
+    def _copy(self, dest):
+        """Two steps needed to keep the content and metadata of the original file:
+
+        1. Copy itself and its some metadata (owner, mode, etc.)
+        2. Copy extra metadata not copyable with the above.
+        """
+        shutil.copy2(self.path(), dest)
+
+        _xattrs = self.xattrs()
+        if _xattrs:
+            for k,v in _xattrs.iteritems():
+                xattr.set(dest, k, v)
+
+    def __eq__(self, other):
+        """(==) method. True if self and other exactly came from the same
+        object, that is, these contents and metadata are exactly same.
+
+        TODO: Compare the part of the path?
+          ex. lhs.path: '/path/to/xyz', rhs.path: '/var/lib/sp2/updates/path/to/xyz'
+        """
+        keys = ('mode', 'uid', 'gid', 'checksum', 'filetype')
+        if not all(((self.get(key) == other.get(key)) for key in keys)):
+            return False
+
+        _xattrs = self.get('xattrs')
+        if _xattrs:
+            _oxattrs = other.get('xattrs')
+            if not _oxattrs:
+                return False
+
+            return all(((_xattrs.get(attr) == _oxattrs.get(attr)) for attr in _xattrs.keys()))
+
+        return True  # The case that xattrs is not available but others are ok.
+
+    def hasSameContent(self, other):
+        """Metadata (path, uid, gid, etc.) do not match but the checksums are
+        same. This indicatest that contents of both are same.
+        """
+        return self.get('checksum') == other.get('checksum')
+
+    def copyable(self):
+        return True
+
+    def path(self): return self['path']
+    def mode(self): return self['mode']
+    def uid(self):  return self['uid']
+    def gid(self):  return self['gid']
+    def checksum(self):  return self['checksum']
+    def md5sum(self):  return self.checksum()  # alias
+    def xattrs(self):  return self['xattrs']
+    def filetype(self):  return self['filetype']
+
+    def remove(self):
+        self._remove(self.path())
+
+    def copy(self, dest, force=False):
+        """Copy self.path() to $dest.  'Copy' action varys depends on actual
+        filetype so that inherited class must overrride this and related
+        methods (_remove and _copy).
+
+        @param  dest      string  The destination to copy
+        @param  force     bool    Force overwrite it even if exists when True
+        """
+        assert self.path() != dest, "Try copying to the same path!"
+
+        if not self.copyable():
+            logging.warn("Cannot copyable.")
+            return False
+
+        if os.path.exists(dest):
+            logging.info("Copying destination already exists: '%s'" % dest)
+
+            # TODO: It has negative impact for symlinks.
+            #
+            #if os.path.realpath(self.path()) == os.path.realpath(dest):
+            #    logging.warn("Copying src and dest are same actually.")
+            #    return False
+
+            if force:
+                logging.info("Removing it...")
+                self._remove(dest)
+            else:
+                logging.warn("Do not overwrite it")
+                return False
+        else:
+            os.makedirs(os.path.dirname(dest))
+
+        logging.info("Copying from '%s' to '%s'" % (self.path(), dest))
+        self._copy(dest)
+
+        return True
+
+
+
+class DirInfo(FileInfo):
+    __ftype = TYPE_DIR
+
+    def __init__(self, path, mode, uid, gid, checksum, xattrs):
+        FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
+
+    def _remove(self, target):
+        os.removedirs(target)
+
+    def _copy(self, dest):
+        os.makedirs(dest, mode=self.mode())
+        try:
+            os.chown(dest, self.uid(), self.gid())
+        except OSError, e:
+            logging.warn(e)
+        shutil.copystat(self.path(), dest)
+
+        # These are not copyed with the above.
+        _xattrs = self.xattrs()
+        if _xattrs:
+            for k,v in _xattrs.iteritems():
+                xattr.set(dest, k, v)
+
+
+
+class SymlinkInfo(FileInfo):
+    __ftype = TYPE_SYMLINK
+
+    def __init__(self, path, mode, uid, gid, checksum, xattrs):
+        FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
+        self['linkto'] = os.path.realpath(path)
+
+    def linkto(self): return self['linkto']
+
+    def _copy(self, dest):
+        os.symlink(self.linkto(), dest)
+
+
+
+class OtherInfo(FileInfo):
+    """Special case that lstat() failed and cannot stat $path.
+    """
+    __ftype = TYPE_OTHER
+
+    def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=CHECKSUM_NONE, xattrs={}):
+        FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
+
+    def copyable(self):
+        return False
+
+
 
 def __setup_dir(dir):
     logging.info(" Creating a directory: %s" % dir)
@@ -467,10 +668,6 @@ def __dir(path):
     '/a/b'
     """
     return os.path.dirname(path)
-
-
-def __to_id(s):
-    return digest(s)
 
 
 def __to_srcdir(path, workdir=''):
