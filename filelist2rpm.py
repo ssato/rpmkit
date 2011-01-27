@@ -381,11 +381,11 @@ CHECKSUM_NONE = '0000000000000000000000000000000000000000'
 
 
 
-class ODict(dict):
+class ObjDict(dict):
     """
     Dict class works like object.
 
-    >>> o = ODict()
+    >>> o = ObjDict()
     >>> o['a'] = 'aaa'
     >>> assert o.a == o['a']
     >>> assert o.a == 'aaa'
@@ -402,10 +402,9 @@ class ODict(dict):
 
 
 
-class FileInfo(ODict):
-    """The class of which objects will hold meta data of regular files, dirs
-    and symlinks. This class is for regular file and the super class for other
-    object types at once.
+class FileInfo(ObjDict):
+    """The class of which objects to hold meta data of regular files, dirs and
+    symlinks. This is for regular file and the super class for other types.
     """
     __ftype = TYPE_FILE
 
@@ -459,33 +458,24 @@ class FileInfo(ODict):
         return True  # The case that xattrs is not available but others are ok.
 
     def hasSameContent(self, other):
-        """Metadata (path, uid, gid, etc.) do not match but the checksums are
-        same. This indicatest that contents of both are same.
+        """These metadata (path, uid, gid, etc.) do not match but the checksums
+        are same. This indicatest that contents are same.
         """
         return self.get('checksum') == other.get('checksum')
 
     def copyable(self):
         return True
 
-    def path(self): return self['path']
-    def mode(self): return self['mode']
-    def uid(self):  return self['uid']
-    def gid(self):  return self['gid']
-    def checksum(self):  return self['checksum']
-    def md5sum(self):  return self.checksum()  # alias
-    def xattrs(self):  return self['xattrs']
-    def filetype(self):  return self['filetype']
-
     def remove(self):
         self._remove(self.path())
 
     def copy(self, dest, force=False):
-        """Copy self.path() to $dest.  'Copy' action varys depends on actual
-        filetype so that inherited class must overrride this and related
-        methods (_remove and _copy).
+        """Copy to $dest.  'Copy' action varys depends on actual filetype so
+        that inherited class must overrride this and related methods (_remove
+        and _copy).
 
-        @param  dest      string  The destination to copy
-        @param  force     bool    Force overwrite it even if exists when True
+        @dest      string  The destination to copy
+        @force     bool    Force overwrite it even if exists when True
         """
         assert self.path() != dest, "Try copying to the same path!"
 
@@ -550,7 +540,8 @@ class SymlinkInfo(FileInfo):
         FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
         self['linkto'] = os.path.realpath(path)
 
-    def linkto(self): return self['linkto']
+    def linkto(self):
+        return self['linkto']
 
     def _copy(self, dest):
         os.symlink(self.linkto(), dest)
@@ -590,13 +581,6 @@ def __tmpl_compile(template_path, params, output):
 def __tmpl_compile_2(template_src, params, output):
     tmpl = Template(source=template_src, searchList=params)
     open(output, 'w').write(tmpl.respond())
-
-
-def __filelist(filelist):
-    """Read file path from given list file line by line and returns sorted path
-    list (key = __dir). Empty lines or lines start with '#' are ignored.
-    """
-    return unique([l.rstrip() for l in filelist.readlines() if l and not l.startswith('#')], key=__dir)
 
 
 def __run(cmd_and_args_s, workdir="", log=True):
@@ -748,6 +732,14 @@ def rpmdb_filelist():
     """TODO: It should be a heavy and time-consuming task. Caching the result somewhere?
     """
     return dict(flattern(([(f, h[rpm.RPMTAG_NAME]) for f in h[rpm.RPMTAG_FILENAMES]] for h in rpmdb_mi())))
+
+
+def process_listfile(filelist):
+    """Read file path from given list file line by line and returns sorted path
+    list (key = __dir). Empty lines or lines start with '#' are ignored.
+    """
+    #return unique([l.rstrip() for l in filelist.readlines() if l and not l.startswith('#')], key=__dir)
+    return unique([l.rstrip() for l in filelist.readlines() if l and not l.startswith('#')], key=__dir)
 
 
 def gen_rpm_spec(pkg):
@@ -997,7 +989,7 @@ def main(compress_map=COMPRESS_MAP):
     destdir = options.destdir.rstrip(os.path.sep)
     pkg['destdir'] = destdir
 
-    for f in __filelist(list_f):
+    for f in process_listfile(list_f):
         # FIXME: Is there any better way?
         if destdir:
             if f.startswith(destdir):
