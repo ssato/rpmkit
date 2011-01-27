@@ -734,12 +734,11 @@ def rpmdb_filelist():
     return dict(flattern(([(f, h[rpm.RPMTAG_NAME]) for f in h[rpm.RPMTAG_FILENAMES]] for h in rpmdb_mi())))
 
 
-def process_listfile(filelist):
+def process_listfile(list_f):
     """Read file path from given list file line by line and returns sorted path
     list (key = __dir). Empty lines or lines start with '#' are ignored.
     """
-    #return unique([l.rstrip() for l in filelist.readlines() if l and not l.startswith('#')], key=__dir)
-    return unique([l.rstrip() for l in filelist.readlines() if l and not l.startswith('#')], key=__dir)
+    return unique([l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')], key=__dir)
 
 
 def gen_rpm_spec(pkg):
