@@ -645,10 +645,12 @@ def __count_sep(path):
     return path.count(os.path.sep)
 
 
-def __dir(path):
+def dirname(path):
     """dirname.
 
-    >>> __dir('/a/b/c')
+    >>> dirname('/a/b/c')
+    '/a/b'
+    >>> dirname('/a/b/')
     '/a/b'
     """
     return os.path.dirname(path)
@@ -674,7 +676,7 @@ def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
     cntr = count()
     fmt = lambda d, fs: tmpl % {'id': str(cntr.next()), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':d}
 
-    return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(files, __dir)])
+    return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(files, dirname)])
 
 
 def flattern(xss):
@@ -735,10 +737,10 @@ def rpmdb_filelist():
 
 
 def process_listfile(list_f):
-    """Read file path from given list file line by line and returns sorted path
-    list (key = __dir). Empty lines or lines start with '#' are ignored.
+    """Read paths from given file line by line and returns path list sorted by
+    dir names. Empty lines or lines start with '#' are ignored.
     """
-    return unique([l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')], key=__dir)
+    return unique([l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')], key=dirname)
 
 
 def gen_rpm_spec(pkg):
