@@ -251,8 +251,8 @@ Homepage: file:///${workdir}
 Package: ${name}
 Section: database
 Architecture: any
-#set $requires_list = ', '.join($requires)
-Depends: \${misc:Depends}, \${shlibs:Depends}, $requires_list
+#set $requires_list = ', ' + ', '.join($requires)
+Depends: \${misc:Depends}, \${shlibs:Depends}$requires_list
 Description: ${summary}
   ${summary}
 """
@@ -272,7 +272,7 @@ DEB_INSTALL_DIRS_${name} =          \
 #set $dir = os.path.dirname($f)
 #if $dir not in $dirs
 \t$dir \\
-#set $dirs.append($dir)
+#set $dirs = $dirs + [$dir]
 #end if
 #end if
 #end for
@@ -283,16 +283,14 @@ install/${name}::
 """
 
 
-PKG_DEB_COPYRIGHT = """
-This package was debianized by ${packager_name} <${packager_mail}> on
+PKG_DEB_COPYRIGHT = """This package was debianized by ${packager_name} <${packager_mail}> on
 ${timestamp}.
 
 This package is distributed under ${license}.
 """
 
 
-PKG_DEB_CHANGELOG = """
-${name} (${version}) unstable; urgency=low
+PKG_DEB_CHANGELOG = """${name} (${version}) unstable; urgency=low
 
   * New upstream release
 
@@ -828,11 +826,14 @@ def gen_buildfiles(pkg):
 
     open(os.path.join(pkg['workdir'], 'rpm.mk'), 'w').write(PKG_MAKEFILE_RPMMK)
 
-    os.makedirs(os.path.join(pkg['workdir'], 'debian'))
-    __tmpl_compile_2(PKG_DEB_RULES,  pkg, os.path.join(pkg['workdir'], 'debian', 'rules'))
-    __tmpl_compile_2(PKG_DEB_CONTROL,  pkg, os.path.join(pkg['workdir'], 'debian', 'control'))
-    __tmpl_compile_2(PKG_DEB_COPYRIGHT,  pkg, os.path.join(pkg['workdir'], 'debian', 'copyright'))
-    __tmpl_compile_2(PKG_DEB_CHANGELOG,  pkg, os.path.join(pkg['workdir'], 'debian', 'changelog'))
+    debiandir = os.path.join(pkg['workdir'], 'debian')
+    if not os.path.exists(debiandir):
+        os.makedirs(debiandir)
+
+    __tmpl_compile_2(PKG_DEB_RULES,  pkg, os.path.join(debiandir, 'rules'))
+    __tmpl_compile_2(PKG_DEB_CONTROL,  pkg, os.path.join(debiandir, 'control'))
+    __tmpl_compile_2(PKG_DEB_COPYRIGHT,  pkg, os.path.join(debiandir, 'copyright'))
+    __tmpl_compile_2(PKG_DEB_CHANGELOG,  pkg, os.path.join(debiandir, 'changelog'))
 
     __run('autoreconf -vfi', workdir=pkg['workdir'])
 
