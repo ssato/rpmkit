@@ -1,6 +1,6 @@
 #! /usr/bin/python
 #
-# dpack.py - Data | Delta Packager, successor of filelist2rpm.py.
+# dpack.py - Data Packager, successor of filelist2rpm.py.
 #
 # It will try gathering files in given file list, and then:
 #
@@ -26,6 +26,8 @@
 #
 # SEE ALSO: http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-creating-rpms.html
 # SEE ALSO: http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-rpm-programming-python.html
+# SEE ALSO: http://cdbs-doc.duckcorp.org
+# SEE ALSO: https://wiki.duckcorp.org/DebianPackagingTutorial/CDBS
 #
 
 from Cheetah.Template import Template
@@ -81,7 +83,7 @@ PKG_COMPRESSORS = {
 
 
 TEMPLATES = {
-    'configure.ac': """\
+    "configure.ac": """\
 AC_INIT([$name],[$version])
 AM_INIT_AUTOMAKE([${compress.am_opt} foreign subdir-objects])
 
@@ -93,30 +95,23 @@ AC_PROG_LN_S
 AC_PROG_MKDIR_P
 AC_PROG_SED
 
-dnl TODO: Is it better to generate $name.spec from $name.spec.in ?
+dnl TODO: Is it better to generate ${name}.spec from ${name}.spec.in ?
 AC_CONFIG_FILES([
 Makefile
 ])
 
 AC_OUTPUT
 """,
-}
-
-
-# FIXME: Ugly hack
-PKG_MAKEFILE_AM_TMPL = """EXTRA_DIST = \\
-${name}.spec \\
-rpm.mk \\
-\$(NULL)
+    # FIXME: Ugly hack in $files_vars_in_makefile_am.
+    "Makefile.am": """\
+EXTRA_DIST = ${name}.spec rpm.mk
 
 include \$(abs_srcdir)/rpm.mk
 
 $files_vars_in_makefile_am
-
-"""
-
-
-PKG_MAKEFILE_RPMMK = """
+""",
+    "rpm.mk": """\
+#raw
 rpmdir = $(abs_builddir)/rpm
 rpmdirs = $(addprefix $(rpmdir)/,RPMS BUILD BUILDROOT)
 
@@ -126,7 +121,6 @@ rpmbuild = rpmbuild \
 --define "_sourcedir $(abs_builddir)" \
 --define "_buildroot $(rpmdir)/BUILDROOT" \
 $(NULL)
-
 
 $(rpmdirs):
 \t$(MKDIR_P) $@
@@ -140,17 +134,16 @@ srpm:
 \t$(rpmbuild) -bs $<
 
 .PHONY: rpm srpm
-"""
-
-
-PKG_RPM_SPEC_TMPL = """
-Name:           ${name}
-Version:        ${version}
+#end raw
+""",
+    "package.spec": """\
+Name:           $name
+Version:        $version
 Release:        1%{?dist}
-Summary:        ${summary}
-Group:          ${group}
-License:        ${license}
-URL:            file:///${workdir}
+Summary:        $summary
+Group:          $group
+License:        $license
+URL:            file:///$workdir
 Source0:        %{name}-%{version}.tar.${compress.ext}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 #if $noarch
@@ -240,35 +233,31 @@ $f
 %changelog
 * ${timestamp} ${packager_name} <${packager_mail}> - ${version}-${release}
 - Initial packaging.
-"""
-
-
-
-PKG_DEB_CONTROL = """Source: ${name}
+""",
+    "debian/control": """\
+Source: $name
 Priority: optional
-Maintainer: ${packager_name} <${packager_mail}>
+Maintainer: $packager_name <$packager_mail>
 Build-Depends: debhelper (>= 5), cdbs, autotools-dev
 Standards-Version: 3.7.3
-Homepage: file:///${workdir}
+Homepage: file:///$workdir
 
-Package: ${name}
+Package: $name
 Section: database
 Architecture: any
 #set $requires_list = ', ' + ', '.join($requires)
 Depends: \${misc:Depends}, \${shlibs:Depends}$requires_list
-Description: ${summary}
-  ${summary}
-"""
-
-
-
-PKG_DEB_RULES = """#!/usr/bin/make -f
+Description: $summary
+  $summary
+""",
+    "debian/rules": """\
+#!/usr/bin/make -f
 #import os.path
 
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/autotools.mk
 
-DEB_INSTALL_DIRS_${name} =          \
+DEB_INSTALL_DIRS_${name} = \\
 #set $dirs = []
 #for $f in $files.targets
 #if $f not in $conflicts.files
@@ -281,24 +270,23 @@ DEB_INSTALL_DIRS_${name} =          \
 #end for
 \t\$(NULL)
 
-install/${name}::
-\tcp -ar debian/tmp/* debian/${name}/
-"""
+install/$name::
+\tcp -ar debian/tmp/* debian/$name/
+""",
+    "debian/copyright": """\
+This package was debianized by $packager_name <$packager_mail> on
+$timestamp.
 
-
-PKG_DEB_COPYRIGHT = """This package was debianized by ${packager_name} <${packager_mail}> on
-${timestamp}.
-
-This package is distributed under ${license}.
-"""
-
-
-PKG_DEB_CHANGELOG = """${name} (${version}) unstable; urgency=low
+This package is distributed under $license.
+""",
+    "debian/changelog": """\
+$name ($version) unstable; urgency=low
 
   * New upstream release
 
- -- ${packager_name} <${packager_mail}> ${timestamp}
-"""
+ -- $packager_name <$packager_mail> $timestamp
+""",
+}
 
 
 
@@ -738,17 +726,6 @@ def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
     return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(files, dirname)])
 
 
-def __generate_from_template(filepath, params, workdir):
-    """Generate file from template.
-
-    @filepath   Path of the file relative to workdir, ex. "debian/rules", "configure.ac".
-    @params     Dict object holding parameters passed to the template engine.
-    """
-    global TEMPLATES
-
-    __tmpl_compile_2(TEMPLATES[filepath], params, os.path.join(workdir, filepath))
-
-
 def flattern(xss):
     """
     >>> flattern([])
@@ -813,14 +790,6 @@ def process_listfile(list_f):
     return unique([l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')], key=dirname)
 
 
-def gen_rpm_spec(pkg):
-    wdir = pkg['workdir']
-
-    spec_f = os.path.join(wdir, "%s.spec" % pkg['name'])
-    __tmpl_compile_2(PKG_RPM_SPEC_TMPL, pkg, spec_f)
-    __copy(spec_f, os.path.join(wdir, '..'))
-
-
 def setup_dirs(pkg):
     __setup_dir(pkg['workdir'])
     __setup_dir(pkg['srcdir'])
@@ -836,22 +805,27 @@ def gen_buildfiles(pkg):
     global TEMPLATES
 
     workdir = pkg['workdir']
-
     pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['files']['targets'])
 
-    __generate_from_template('configure.ac', pkg, workdir)
-    __tmpl_compile_2(PKG_MAKEFILE_AM_TMPL,  pkg, os.path.join(pkg['workdir'], 'Makefile.am'))
+    def genfile(filepath, output=""):
+        __tmpl_compile_2(TEMPLATES[filepath], pkg, os.path.join(workdir, (output or filepath)))
 
-    open(os.path.join(pkg['workdir'], 'rpm.mk'), 'w').write(PKG_MAKEFILE_RPMMK)
+    genfile('configure.ac')
+    genfile('Makefile.am')
+    genfile('rpm.mk')
 
-    debiandir = os.path.join(pkg['workdir'], 'debian')
+    spec_f = "%s.spec" % pkg['name']
+    genfile("package.spec", spec_f)
+    __copy(os.path.join(workdir, spec_f), os.path.join(workdir, '..'))
+
+    debiandir = os.path.join(workdir, 'debian')
     if not os.path.exists(debiandir):
         os.makedirs(debiandir)
 
-    __tmpl_compile_2(PKG_DEB_RULES,  pkg, os.path.join(debiandir, 'rules'))
-    __tmpl_compile_2(PKG_DEB_CONTROL,  pkg, os.path.join(debiandir, 'control'))
-    __tmpl_compile_2(PKG_DEB_COPYRIGHT,  pkg, os.path.join(debiandir, 'copyright'))
-    __tmpl_compile_2(PKG_DEB_CHANGELOG,  pkg, os.path.join(debiandir, 'changelog'))
+    genfile('debian/rules')
+    genfile('debian/control')
+    genfile('debian/copyright')
+    genfile('debian/changelog')
 
     __run('autoreconf -vfi', workdir=pkg['workdir'])
 
@@ -859,9 +833,9 @@ def gen_buildfiles(pkg):
 def build_srpm(pkg):
     __run('./configure', workdir=pkg['workdir'])
     __run('make srpm', workdir=pkg['workdir'])
+
     for p in glob.glob(os.path.join(pkg['workdir'], "*.src.rpm")):
         __copy(p, os.path.join(pkg['workdir'], '../'))
-
 
 
 def build_rpm_with_mock(pkg):
@@ -893,7 +867,6 @@ def build_deb_with_debuild(pkg):
 def do_packaging(pkg, options):
     setup_dirs(pkg)
     copy_files(pkg)
-    gen_rpm_spec(pkg)
     gen_buildfiles(pkg)
     build_srpm(pkg)
 
