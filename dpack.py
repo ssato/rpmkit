@@ -68,9 +68,9 @@ except ImportError:
 
 try:
     from hashlib import md5, sha1 #, sha256, sha512
-    except ImportError:  # python < 2.5
-        import md5
-        import sha as sha1
+except ImportError:  # python < 2.5
+    import md5
+    import sha as sha1
 
 
 
@@ -505,6 +505,7 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
     return m.hexdigest()
 
 
+@memoize
 def flattern(xss):
     """
     >>> flattern([])
@@ -513,22 +514,32 @@ def flattern(xss):
     [1, 2, 3, 4, 5]
     >>> flattern([[1,2,[3]],[4,[5,6]]])
     [1, 2, 3, 4, 5, 6]
+
+    tuple:
+
+    >>> flattern([(1,2,3),(4,5)])
+    [1, 2, 3, 4, 5]
+
+    generator:
+
+    >>> flattern(((i, i * 2) for i in range(0,5)))
+    [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
     """
     ret = []
+
     for xs in xss:
-        if isinstance(xs, list):
-            ys = flattern(xs)
-            ret += ys
+        # TODO: how to detect the enumerate?
+        if isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None)):
+            ret += flattern(xs)
         else:
             ret.append(xs)
+
     return ret
 
 
+@memoize
 def unique(xs, cmp_f=cmp, key=None):
-    """Returns (sorted) list of no duplicated items.
-
-    @xs     list of object (x)
-    @cmp_f  comparison function for x
+    """Returns new sorted list of no duplicated items.
 
     >>> unique([])
     []
@@ -539,17 +550,27 @@ def unique(xs, cmp_f=cmp, key=None):
         return xs
 
     ys = sorted(xs, cmp=cmp_f, key=key)
+
     if ys == []:
         return ys
 
-    rs = [ys[0]]
+    ret = [ys[0]]
 
     for y in ys[1:]:
-        if y == rs[-1]:
+        if y == ret[-1]:
             continue
-        rs.append(y)
+        ret.append(y)
 
-    return rs
+    return ret
+
+
+def compile_template(template, params, outfile):
+    if isinstance(tmpl, file):
+        tmpl = Template(file=template, searchList=params)
+    else:
+        tmpl = Template(source=template, searchList=params)
+
+    open(outfile, 'w').write(tmpl.respond())
 
 
 
@@ -736,16 +757,6 @@ def __setup_dir(dir):
         os.makedirs(dir, 0700)
 
 
-def __tmpl_compile(template_path, params, output):
-    tmpl = Template(file=template_path, searchList=params)
-    open(output, 'w').write(tmpl.respond())
-
-
-def __tmpl_compile_2(template_src, params, output):
-    tmpl = Template(source=template_src, searchList=params)
-    open(output, 'w').write(tmpl.respond())
-
-
 def __run(cmd_and_args_s, workdir="", log=True):
     """
     >>> __run("ls /dev/null")
@@ -866,7 +877,7 @@ def gen_buildfiles(pkg):
     pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['files']['targets'])
 
     def genfile(filepath, output=""):
-        __tmpl_compile_2(TEMPLATES[filepath], pkg, os.path.join(workdir, (output or filepath)))
+        compile_template(TEMPLATES[filepath], pkg, os.path.join(workdir, (output or filepath)))
 
     genfile('configure.ac')
     genfile('Makefile.am')
