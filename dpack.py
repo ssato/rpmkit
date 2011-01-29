@@ -505,6 +505,53 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
     return m.hexdigest()
 
 
+def flattern(xss):
+    """
+    >>> flattern([])
+    []
+    >>> flattern([[1,2,3],[4,5]])
+    [1, 2, 3, 4, 5]
+    >>> flattern([[1,2,[3]],[4,[5,6]]])
+    [1, 2, 3, 4, 5, 6]
+    """
+    ret = []
+    for xs in xss:
+        if isinstance(xs, list):
+            ys = flattern(xs)
+            ret += ys
+        else:
+            ret.append(xs)
+    return ret
+
+
+def unique(xs, cmp_f=cmp, key=None):
+    """Returns (sorted) list of no duplicated items.
+
+    @xs     list of object (x)
+    @cmp_f  comparison function for x
+
+    >>> unique([])
+    []
+    >>> unique([0, 3, 1, 2, 1, 0, 4, 5])
+    [0, 1, 2, 3, 4, 5]
+    """
+    if xs == []:
+        return xs
+
+    ys = sorted(xs, cmp=cmp_f, key=key)
+    if ys == []:
+        return ys
+
+    rs = [ys[0]]
+
+    for y in ys[1:]:
+        if y == rs[-1]:
+            continue
+        rs.append(y)
+
+    return rs
+
+
 
 class ObjDict(dict):
     """
@@ -782,53 +829,6 @@ def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
     fmt = lambda d, fs: tmpl % {'id': str(cntr.next()), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':d}
 
     return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(files, dirname)])
-
-
-def flattern(xss):
-    """
-    >>> flattern([])
-    []
-    >>> flattern([[1,2,3],[4,5]])
-    [1, 2, 3, 4, 5]
-    >>> flattern([[1,2,[3]],[4,[5,6]]])
-    [1, 2, 3, 4, 5, 6]
-    """
-    ret = []
-    for xs in xss:
-        if isinstance(xs, list):
-            ys = flattern(xs)
-            ret += ys
-        else:
-            ret.append(xs)
-    return ret
-
-
-def unique(xs, cmp_f=cmp, key=None):
-    """Returns (sorted) list of no duplicated items.
-
-    @xs     list of object (x)
-    @cmp_f  comparison function for x
-
-    >>> unique([])
-    []
-    >>> unique([0, 3, 1, 2, 1, 0, 4, 5])
-    [0, 1, 2, 3, 4, 5]
-    """
-    if xs == []:
-        return xs
-
-    ys = sorted(xs, cmp=cmp_f, key=key)
-    if ys == []:
-        return ys
-
-    rs = [ys[0]]
-
-    for y in ys[1:]:
-        if y == rs[-1]:
-            continue
-        rs.append(y)
-
-    return rs
 
 
 def rpmdb_mi():
