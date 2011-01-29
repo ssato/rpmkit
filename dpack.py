@@ -33,6 +33,7 @@
 from Cheetah.Template import Template
 from itertools import groupby, count
 
+import copy
 import datetime
 import glob
 import grp
@@ -428,6 +429,38 @@ CHECKSUM_NONE = '0000000000000000000000000000000000000000'
 
 
 
+def dicts_comp(lhs, rhs, keys=False):
+    """Compare dicts. $rhs may have keys (and values) $lhs does not have.
+
+    >>> dicts_comp({},{})
+    True
+    >>> dicts_comp({'a':1},{})
+    False
+    >>> d0 = {'a': 0, 'b': 1, 'c': 2}
+    >>> d1 = copy.copy(d0)
+    >>> dicts_comp(d0, d1)
+    True
+    >>> d1['d'] = 3
+    >>> dicts_comp(d0, d1)
+    True
+    >>> dicts_comp(d0, d1, ('d'))
+    False
+    >>> d2 = copy.copy(d0)
+    >>> d2['c'] = 3
+    >>> dicts_comp(d0, d2)
+    False
+    >>> dicts_comp(d0, d2, ('a', 'b'))
+    True
+    """
+    # shortcuts:
+    if lhs == {}:
+        return True
+    elif rhs == {}:
+        return False
+    else:
+        return all(((lhs.get(key) == rhs.get(key)) for key in (keys and keys or lhs.keys())))
+
+
 class ObjDict(dict):
     """
     Dict class works like object.
@@ -484,29 +517,20 @@ class FileInfo(ObjDict):
                 xattr.set(dest, k, v)
 
     def __eq__(self, other):
-        """(==) method. True if self and other exactly came from the same
-        object, that is, these contents and metadata are exactly same.
+        """self and other are identical, that is, these contents and metadata
+        (except for path) are exactly same.
 
         TODO: Compare the part of the path?
           ex. lhs.path: '/path/to/xyz', rhs.path: '/var/lib/sp2/updates/path/to/xyz'
         """
-        keys = ('mode', 'uid', 'gid', 'checksum', 'filetype')
-        if not all(((self.get(key) == other.get(key)) for key in keys)):
+        if dicts_comp(self, other, ('mode', 'uid', 'gid', 'checksum', 'filetype')):
+            return dicts_comp(self.get('xattrs', {}), other.get('xattrs', {}))
+        else:
             return False
 
-        _xattrs = self.get('xattrs')
-        if _xattrs:
-            _oxattrs = other.get('xattrs')
-            if not _oxattrs:
-                return False
-
-            return all(((_xattrs.get(attr) == _oxattrs.get(attr)) for attr in _xattrs.keys()))
-
-        return True  # The case that xattrs is not available but others are ok.
-
-    def hasSameContent(self, other):
+    def equivalent(self, other):
         """These metadata (path, uid, gid, etc.) do not match but the checksums
-        are same. This indicatest that contents are same.
+        are same, that is, that contents are exactly same.
         """
         return self.get('checksum') == other.get('checksum')
 
@@ -686,6 +710,8 @@ def dirname(path):
     '/a/b'
     >>> dirname('/a/b/')
     '/a/b'
+    >>> dirname('')
+    ''
     """
     return os.path.dirname(path)
 
