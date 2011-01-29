@@ -679,19 +679,6 @@ def __copy(src, dst):
     __run("cp -a %s %s" % (src, dst), log=False)
 
 
-def __count_sep(path):
-    """Count the separator (ex. '/' in Unix like systems) in given path.
-
-    >>> __count_sep('')
-    0
-    >>> __count_sep('/')
-    1
-    >>> __count_sep('/a/b/c')
-    3
-    """
-    return path.count(os.path.sep)
-
-
 def dirname(path):
     """dirname.
 
