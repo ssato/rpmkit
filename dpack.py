@@ -573,6 +573,26 @@ def compile_template(template, params, outfile):
     open(outfile, 'w').write(tmpl.respond())
 
 
+def __run(cmd_and_args_s, workdir="", log=True):
+    """
+    >>> __run("ls /dev/null")
+    ('/dev/null\\n', '')
+    """
+    if not workdir:
+        workdir = os.path.abspath(os.curdir)
+
+    if log:
+        logging.info(" Run: %s" % cmd_and_args_s)
+
+    pipe = subprocess.Popen([cmd_and_args_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
+    (output, errors) = pipe.communicate()  # TODO: It might be blocked. Use Popen.wait() instead?
+
+    if pipe.returncode == 0:
+        return (output, errors)
+    else:
+        raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_and_args_s, errors))
+
+
 
 class ObjDict(dict):
     """
@@ -755,26 +775,6 @@ def __setup_dir(dir):
             raise RuntimeError(" '%s' already exists and it's not a directory! Aborting..." % dir)
     else:
         os.makedirs(dir, 0700)
-
-
-def __run(cmd_and_args_s, workdir="", log=True):
-    """
-    >>> __run("ls /dev/null")
-    ('/dev/null\\n', '')
-    """
-    if not workdir:
-        workdir = os.path.abspath(os.curdir)
-
-    if log:
-        logging.info(" Run: %s" % cmd_and_args_s)
-
-    pipe = subprocess.Popen([cmd_and_args_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
-    (output, errors) = pipe.communicate()  # TODO: It might be blocked. Use Popen.wait() instead?
-
-    if pipe.returncode == 0:
-        return (output, errors)
-    else:
-        raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_and_args_s, errors))
 
 
 def __copy(src, dst):
