@@ -66,6 +66,12 @@ except ImportError:
         #get_all = classmethod(get_all)
         #set = classmethod(set)
 
+try:
+    from hashlib import md5, sha1 #, sha256, sha512
+    except ImportError:  # python < 2.5
+        import md5
+        import sha as sha1
+
 
 
 __version__ = "0.1"
@@ -424,7 +430,6 @@ $
 ]
 
 
-CHECKSUM_NONE = '0000000000000000000000000000000000000000'
 (TYPE_FILE, TYPE_DIR, TYPE_SYMLINK, TYPE_OTHER) = range(0,4)
 
 
@@ -459,6 +464,46 @@ def dicts_comp(lhs, rhs, keys=False):
         return False
     else:
         return all(((lhs.get(key) == rhs.get(key)) for key in (keys and keys or lhs.keys())))
+
+
+def memoize(fn):
+    """memoization decorator.
+    """
+    cache = {}
+
+    def wrapped(*args, **kwargs):
+        key = repr(args) + repr(kwargs)
+        if not cache.has_key(key):
+            cache[key] = fn(*args, **kwargs)
+
+        return cache[key]
+
+    return wrapped
+
+
+@memoize
+def checksum(filepath='', algo=sha1, buffsize=8192):
+    """compute and check md5 or sha1 message digest of given file path.
+
+    TODO: What should be done when any exceptions such like IOError (e.g. could
+    not open $filepath) occur?
+    """
+    if not filepath:
+        return '0' * len(algo('').hexdigest())
+
+    f = open(filepath, 'r')
+    m = algo()
+
+    while True:
+        data = f.read(buffsize)
+        if not data:
+            break
+        m.update(data)
+
+    f.close()
+
+    return m.hexdigest()
+
 
 
 class ObjDict(dict):
@@ -624,7 +669,7 @@ class OtherInfo(FileInfo):
     """
     __ftype = TYPE_OTHER
 
-    def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=CHECKSUM_NONE, xattrs={}):
+    def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=checksum(), xattrs={}):
         FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
 
     def copyable(self):
