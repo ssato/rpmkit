@@ -2,7 +2,7 @@
 #
 # rpms2sqldb.py - Dump rpm metadata from rpm files to sqlite database
 #
-# Copyright (C) 2010 Satoru SATOH <satoru.satoh@gmail.com>
+# Copyright (C) 2010, 2011 Satoru SATOH <satoru.satoh@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Reference: http://docs.fedoraproject.org/drafts/rpm-guide-en/ch-rpm-programming-python.html
+#
+# SEE Also: https://fedorahosted.org/rq/wiki
+#           rq looks more feature rich and complete solution to qeury rpm data.
 #
 
 import datetime
