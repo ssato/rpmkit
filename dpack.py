@@ -573,24 +573,25 @@ def compile_template(template, params, outfile):
     open(outfile, 'w').write(tmpl.respond())
 
 
-def __run(cmd_and_args_s, workdir="", log=True):
+def shell(cmd_s, workdir="", log=True):
     """
-    >>> __run("ls /dev/null")
+    TODO: Popen.communicate might be blocked. How about using Popen.wait instead?
+
+    >>> shell("ls /dev/null")
     ('/dev/null\\n', '')
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
-    if log:
-        logging.info(" Run: %s" % cmd_and_args_s)
+    logging.info(" Run: %s at %s" % (cmd_s, workdir))
 
-    pipe = subprocess.Popen([cmd_and_args_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
-    (output, errors) = pipe.communicate()  # TODO: It might be blocked. Use Popen.wait() instead?
+    pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
+    (output, errors) = pipe.communicate()
 
     if pipe.returncode == 0:
         return (output, errors)
     else:
-        raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_and_args_s, errors))
+        raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
 
 
 
@@ -803,7 +804,7 @@ def __copy(src, dst):
     # at present.
     #
     #shutil.copy2(src, dst)
-    __run("cp -a %s %s" % (src, dst), log=False)
+    shell("cp -a %s %s" % (src, dst), log=False)
 
 
 def dirname(path):
@@ -896,12 +897,12 @@ def gen_buildfiles(pkg):
     genfile('debian/copyright')
     genfile('debian/changelog')
 
-    __run('autoreconf -vfi', workdir=pkg['workdir'])
+    shell('autoreconf -vfi', workdir=pkg['workdir'])
 
 
 def build_srpm(pkg):
-    __run('./configure', workdir=pkg['workdir'])
-    __run('make srpm', workdir=pkg['workdir'])
+    shell('./configure', workdir=pkg['workdir'])
+    shell('make srpm', workdir=pkg['workdir'])
 
     for p in glob.glob(os.path.join(pkg['workdir'], "*.src.rpm")):
         __copy(p, os.path.join(pkg['workdir'], '../'))
@@ -911,26 +912,26 @@ def build_rpm_with_mock(pkg):
     """TODO: Identify the (single) src.rpm
     """
     try:
-        __run("mock --version > /dev/null")
+        shell("mock --version > /dev/null")
     except RuntimeError, e:
         logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
         build_rpm_with_rpmbuild(pkg)
         return
 
-    __run("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % pkg, workdir=pkg['workdir'])
+    shell("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % pkg, workdir=pkg['workdir'])
 
     for p in glob.glob("/var/lib/mock/%(dist)s/result/*.rpm" % pkg):
         __copy(p, os.path.join(pkg['workdir'], '../'))
 
 
 def build_rpm_with_rpmbuild(pkg):
-    __run('make rpm', workdir=pkg['workdir'])
+    shell('make rpm', workdir=pkg['workdir'])
     for p in glob.glob(os.path.join(pkg['workdir'], "*.rpm")):
         __copy(p, os.path.join(pkg['workdir'], '../'))
 
 
 def build_deb_with_debuild(pkg):
-    __run('debuild -us -uc', workdir=pkg['workdir'])
+    shell('debuild -us -uc', workdir=pkg['workdir'])
 
 
 def do_packaging(pkg, options):
