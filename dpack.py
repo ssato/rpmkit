@@ -31,7 +31,7 @@
 #
 
 from Cheetah.Template import Template
-from itertools import groupby, count
+from itertools import chain, count, groupby
 
 import copy
 import datetime
@@ -506,7 +506,7 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
 
 
 @memoize
-def flattern(xss):
+def flattern(xss, list_only=False):
     """
     >>> flattern([])
     []
@@ -527,14 +527,31 @@ def flattern(xss):
     """
     ret = []
 
+    def pred(xs, list_only):
+        if list_only:
+            return isinstance(xs, list)
+        else:
+            # TODO: how to detect the enumerate?
+            return isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None))
+
     for xs in xss:
-        # TODO: how to detect the enumerate?
-        if isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None)):
+        if pred(xs, list_only):
             ret += flattern(xs)
         else:
             ret.append(xs)
 
     return ret
+
+
+#@memoize
+def concat(xss):
+    """
+    >>> concat([[]])
+    []
+    >>> concat([[1,2,3],[4,5]])
+    [1, 2, 3, 4, 5]
+    """
+    return list(chain(*xss))
 
 
 @memoize
@@ -564,6 +581,19 @@ def unique(xs, cmp_f=cmp, key=None):
     return ret
 
 
+def dirname(path):
+    """dirname.
+
+    >>> dirname('/a/b/c')
+    '/a/b'
+    >>> dirname('/a/b/')
+    '/a/b'
+    >>> dirname('')
+    ''
+    """
+    return os.path.dirname(path)
+
+
 def compile_template(template, params, outfile):
     if isinstance(tmpl, file):
         tmpl = Template(file=template, searchList=params)
@@ -574,11 +604,7 @@ def compile_template(template, params, outfile):
 
 
 def shell(cmd_s, workdir="", log=True):
-    """
-    TODO: Popen.communicate might be blocked. How about using Popen.wait instead?
-
-    >>> shell("ls /dev/null")
-    ('/dev/null\\n', '')
+    """TODO: Popen.communicate might be blocked. How about using Popen.wait instead?
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
@@ -592,6 +618,14 @@ def shell(cmd_s, workdir="", log=True):
         return (output, errors)
     else:
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
+
+
+def rpmdb_filelist():
+    """TODO: It should be a heavy and time-consuming task. Caching the result somewhere?
+
+    >>> if os.path.exists('/var/lib/rpm/Basenames'): db = rpmdb_filelist(); assert db.get('/etc/hosts') == 'setup'
+    """
+    return dict(concat(([(f, h['name']) for f in h['filenames']] for h in rpm.TransactionSet().dbMatch())))
 
 
 
@@ -807,19 +841,6 @@ def __copy(src, dst):
     shell("cp -a %s %s" % (src, dst), log=False)
 
 
-def dirname(path):
-    """dirname.
-
-    >>> dirname('/a/b/c')
-    '/a/b'
-    >>> dirname('/a/b/')
-    '/a/b'
-    >>> dirname('')
-    ''
-    """
-    return os.path.dirname(path)
-
-
 def __to_srcdir(path, workdir=''):
     """
     >>> __to_srcdir('/a/b/c')
@@ -841,16 +862,6 @@ def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
     fmt = lambda d, fs: tmpl % {'id': str(cntr.next()), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':d}
 
     return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(files, dirname)])
-
-
-def rpmdb_mi():
-    return rpm.TransactionSet().dbMatch()
-
-
-def rpmdb_filelist():
-    """TODO: It should be a heavy and time-consuming task. Caching the result somewhere?
-    """
-    return dict(flattern(([(f, h[rpm.RPMTAG_NAME]) for f in h[rpm.RPMTAG_FILENAMES]] for h in rpmdb_mi())))
 
 
 def process_listfile(list_f):
