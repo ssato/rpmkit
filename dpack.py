@@ -506,7 +506,7 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
 
 
 @memoize
-def flattern(xss, list_only=False):
+def flattern(xss):
     """
     >>> flattern([])
     []
@@ -527,15 +527,8 @@ def flattern(xss, list_only=False):
     """
     ret = []
 
-    def pred(xs, list_only):
-        if list_only:
-            return isinstance(xs, list)
-        else:
-            # TODO: how to detect the enumerate?
-            return isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None))
-
     for xs in xss:
-        if pred(xs, list_only):
+        if isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None)):
             ret += flattern(xs)
         else:
             ret.append(xs)
