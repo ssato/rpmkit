@@ -586,7 +586,7 @@ def dirname(path):
 
 
 def compile_template(template, params, outfile):
-    if isinstance(tmpl, file):
+    if isinstance(template, file):
         tmpl = Template(file=template, searchList=params)
     else:
         tmpl = Template(source=template, searchList=params)
@@ -600,7 +600,7 @@ def shell(cmd_s, workdir="", log=True):
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
-    logging.info(" Run: %s at %s" % (cmd_s, workdir))
+    logging.info(" Run: %s [in %s]" % (cmd_s, workdir))
 
     pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
     (output, errors) = pipe.communicate()
