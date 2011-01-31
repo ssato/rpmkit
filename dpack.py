@@ -457,7 +457,6 @@ def dicts_comp(lhs, rhs, keys=False):
     >>> dicts_comp(d0, d2, ('a', 'b'))
     True
     """
-    # shortcuts:
     if lhs == {}:
         return True
     elif rhs == {}:
@@ -536,7 +535,6 @@ def flattern(xss):
     return ret
 
 
-#@memoize
 def concat(xss):
     """
     >>> concat([[]])
@@ -650,19 +648,23 @@ class FileInfo(ObjDict):
     __ftype = TYPE_FILE
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs, **kwargs):
-        self['path'] = path
-        self['mode'] = mode
-        (self['uid'], self['gid']) = (uid, gid)
-        self['checksum'] = checksum
-        self['xattrs'] = xattrs or {}
+        self.path = path
+        self.realpath = os.path.realpath(path)
 
-        self['filetype'] = self.__ftype
+        self.mode = mode
+        self.uid= uid
+        self.gid = gid
+        self.checksum = checksum
+        self.xattrs = xattrs or {}
 
-        if kwargs:
-            self.update(kwargs)
+        self.filetype = self.__ftype
 
-    def _remove(self, target):
-        os.remove(target)
+        for k,v in kwargs.iteritems():
+            self[k] = v
+
+    def _copy_xattrs(self, dest):
+        for k,v in self.xattrs.iteritems():
+            xattr.set(dest, k, v)
 
     def _copy(self, dest):
         """Two steps needed to keep the content and metadata of the original file:
@@ -671,11 +673,10 @@ class FileInfo(ObjDict):
         2. Copy extra metadata not copyable with the above.
         """
         shutil.copy2(self.path(), dest)
+        self._copy_xattrs(dest)
 
-        _xattrs = self.xattrs()
-        if _xattrs:
-            for k,v in _xattrs.iteritems():
-                xattr.set(dest, k, v)
+    def _remove(self, target):
+        os.remove(target)
 
     def __eq__(self, other):
         """self and other are identical, that is, these contents and metadata
@@ -693,7 +694,7 @@ class FileInfo(ObjDict):
         """These metadata (path, uid, gid, etc.) do not match but the checksums
         are same, that is, that contents are exactly same.
         """
-        return self.get('checksum') == other.get('checksum')
+        return self.checksum == other.checksum
 
     def copyable(self):
         return True
@@ -706,34 +707,34 @@ class FileInfo(ObjDict):
         that inherited class must overrride this and related methods (_remove
         and _copy).
 
-        @dest      string  The destination to copy
-        @force     bool    Force overwrite it even if exists when True
+        @dest      string  The destination path to copy to
+        @force     bool    When True, force overwrite $dest even if it exists
         """
-        assert self.path() != dest, "Try copying to the same path!"
+        assert self.path != dest, "Copying src and dst are same!"
 
         if not self.copyable():
-            logging.warn("Cannot copyable.")
+            logging.warn(" Not copyable")
             return False
 
         if os.path.exists(dest):
-            logging.info("Copying destination already exists: '%s'" % dest)
+            logging.info(" Copying destination already exists: '%s'" % dest)
 
             # TODO: It has negative impact for symlinks.
             #
-            #if os.path.realpath(self.path()) == os.path.realpath(dest):
+            #if os.path.realpath(self.path) == os.path.realpath(dest):
             #    logging.warn("Copying src and dest are same actually.")
             #    return False
 
             if force:
-                logging.info("Removing it...")
+                logging.info(" Removing dest: " % dest)
                 self._remove(dest)
             else:
-                logging.warn("Do not overwrite it")
+                logging.warn(" Do not overwrite it")
                 return False
         else:
             os.makedirs(os.path.dirname(dest))
 
-        logging.info("Copying from '%s' to '%s'" % (self.path(), dest))
+        logging.info(" Copying from '%s' to '%s'" % (self.path, dest))
         self._copy(dest)
 
         return True
@@ -750,18 +751,15 @@ class DirInfo(FileInfo):
         os.removedirs(target)
 
     def _copy(self, dest):
-        os.makedirs(dest, mode=self.mode())
+        os.makedirs(dest, mode=self.mode)
+
         try:
-            os.chown(dest, self.uid(), self.gid())
+            os.chown(dest, self.uid, self.gid)
         except OSError, e:
             logging.warn(e)
-        shutil.copystat(self.path(), dest)
 
-        # These are not copyed with the above.
-        _xattrs = self.xattrs()
-        if _xattrs:
-            for k,v in _xattrs.iteritems():
-                xattr.set(dest, k, v)
+        shutil.copystat(self.path, dest)
+        self._copy_xattrs(dest)
 
 
 
@@ -770,13 +768,10 @@ class SymlinkInfo(FileInfo):
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
-        self['linkto'] = os.path.realpath(path)
-
-    def linkto(self):
-        return self['linkto']
+        self.linkto = os.path.realpath(path)
 
     def _copy(self, dest):
-        os.symlink(self.linkto(), dest)
+        os.symlink(self.linkto, dest)
 
 
 
