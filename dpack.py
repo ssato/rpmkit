@@ -43,11 +43,12 @@ import optparse
 import os
 import os.path
 import pwd
-import rpm
 import shutil
 import stat
 import subprocess
 import sys
+
+import rpm
 
 try:
     import xattr   # pyxattr
@@ -215,14 +216,14 @@ rm -rf \$RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc README
 #if $conflicts.names
-#for $f in $files.targets
-#if $f not in $conflicts.files
-$f
+#for $fi in $fileinfos
+#if $fi.target not in $conflicts.files
+${fi.target}
 #end if
 #end for
 #else
-#for $f in $files.targets
-$f
+#for $fi in $fileinfos
+${fi.target}
 #end for
 #end if
 
@@ -266,9 +267,9 @@ include /usr/share/cdbs/1/class/autotools.mk
 
 DEB_INSTALL_DIRS_${name} = \\
 #set $dirs = []
-#for $f in $files.targets
-#if $f not in $conflicts.files
-#set $dir = os.path.dirname($f)
+#for $fi in $fileinfos
+#if $fi.target not in $conflicts.files
+#set $dir = os.path.dirname($fi.target)
 #if $dir not in $dirs
 \t$dir \\
 #set $dirs = $dirs + [$dir]
@@ -430,7 +431,8 @@ $
 ]
 
 
-(TYPE_FILE, TYPE_DIR, TYPE_SYMLINK, TYPE_OTHER) = range(0,4)
+(TYPE_FILE, TYPE_DIR, TYPE_SYMLINK, TYPE_OTHER, TYPE_UNKNOWN) = \
+    ('file', 'dir', 'symlink', 'other', 'unknown')
 
 
 
@@ -504,7 +506,7 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
     return m.hexdigest()
 
 
-@memoize
+#@memoize
 def flattern(xss):
     """
     >>> flattern([])
@@ -545,7 +547,7 @@ def concat(xss):
     return list(chain(*xss))
 
 
-@memoize
+#@memoize
 def unique(xs, cmp_f=cmp, key=None):
     """Returns new sorted list of no duplicated items.
 
@@ -570,6 +572,10 @@ def unique(xs, cmp_f=cmp, key=None):
         ret.append(y)
 
     return ret
+
+
+def true(x):
+    return True
 
 
 def dirname(path):
@@ -611,12 +617,92 @@ def shell(cmd_s, workdir="", log=True):
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
 
 
-def rpmdb_filelist():
-    """TODO: It should be a heavy and time-consuming task. Caching the result somewhere?
 
-    >>> if os.path.exists('/var/lib/rpm/Basenames'): db = rpmdb_filelist(); assert db.get('/etc/hosts') == 'setup'
-    """
-    return dict(concat(([(f, h['name']) for f in h['filenames']] for h in rpm.TransactionSet().dbMatch())))
+class Rpm(object):
+
+    # RpmFi (FileInfo) keys:
+    fi_keys = ('path', 'size', 'mode', 'mtime', 'flags', 'rdev', 'inode',
+        'nlink', 'state', 'vflags', 'uid', 'gid', 'checksum')
+
+    @classmethod
+    def ts(self):
+        return rpm.TransactionSet()
+
+    @classmethod
+    def pathinfo(self, path):
+        """Get meta data of file or dir from RPM Database.
+
+        @path    Path of the file or directory (relative or absolute)
+        @return  A dict; keys are fi_keys (see below)
+
+        >>> hosts = '/etc/hosts'
+        >>> pm = '/proc/mounts'
+        >>>  
+        >>> if os.path.exists('/var/lib/rpm/Basenames'):
+        ...     if os.path.exists(hosts):
+        ...         pi = Rpm.pathinfo(hosts)
+        ...         assert pi.get('path') == hosts
+        ...         assert sorted(pi.keys()) == sorted(Rpm.fi_keys)
+        ...     #
+        ...     if os.path.exists(pm):
+        ...         pi = Rpm.pathinfo(pm)
+        ...         assert pi == {}, "result was '%s'" % str(pi)
+        """
+        _path = os.path.abspath(path)
+
+        try:
+            fis = [h.fiFromHeader() for h in Rpm.ts().dbMatch('basenames', _path)]
+            if fis:
+                xs = [x for x in fis[0] if x and x[0] == _path]
+                if xs:
+                    return dict(zip(Rpm.fi_keys, xs[0]))
+        except:  # FIXME: Careful excpetion handling
+            pass
+
+        return dict()
+
+    @classmethod
+    def each_fileinfo_by_package(self, pname='', pred=true):
+        """RpmFi (File Info) of installed package, matched packages or all
+        packages generator.
+
+        @pname  str       A package name or name pattern (ex. 'kernel*') or ''
+                          which means all packages.
+        @pred   function  A predicate to sort out only necessary results.
+                          $pred :: RpmFi -> bool.
+
+        @return  A dict which has keys (Rpm.fi_keys and 'package' = package name)
+                 and corresponding values.
+
+        @see rpm/python/rpmfi-py.c
+        """
+        if '*' in pname:
+            mi = Rpm.ts().dbMatch()
+            mi.pattern('name', rpm.RPMMIRE_GLOB, pname)
+
+        elif pname:
+            mi = Rpm.ts().dbMatch('name', pname)
+
+        else:
+            mi = Rpm.ts().dbMatch()
+
+        for h in mi:
+            for fi in h.fiFromHeader():
+                if pred(fi):
+                    yield dict(zip(Rpm.fi_keys + ['package',], list(fi) + [h['name'],]))
+
+        # Release them to avoid core dumped or getting wrong result next time.
+        del mi
+
+    @classmethod
+    def filelist(self):
+        """TODO: It should be a heavy and time-consuming task. Caching the result somewhere?
+
+        >>> if os.path.exists('/var/lib/rpm/Basenames'):
+        ...     db = Rpm.filelist()
+        ...     assert db.get('/etc/hosts') == 'setup'
+        """
+        return dict(concat(([(f, h['name']) for f in h['filenames']] for h in Rpm.ts().dbMatch())))
 
 
 
@@ -742,12 +828,16 @@ class FileInfo(ObjDict):
 
 
 class DirInfo(FileInfo):
+
     __ftype = TYPE_DIR
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
 
     def _remove(self, target):
+        if not os.path.isdir(target):
+            raise RuntimeError(" '%s' is not a directory! Aborting..." % target)
+
         os.removedirs(target)
 
     def _copy(self, dest):
@@ -776,9 +866,22 @@ class SymlinkInfo(FileInfo):
 
 
 class OtherInfo(FileInfo):
-    """Special case that lstat() failed and cannot stat $path.
+    """$path may be a socket, FIFO (named pipe), Character Dev or Block Dev, etc.
     """
     __ftype = TYPE_OTHER
+
+    def __init__(self, path, mode, uid, gid, checksum, xattrs):
+        FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
+
+    def copyable(self):
+        return False
+
+
+
+class UnknownInfo(FileInfo):
+    """Special case that lstat() failed and cannot stat $path.
+    """
+    __ftype = TYPE_UNKNOWN
 
     def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=checksum(), xattrs={}):
         FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
@@ -788,7 +891,151 @@ class OtherInfo(FileInfo):
 
 
 
-def __setup_dir(dir):
+class FileInfoFactory(object):
+    """Factory class for *Info.
+    """
+
+    def _stat(self, path):
+        """
+        @path    str     Object's path (relative or absolute)
+        @return  A tuple of (mode, uid, gid) or None if OSError was raised.
+
+        >>> ff = FileInfoFactory()
+        >>> (_mode, uid, gid) = ff._stat('/etc/hosts')
+        >>> assert uid == 0
+        >>> assert gid == 0
+        >>> #
+        >>> if os.getuid() != 0:
+        ...    assert ff._stat('/root/.bashrc') is None
+        """
+        try:
+            _stat = os.lstat(path)
+        except OSError, e:
+            logging.warn(e)
+            return None
+
+        return (_stat.st_mode, _stat.st_uid, _stat.st_gid)
+
+    def _stat_with_rpmdb(self, path):
+        """Same as the above but use RPM DB deta instead of lstat().
+
+        There are cases to get no results if the target objects not owned by
+        any packages.
+
+        >>> ff = FileInfoFactory()
+        >>> 
+        >>> (_mode, uid, gid) = ff._stat_with_rpmdb('/etc/hosts')
+        >>> assert uid == 0
+        >>> assert gid == 0
+        >>> #
+        >>> st = ff._stat_with_rpmdb('/proc/mounts')
+        >>> assert st is None, "stat was '%s'" % str(st)
+        """
+        try:
+            fi = Rpm.pathinfo(path)
+            if fi:
+                uid = pwd.getpwnam(fi['uid']).pw_uid   # uid: name -> id
+                gid = grp.getgrnam(fi['gid']).gr_gid   # gid: name -> id
+
+                return (fi['mode'], uid, gid)
+        except:
+            pass
+
+        return None
+
+
+    def _guess_ftype(self, st_mode):
+        """
+        @st_mode    st_mode
+
+        TODO: More appropriate doctest cases.
+
+        >>> ff = FileInfoFactory()
+        >>> st_mode = lambda f: os.lstat(f)[0]
+        >>> 
+        >>> if os.path.exists('/etc/grub.conf'):
+        ...     assert TYPE_SYMLINK == ff._guess_ftype(st_mode('/etc/grub.conf'))
+        >>> 
+        >>> if os.path.exists('/etc/hosts'):
+        ...     assert TYPE_FILE == ff._guess_ftype(st_mode('/etc/hosts'))
+        >>> 
+        >>> if os.path.isdir('/etc'):
+        ...     assert TYPE_DIR == ff._guess_ftype(st_mode('/etc'))
+        >>> 
+        >>> if os.path.exists('/dev/null'):
+        ...     assert TYPE_OTHER == ff._guess_ftype(st_mode('/dev/null'))
+        """
+        if stat.S_ISLNK(st_mode):
+            ft = TYPE_SYMLINK
+
+        elif stat.S_ISREG(st_mode):
+            ft = TYPE_FILE
+
+        elif stat.S_ISDIR(st_mode):
+            ft = TYPE_DIR
+
+        elif stat.S_ISCHR(st_mode) or stat.S_ISBLK(st_mode) \
+            or stat.S_ISFIFO(st_mode) or stat.S_ISSOCK(st_mode):
+            ft = TYPE_OTHER
+        else:
+            ft = TYPE_UNKNOWN  # Should not be reached
+
+        return ft
+
+    def create(self, path, use_rpmdb=False):
+        """Factory method.
+
+        Get metada of object by lstat(), create and return the *Info instance.
+
+        @path       str   Object path (relative or absolute)
+        @use_rpmdb  bool  Use data in RPM DB if True instead of lstat()
+
+        @return  A FileInfo or inherited class' instance
+        """
+        res = (use_rpmdb and self._stat_with_rpmdb or self._stat)(path)
+
+        if res is None:
+            return UnknownInfo(path)
+        else:
+            (_mode, _uid, _gid) = res
+
+        xs = xattr.get_all(path)
+        _xattrs = (xs and dict(xs) or {})
+
+        _filetype = self._guess_ftype(_mode)
+
+        if _filetype == TYPE_FILE:
+            _checksum = checksum(path)
+        else:
+            _checksum = checksum()
+
+        _cls = eval("%sInfo" % _filetype.title())
+
+        return _cls(path, _mode, _uid, _gid, _checksum, _xattrs)
+
+
+
+def process_listfile(list_f):
+    """Read paths from given file line by line and returns path list sorted by
+    dir names. Empty lines or lines start with '#' are ignored.
+
+    @list_f  File obj of file list.
+    """
+    return unique([l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')], key=dirname)
+
+
+def collect(list_f, rpmdb=False):
+    """
+    Collect FileInfo objects.
+    """
+    ff = FileInfoFactory()
+
+    for p in process_listfile(list_f):
+        fi = ff.create(p, rpmdb)
+        yield fi
+
+
+def createdir(dir):
     logging.info(" Creating a directory: %s" % dir)
 
     if os.path.exists(dir):
@@ -829,13 +1076,13 @@ def __copy(src, dst):
     shell("cp -a %s %s" % (src, dst), log=False)
 
 
-def __to_srcdir(path, workdir=''):
+def to_srcdir(path, workdir=''):
     """
-    >>> __to_srcdir('/a/b/c')
+    >>> to_srcdir('/a/b/c')
     'src/a/b/c'
-    >>> __to_srcdir('a/b')
+    >>> to_srcdir('a/b')
     'src/a/b'
-    >>> __to_srcdir('/')
+    >>> to_srcdir('/')
     'src/'
     """
     assert path != '', "Empty path was given"
@@ -843,38 +1090,33 @@ def __to_srcdir(path, workdir=''):
     return os.path.join(workdir, 'src', path.strip(os.path.sep))
 
 
-def __gen_files_vars_in_makefile_am(files, tmpl=PKG_DIST_INST_FILES_TMPL):
+def __gen_files_vars_in_makefile_am(fileinfos, tmpl=PKG_DIST_INST_FILES_TMPL):
     """FIXME: ugly code
     """
+    targets = [fi.target for fi in fileinfos]
     cntr = count()
-    fmt = lambda d, fs: tmpl % {'id': str(cntr.next()), 'files': " \\\n".join((__to_srcdir(f) for f in fs)), 'dir':d}
+    fmt = lambda d, fs: tmpl % {'id': str(cntr.next()), 'files': " \\\n".join((to_srcdir(f) for f in fs)), 'dir':d}
 
-    return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(files, dirname)])
-
-
-def process_listfile(list_f):
-    """Read paths from given file line by line and returns path list sorted by
-    dir names. Empty lines or lines start with '#' are ignored.
-    """
-    return unique([l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')], key=dirname)
+    return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(targets, dirname)])
 
 
 def setup_dirs(pkg):
-    __setup_dir(pkg['workdir'])
-    __setup_dir(pkg['srcdir'])
+    createdir(pkg['workdir'])
+    createdir(pkg['srcdir'])
 
 
 def copy_files(pkg):
-    for t in pkg['files']['targets']:
+    for t0 in pkg['fileinfos']:
+        t = t0.target
         t2 = (pkg['destdir'] and os.path.join(pkg['destdir'], t.strip(os.path.sep)) or t)
-        __copy(t2, __to_srcdir(t, pkg['workdir']))
+        __copy(t2, to_srcdir(t, pkg['workdir']))
 
 
 def gen_buildfiles(pkg):
     global TEMPLATES
 
     workdir = pkg['workdir']
-    pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['files']['targets'])
+    pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['fileinfos'])
 
     def genfile(filepath, output=""):
         compile_template(TEMPLATES[filepath], pkg, os.path.join(workdir, (output or filepath)))
@@ -1117,42 +1359,41 @@ def main():
     if options.no_rpmdb:
         filelist_db = dict()
     else:
-        filelist_db = rpmdb_filelist()
+        filelist_db = Rpm.filelist()
 
-    files = []
+    fileinfos = []
     conflicts = dict()
 
     destdir = options.destdir.rstrip(os.path.sep)
     pkg['destdir'] = destdir
 
-    for f in process_listfile(list_f):
+    for fi in collect(list_f, (not options.no_rpmdb)):
+        f = fi.path
+
         # FIXME: Is there any better way?
         if destdir:
             if f.startswith(destdir):
-                f = f.split(destdir)[1]
+                fi.target = f.split(destdir)[1]
             else:
                 logging.error(" The path '%s' does not start with given destdir '%s'" % (f, destdir))
                 raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
+        else:
+            fi.target = f
 
-        p = filelist_db.get(f, False)
+        p = filelist_db.get(fi.target, False)
 
         if p and p != pkg['name']:
             logging.info(" %s is owned by %s, that is, it will be conflicts with %s" % (f, p, p))
-            conflicts[f] = p
+            conflicts[fi.target] = p
 
-        files.append(f)
+        fileinfos.append(fi)
 
-    pkg['files'] = {
-        'targets': files,
-        'sources': [os.path.join('src', p[1:]) for p in files]
-    }
+    pkg['fileinfos'] = fileinfos
 
     pkg['conflicts'] = {
         'names': unique(conflicts.values()),
         'files': conflicts.keys(),
     }
-
-    pkg['filelist'] = [os.path.join('src', p[1:]) for p in files]
 
     if options.summary:
         pkg['summary'] = options.summary
@@ -1170,5 +1411,5 @@ def main():
 if __name__ == '__main__':
     main()
 
-
 # vim: set sw=4 ts=4 expandtab:
+# vim:sw=4:ts=4:et:
