@@ -35,6 +35,7 @@ from itertools import chain, count, groupby
 
 import copy
 import datetime
+import doctest
 import glob
 import grp
 import locale
@@ -47,6 +48,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import unittest
 
 import rpm
 
@@ -506,7 +508,7 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
     return m.hexdigest()
 
 
-#@memoize
+@memoize
 def flattern(xss):
     """
     >>> flattern([])
@@ -547,7 +549,7 @@ def concat(xss):
     return list(chain(*xss))
 
 
-#@memoize
+@memoize
 def unique(xs, cmp_f=cmp, key=None):
     """Returns new sorted list of no duplicated items.
 
@@ -591,17 +593,30 @@ def dirname(path):
     return os.path.dirname(path)
 
 
-def compile_template(template, params, outfile):
+def compile_template(template, params):
+    """
+    >>> tmpl_s = "a=$a b=$b"
+    >>> params = {'a':1, 'b':'b'}
+    >>> 
+    >>> assert "a=1 b=b" == compile_template(tmpl_s, params)
+    """
     if isinstance(template, file):
         tmpl = Template(file=template, searchList=params)
     else:
         tmpl = Template(source=template, searchList=params)
 
-    open(outfile, 'w').write(tmpl.respond())
+    return tmpl.respond()
 
 
 def shell(cmd_s, workdir="", log=True):
     """TODO: Popen.communicate might be blocked. How about using Popen.wait instead?
+
+    >>> (_o, e) = shell('ls', '/tmp', False)
+
+    TODO: test cases raise RuntimeError.
+
+    #>>> _res = shell('ls', '/root', False)
+    #RuntimeError: ...
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
@@ -615,6 +630,33 @@ def shell(cmd_s, workdir="", log=True):
         return (output, errors)
     else:
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
+
+
+
+class TestDecoratedFuncs(unittest.TestCase):
+    """It seems that doctests in decarated functions are not run.  This class
+    is a workaround for this issue.
+    """
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_checksum_null(self):
+        self.assertEquals(checksum(), '0' * len(sha1('').hexdigest()))
+
+    def test_flattern(self):
+        self.assertEquals(flattern([]),                               [])
+        self.assertEquals(flattern([[1,2,3],[4,5]]),                  [1, 2, 3, 4, 5])
+        self.assertEquals(flattern([[1,2,[3]],[4,[5,6]]]),            [1, 2, 3, 4, 5, 6])
+        self.assertEquals(flattern([(1,2,3),(4,5)]),                  [1, 2, 3, 4, 5])
+        self.assertEquals(flattern(((i, i * 2) for i in range(0,5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
+
+    def test_unique(self):
+        self.assertEquals(unique([]),                       [])
+        self.assertEquals(unique([0, 3, 1, 2, 1, 0, 4, 5]), [0, 1, 2, 3, 4, 5])
 
 
 
@@ -1119,7 +1161,8 @@ def gen_buildfiles(pkg):
     pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['fileinfos'])
 
     def genfile(filepath, output=""):
-        compile_template(TEMPLATES[filepath], pkg, os.path.join(workdir, (output or filepath)))
+        outfile = os.path.join(workdir, (output or filepath))
+        open(outfile, 'w').write(compile_template(TEMPLATES[filepath], pkg))
 
     genfile('configure.ac')
     genfile('Makefile.am')
@@ -1194,8 +1237,8 @@ def show_examples(logs=EXAMPLE_LOGS):
 
 
 def run_tests():
-    import doctest
     doctest.testmod(verbose=True)
+    unittest.main(argv=sys.argv[:1], verbosity=2)
 
 
 def option_parser(V=__version__):
