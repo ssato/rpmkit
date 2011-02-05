@@ -49,6 +49,7 @@ import stat
 import subprocess
 import sys
 import unittest
+import tempfile
 
 import rpm
 
@@ -632,6 +633,54 @@ def shell(cmd_s, workdir="", log=True):
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
 
 
+def createdir(dir, mode=0700):
+    """Create a dir with specified mode.
+    """
+    logging.info(" Creating a directory: %s" % dir)
+
+    if os.path.exists(dir):
+        if os.path.isdir(dir):
+            logging.warn(" Directory already exists! Skip it: %s" % dir)
+        else:
+            raise RuntimeError(" Already exists but not a directory: %s" % dir)
+    else:
+        os.makedirs(dir, mode)
+
+
+def rm_rf(dir):
+    """'rm -rf' in python.
+
+    >>> d = tempfile.mkdtemp(dir='/tmp')
+    >>> rm_rf(d)
+    >>> rm_rf(d)
+    >>> 
+    >>> d = tempfile.mkdtemp(dir='/tmp')
+    >>> for c in "abc":
+    ...     os.makedirs(os.path.join(d, c))
+    >>> os.makedirs(os.path.join(d, "c", "d"))
+    >>> open(os.path.join(d, 'x'), "w").write("test")
+    >>> open(os.path.join(d, 'a', 'y'), "w").write("test")
+    >>> open(os.path.join(d, 'c', 'd', 'z'), "w").write("test")
+    >>> 
+    >>> rm_rf(d)
+    """
+    if not os.path.exists(dir):
+        return
+
+    if os.path.isfile(dir):
+        os.remove(dir)
+        return 
+
+    for x in glob.glob(os.path.join(dir, '*')):
+        if os.path.isdir(x):
+            rm_rf(x)
+        else:
+            os.remove(x)
+
+    if os.path.exists(dir):
+        os.removedirs(dir)
+
+
 
 class TestDecoratedFuncs(unittest.TestCase):
     """It seems that doctests in decarated functions are not run.  This class
@@ -657,6 +706,31 @@ class TestDecoratedFuncs(unittest.TestCase):
     def test_unique(self):
         self.assertEquals(unique([]),                       [])
         self.assertEquals(unique([0, 3, 1, 2, 1, 0, 4, 5]), [0, 1, 2, 3, 4, 5])
+
+
+
+class TestFuncsWithSideEffects(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_createdir_normal(self):
+        """TODO: Check mode (permission).
+        """
+        d = os.path.join(self.workdir, "a")
+        createdir(d)
+
+        self.assertTrue(os.path.isdir(d))
+
+    def test_createdir_specials(self):
+        self.assertIsNone(createdir(self.workdir))  # try creating dir already exists.
+
+        f = os.path.join(self.workdir, 'a')
+        open(f, "w").write("test")
+        self.assertRaises(RuntimeError, createdir, f)
 
 
 
@@ -958,34 +1032,6 @@ class FileInfoFactory(object):
 
         return (_stat.st_mode, _stat.st_uid, _stat.st_gid)
 
-    def _stat_with_rpmdb(self, path):
-        """Same as the above but use RPM DB deta instead of lstat().
-
-        There are cases to get no results if the target objects not owned by
-        any packages.
-
-        >>> ff = FileInfoFactory()
-        >>> 
-        >>> (_mode, uid, gid) = ff._stat_with_rpmdb('/etc/hosts')
-        >>> assert uid == 0
-        >>> assert gid == 0
-        >>> #
-        >>> st = ff._stat_with_rpmdb('/proc/mounts')
-        >>> assert st is None, "stat was '%s'" % str(st)
-        """
-        try:
-            fi = Rpm.pathinfo(path)
-            if fi:
-                uid = pwd.getpwnam(fi['uid']).pw_uid   # uid: name -> id
-                gid = grp.getgrnam(fi['gid']).gr_gid   # gid: name -> id
-
-                return (fi['mode'], uid, gid)
-        except:
-            pass
-
-        return None
-
-
     def _guess_ftype(self, st_mode):
         """
         @st_mode    st_mode
@@ -1024,22 +1070,17 @@ class FileInfoFactory(object):
 
         return ft
 
-    def create(self, path, use_rpmdb=False):
-        """Factory method.
-
-        Get metada of object by lstat(), create and return the *Info instance.
+    def create(self, path):
+        """Factory method. Create and return the *Info instance.
 
         @path       str   Object path (relative or absolute)
-        @use_rpmdb  bool  Use data in RPM DB if True instead of lstat()
-
-        @return  A FileInfo or inherited class' instance
         """
-        res = (use_rpmdb and self._stat_with_rpmdb or self._stat)(path)
+        st = self._stat(path)
 
-        if res is None:
+        if st is None:
             return UnknownInfo(path)
         else:
-            (_mode, _uid, _gid) = res
+            (_mode, _uid, _gid) = st
 
         xs = xattr.get_all(path)
         _xattrs = (xs and dict(xs) or {})
@@ -1057,6 +1098,43 @@ class FileInfoFactory(object):
 
 
 
+class RpmFileInfoFactory(FileInfoFactory):
+
+    def __init__(self):
+        FileInfoFactory.__init__(self)
+
+    def _stat(self, path):
+        """Stat with using RPM database instead of lstat().
+
+        There are cases to get no results if the target objects not owned by
+        any packages.
+
+        >>> ff = RpmFileInfoFactory()
+        >>> 
+        >>> if os.path.exists('/var/lib/rpm/Basenames'):
+        ...     if os.path.exists('/etc/hosts'):
+        ...         (_mode, uid, gid) = ff._stat('/etc/hosts')
+        ...         assert uid == 0
+        ...         assert gid == 0
+        ... 
+        ...     if os.path.exists('/proc/mounts'):
+        ...         st = ff._stat('/proc/mounts')
+        ...         assert st is None, "stat was '%s'" % str(st)
+        """
+        try:
+            fi = Rpm.pathinfo(path)
+            if fi:
+                uid = pwd.getpwnam(fi['uid']).pw_uid   # uid: name -> id
+                gid = grp.getgrnam(fi['gid']).gr_gid   # gid: name -> id
+
+                return (fi['mode'], uid, gid)
+        except:
+            pass
+
+        return None
+
+
+
 def process_listfile(list_f):
     """Read paths from given file line by line and returns path list sorted by
     dir names. Empty lines or lines start with '#' are ignored.
@@ -1070,23 +1148,11 @@ def collect(list_f, rpmdb=False):
     """
     Collect FileInfo objects.
     """
-    ff = FileInfoFactory()
+    ff = (rpmdb and RpmFileInfoFactory() or FileInfoFactory())
 
     for p in process_listfile(list_f):
-        fi = ff.create(p, rpmdb)
+        fi = ff.create(p)
         yield fi
-
-
-def createdir(dir):
-    logging.info(" Creating a directory: %s" % dir)
-
-    if os.path.exists(dir):
-        if os.path.isdir(dir):
-            logging.warn(" Target directory already exists! Skipping: %s" % dir)
-        else:
-            raise RuntimeError(" '%s' already exists and it's not a directory! Aborting..." % dir)
-    else:
-        os.makedirs(dir, 0700)
 
 
 def __copy(src, dst):
