@@ -121,7 +121,6 @@ Makefile
 
 AC_OUTPUT
 """,
-    # FIXME: Ugly hack in $files_vars_in_makefile_am.
     "Makefile.am": """\
 #if $rpm
 EXTRA_DIST = ${name}.spec rpm.mk
@@ -138,9 +137,6 @@ dist_pkgdata${dd.id}_DATA = $f \\
 
 #end for
 """,
-#
-#$files_vars_in_makefile_am
-#""",
     "rpm.mk": """\
 #raw
 rpmdir = $(abs_builddir)/rpm
