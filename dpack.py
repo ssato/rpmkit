@@ -8,6 +8,9 @@
 # * generate packaging metadata like RPM SPEC, debian/rules, etc.
 # * build package such as rpm, src.rpm, deb, etc.
 #
+# NOTE: The permissions of the files may be lost during packaging.  If you want
+# to force set permissions as you wanted, specify these in the %files section
+# in the rpm spec explicitly.
 #
 # Copyright (C) 2011 Satoru SATOH <satoru.satoh @ gmail.com>
 #
@@ -28,6 +31,11 @@
 # SEE ALSO: http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-rpm-programming-python.html
 # SEE ALSO: http://cdbs-doc.duckcorp.org
 # SEE ALSO: https://wiki.duckcorp.org/DebianPackagingTutorial/CDBS
+#
+#
+# TODO:
+# * add permission specifiers for targets in RPM SPECs
+# * keep permissions of targets in tar archives
 #
 
 from Cheetah.Template import Template
@@ -115,12 +123,24 @@ AC_OUTPUT
 """,
     # FIXME: Ugly hack in $files_vars_in_makefile_am.
     "Makefile.am": """\
+#if $rpm
 EXTRA_DIST = ${name}.spec rpm.mk
 
 include \$(abs_srcdir)/rpm.mk
+#end if
 
-$files_vars_in_makefile_am
+#for $dd in $distdata
+pkgdata${dd.id}dir = $dd.dir
+#for $f in $dd.files
+dist_pkgdata${dd.id}_DATA = $f \\
+#end for
+\$(NULL)
+
+#end for
 """,
+#
+#$files_vars_in_makefile_am
+#""",
     "rpm.mk": """\
 #raw
 rpmdir = $(abs_builddir)/rpm
@@ -305,6 +325,7 @@ PKG_DIST_INST_FILES_TMPL = """
 pkgdata%(id)sdir = %(dir)s
 dist_pkgdata%(id)s_DATA = %(files)s
 """
+
 
 
 EXAMPLE_LOGS = [
@@ -610,14 +631,8 @@ def compile_template(template, params):
 
 
 def shell(cmd_s, workdir="", log=True):
-    """TODO: Popen.communicate might be blocked. How about using Popen.wait instead?
-
-    >>> (_o, e) = shell('ls', '/tmp', False)
-
-    TODO: test cases raise RuntimeError.
-
-    #>>> _res = shell('ls', '/root', False)
-    #RuntimeError: ...
+    """TODO: Popen.communicate might be blocked. How about using
+    Popen.wait instead?
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
@@ -731,6 +746,13 @@ class TestFuncsWithSideEffects(unittest.TestCase):
         f = os.path.join(self.workdir, 'a')
         open(f, "w").write("test")
         self.assertRaises(RuntimeError, createdir, f)
+
+    def test_shell(self):
+        (o, e) = shell('echo "" > /dev/null', '.', False)
+        self.assertEquals(e, "")
+        self.assertEquals(o, "")
+
+        self.assertRaises(RuntimeError, shell, 'grep xyz /dev/null')
 
 
 
@@ -934,7 +956,9 @@ class FileInfo(ObjDict):
                 logging.warn(" Do not overwrite it")
                 return False
         else:
-            os.makedirs(os.path.dirname(dest))
+            # TODO: which is better?
+            # os.makedirs(os.path.dirname(dest)) or ...
+            shutil.copytree(os.path.dirname(self.path), os.path.dirname(dest))
 
         logging.info(" Copying from '%s' to '%s'" % (self.path, dest))
         self._copy(dest)
@@ -1208,6 +1232,36 @@ def __gen_files_vars_in_makefile_am(fileinfos, tmpl=PKG_DIST_INST_FILES_TMPL):
     return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(targets, dirname)])
 
 
+def distdata_in_makefile_am(paths, srcdir='src'):
+    """
+    @paths  file path list
+
+    >>> ps0 = ['/etc/resolv.conf', '/etc/sysconfig/iptables']
+    >>> rs0 = [{'dir': '/etc', 'files': ['src/etc/resolv.conf'], 'id': '0'}, {'dir': '/etc/sysconfig', 'files': ['src/etc/sysconfig/iptables'], 'id': '1'}]
+    >>> 
+    >>> ps1 = ps0 + ['/etc/sysconfig/ip6tables', '/etc/modprobe.d/dist.conf']
+    >>> rs1 = [{'dir': '/etc', 'files': ['src/etc/resolv.conf'], 'id': '0'}, {'dir': '/etc/sysconfig', 'files': ['src/etc/sysconfig/iptables', 'src/etc/sysconfig/ip6tables'], 'id': '1'}, {'dir': '/etc/modprobe.d', 'files': ['src/etc/modprobe.d/dist.conf'], 'id': '2'}]
+    >>> 
+    >>> _cmp = lambda ds1, ds2: all([dicts_comp(*dt) for dt in zip(ds1, ds2)])
+    >>> 
+    >>> rrs0 = distdata_in_makefile_am(ps0)
+    >>> rrs1 = distdata_in_makefile_am(ps1)
+    >>> 
+    >>> assert _cmp(rrs0, rs0), "expected %s but got %s" % (str(rs0), str(rrs0))
+    >>> assert _cmp(rrs1, rs1), "expected %s but got %s" % (str(rs1), str(rrs1))
+    """
+    cntr = count()
+
+    return [
+        {
+            'id': str(cntr.next()),
+            'dir':d,
+            'files': [os.path.join('src', p.strip(os.path.sep)) for p in ps]
+        } \
+        for d,ps in groupby(paths, dirname)
+    ]
+
+
 def setup_dirs(pkg):
     createdir(pkg['workdir'])
     createdir(pkg['srcdir'])
@@ -1224,7 +1278,8 @@ def gen_buildfiles(pkg):
     global TEMPLATES
 
     workdir = pkg['workdir']
-    pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['fileinfos'])
+    #pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['fileinfos'])
+    pkg['distdata'] = distdata_in_makefile_am([fi.path for fi in pkg['fileinfos']])
 
     def genfile(filepath, output=""):
         outfile = os.path.join(workdir, (output or filepath))
@@ -1282,6 +1337,135 @@ def build_rpm_with_rpmbuild(pkg):
 
 def build_deb_with_debuild(pkg):
     shell('debuild -us -uc', workdir=pkg['workdir'])
+
+
+
+class PackageMaker(object):
+
+    def __init__(self, package, workdir, destdir=""):
+        self.package = package
+        self.workdir = workdir
+        self.destdir = destdir
+
+        self.srcdir = os.path.join(workdir, 'src')
+
+    def shell(self, *args):
+        return shell(*args, workdir=self.workdir)
+
+    def to_srcdir(self, path):
+        """
+        >>> pm = PackageMaker({}, '/tmp/w')
+        >>> pm.to_srcdir('/a/b/c')
+        '/tmp/w/src/a/b/c'
+        >>> pm.to_srcdir('a/b')
+        '/tmp/w/src/a/b'
+        >>> pm.to_srcdir('/')
+        '/tmp/w/src/'
+        """
+        assert path != '', "Empty path was given"
+
+        return os.path.join(self.srcdir, path.strip(os.path.sep))
+
+    def genfile(self, path, output=False):
+        global TEMPLATES
+
+        outfile = os.path.join(self.workdir, (output or path))
+        open(outfile, 'w').write(compile_template(TEMPLATES[path], self.package))
+
+    def copyfiles(self):
+        for fi in self.package['fileinfos']:
+            p = fi.path
+
+            if self.destdir:
+                p = os.path.join(self.destdir, p.strip(os.path.sep))
+
+            fi.copy(self.to_srcdir(p))
+
+    def setup(self):
+        for d in ('workdir', 'srcdir'):
+            createdir(self.package[d])
+
+        self.copyfiles()
+
+    def pre_configure(self): pass
+    def post_configure(self): pass
+    def pre_package(self): pass
+    def post_package(self): pass
+
+    def configure(self):
+        self.pre_configure()
+
+        self.package['distdata'] = distdata_in_makefile_am([fi.path for fi in self.package['fileinfos']])
+
+        self.genfile('configure.ac')
+        self.genfile('Makefile.am')
+        self.shell('autoreconf -vfi')
+
+        self.post_configure()
+
+    def package(self):
+        self.pre_package()
+
+        self.shell('./configure')
+        self.shell('make dist')
+
+        self.post_package()
+
+
+class RpmPackageMaker(PackageMaker):
+
+    def __init__(self, package, workdir, destdir="", no_mock=False, build_all=False):
+        PackageMaker.__init__(package, workdir, destdir)
+        self.mock = (not no_mock)
+        self.build_all = build_all
+        self.package['rpm'] = "yes"
+
+    def build_srpm(self):
+        self.shell('make srpm')
+
+    def build_rpm_wo_mock(self):
+        self.shell('make rpm')
+
+    def build_rpm(self):
+        try:
+            self.shell("mock --version > /dev/null")
+        except RuntimeError, e:
+            logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
+            self.build_rpm_wo_mock()
+            return
+
+        self.shell("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % self.package)
+
+    def post_configure(self):
+        self.genfile('rpm.mk')
+        self.genfile("package.spec", "%s.spec" % self.package['name'])
+
+    def post_package(self):
+        self.build_srpm()
+
+        if self.mock:
+            self.build_rpm_wo_mock()
+        else:
+            self.build_rpm()
+
+
+
+class DebPackageMaker(PackageMaker):
+
+    def post_configure(self):
+        debiandir = os.path.join(self.workdir, 'debian')
+
+        if not os.path.exists(debiandir):
+            os.makedirs(debiandir, 0755)
+
+        self.genfile('debian/rules')
+        self.genfile('debian/control')
+        self.genfile('debian/copyright')
+        self.genfile('debian/changelog')
+
+    def post_package(pkg):
+        self.shell('debuild -us -uc')
+
 
 
 def do_packaging(pkg, options):
@@ -1455,6 +1639,7 @@ def main():
     }
 
     pkg['dist'] = options.dist
+    pkg['rpm'] = 1
 
     # TODO: Revert locale setting change just after timestamp was gotten.
     locale.setlocale(locale.LC_ALL, "C")
