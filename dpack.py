@@ -86,7 +86,7 @@ except ImportError:  # python < 2.5
 
 
 
-__version__ = "0.1"
+__version__ = "0.0.99"
 
 
 # TODO: Detect appropriate distribution (for mock) automatically.
