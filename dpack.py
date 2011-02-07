@@ -635,13 +635,17 @@ def shell(cmd_s, workdir="", log=True):
 
     logging.info(" Run: %s at %s" % (cmd_s, workdir))
 
-    pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
-    (output, errors) = pipe.communicate()
+    try:
+        pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
+        (output, errors) = pipe.communicate()
+    except Exception, e:
+        raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
 
     if pipe.returncode == 0:
         return (output, errors)
     else:
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
+
 
 
 def createdir(dir, mode=0700):
@@ -749,6 +753,9 @@ class TestFuncsWithSideEffects(unittest.TestCase):
         self.assertEquals(o, "")
 
         self.assertRaises(RuntimeError, shell, 'grep xyz /dev/null')
+
+        if os.getuid() != 0:
+            self.assertRaises(RuntimeError, shell, 'ls', '/root')
 
 
 
