@@ -1137,9 +1137,9 @@ class RpmFileInfoFactory(FileInfoFactory):
         There are cases to get no results if the target objects not owned by
         any packages.
 
-        >>> ff = RpmFileInfoFactory()
-        >>> 
         >>> if os.path.exists('/var/lib/rpm/Basenames'):
+        ...     ff = RpmFileInfoFactory()
+        ... 
         ...     if os.path.exists('/etc/hosts'):
         ...         (_mode, uid, gid) = ff._stat('/etc/hosts')
         ...         assert uid == 0
