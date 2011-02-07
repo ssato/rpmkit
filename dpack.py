@@ -130,8 +130,9 @@ include \$(abs_srcdir)/rpm.mk
 
 #for $dd in $distdata
 pkgdata${dd.id}dir = $dd.dir
+dist_pkgdata${dd.id}_DATA = \\
 #for $f in $dd.files
-dist_pkgdata${dd.id}_DATA = $f \\
+$f \\
 #end for
 \$(NULL)
 
@@ -899,7 +900,7 @@ class FileInfo(ObjDict):
         1. Copy itself and its some metadata (owner, mode, etc.)
         2. Copy extra metadata not copyable with the above.
         """
-        shutil.copy2(self.path(), dest)
+        shutil.copy2(self.path, dest)
         self._copy_xattrs(dest)
 
     def _remove(self, target):
@@ -927,7 +928,7 @@ class FileInfo(ObjDict):
         return True
 
     def remove(self):
-        self._remove(self.path())
+        self._remove(self.path)
 
     def copy(self, dest, force=False):
         """Copy to $dest.  'Copy' action varys depends on actual filetype so
@@ -940,7 +941,7 @@ class FileInfo(ObjDict):
         assert self.path != dest, "Copying src and dst are same!"
 
         if not self.copyable():
-            logging.warn(" Not copyable")
+            logging.warn(" Not copyable: %s" % str(self))
             return False
 
         if os.path.exists(dest):
@@ -959,9 +960,15 @@ class FileInfo(ObjDict):
                 logging.warn(" Do not overwrite it")
                 return False
         else:
+            destdir = os.path.dirname(dest)
+
             # TODO: which is better?
-            # os.makedirs(os.path.dirname(dest)) or ...
-            shutil.copytree(os.path.dirname(self.path), os.path.dirname(dest))
+            #os.makedirs(os.path.dirname(dest)) or ...
+            #shutil.copytree(os.path.dirname(self.path), os.path.dirname(dest))
+
+            if not os.path.exists(destdir):
+                os.makedirs(destdir)
+            shutil.copystat(os.path.dirname(self.path), destdir)
 
         logging.info(" Copying from '%s' to '%s'" % (self.path, dest))
         self._copy(dest)
@@ -1114,12 +1121,15 @@ class FileInfoFactory(object):
 
         _filetype = self._guess_ftype(_mode)
 
+        if _filetype == TYPE_UNKNOWN:
+            logging.info(" Could not get the result: %s" % path)
+
         if _filetype == TYPE_FILE:
             _checksum = checksum(path)
         else:
             _checksum = checksum()
 
-        _cls = globals.get("%sInfo" % _filetype.title(), False)
+        _cls = globals().get("%sInfo" % _filetype.title(), False)
         assert _cls, "Should not reached here! _filetype.title() was '%s'" % _filetype.title()
 
         return _cls(path, _mode, _uid, _gid, _checksum, _xattrs)
@@ -1129,7 +1139,7 @@ class FileInfoFactory(object):
 class RpmFileInfoFactory(FileInfoFactory):
 
     def __init__(self):
-        FileInfoFactory.__init__(self)
+        super(RpmFileInfoFactory, self).__init__()
 
     def _stat(self, path):
         """Stat with using RPM database instead of lstat().
@@ -1145,9 +1155,10 @@ class RpmFileInfoFactory(FileInfoFactory):
         ...         assert uid == 0
         ...         assert gid == 0
         ... 
-        ...     if os.path.exists('/proc/mounts'):
-        ...         st = ff._stat('/proc/mounts')
-        ...         assert st is None, "stat was '%s'" % str(st)
+        ...     if os.path.exists('/etc/resolv.conf'):  # not in the rpm database.
+        ...         (_mode, uid, gid) = ff._stat('/etc/resolv.conf')
+        ...         assert uid == 0
+        ...         assert gid == 0
         """
         try:
             fi = Rpm.pathinfo(path)
@@ -1159,7 +1170,7 @@ class RpmFileInfoFactory(FileInfoFactory):
         except:
             pass
 
-        return None
+        return super(RpmFileInfoFactory, self)._stat(path)
 
 
 
@@ -1268,6 +1279,16 @@ def copy_files(pkg):
         __copy(t2, to_srcdir(t, pkg['workdir']))
 
 
+def copyfiles(package):
+    for fi in package['fileinfos']:
+        p = fi.path
+
+        if package['destdir']:
+            p = os.path.join(package['destdir'], p.strip(os.path.sep))
+
+        fi.copy(os.path.join(package['workdir'], to_srcdir(p)))
+
+
 def gen_buildfiles(pkg):
     global TEMPLATES
 
@@ -1372,7 +1393,7 @@ class PackageMaker(object):
             if self.destdir:
                 p = os.path.join(self.destdir, p.strip(os.path.sep))
 
-            fi.copy(self.to_srcdir(p))
+            fi.copy(os.path.join(self.workdir, self.to_srcdir(p)))
 
     def setup(self):
         for d in ('workdir', 'srcdir'):
@@ -1463,7 +1484,8 @@ class DebPackageMaker(PackageMaker):
 
 def do_packaging(pkg, options):
     setup_dirs(pkg)
-    copy_files(pkg)
+    #copy_files(pkg)
+    copyfiles(pkg)
     gen_buildfiles(pkg)
     build_srpm(pkg)
 
