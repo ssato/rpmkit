@@ -1119,7 +1119,8 @@ class FileInfoFactory(object):
         else:
             _checksum = checksum()
 
-        _cls = eval("%sInfo" % _filetype.title())
+        _cls = globals.get("%sInfo" % _filetype.title(), False)
+        assert _cls, "Should not reached here! _filetype.title() was '%s'" % _filetype.title()
 
         return _cls(path, _mode, _uid, _gid, _checksum, _xattrs)
 
