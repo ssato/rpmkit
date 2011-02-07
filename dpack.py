@@ -8,6 +8,9 @@
 # * generate packaging metadata like RPM SPEC, debian/rules, etc.
 # * build package such as rpm, src.rpm, deb, etc.
 #
+# NOTE: The permissions of the files may be lost during packaging.  If you want
+# to force set permissions as you wanted, specify these in the %files section
+# in the rpm spec explicitly.
 #
 # Copyright (C) 2011 Satoru SATOH <satoru.satoh @ gmail.com>
 #
@@ -29,12 +32,18 @@
 # SEE ALSO: http://cdbs-doc.duckcorp.org
 # SEE ALSO: https://wiki.duckcorp.org/DebianPackagingTutorial/CDBS
 #
+#
+# TODO:
+# * add permission specifiers for targets in RPM SPECs
+# * keep permissions of targets in tar archives
+#
 
 from Cheetah.Template import Template
 from itertools import chain, count, groupby
 
 import copy
 import datetime
+import doctest
 import glob
 import grp
 import locale
@@ -47,6 +56,8 @@ import shutil
 import stat
 import subprocess
 import sys
+import unittest
+import tempfile
 
 import rpm
 
@@ -75,7 +86,7 @@ except ImportError:  # python < 2.5
 
 
 
-__version__ = "0.1"
+__version__ = "0.0.99"
 
 
 # TODO: Detect appropriate distribution (for mock) automatically.
@@ -110,13 +121,22 @@ Makefile
 
 AC_OUTPUT
 """,
-    # FIXME: Ugly hack in $files_vars_in_makefile_am.
     "Makefile.am": """\
+#if $rpm
 EXTRA_DIST = ${name}.spec rpm.mk
 
 include \$(abs_srcdir)/rpm.mk
+#end if
 
-$files_vars_in_makefile_am
+#for $dd in $distdata
+pkgdata${dd.id}dir = $dd.dir
+dist_pkgdata${dd.id}_DATA = \\
+#for $f in $dd.files
+$f \\
+#end for
+\$(NULL)
+
+#end for
 """,
     "rpm.mk": """\
 #raw
@@ -302,6 +322,7 @@ PKG_DIST_INST_FILES_TMPL = """
 pkgdata%(id)sdir = %(dir)s
 dist_pkgdata%(id)s_DATA = %(files)s
 """
+
 
 
 EXAMPLE_LOGS = [
@@ -506,7 +527,7 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
     return m.hexdigest()
 
 
-#@memoize
+@memoize
 def flattern(xss):
     """
     >>> flattern([])
@@ -547,7 +568,7 @@ def concat(xss):
     return list(chain(*xss))
 
 
-#@memoize
+@memoize
 def unique(xs, cmp_f=cmp, key=None):
     """Returns new sorted list of no duplicated items.
 
@@ -591,30 +612,151 @@ def dirname(path):
     return os.path.dirname(path)
 
 
-def compile_template(template, params, outfile):
+def compile_template(template, params):
+    """
+    >>> tmpl_s = "a=$a b=$b"
+    >>> params = {'a':1, 'b':'b'}
+    >>> 
+    >>> assert "a=1 b=b" == compile_template(tmpl_s, params)
+    """
     if isinstance(template, file):
         tmpl = Template(file=template, searchList=params)
     else:
         tmpl = Template(source=template, searchList=params)
 
-    open(outfile, 'w').write(tmpl.respond())
+    return tmpl.respond()
 
 
 def shell(cmd_s, workdir="", log=True):
-    """TODO: Popen.communicate might be blocked. How about using Popen.wait instead?
+    """TODO: Popen.communicate might be blocked. How about using
+    Popen.wait instead?
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
     logging.info(" Run: %s [in %s]" % (cmd_s, workdir))
 
-    pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
-    (output, errors) = pipe.communicate()
+    try:
+        pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
+        (output, errors) = pipe.communicate()
+    except Exception, e:
+        raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
 
     if pipe.returncode == 0:
         return (output, errors)
     else:
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
+
+
+
+def createdir(dir, mode=0700):
+    """Create a dir with specified mode.
+    """
+    logging.info(" Creating a directory: %s" % dir)
+
+    if os.path.exists(dir):
+        if os.path.isdir(dir):
+            logging.warn(" Directory already exists! Skip it: %s" % dir)
+        else:
+            raise RuntimeError(" Already exists but not a directory: %s" % dir)
+    else:
+        os.makedirs(dir, mode)
+
+
+def rm_rf(dir):
+    """'rm -rf' in python.
+
+    >>> d = tempfile.mkdtemp(dir='/tmp')
+    >>> rm_rf(d)
+    >>> rm_rf(d)
+    >>> 
+    >>> d = tempfile.mkdtemp(dir='/tmp')
+    >>> for c in "abc":
+    ...     os.makedirs(os.path.join(d, c))
+    >>> os.makedirs(os.path.join(d, "c", "d"))
+    >>> open(os.path.join(d, 'x'), "w").write("test")
+    >>> open(os.path.join(d, 'a', 'y'), "w").write("test")
+    >>> open(os.path.join(d, 'c', 'd', 'z'), "w").write("test")
+    >>> 
+    >>> rm_rf(d)
+    """
+    if not os.path.exists(dir):
+        return
+
+    if os.path.isfile(dir):
+        os.remove(dir)
+        return 
+
+    for x in glob.glob(os.path.join(dir, '*')):
+        if os.path.isdir(x):
+            rm_rf(x)
+        else:
+            os.remove(x)
+
+    if os.path.exists(dir):
+        os.removedirs(dir)
+
+
+
+class TestDecoratedFuncs(unittest.TestCase):
+    """It seems that doctests in decarated functions are not run.  This class
+    is a workaround for this issue.
+    """
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_checksum_null(self):
+        self.assertEquals(checksum(), '0' * len(sha1('').hexdigest()))
+
+    def test_flattern(self):
+        self.assertEquals(flattern([]),                               [])
+        self.assertEquals(flattern([[1,2,3],[4,5]]),                  [1, 2, 3, 4, 5])
+        self.assertEquals(flattern([[1,2,[3]],[4,[5,6]]]),            [1, 2, 3, 4, 5, 6])
+        self.assertEquals(flattern([(1,2,3),(4,5)]),                  [1, 2, 3, 4, 5])
+        self.assertEquals(flattern(((i, i * 2) for i in range(0,5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
+
+    def test_unique(self):
+        self.assertEquals(unique([]),                       [])
+        self.assertEquals(unique([0, 3, 1, 2, 1, 0, 4, 5]), [0, 1, 2, 3, 4, 5])
+
+
+
+class TestFuncsWithSideEffects(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_createdir_normal(self):
+        """TODO: Check mode (permission).
+        """
+        d = os.path.join(self.workdir, "a")
+        createdir(d)
+
+        self.assertTrue(os.path.isdir(d))
+
+    def test_createdir_specials(self):
+        self.assertIsNone(createdir(self.workdir))  # try creating dir already exists.
+
+        f = os.path.join(self.workdir, 'a')
+        open(f, "w").write("test")
+        self.assertRaises(RuntimeError, createdir, f)
+
+    def test_shell(self):
+        (o, e) = shell('echo "" > /dev/null', '.', False)
+        self.assertEquals(e, "")
+        self.assertEquals(o, "")
+
+        self.assertRaises(RuntimeError, shell, 'grep xyz /dev/null')
+
+        if os.getuid() != 0:
+            self.assertRaises(RuntimeError, shell, 'ls', '/root')
 
 
 
@@ -758,7 +900,7 @@ class FileInfo(ObjDict):
         1. Copy itself and its some metadata (owner, mode, etc.)
         2. Copy extra metadata not copyable with the above.
         """
-        shutil.copy2(self.path(), dest)
+        shutil.copy2(self.path, dest)
         self._copy_xattrs(dest)
 
     def _remove(self, target):
@@ -786,7 +928,7 @@ class FileInfo(ObjDict):
         return True
 
     def remove(self):
-        self._remove(self.path())
+        self._remove(self.path)
 
     def copy(self, dest, force=False):
         """Copy to $dest.  'Copy' action varys depends on actual filetype so
@@ -799,7 +941,7 @@ class FileInfo(ObjDict):
         assert self.path != dest, "Copying src and dst are same!"
 
         if not self.copyable():
-            logging.warn(" Not copyable")
+            logging.warn(" Not copyable: %s" % str(self))
             return False
 
         if os.path.exists(dest):
@@ -818,7 +960,15 @@ class FileInfo(ObjDict):
                 logging.warn(" Do not overwrite it")
                 return False
         else:
-            os.makedirs(os.path.dirname(dest))
+            destdir = os.path.dirname(dest)
+
+            # TODO: which is better?
+            #os.makedirs(os.path.dirname(dest)) or ...
+            #shutil.copytree(os.path.dirname(self.path), os.path.dirname(dest))
+
+            if not os.path.exists(destdir):
+                os.makedirs(destdir)
+            shutil.copystat(os.path.dirname(self.path), destdir)
 
         logging.info(" Copying from '%s' to '%s'" % (self.path, dest))
         self._copy(dest)
@@ -916,34 +1066,6 @@ class FileInfoFactory(object):
 
         return (_stat.st_mode, _stat.st_uid, _stat.st_gid)
 
-    def _stat_with_rpmdb(self, path):
-        """Same as the above but use RPM DB deta instead of lstat().
-
-        There are cases to get no results if the target objects not owned by
-        any packages.
-
-        >>> ff = FileInfoFactory()
-        >>> 
-        >>> (_mode, uid, gid) = ff._stat_with_rpmdb('/etc/hosts')
-        >>> assert uid == 0
-        >>> assert gid == 0
-        >>> #
-        >>> st = ff._stat_with_rpmdb('/proc/mounts')
-        >>> assert st is None, "stat was '%s'" % str(st)
-        """
-        try:
-            fi = Rpm.pathinfo(path)
-            if fi:
-                uid = pwd.getpwnam(fi['uid']).pw_uid   # uid: name -> id
-                gid = grp.getgrnam(fi['gid']).gr_gid   # gid: name -> id
-
-                return (fi['mode'], uid, gid)
-        except:
-            pass
-
-        return None
-
-
     def _guess_ftype(self, st_mode):
         """
         @st_mode    st_mode
@@ -982,36 +1104,73 @@ class FileInfoFactory(object):
 
         return ft
 
-    def create(self, path, use_rpmdb=False):
-        """Factory method.
-
-        Get metada of object by lstat(), create and return the *Info instance.
+    def create(self, path):
+        """Factory method. Create and return the *Info instance.
 
         @path       str   Object path (relative or absolute)
-        @use_rpmdb  bool  Use data in RPM DB if True instead of lstat()
-
-        @return  A FileInfo or inherited class' instance
         """
-        res = (use_rpmdb and self._stat_with_rpmdb or self._stat)(path)
+        st = self._stat(path)
 
-        if res is None:
+        if st is None:
             return UnknownInfo(path)
         else:
-            (_mode, _uid, _gid) = res
+            (_mode, _uid, _gid) = st
 
         xs = xattr.get_all(path)
         _xattrs = (xs and dict(xs) or {})
 
         _filetype = self._guess_ftype(_mode)
 
+        if _filetype == TYPE_UNKNOWN:
+            logging.info(" Could not get the result: %s" % path)
+
         if _filetype == TYPE_FILE:
             _checksum = checksum(path)
         else:
             _checksum = checksum()
 
-        _cls = eval("%sInfo" % _filetype.title())
+        _cls = globals().get("%sInfo" % _filetype.title(), False)
+        assert _cls, "Should not reached here! _filetype.title() was '%s'" % _filetype.title()
 
         return _cls(path, _mode, _uid, _gid, _checksum, _xattrs)
+
+
+
+class RpmFileInfoFactory(FileInfoFactory):
+
+    def __init__(self):
+        super(RpmFileInfoFactory, self).__init__()
+
+    def _stat(self, path):
+        """Stat with using RPM database instead of lstat().
+
+        There are cases to get no results if the target objects not owned by
+        any packages.
+
+        >>> if os.path.exists('/var/lib/rpm/Basenames'):
+        ...     ff = RpmFileInfoFactory()
+        ... 
+        ...     if os.path.exists('/etc/hosts'):
+        ...         (_mode, uid, gid) = ff._stat('/etc/hosts')
+        ...         assert uid == 0
+        ...         assert gid == 0
+        ... 
+        ...     if os.path.exists('/etc/resolv.conf'):  # not in the rpm database.
+        ...         (_mode, uid, gid) = ff._stat('/etc/resolv.conf')
+        ...         assert uid == 0
+        ...         assert gid == 0
+        """
+        try:
+            fi = Rpm.pathinfo(path)
+            if fi:
+                uid = pwd.getpwnam(fi['uid']).pw_uid   # uid: name -> id
+                gid = grp.getgrnam(fi['gid']).gr_gid   # gid: name -> id
+
+                return (fi['mode'], uid, gid)
+        except:
+            pass
+
+        return super(RpmFileInfoFactory, self)._stat(path)
 
 
 
@@ -1028,23 +1187,11 @@ def collect(list_f, rpmdb=False):
     """
     Collect FileInfo objects.
     """
-    ff = FileInfoFactory()
+    ff = (rpmdb and RpmFileInfoFactory() or FileInfoFactory())
 
     for p in process_listfile(list_f):
-        fi = ff.create(p, rpmdb)
+        fi = ff.create(p)
         yield fi
-
-
-def createdir(dir):
-    logging.info(" Creating a directory: %s" % dir)
-
-    if os.path.exists(dir):
-        if os.path.isdir(dir):
-            logging.warn(" Target directory already exists! Skipping: %s" % dir)
-        else:
-            raise RuntimeError(" '%s' already exists and it's not a directory! Aborting..." % dir)
-    else:
-        os.makedirs(dir, 0700)
 
 
 def __copy(src, dst):
@@ -1090,14 +1237,34 @@ def to_srcdir(path, workdir=''):
     return os.path.join(workdir, 'src', path.strip(os.path.sep))
 
 
-def __gen_files_vars_in_makefile_am(fileinfos, tmpl=PKG_DIST_INST_FILES_TMPL):
-    """FIXME: ugly code
+def distdata_in_makefile_am(paths, srcdir='src'):
     """
-    targets = [fi.target for fi in fileinfos]
-    cntr = count()
-    fmt = lambda d, fs: tmpl % {'id': str(cntr.next()), 'files': " \\\n".join((to_srcdir(f) for f in fs)), 'dir':d}
+    @paths  file path list
 
-    return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(targets, dirname)])
+    >>> ps0 = ['/etc/resolv.conf', '/etc/sysconfig/iptables']
+    >>> rs0 = [{'dir': '/etc', 'files': ['src/etc/resolv.conf'], 'id': '0'}, {'dir': '/etc/sysconfig', 'files': ['src/etc/sysconfig/iptables'], 'id': '1'}]
+    >>> 
+    >>> ps1 = ps0 + ['/etc/sysconfig/ip6tables', '/etc/modprobe.d/dist.conf']
+    >>> rs1 = [{'dir': '/etc', 'files': ['src/etc/resolv.conf'], 'id': '0'}, {'dir': '/etc/sysconfig', 'files': ['src/etc/sysconfig/iptables', 'src/etc/sysconfig/ip6tables'], 'id': '1'}, {'dir': '/etc/modprobe.d', 'files': ['src/etc/modprobe.d/dist.conf'], 'id': '2'}]
+    >>> 
+    >>> _cmp = lambda ds1, ds2: all([dicts_comp(*dt) for dt in zip(ds1, ds2)])
+    >>> 
+    >>> rrs0 = distdata_in_makefile_am(ps0)
+    >>> rrs1 = distdata_in_makefile_am(ps1)
+    >>> 
+    >>> assert _cmp(rrs0, rs0), "expected %s but got %s" % (str(rs0), str(rrs0))
+    >>> assert _cmp(rrs1, rs1), "expected %s but got %s" % (str(rs1), str(rrs1))
+    """
+    cntr = count()
+
+    return [
+        {
+            'id': str(cntr.next()),
+            'dir':d,
+            'files': [os.path.join('src', p.strip(os.path.sep)) for p in ps]
+        } \
+        for d,ps in groupby(paths, dirname)
+    ]
 
 
 def setup_dirs(pkg):
@@ -1112,14 +1279,25 @@ def copy_files(pkg):
         __copy(t2, to_srcdir(t, pkg['workdir']))
 
 
+def copyfiles(package):
+    for fi in package['fileinfos']:
+        p = fi.path
+
+        if package['destdir']:
+            p = os.path.join(package['destdir'], p.strip(os.path.sep))
+
+        fi.copy(os.path.join(package['workdir'], to_srcdir(p)))
+
+
 def gen_buildfiles(pkg):
     global TEMPLATES
 
     workdir = pkg['workdir']
-    pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['fileinfos'])
+    pkg['distdata'] = distdata_in_makefile_am([fi.path for fi in pkg['fileinfos']])
 
     def genfile(filepath, output=""):
-        compile_template(TEMPLATES[filepath], pkg, os.path.join(workdir, (output or filepath)))
+        outfile = os.path.join(workdir, (output or filepath))
+        open(outfile, 'w').write(compile_template(TEMPLATES[filepath], pkg))
 
     genfile('configure.ac')
     genfile('Makefile.am')
@@ -1175,9 +1353,139 @@ def build_deb_with_debuild(pkg):
     shell('debuild -us -uc', workdir=pkg['workdir'])
 
 
+
+class PackageMaker(object):
+
+    def __init__(self, package, workdir, destdir=""):
+        self.package = package
+        self.workdir = workdir
+        self.destdir = destdir
+
+        self.srcdir = os.path.join(workdir, 'src')
+
+    def shell(self, *args):
+        return shell(*args, workdir=self.workdir)
+
+    def to_srcdir(self, path):
+        """
+        >>> pm = PackageMaker({}, '/tmp/w')
+        >>> pm.to_srcdir('/a/b/c')
+        '/tmp/w/src/a/b/c'
+        >>> pm.to_srcdir('a/b')
+        '/tmp/w/src/a/b'
+        >>> pm.to_srcdir('/')
+        '/tmp/w/src/'
+        """
+        assert path != '', "Empty path was given"
+
+        return os.path.join(self.srcdir, path.strip(os.path.sep))
+
+    def genfile(self, path, output=False):
+        global TEMPLATES
+
+        outfile = os.path.join(self.workdir, (output or path))
+        open(outfile, 'w').write(compile_template(TEMPLATES[path], self.package))
+
+    def copyfiles(self):
+        for fi in self.package['fileinfos']:
+            p = fi.path
+
+            if self.destdir:
+                p = os.path.join(self.destdir, p.strip(os.path.sep))
+
+            fi.copy(os.path.join(self.workdir, self.to_srcdir(p)))
+
+    def setup(self):
+        for d in ('workdir', 'srcdir'):
+            createdir(self.package[d])
+
+        self.copyfiles()
+
+    def pre_configure(self): pass
+    def post_configure(self): pass
+    def pre_package(self): pass
+    def post_package(self): pass
+
+    def configure(self):
+        self.pre_configure()
+
+        self.package['distdata'] = distdata_in_makefile_am([fi.path for fi in self.package['fileinfos']])
+
+        self.genfile('configure.ac')
+        self.genfile('Makefile.am')
+        self.shell('autoreconf -vfi')
+
+        self.post_configure()
+
+    def package(self):
+        self.pre_package()
+
+        self.shell('./configure')
+        self.shell('make dist')
+
+        self.post_package()
+
+
+class RpmPackageMaker(PackageMaker):
+
+    def __init__(self, package, workdir, destdir="", no_mock=False, build_all=False):
+        PackageMaker.__init__(package, workdir, destdir)
+        self.mock = (not no_mock)
+        self.build_all = build_all
+        self.package['rpm'] = "yes"
+
+    def build_srpm(self):
+        self.shell('make srpm')
+
+    def build_rpm_wo_mock(self):
+        self.shell('make rpm')
+
+    def build_rpm(self):
+        try:
+            self.shell("mock --version > /dev/null")
+        except RuntimeError, e:
+            logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
+            self.build_rpm_wo_mock()
+            return
+
+        self.shell("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % self.package)
+
+    def post_configure(self):
+        self.genfile('rpm.mk')
+        self.genfile("package.spec", "%s.spec" % self.package['name'])
+
+    def post_package(self):
+        self.build_srpm()
+
+        if self.mock:
+            self.build_rpm_wo_mock()
+        else:
+            self.build_rpm()
+
+
+
+class DebPackageMaker(PackageMaker):
+
+    def post_configure(self):
+        debiandir = os.path.join(self.workdir, 'debian')
+
+        if not os.path.exists(debiandir):
+            os.makedirs(debiandir, 0755)
+
+        self.genfile('debian/rules')
+        self.genfile('debian/control')
+        self.genfile('debian/copyright')
+        self.genfile('debian/changelog')
+
+    def post_package(pkg):
+        self.shell('debuild -us -uc')
+
+
+
 def do_packaging(pkg, options):
     setup_dirs(pkg)
-    copy_files(pkg)
+    #copy_files(pkg)
+    copyfiles(pkg)
     gen_buildfiles(pkg)
     build_srpm(pkg)
 
@@ -1194,8 +1502,8 @@ def show_examples(logs=EXAMPLE_LOGS):
 
 
 def run_tests():
-    import doctest
     doctest.testmod(verbose=True)
+    unittest.main(argv=sys.argv[:1], verbosity=2)
 
 
 def option_parser(V=__version__):
@@ -1346,6 +1654,7 @@ def main():
     }
 
     pkg['dist'] = options.dist
+    pkg['rpm'] = 1
 
     # TODO: Revert locale setting change just after timestamp was gotten.
     locale.setlocale(locale.LC_ALL, "C")
