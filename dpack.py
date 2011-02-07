@@ -1226,16 +1226,6 @@ def to_srcdir(path, workdir=''):
     return os.path.join(workdir, 'src', path.strip(os.path.sep))
 
 
-def __gen_files_vars_in_makefile_am(fileinfos, tmpl=PKG_DIST_INST_FILES_TMPL):
-    """FIXME: ugly code
-    """
-    targets = [fi.target for fi in fileinfos]
-    cntr = count()
-    fmt = lambda d, fs: tmpl % {'id': str(cntr.next()), 'files': " \\\n".join((to_srcdir(f) for f in fs)), 'dir':d}
-
-    return ''.join([fmt(d, [x for x in grp]) for d,grp in groupby(targets, dirname)])
-
-
 def distdata_in_makefile_am(paths, srcdir='src'):
     """
     @paths  file path list
@@ -1282,7 +1272,6 @@ def gen_buildfiles(pkg):
     global TEMPLATES
 
     workdir = pkg['workdir']
-    #pkg['files_vars_in_makefile_am'] = __gen_files_vars_in_makefile_am(pkg['fileinfos'])
     pkg['distdata'] = distdata_in_makefile_am([fi.path for fi in pkg['fileinfos']])
 
     def genfile(filepath, output=""):
