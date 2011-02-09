@@ -63,7 +63,7 @@ import rpm
 
 try:
     import xattr   # pyxattr
-    XATTR_AVAIL = True
+    USE_PYXATTR = True
 
 except ImportError:
     # Make up a 'Null-Object' like class mimics xattr module.
@@ -80,7 +80,7 @@ except ImportError:
         #get_all = classmethod(get_all)
         #set = classmethod(set)
     
-    XATTR_AVAIL = False
+    USE_PYXATTR = False
 
 
 try:
@@ -874,79 +874,6 @@ class ObjDict(dict):
 
 
 
-class FIController(object):
-
-    def __init__(self, use_pyxattr=XATTR_AVAIL):
-        self.use_pyxattr = use_pyxattr
-
-    def _copy_xattrs(self, fileinfo, dest):
-        """
-        TODO: doctest code.
-        """
-        for k,v in fileinfo.xattrs.iteritems():
-            xattr.set(dest, k, v)
-
-    def _copy(self, fileinfo, dest):
-        """Two steps needed to keep the content and metadata of the original
-        file if self.use_pyxattr == True:
-
-        1. Copy itself and its some metadata (owner, mode, etc.)
-        2. Copy extra metadata not copyable with the above.
-        """
-        if self.use_pyxattr:
-            shutil.copy2(fileinfo.path, dest)
-            self._copy_xattrs(fileinfo, dest)
-        else:
-            shell("cp -a %s %s" % (fileinfo.path, dest))
-
-    def copy(self, fileinfo, dest, force=False):
-        """Copy file/dir/symlink/other objects of given $fileinfo to $dest.
-
-        'Copy' action varys depends on actual filetype.
-
-        @fileinfo  *Info obj  File/Dir/Symlink/OtherInfo instance.
-        @dest      string     The destination path to copy to
-        @force     bool       When True, force overwrite $dest even if it exists
-        """
-        assert fileinfo.path != dest, "Copying src and dst are same!"
-
-        if not fileinnfo.copyable():
-            logging.warn(" Not copyable: %s" % str(self))
-            return False
-
-        if os.path.exists(dest):
-            logging.info(" Copying destination already exists: '%s'" % dest)
-
-            # TODO: It has negative impact for symlinks.
-            #
-            #if os.path.realpath(self.path) == os.path.realpath(dest):
-            #    logging.warn("Copying src and dest are same actually.")
-            #    return False
-
-            if force:
-                logging.info(" Removing dest: " % dest)
-                fileinfo.remove(dest)
-            else:
-                logging.warn(" Do not overwrite it")
-                return False
-        else:
-            destdir = os.path.dirname(dest)
-
-            # TODO: which is better?
-            #os.makedirs(os.path.dirname(dest)) or ...
-            #shutil.copytree(os.path.dirname(self.path), os.path.dirname(dest))
-
-            if not os.path.exists(destdir):
-                os.makedirs(destdir)
-            shutil.copystat(os.path.dirname(fileinfo.path), destdir)
-
-        logging.info(" Copying from '%s' to '%s'" % (fileinfo.path, dest))
-        self._copy(fileinfo, dest)
-
-        return True
-
-
-
 class FileInfo(ObjDict):
     """The class of which objects to hold meta data of regular files, dirs and
     symlinks. This is for regular file and the super class for other types.
@@ -977,9 +904,16 @@ class FileInfo(ObjDict):
 
         1. Copy itself and its some metadata (owner, mode, etc.)
         2. Copy extra metadata not copyable with the above.
+
+        'cp -a' do these at once and might be suited for most cases.
         """
-        shutil.copy2(self.path, dest)
-        self._copy_xattrs(dest)
+        global USE_PYXATTR
+
+        if USE_PYXATTR:
+            shutil.copy2(fileinfo.path, dest)
+            self._copy_xattrs(fileinfo, dest)
+        else:
+            shell("cp -a %s %s" % (fileinfo.path, dest))
 
     def _remove(self, target):
         os.remove(target)
@@ -1612,6 +1546,7 @@ def option_parser(V=__version__):
         'quiet': False,
         'show_examples': False,
         'test': False,
+        'with_pyxattr': False,
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -1666,6 +1601,10 @@ Examples:
     rog.add_option('', '--no-rpmdb', action='store_true', help='Do not refer rpm db to get extra information of target files')
     p.add_option_group(rog)
 
+    aog = optparse.OptionGroup(p, "Other advanced options")
+    aog.add_option('', '--with-pyxattr', action='store_true', help='Get/set xattributes of files with pure python code.')
+    p.add_option_group(aog)
+
     p.add_option('-D', '--debug', action="store_true", help='Debug mode')
     p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
 
@@ -1676,7 +1615,7 @@ Examples:
 
 
 def main():
-    global PKG_COMPRESSORS, TARGET_DIST_DEFAULT
+    global PKG_COMPRESSORS, TARGET_DIST_DEFAULT, USE_PYXATTR
 
     loglevel = logging.INFO
     logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
@@ -1748,6 +1687,13 @@ def main():
     else:
         filelist_db = Rpm.filelist()
 
+    if options.with_pyxattr:
+        if not USE_PYXATTR:
+            logging.warn(" pyxattr module is not found so that it will not use it")
+    else:
+        USE_PYXATTR = False
+
+ 
     fileinfos = []
     conflicts = dict()
 
