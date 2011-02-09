@@ -982,7 +982,7 @@ class DirInfo(FileInfo):
     __ftype = TYPE_DIR
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
-        FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
+        super(DirInfo, self).__init__()
 
     def _remove(self, target):
         if not os.path.isdir(target):
@@ -1007,7 +1007,7 @@ class SymlinkInfo(FileInfo):
     __ftype = TYPE_SYMLINK
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
-        FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
+        super(SymlinkInfo, self).__init__()
         self.linkto = os.path.realpath(path)
 
     def _copy(self, dest):
@@ -1021,7 +1021,7 @@ class OtherInfo(FileInfo):
     __ftype = TYPE_OTHER
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
-        FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
+        super(OtherInfo, self).__init__()
 
     def copyable(self):
         return False
@@ -1034,7 +1034,7 @@ class UnknownInfo(FileInfo):
     __ftype = TYPE_UNKNOWN
 
     def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=checksum(), xattrs={}):
-        FileInfo.__init__(self, path, mode, uid, gid, checksum, xattrs)
+        super(UnknownInfo, self).__init__()
 
     def copyable(self):
         return False
@@ -1429,7 +1429,7 @@ class PackageMaker(object):
 class RpmPackageMaker(PackageMaker):
 
     def __init__(self, package, workdir, destdir="", no_mock=False, build_all=False):
-        PackageMaker.__init__(package, workdir, destdir)
+        super(RpmPackageMaker, self).__init__()
         self.mock = (not no_mock)
         self.build_all = build_all
         self.package['rpm'] = "yes"
