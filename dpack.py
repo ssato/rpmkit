@@ -892,6 +892,8 @@ class FileInfo(ObjDict):
 
         self.filetype = self.__ftype
 
+        self.perm_default = 0644
+
         for k,v in kwargs.iteritems():
             self[k] = v
 
@@ -938,6 +940,14 @@ class FileInfo(ObjDict):
 
     def copyable(self):
         return True
+
+    def permission(self):
+        """permission (mode) can passed to 'chmod'.
+        """
+        return oct(stat.S_IMODE(self.mode & 0777))
+
+    def need_set_perm(self):
+        return self.permission() != self.perm_default
 
     def remove(self):
         self._remove(self.path)
@@ -996,6 +1006,8 @@ class DirInfo(FileInfo):
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(DirInfo, self).__init__()
 
+        self.perm_default = 0755
+
     def _remove(self, target):
         if not os.path.isdir(target):
             raise RuntimeError(" '%s' is not a directory! Aborting..." % target)
@@ -1024,6 +1036,9 @@ class SymlinkInfo(FileInfo):
 
     def _copy(self, dest):
         os.symlink(self.linkto, dest)
+
+    def need_set_perm(self):
+        return False
 
 
 
