@@ -94,10 +94,6 @@ except ImportError:  # python < 2.5
 __version__ = "0.0.99"
 
 
-# TODO: Detect appropriate distribution (for mock) automatically.
-TARGET_DIST_DEFAULT = 'fedora-14-i386'
-
-
 PKG_COMPRESSORS = {
     # extension: am_option,
     'xz'    : 'dist-xz',
@@ -1537,7 +1533,7 @@ def run_tests():
 
 
 def option_parser(V=__version__):
-    global PKG_COMPRESSORS, TARGET_DIST_DEFAULT
+    global PKG_COMPRESSORS
 
     ver_s = "%prog " + V
 
@@ -1557,7 +1553,8 @@ def option_parser(V=__version__):
         'workdir': workdir,
         'build_rpm': False,
         'no_mock': False,
-        'dist': TARGET_DIST_DEFAULT,
+         # TODO: Detect appropriate distribution (for mock) automatically.
+        'dist': 'fedora-14-i386',
         'pkgfmt': 'rpm',
         'destdir': '',
         'no_rpmdb': False,
@@ -1635,7 +1632,7 @@ Examples:
 
 
 def main():
-    global PKG_COMPRESSORS, TARGET_DIST_DEFAULT, USE_PYXATTR
+    global PKG_COMPRESSORS, USE_PYXATTR
 
     loglevel = logging.INFO
     logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
