@@ -912,10 +912,10 @@ class FileInfo(ObjDict):
         global USE_PYXATTR
 
         if USE_PYXATTR:
-            shutil.copy2(fileinfo.path, dest)
-            self._copy_xattrs(fileinfo, dest)
+            shutil.copy2(self.path, dest)
+            self._copy_xattrs(dest)
         else:
-            shell("cp -a %s %s" % (fileinfo.path, dest))
+            shell("cp -a %s %s" % (self.path, dest))
 
     def _remove(self, target):
         os.remove(target)
@@ -1004,7 +1004,7 @@ class DirInfo(FileInfo):
     __ftype = TYPE_DIR
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
-        super(DirInfo, self).__init__()
+        super(DirInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
 
         self.perm_default = 0755
 
@@ -1031,7 +1031,7 @@ class SymlinkInfo(FileInfo):
     __ftype = TYPE_SYMLINK
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
-        super(SymlinkInfo, self).__init__()
+        super(SymlinkInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
         self.linkto = os.path.realpath(path)
 
     def _copy(self, dest):
@@ -1048,7 +1048,7 @@ class OtherInfo(FileInfo):
     __ftype = TYPE_OTHER
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
-        super(OtherInfo, self).__init__()
+        super(OtherInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
 
     def copyable(self):
         return False
@@ -1061,7 +1061,7 @@ class UnknownInfo(FileInfo):
     __ftype = TYPE_UNKNOWN
 
     def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=checksum(), xattrs={}):
-        super(UnknownInfo, self).__init__()
+        super(UnknownInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
 
     def copyable(self):
         return False
@@ -1299,13 +1299,6 @@ def setup_dirs(pkg):
     createdir(pkg['srcdir'])
 
 
-def copy_files(pkg):
-    for t0 in pkg['fileinfos']:
-        t = t0.target
-        t2 = (pkg['destdir'] and os.path.join(pkg['destdir'], t.strip(os.path.sep)) or t)
-        __copy(t2, to_srcdir(t, pkg['workdir']))
-
-
 def copyfiles(package):
     for fi in package['fileinfos']:
         p = fi.path
@@ -1383,12 +1376,15 @@ def build_deb_with_debuild(pkg):
 
 class PackageMaker(object):
 
-    def __init__(self, package, workdir, destdir=""):
+    def __init__(self, package, workdir, destdir="", *args, **kwargs):
         self.package = package
         self.workdir = workdir
         self.destdir = destdir
 
         self.srcdir = os.path.join(workdir, 'src')
+
+        for k,v in kwargs.iteritems():
+            setattr(self, k, v)
 
     def shell(self, *args):
         return shell(*args, workdir=self.workdir)
@@ -1428,72 +1424,68 @@ class PackageMaker(object):
 
         self.copyfiles()
 
-    def pre_configure(self): pass
-    def post_configure(self): pass
-    def pre_package(self): pass
-    def post_package(self): pass
-
     def configure(self):
-        self.pre_configure()
-
         self.package['distdata'] = distdata_in_makefile_am([fi.path for fi in self.package['fileinfos']])
 
         self.genfile('configure.ac')
         self.genfile('Makefile.am')
         self.shell('autoreconf -vfi')
 
-        self.post_configure()
-
-    def package(self):
-        self.pre_package()
-
+    def build(self):
         self.shell('./configure')
         self.shell('make dist')
 
-        self.post_package()
 
 
-class RpmPackageMaker(PackageMaker):
+class TgzPackageMaker(PackageMaker):
+    pass
 
-    def __init__(self, package, workdir, destdir="", no_mock=False, build_all=False):
-        super(RpmPackageMaker, self).__init__()
-        self.mock = (not no_mock)
+
+
+class RpmPackageMaker(TgzPackageMaker):
+
+    def __init__(self, package, workdir, destdir="", use_mock=False, build_all=False):
+        super(RpmPackageMaker, self).__init__(package, workdir, destdir, use_mock, build_all)
+        self.use_mock = use_mock
         self.build_all = build_all
         self.package['rpm'] = "yes"
 
     def build_srpm(self):
-        self.shell('make srpm')
-
-    def build_rpm_wo_mock(self):
-        self.shell('make rpm')
+        return self.shell('make srpm')
 
     def build_rpm(self):
-        try:
-            self.shell("mock --version > /dev/null")
-        except RuntimeError, e:
-            logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
-            self.build_rpm_wo_mock()
-            return
+        if self.use_mock:
+            build_cmd = "mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % self.package
 
-        self.shell("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % self.package)
+            try:
+                self.shell("mock --version > /dev/null")
+            except RuntimeError, e:
+                logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
+                build_cmd = "make rpm"
+        else:
+            build_cmd = "make rpm"
 
-    def post_configure(self):
+        return self.shell(build_cmd)
+
+    def configure(self):
+        super(RpmPackageMaker, self).configure()
+
         self.genfile('rpm.mk')
         self.genfile("package.spec", "%s.spec" % self.package['name'])
 
-    def post_package(self):
+    def build(self):
+        super(RpmPackageMaker, self).build()
+
         self.build_srpm()
-
-        if self.mock:
-            self.build_rpm_wo_mock()
-        else:
-            self.build_rpm()
+        self.build_rpm()
 
 
 
-class DebPackageMaker(PackageMaker):
+class DebPackageMaker(TgzPackageMaker):
 
-    def post_configure(self):
+    def configure(self):
+        super(DebPackageMaker, self).configure()
+
         debiandir = os.path.join(self.workdir, 'debian')
 
         if not os.path.exists(debiandir):
@@ -1504,14 +1496,14 @@ class DebPackageMaker(PackageMaker):
         self.genfile('debian/copyright')
         self.genfile('debian/changelog')
 
-    def post_package(pkg):
+    def build(pkg):
+        super(DebPackageMaker, self).build()
         self.shell('debuild -us -uc')
 
 
 
 def do_packaging(pkg, options):
     setup_dirs(pkg)
-    #copy_files(pkg)
     copyfiles(pkg)
     gen_buildfiles(pkg)
     build_srpm(pkg)
@@ -1521,6 +1513,17 @@ def do_packaging(pkg, options):
             build_rpm_with_rpmbuild(pkg)
         else:
             build_rpm_with_mock(pkg)
+
+
+def do_packaging_2(pkg, options):
+    pm = globals().get("%sPackageMaker" % options.pkgfmt.title(), TgzPackageMaker)(
+        pkg,pkg['workdir'], options.destdir,
+        use_mock=(not options.no_mock),
+        build_all=options.build_rpm,
+    )
+    pm.setup()
+    pm.configure()
+    pm.build()
 
 
 def show_examples(logs=EXAMPLE_LOGS):
@@ -1555,6 +1558,7 @@ def option_parser(V=__version__):
         'build_rpm': False,
         'no_mock': False,
         'dist': TARGET_DIST_DEFAULT,
+        'pkgfmt': 'rpm',
         'destdir': '',
         'no_rpmdb': False,
         'debug': False,
@@ -1604,6 +1608,7 @@ Examples:
     bog.add_option('', '--no-mock', action="store_true",
         help='Build RPM with using rpmbuild instead of mock (not recommended)')
     bog.add_option('', '--dist', help='Target distribution (for mock) [%default]')
+    bog.add_option('', '--pkgfmt', help='Terget package format: tgz, rpm or deb [%default]')
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
@@ -1753,7 +1758,8 @@ def main():
     else:
         pkg['requires'] = []
 
-    do_packaging(pkg, options)
+    #do_packaging(pkg, options)
+    do_packaging_2(pkg, options)
 
 
 if __name__ == '__main__':
