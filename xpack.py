@@ -105,7 +105,7 @@ PKG_COMPRESSORS = {
 TEMPLATES = {
     "configure.ac": """\
 AC_INIT([$name],[$version])
-AM_INIT_AUTOMAKE([${compresser.am_opt} foreign subdir-objects])
+AM_INIT_AUTOMAKE([${compressor.am_opt} foreign subdir-objects])
 
 dnl http://www.flameeyes.eu/autotools-mythbuster/automake/silent.html
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -173,7 +173,7 @@ Summary:        $summary
 Group:          $group
 License:        $license
 URL:            file:///$workdir
-Source0:        %{name}-%{version}.tar.${compresser.ext}
+Source0:        %{name}-%{version}.tar.${compressor.ext}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 #if $noarch
 BuildArch:      noarch
@@ -1544,7 +1544,7 @@ def option_parser(V=__version__):
         'name': 'foo',
         'group': 'System Environment/Base',
         'license': 'GPLv3+',
-        'compresser': 'xz',
+        'compressor': 'xz',
         'arch': False,
         'requires': [],
         'packager_name': packager,
@@ -1590,7 +1590,7 @@ Examples:
     pog.add_option('', '--group', help='The group of the package [%default]')
     pog.add_option('', '--license', help='The license of the package [%default]')
     pog.add_option('-S', '--summary', help='The summary of the package')
-    pog.add_option('-z', '--compresser', type="choice", choices=PKG_COMPRESSORS.keys(),
+    pog.add_option('-z', '--compressor', type="choice", choices=PKG_COMPRESSORS.keys(),
         help="Tool to compress src archives [%default]")
     pog.add_option('', '--arch', action='store_true', help='Make package arch-dependent [false - noarch]')
     pog.add_option('', '--requires', help='Specify the package requirements as comma separated list')
@@ -1682,9 +1682,9 @@ def main():
     pkg['workdir'] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
     pkg['srcdir'] = os.path.join(pkg['workdir'], 'src')
 
-    pkg['compresser'] = {
-        'ext': options.compresser,
-        'am_opt': PKG_COMPRESSORS.get(options.compresser),
+    pkg['compressor'] = {
+        'ext': options.compressor,
+        'am_opt': PKG_COMPRESSORS.get(options.compressor),
     }
 
     pkg['dist'] = options.dist
