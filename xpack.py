@@ -44,6 +44,7 @@ from itertools import chain, count, groupby
 import copy
 import datetime
 import doctest
+import email
 import glob
 import grp
 import locale
@@ -53,6 +54,7 @@ import os
 import os.path
 import pwd
 import shutil
+import socket
 import stat
 import subprocess
 import sys
@@ -99,6 +101,14 @@ PKG_COMPRESSORS = {
     'xz'    : 'dist-xz',
     'bz2'   : 'dist-bzip2',
     'gz'    : '',
+}
+
+
+PKG_METADATA_FMTS = {
+    'description': """\
+This package provides some backup data collected on %(host)s
+by %(packager)s at %(date)s.
+""",
 }
 
 
@@ -172,7 +182,7 @@ Release:        1%{?dist}
 Summary:        $summary
 Group:          $group
 License:        $license
-URL:            file:///$workdir
+URL:            $url
 Source0:        %{name}-%{version}.tar.${compressor.ext}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 #if $noarch
@@ -184,7 +194,7 @@ Requires:       $req
 
 
 %description
-${summary}
+${description}
 
 
 #if $conflicts.names
@@ -611,6 +621,23 @@ def dirname(path):
     ''
     """
     return os.path.dirname(path)
+
+
+def hostname():
+    """
+    FIXME: Is there any cases exist that socket.gethostname() fails?
+    """
+    try:
+        return socket.gethostname()
+    except:
+        return os.uname()[1]
+
+
+def date(rfc2822=False):
+    if rfc2822:
+        return email.Utils.formatdate()
+    else:
+        return datetime.date.today().strftime("%a %b %_d %Y")
 
 
 def compile_template(template, params):
@@ -1544,6 +1571,8 @@ def option_parser(V=__version__):
         'name': 'foo',
         'group': 'System Environment/Base',
         'license': 'GPLv3+',
+        'url': 'file:///' + workdir,
+        'description': False,
         'compressor': 'xz',
         'arch': False,
         'requires': [],
@@ -1589,7 +1618,9 @@ Examples:
     pog.add_option('-n', '--name', help='Package name [%default]')
     pog.add_option('', '--group', help='The group of the package [%default]')
     pog.add_option('', '--license', help='The license of the package [%default]')
-    pog.add_option('-S', '--summary', help='The summary of the package')
+    pog.add_option('', '--url', help='The url of the package [%default]')
+    pog.add_option('', '--summary', help='The summary of the package')
+    pog.add_option('', '--description', help='The text file contains package description')
     pog.add_option('-z', '--compressor', type="choice", choices=PKG_COMPRESSORS.keys(),
         help="Tool to compress src archives [%default]")
     pog.add_option('', '--arch', action='store_true', help='Make package arch-dependent [false - noarch]')
@@ -1632,7 +1663,7 @@ Examples:
 
 
 def main():
-    global PKG_COMPRESSORS, USE_PYXATTR
+    global PKG_COMPRESSORS, USE_PYXATTR, PKG_METADATA_FMTS
 
     loglevel = logging.INFO
     logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
@@ -1674,10 +1705,17 @@ def main():
     pkg['release'] = '1'
     pkg['group'] = options.group
     pkg['license'] = options.license
+    pkg['url'] = options.url
 
     pkg['version'] = options.package_version
     pkg['packager_name'] = options.packager_name
     pkg['packager_mail'] = options.packager_mail
+
+    if options.description:
+        pkg['description'] = open(options.description).read()
+    else:
+        pkg['description'] = PKG_METADATA_FMTS.get('description') % \
+            { 'host': hostname(), 'packager': pkg['packager_name'], 'date': date(rfc2822=True), }
 
     pkg['workdir'] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
     pkg['srcdir'] = os.path.join(pkg['workdir'], 'src')
