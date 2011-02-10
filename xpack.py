@@ -52,6 +52,7 @@ import logging
 import optparse
 import os
 import os.path
+import cPickle as pickle
 import pwd
 import shutil
 import socket
@@ -662,7 +663,7 @@ def shell(cmd_s, workdir="", log=True):
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
-    logging.info(" Run: %s [in %s]" % (cmd_s, workdir))
+    logging.info(" Run: %s [%s]" % (cmd_s, workdir))
 
     try:
         pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
@@ -724,6 +725,22 @@ def rm_rf(dir):
     if os.path.exists(dir):
         os.removedirs(dir)
 
+
+def cache_needs_updates_p(cache_file, expires=0):
+    if expires == 0 or not os.path.exists(cache_file):
+        return True
+
+    try:
+        mtime = os.stat(cache_file).st_mtime
+    except OSError:  # It indicates that the cache file cannot be updated.
+        return True  # FIXME: How to handle the above case?
+
+    cur_time = datetime.datetime.now()
+    cache_mtime = datetime.datetime.fromtimestamp(mtime)
+
+    delta = cur_time - cache_mtime  # TODO: How to do if it's negative value?
+
+    return (delta >= datetime.timedelta(expires))
 
 
 class TestDecoratedFuncs(unittest.TestCase):
@@ -789,6 +806,8 @@ class TestFuncsWithSideEffects(unittest.TestCase):
 
 
 class Rpm(object):
+
+    RPM_FILELIST_CACHE = os.path.join(os.environ['HOME'], '.cache', 'xpack.rpm.filelist.pkl')
 
     # RpmFi (FileInfo) keys:
     fi_keys = ('path', 'size', 'mode', 'mtime', 'flags', 'rdev', 'inode',
@@ -865,14 +884,41 @@ class Rpm(object):
         del mi
 
     @classmethod
-    def filelist(self):
-        """TODO: It should be a heavy and time-consuming task. Caching the result somewhere?
+    def filelist(self, cache=True, expires=1, pkl_proto=pickle.HIGHEST_PROTOCOL):
+        """TODO: It should be a heavy and time-consuming task. How to shorten
+        this time? - caching, utilize yum's file list database or whatever.
 
         >>> if os.path.exists('/var/lib/rpm/Basenames'):
         ...     db = Rpm.filelist()
         ...     assert db.get('/etc/hosts') == 'setup'
         """
-        return dict(concat(([(f, h['name']) for f in h['filenames']] for h in Rpm.ts().dbMatch())))
+        data = None
+
+        cache_file = self.RPM_FILELIST_CACHE
+        cachedir = os.path.dirname(cache_file)
+
+        if not os.path.exists(cachedir):
+            os.makedirs(cachedir, 0755)
+
+        if cache and not cache_needs_updates_p(cache_file, expires):
+            try:
+                data = pickle.load(open(cache_file, 'rb'))
+                logging.debug(" Could load the cache: %s" % cache_file)
+            except:
+                logging.warn(" Could not load the cache: %s" % cache_file)
+                date = None
+
+        if data is None:
+            data = dict(concat(([(f, h['name']) for f in h['filenames']] for h in Rpm.ts().dbMatch())))
+
+            try:
+                # TODO: How to detect errors during/after pickle.dump.
+                pickle.dump(data, open(cache_file, 'wb'), pkl_proto)
+                logging.debug(" Could save the cache: %s" % cache_file)
+            except:
+                logging.warn(" Could not save the cache: %s" % cache_file)
+
+        return data
 
 
 
@@ -1681,6 +1727,7 @@ def main():
         sys.exit(0)
 
     if options.test:
+        logging.getLogger().setLevel(logging.DEBUG)
         run_tests()
         sys.exit(0)
 
