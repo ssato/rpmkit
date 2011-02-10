@@ -1,6 +1,6 @@
 #! /usr/bin/python
 #
-# xpack.py - X (files, dirs, ...) Packager, successor of filelist2rpm.py.
+# xpack.py - X (files, dirs, ...) Packager, successor of xpack.py.
 #
 # It will try gathering files in given file list, and then:
 #
@@ -340,7 +340,7 @@ dist_pkgdata%(id)s_DATA = %(files)s
 EXAMPLE_LOGS = [
 """
 $ ls
-filelist2rpm.py  files.list
+xpack.py  files.list
 $ cat files.list
 /etc/auto.master
 /etc/auto.misc
@@ -354,9 +354,9 @@ $ cat files.list
 /etc/modprobe.d/libmlx4.conf
 /etc/resolv.conf
 /etc/yum.repos.d/fedora.repo
-$ python filelist2rpm.py -n foo -w ./0 -q files.list
+$ python xpack.py -n foo -w ./0 -q files.list
 $ ls
-0  filelist2rpm.py  files.list
+0  xpack.py  files.list
 $ ls 0
 foo-0.1  foo-0.1-1.fc14.src.rpm  foo.spec
 $ ls 0/foo-0.1
@@ -369,7 +369,7 @@ Makefile.am  config.log      foo-0.1-1.fc14.noarch.rpm  foo-overrides-0.1-1.fc14
 Makefile.in  config.status   foo-0.1-1.fc14.src.rpm     foo.spec                             rpm.mk
 aclocal.m4   configure       foo-0.1.tar.gz             install-sh                           src
 $
-$ cat files.list | python filelist2rpm.py -n foo -w ./1 -
+$ cat files.list | python xpack.py -n foo -w ./1 -
 12:10:06 [INFO]  /etc/auto.master is owned by autofs, that is, it will be conflicts with autofs
 12:10:06 [INFO]  /etc/auto.misc is owned by autofs, that is, it will be conflicts with autofs
 12:10:06 [INFO]  /etc/auto.net is owned by autofs, that is, it will be conflicts with autofs
@@ -408,7 +408,7 @@ Makefile.am  aclocal.m4   config.log      configure      foo-0.1-1.fc14.src.rpm 
 $
 """,
 """
-$ echo /etc/resolv.conf | python filelist2rpm.py -n resolvconf -w 2 --build-rpm -
+$ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --build-rpm -
 12:12:20 [INFO]  Creating a directory: /tmp/t/2/resolvconf-0.1
 12:12:20 [INFO]  Creating a directory: /tmp/t/2/resolvconf-0.1/src
 12:12:20 [INFO]  Copying: /etc/resolv.conf -> /tmp/t/2/resolvconf-0.1/src/etc/resolv.conf
@@ -431,11 +431,11 @@ $
 """,
 """
 $ ls
-filelist2rpm.py  srv
+xpack.py  srv
 $ ls srv/isos/
 rhel-server-5.6-i386-dvd.iso
 $ echo /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso | \\
-> python filelist2rpm.py -n rhel-server-5-6-i386-dvd-iso -w ./w \\
+> python xpack.py -n rhel-server-5-6-i386-dvd-iso -w ./w \\
 > --destdir /tmp/t/ --build-rpm --no-mock -
 10:50:44 [INFO]  Creating a directory: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1
 10:50:44 [INFO]  Creating a directory: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/src
@@ -449,7 +449,7 @@ $ echo /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso | \\
 10:51:03 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/../
 10:51:03 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.src.rpm -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/../
 $ ls
-filelist2rpm.py  srv  w
+xpack.py  srv  w
 $ ls w/rhel-server-5-6-i386-dvd-iso-0.1
 Makefile     autom4te.cache  configure.ac                                        rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.src.rpm  rpm
 Makefile.am  config.log      install-sh                                          rhel-server-5-6-i386-dvd-iso-0.1.tar.gz          rpm.mk
