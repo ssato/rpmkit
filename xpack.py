@@ -1,6 +1,6 @@
 #! /usr/bin/python
 #
-# dpack.py - Data Packager, successor of filelist2rpm.py.
+# xpack.py - X (files, dirs, ...) Packager, successor of filelist2rpm.py.
 #
 # It will try gathering files in given file list, and then:
 #
