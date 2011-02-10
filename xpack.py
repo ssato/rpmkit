@@ -1014,8 +1014,11 @@ class FileInfo(ObjDict):
         """
         return oct(stat.S_IMODE(self.mode & 0777))
 
-    def need_set_perm(self):
+    def need_to_chmod(self):
         return self.permission() != self.perm_default
+
+    def need_to_chown(self):
+        return self.uid != 0 or self.gid != 0  # 0 == root
 
     def remove(self):
         self._remove(self.path)
@@ -1105,7 +1108,7 @@ class SymlinkInfo(FileInfo):
     def _copy(self, dest):
         os.symlink(self.linkto, dest)
 
-    def need_set_perm(self):
+    def need_to_chmod(self):
         return False
 
 
