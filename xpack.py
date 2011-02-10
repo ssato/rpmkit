@@ -280,7 +280,7 @@ Priority: optional
 Maintainer: $packager_name <$packager_mail>
 Build-Depends: debhelper (>= 5), cdbs, autotools-dev
 Standards-Version: 3.7.3
-Homepage: file:///$workdir
+Homepage: $url
 
 Package: $name
 Section: database
@@ -315,7 +315,7 @@ install/$name::
 """,
     "debian/copyright": """\
 This package was debianized by $packager_name <$packager_mail> on
-$timestamp.
+$date.
 
 This package is distributed under $license.
 """,
@@ -327,7 +327,6 @@ $name ($version) unstable; urgency=low
  -- $packager_name <$packager_mail> $timestamp
 """,
 }
-
 
 
 PKG_DIST_INST_FILES_TMPL = """
@@ -1757,6 +1756,8 @@ def main():
     pkg['version'] = options.package_version
     pkg['packager_name'] = options.packager_name
     pkg['packager_mail'] = options.packager_mail
+
+    pkg['date'] = date(rfc2822=True)
 
     if options.description:
         pkg['description'] = open(options.description).read()
