@@ -1574,19 +1574,6 @@ class DebPackageMaker(TgzPackageMaker):
 
 
 def do_packaging(pkg, options):
-    setup_dirs(pkg)
-    copyfiles(pkg)
-    gen_buildfiles(pkg)
-    build_srpm(pkg)
-
-    if options.build_rpm:
-        if options.no_mock:
-            build_rpm_with_rpmbuild(pkg)
-        else:
-            build_rpm_with_mock(pkg)
-
-
-def do_packaging_2(pkg, options):
     pm = globals().get("%sPackageMaker" % options.pkgfmt.title(), TgzPackageMaker)(
         pkg,pkg['workdir'], options.destdir,
         use_mock=(not options.no_mock),
@@ -1844,8 +1831,7 @@ def main():
     else:
         pkg['requires'] = []
 
-    #do_packaging(pkg, options)
-    do_packaging_2(pkg, options)
+    do_packaging(pkg, options)
 
 
 if __name__ == '__main__':
