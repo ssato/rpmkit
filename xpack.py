@@ -1507,7 +1507,7 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp()
-        logging.info("") # dummy log
+        logging.info("")
 
         self.filelist = os.path.join(self.workdir, 'file.list')
 
@@ -1541,8 +1541,11 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
 
 
 
-def run_tests():
+def run_doctests():
     doctest.testmod(verbose=True)
+
+
+def run_unittests():
     unittest.main(argv=sys.argv[:1], verbosity=2)
 
 
@@ -1578,6 +1581,8 @@ def option_parser(V=__version__):
         'quiet': False,
         'show_examples': False,
         'test': False,
+        'doctests': False,
+        'unittests': False,
         'with_pyxattr': False,
     }
 
@@ -1644,7 +1649,12 @@ Examples:
     p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
 
     p.add_option('', '--show-examples', action="store_true", help='Show examples')
-    p.add_option('-T', '--test', action="store_true", help='Run tests')
+
+    tog = optparse.OptionGroup(p, "Test options")
+    tog.add_option('', '--test', action="store_true", help='Run all tests')
+    tog.add_option('', '--doctests', action="store_true", help='Run doc tests')
+    tog.add_option('', '--unittests', action="store_true", help='Run unit tests')
+    p.add_option_group(tog)
 
     return p
 
@@ -1674,7 +1684,16 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     if options.test:
-        run_tests()
+        run_doctests()
+        run_unittests()
+        sys.exit(0)
+
+    if options.doctests:
+        run_doctests()
+        sys.exit(0)
+
+    if options.unittests:
+        run_unittests()
         sys.exit(0)
 
     if len(args) < 1:
