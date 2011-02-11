@@ -1433,7 +1433,9 @@ class RpmPackageMaker(TgzPackageMaker):
         super(RpmPackageMaker, self).build()
 
         self.build_srpm()
-        self.build_rpm()
+
+        if self.build_all:
+            self.build_rpm()
 
 
 
@@ -1472,6 +1474,30 @@ def do_packaging(pkg, options):
 def show_examples(logs=EXAMPLE_LOGS):
     for log in logs:
         print >> sys.stdout, log
+
+
+
+class TestMainProgram(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp()
+        logging.info(".") # dummy log
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_packaging_single_file(self):
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s -" % (sys.argv[0], self.workdir)
+        self.assertEquals(os.system(cmd), 0)
+
+    def test_packaging_single_file_build_rpm(self):
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm --no-mock -" % (sys.argv[0], self.workdir)
+        self.assertEquals(os.system(cmd), 0)
+
+    def test_packaging_single_file_build_rpm_with_mock(self):
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm -" % (sys.argv[0], self.workdir)
+        self.assertEquals(os.system(cmd), 0)
+
 
 
 def run_tests():
@@ -1600,8 +1626,13 @@ def main():
         show_examples()
         sys.exit(0)
 
-    if options.test:
+    if options.quiet:
+        logging.getLogger().setLevel(logging.WARN)
+
+    if options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    if options.test:
         run_tests()
         sys.exit(0)
 
@@ -1610,12 +1641,6 @@ def main():
         sys.exit(1)
 
     filelist = args[0]
-
-    if options.quiet:
-        logging.getLogger().setLevel(logging.WARN)
-
-    if options.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
 
     if options.arch:
         pkg['noarch'] = False
@@ -1723,4 +1748,3 @@ if __name__ == '__main__':
     main()
 
 # vim: set sw=4 ts=4 expandtab:
-# vim:sw=4:ts=4:et:
