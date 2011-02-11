@@ -329,13 +329,6 @@ $name ($version) unstable; urgency=low
 }
 
 
-PKG_DIST_INST_FILES_TMPL = """
-pkgdata%(id)sdir = %(dir)s
-dist_pkgdata%(id)s_DATA = %(files)s
-"""
-
-
-
 EXAMPLE_LOGS = [
 """
 $ ls
@@ -1567,7 +1560,7 @@ Examples:
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
-        "make it installed as '/usr/share/foo/a.dat' with rpm built, you can accomplish "
+        "make it installed as '/usr/share/foo/a.dat' with the package , you can accomplish "
         "that by this option: '--destdir=/builddir/destdir'")
 
     p.add_option_group(bog)
