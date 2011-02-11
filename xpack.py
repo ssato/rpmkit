@@ -1292,35 +1292,6 @@ def collect(list_f, rpmdb=False):
         yield fi
 
 
-def __copy(src, dst):
-    """Copy $src to $dst.
-    """
-    logging.info(" Copying: %s -> %s" % (src, dst))
-
-    if os.path.isdir(src):
-        if os.path.exists(dst):
-            if not os.path.isdir(dst):
-                raise RuntimeError(" '%s' already exists and it's not a directory! Aborting..." % dst)
-        else:
-            logging.info(" The target is a directory")
-        return
-
-    dstdir = os.path.dirname(dst)
-
-    if os.path.exists(dstdir):
-        if not os.path.isdir(dstdir):
-            raise RuntimeError(" '%s' (in which %s will be) already exists and it's not a directory! Aborting..." % (dstdir, src))
-    else:
-        os.makedirs(dstdir, 0755)
-
-    # NOTE: shutil.copy2 is corresponding to 'cp --preserve=mode,ownership,timestamps'
-    # and sufficient for most cases, I guess. But to make safer, choose 'cp --preserve=all'
-    # at present.
-    #
-    #shutil.copy2(src, dst)
-    shell("cp -a %s %s" % (src, dst), log=False)
-
-
 def to_srcdir(path, workdir=''):
     """
     >>> to_srcdir('/a/b/c')
@@ -1363,85 +1334,6 @@ def distdata_in_makefile_am(paths, srcdir='src'):
         } \
         for d,ps in groupby(paths, dirname)
     ]
-
-
-def setup_dirs(pkg):
-    createdir(pkg['workdir'])
-    createdir(pkg['srcdir'])
-
-
-def copyfiles(package):
-    for fi in package['fileinfos']:
-        p = fi.path
-
-        if package['destdir']:
-            p = os.path.join(package['destdir'], p.strip(os.path.sep))
-
-        fi.copy(os.path.join(package['workdir'], to_srcdir(p)))
-
-
-def gen_buildfiles(pkg):
-    global TEMPLATES
-
-    workdir = pkg['workdir']
-    pkg['distdata'] = distdata_in_makefile_am([fi.path for fi in pkg['fileinfos']])
-
-    def genfile(filepath, output=""):
-        outfile = os.path.join(workdir, (output or filepath))
-        open(outfile, 'w').write(compile_template(TEMPLATES[filepath], pkg))
-
-    genfile('configure.ac')
-    genfile('Makefile.am')
-    genfile('rpm.mk')
-
-    spec_f = "%s.spec" % pkg['name']
-    genfile("package.spec", spec_f)
-    __copy(os.path.join(workdir, spec_f), os.path.join(workdir, '..'))
-
-    debiandir = os.path.join(workdir, 'debian')
-    if not os.path.exists(debiandir):
-        os.makedirs(debiandir)
-
-    genfile('debian/rules')
-    genfile('debian/control')
-    genfile('debian/copyright')
-    genfile('debian/changelog')
-
-    shell('autoreconf -vfi', workdir=pkg['workdir'])
-
-
-def build_srpm(pkg):
-    shell('./configure', workdir=pkg['workdir'])
-    shell('make srpm', workdir=pkg['workdir'])
-
-    for p in glob.glob(os.path.join(pkg['workdir'], "*.src.rpm")):
-        __copy(p, os.path.join(pkg['workdir'], '../'))
-
-
-def build_rpm_with_mock(pkg):
-    """TODO: Identify the (single) src.rpm
-    """
-    try:
-        shell("mock --version > /dev/null")
-    except RuntimeError, e:
-        logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
-        build_rpm_with_rpmbuild(pkg)
-        return
-
-    shell("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % pkg, workdir=pkg['workdir'])
-
-    for p in glob.glob("/var/lib/mock/%(dist)s/result/*.rpm" % pkg):
-        __copy(p, os.path.join(pkg['workdir'], '../'))
-
-
-def build_rpm_with_rpmbuild(pkg):
-    shell('make rpm', workdir=pkg['workdir'])
-    for p in glob.glob(os.path.join(pkg['workdir'], "*.rpm")):
-        __copy(p, os.path.join(pkg['workdir'], '../'))
-
-
-def build_deb_with_debuild(pkg):
-    shell('debuild -us -uc', workdir=pkg['workdir'])
 
 
 
