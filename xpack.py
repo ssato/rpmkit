@@ -32,6 +32,9 @@
 # SEE ALSO: http://cdbs-doc.duckcorp.org
 # SEE ALSO: https://wiki.duckcorp.org/DebianPackagingTutorial/CDBS
 #
+# Requirements:
+# * python-cheetah: EPEL should be needed for RHEL
+# * rpm-python
 #
 # TODO:
 # * add permission specifiers for targets in RPM SPECs
@@ -250,12 +253,12 @@ rm -rf \$RPM_BUILD_ROOT
 #if $conflicts.names
 #for $fi in $fileinfos
 #if $fi.target not in $conflicts.files
-${fi.target}
+$fi.rpm_attr$fi.target
 #end if
 #end for
 #else
 #for $fi in $fileinfos
-${fi.target}
+$fi.rpm_attr$fi.target
 #end for
 #end if
 
@@ -953,7 +956,7 @@ class FileInfo(ObjDict):
 
         self.filetype = self.__ftype
 
-        self.perm_default = 0644
+        self.perm_default = 644
 
         for k,v in kwargs.iteritems():
             self[k] = v
@@ -1003,9 +1006,9 @@ class FileInfo(ObjDict):
         return True
 
     def permission(self):
-        """permission (mode) can passed to 'chmod'.
+        """permission (mode) can be passed to 'chmod'.
         """
-        return oct(stat.S_IMODE(self.mode & 0777))
+        return oct(stat.S_IMODE(self.mode & 0777))[1:]
 
     def need_to_chmod(self):
         return self.permission() != self.perm_default
@@ -1070,7 +1073,7 @@ class DirInfo(FileInfo):
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(DirInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
 
-        self.perm_default = 0755
+        self.perm_default = 755
 
     def _remove(self, target):
         if not os.path.isdir(target):
@@ -1263,6 +1266,18 @@ class RpmFileInfoFactory(FileInfoFactory):
 
         return super(RpmFileInfoFactory, self)._stat(path)
 
+    def create(self, path):
+        """TODO: what should be done for objects of *infos other than fileinfo?
+        """
+        fi = super(RpmFileInfoFactory, self).create(path)
+
+        if fi.need_to_chmod() or fi.need_to_chown():
+            fi.rpm_attr = rpm_attr(fi)
+        else:
+            fi.rpm_attr = ""
+
+        return fi
+
 
 
 def process_listfile(list_f):
@@ -1328,6 +1343,23 @@ def distdata_in_makefile_am(paths, srcdir='src'):
         for d,ps in groupby(paths, dirname)
     ]
 
+
+def rpm_attr(fileinfo):
+    """Returns '%attr(...)' to specify the file attribute of $fileinfo.path in
+    the %files section in rpm spec.
+
+    >>> fi = FileInfo('/dummy/path', 33204, 0, 0, checksum(),{})
+    >>> rpm_attr(fi)
+    '%attr(664, -, -) '
+    >>> fi = FileInfo('/bin/foo', 33261, 1, 1, checksum(),{})
+    >>> rpm_attr(fi)
+    '%attr(755, bin, bin) '
+    """
+    m = fileinfo.permission() # ex. '755'
+    u = (fileinfo.uid == 0 and '-' or pwd.getpwuid(fileinfo.uid).pw_name)
+    g = (fileinfo.gid == 0 and '-' or grp.getgrgid(fileinfo.gid).gr_name)
+
+    return "%%attr(%(m)s, %(u)s, %(g)s) " % {'m':m, 'u':u, 'g':g,}
 
 
 class PackageMaker(object):
@@ -1424,10 +1456,10 @@ class RpmPackageMaker(TgzPackageMaker):
             return self.shell("make rpm")
 
     def configure(self):
-        super(RpmPackageMaker, self).configure()
-
         self.genfile('rpm.mk')
         self.genfile("package.spec", "%s.spec" % self.package['name'])
+
+        super(RpmPackageMaker, self).configure()
 
     def build(self):
         super(RpmPackageMaker, self).build()
