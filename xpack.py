@@ -1575,7 +1575,7 @@ class DebPackageMaker(TgzPackageMaker):
 
 def do_packaging(pkg, options):
     pm = globals().get("%sPackageMaker" % options.pkgfmt.title(), TgzPackageMaker)(
-        pkg,pkg['workdir'], options.destdir,
+        pkg, pkg['workdir'], options.destdir,
         use_mock=(not options.no_mock),
         build_all=options.build_rpm,
     )
