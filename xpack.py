@@ -1411,17 +1411,17 @@ class RpmPackageMaker(TgzPackageMaker):
 
     def build_rpm(self):
         if self.use_mock:
-            build_cmd = "mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % self.package
-
             try:
                 self.shell("mock --version > /dev/null")
             except RuntimeError, e:
                 logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
-                build_cmd = "make rpm"
-        else:
-            build_cmd = "make rpm"
+                self.use_mock = False
 
-        return self.shell(build_cmd)
+        if self.use_mock:
+            self.shell("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % self.package)
+            return self.shell("mv /var/lib/mock/%(dist)s/result/*.rpm %(workdir)s" % self.package)
+        else:
+            return self.shell("make rpm")
 
     def configure(self):
         super(RpmPackageMaker, self).configure()
@@ -1477,26 +1477,67 @@ def show_examples(logs=EXAMPLE_LOGS):
 
 
 
-class TestMainProgram(unittest.TestCase):
+class TestMainProgram00SingleFileCases(unittest.TestCase):
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp()
-        logging.info(".") # dummy log
+        logging.info("") # dummy log
 
     def tearDown(self):
         rm_rf(self.workdir)
 
-    def test_packaging_single_file(self):
+    def test_packaging(self):
         cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.src.rpm" % self.workdir)) > 0)
 
-    def test_packaging_single_file_build_rpm(self):
+    def test_packaging_build_rpm(self):
         cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm --no-mock -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
-    def test_packaging_single_file_build_rpm_with_mock(self):
+    def test_packaging_build_rpm_with_mock(self):
         cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
+
+
+class TestMainProgram01MultipleFilesCases(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp()
+        logging.info("") # dummy log
+
+        self.filelist = os.path.join(self.workdir, 'file.list')
+
+        targets = [
+            '/etc/auto.master', '/etc/auto.misc', '/etc/auto.net', '/etc/auto.smb',
+            '/etc/modprobe.d/blacklist.conf', '/etc/modprobe.d/dist-alsa.conf',
+            '/etc/modprobe.d/dist-oss.conf', '/etc/modprobe.d/dist.conf',
+            '/etc/resolv.conf',
+            '/etc/security/limits.conf', '/etc/security/access.conf',
+        ]
+        self.files = [f for f in targets if os.path.exists(f)]
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_packaging_wo_rpmdb_wo_mock(self):
+        open(self.filelist, 'w').write("\n".join(self.files))
+
+        cmd = "python %s -n etcdata -w %s --build-rpm --no-rpmdb --no-mock %s" % (sys.argv[0], self.workdir, self.filelist)
+        self.assertEquals(os.system(cmd), 0)
+        self.assertEquals(len(glob.glob("%s/*/*.src.rpm" % self.workdir)), 1)
+        self.assertEquals(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)), 1)
+
+    def test_packaging_w_rpmdb_wo_mock(self):
+        open(self.filelist, 'w').write("\n".join(self.files))
+
+        cmd = "python %s -n etcdata -w %s --build-rpm --no-mock %s" % (sys.argv[0], self.workdir, self.filelist)
+        self.assertEquals(os.system(cmd), 0)
+        self.assertEquals(len(glob.glob("%s/*/*.src.rpm" % self.workdir)), 1)
+        self.assertEquals(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)), 2) # etcdata and etcdata-overrides
 
 
 
