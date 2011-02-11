@@ -1718,15 +1718,15 @@ def main():
     if options.test:
         run_doctests()
         run_unittests()
-        sys.exit(0)
+        sys.exit()
 
     if options.doctests:
         run_doctests()
-        sys.exit(0)
+        sys.exit()
 
     if options.unittests:
         run_unittests()
-        sys.exit(0)
+        sys.exit()
 
     if len(args) < 1:
         p.print_usage()
