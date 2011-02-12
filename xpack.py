@@ -1417,7 +1417,7 @@ class PackageMaker(object):
 
     def to_srcdir(self, path):
         """
-        >>> pm = PackageMaker({}, '/tmp/w')
+        >>> pm = PackageMaker({'name': 'foo',}, '/tmp/w')
         >>> pm.to_srcdir('/a/b/c')
         '/tmp/w/src/a/b/c'
         >>> pm.to_srcdir('a/b')
