@@ -9,8 +9,7 @@
 # * build package such as rpm, src.rpm, deb, etc.
 #
 # NOTE: The permissions of the files may be lost during packaging.  If you want
-# to force set permissions as you wanted, specify these in the %files section
-# in the rpm spec explicitly.
+# to force set permissions as you wanted, specify these explicitly.
 #
 # Copyright (C) 2011 Satoru SATOH <satoru.satoh @ gmail.com>
 #
