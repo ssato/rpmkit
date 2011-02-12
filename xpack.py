@@ -1349,8 +1349,6 @@ def collect(list_f, pkg_name, options):
         if force_set_uid_and_gid:
             logging.debug(" force set uid and gid of %s" % fi.path)
             fi.uid = fi.gid = 0
-            import pprint
-            pprint.pprint(fi)
 
         f = fi.path
 
