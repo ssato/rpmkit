@@ -108,14 +108,6 @@ PKG_COMPRESSORS = {
 }
 
 
-PKG_METADATA_FMTS = {
-    'description': """\
-This package provides some backup data collected on %(host)s
-by %(packager)s at %(date)s.
-""",
-}
-
-
 TEMPLATES = {
     "configure.ac": """\
 AC_INIT([$name],[$version])
@@ -198,7 +190,8 @@ Requires:       $req
 
 
 %description
-${description}
+This package provides some backup data collected on $host
+by $packager_name at $date.date.
 
 
 #if $conflicts.names
@@ -1735,7 +1728,7 @@ Examples:
 
 
 def main():
-    global PKG_COMPRESSORS, USE_PYXATTR, PKG_METADATA_FMTS
+    global PKG_COMPRESSORS, USE_PYXATTR
 
     verbose_test = False
 
@@ -1796,14 +1789,6 @@ def main():
     pkg['packager_name'] = options.packager_name
     pkg['packager_mail'] = options.packager_mail
 
-    pkg['date'] = date(rfc2822=True)
-
-    if options.description:
-        pkg['description'] = open(options.description).read()
-    else:
-        pkg['description'] = PKG_METADATA_FMTS.get('description') % \
-            { 'host': hostname(), 'packager': pkg['packager_name'], 'date': date(rfc2822=True), }
-
     pkg['workdir'] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
     pkg['srcdir'] = os.path.join(pkg['workdir'], 'src')
 
@@ -1813,7 +1798,6 @@ def main():
     }
 
     pkg['dist'] = options.dist
-    pkg['rpm'] = 1
 
     # TODO: Revert locale setting change just after timestamp was gotten.
     locale.setlocale(locale.LC_ALL, "C")
@@ -1821,6 +1805,10 @@ def main():
         'date': date(rfc2822=True),
         'timestamp': date(),
     }
+    pkg['host'] = hostname()
+
+    if options.pkgfmt == 'rpm':
+        pkg['rpm'] = 1
 
     if filelist == '-':
         list_f = sys.stdin
@@ -1829,7 +1817,7 @@ def main():
 
     if options.with_pyxattr:
         if not USE_PYXATTR:
-            logging.warn(" pyxattr module is not found so that it will not use it")
+            logging.warn(" pyxattr module is not found so that it will not be used.")
     else:
         USE_PYXATTR = False
 
