@@ -1471,9 +1471,7 @@ class PackageMaker(object):
 
     def copyfiles(self):
         for fi in self.package['fileinfos']:
-            p = fi.target
-
-            fi.copy(os.path.join(self.workdir, self.to_srcdir(p)))
+            fi.copy(os.path.join(self.workdir, self.to_srcdir(fi.target)))
 
     def setup(self):
         logging.info("Setting up src tree in %s: %s" % (self.workdir, self.pname))
