@@ -1613,7 +1613,7 @@ def run_doctests(verbose):
 
 
 def run_unittests(verbose):
-    unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 1))
+    unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
 
 
 def option_parser(V=__version__):
@@ -1747,7 +1747,7 @@ def main():
         sys.exit(0)
 
     if options.quiet:
-        logging.getLogger().setLevel(logging.WARN)
+        logging.getLogger().setLevel(logging.WARNING)
         verbose_test = False
 
     if options.debug:
