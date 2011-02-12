@@ -222,12 +222,16 @@ cat <<EOF > README
 $summary
 EOF
 
-#if $conflicts.names
+cat /dev/null > MANIFESTS
 cat /dev/null > MANIFESTS.overrides
-#for $f in $conflicts.files
-echo $f >> MANIFESTS.overrides
-#end for
+
+#for $fi in $fileinfos
+#if $fi.conflicts
+echo $fi.target >> MANIFESTS.overrides
+#else
+echo $fi.target >> MANIFESTS
 #end if
+#end for
 
 
 %build
@@ -250,31 +254,27 @@ rm -rf \$RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc README
-#if $conflicts.names
 #for $fi in $fileinfos
-#if $fi.target not in $conflicts.files
+#if not $fi.conflicts
 $fi.rpm_attr$fi.target
 #end if
 #end for
-#else
-#for $fi in $fileinfos
-$fi.rpm_attr$fi.target
-#end for
-#end if
 
 
 #if $conflicts.names
 %files          overrides
 %defattr(-,root,root,-)
 %doc MANIFESTS.overrides
-#for $f in $conflicts.files
-$f
+#for $fi in $fileinfos
+#if $fi.conflicts
+$fi.rpm_attr$fi.target
+#end if
 #end for
 #end if
 
 
 %changelog
-* ${timestamp} ${packager_name} <${packager_mail}> - ${version}-${release}
+* $date.timestamp ${packager_name} <${packager_mail}> - ${version}-${release}
 - Initial packaging.
 """,
     "debian/control": """\
@@ -327,7 +327,7 @@ $name ($version) unstable; urgency=low
 
   * New upstream release
 
- -- $packager_name <$packager_mail> $timestamp
+ -- $packager_name <$packager_mail> $date.date
 """,
 }
 
@@ -956,7 +956,7 @@ class FileInfo(ObjDict):
 
         self.filetype = self.__ftype
 
-        self.perm_default = 644
+        self.perm_default = '644'
 
         for k,v in kwargs.iteritems():
             self[k] = v
@@ -1073,7 +1073,7 @@ class DirInfo(FileInfo):
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(DirInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
 
-        self.perm_default = 755
+        self.perm_default = '755'
 
     def _remove(self, target):
         if not os.path.isdir(target):
@@ -1289,15 +1289,49 @@ def process_listfile(list_f):
     return unique([l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')], key=dirname)
 
 
-def collect(list_f, rpmdb=False):
+def collect(list_f, pkg_name, options):
     """
-    Collect FileInfo objects.
+    Collect FileInfo objects from given file list.
     """
-    ff = (rpmdb and RpmFileInfoFactory() or FileInfoFactory())
+    ff = (options.pkgfmt == 'rpm' and RpmFileInfoFactory() or FileInfoFactory())
 
-    for p in process_listfile(list_f):
+    if options.pkgfmt != 'rpm' or options.no_rpmdb:
+        filelist_db = dict()
+    else:
+        filelist_db = Rpm.filelist()
+
+    fileinfos = []
+
+    destdir = options.destdir
+
+    fs = unique(process_listfile(list_f))
+
+    for p in fs:
         fi = ff.create(p)
-        yield fi
+
+        f = fi.path
+
+        # FIXME: Is there any better way?
+        if destdir:
+            if f.startswith(destdir):
+                fi.target = f.split(destdir)[1]
+            else:
+                logging.error(" The path '%s' does not start with given destdir '%s'" % (f, destdir))
+                raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
+        else:
+            fi.target = f
+
+        p = filelist_db.get(fi.target, False)
+
+        if p and p != pkg_name:
+            logging.info(" %s is owned by %s, that is, it will be conflicts with %s" % (f, p, p))
+            fi.conflicts = p
+        else:
+            fi.conflicts = ""
+
+        fileinfos.append(fi)
+
+    return fileinfos
 
 
 def to_srcdir(path, workdir=''):
@@ -1770,17 +1804,15 @@ def main():
 
     # TODO: Revert locale setting change just after timestamp was gotten.
     locale.setlocale(locale.LC_ALL, "C")
-    pkg['timestamp'] = datetime.date.today().strftime("%a %b %_d %Y")
+    pkg['date'] = {
+        'date': date(rfc2822=True),
+        'timestamp': date(),
+    }
 
     if filelist == '-':
         list_f = sys.stdin
     else:
         list_f = open(filelist)
-
-    if options.no_rpmdb:
-        filelist_db = dict()
-    else:
-        filelist_db = Rpm.filelist()
 
     if options.with_pyxattr:
         if not USE_PYXATTR:
@@ -1788,39 +1820,13 @@ def main():
     else:
         USE_PYXATTR = False
 
- 
-    fileinfos = []
-    conflicts = dict()
-
     destdir = options.destdir.rstrip(os.path.sep)
     pkg['destdir'] = destdir
 
-    for fi in collect(list_f, (not options.no_rpmdb)):
-        f = fi.path
-
-        # FIXME: Is there any better way?
-        if destdir:
-            if f.startswith(destdir):
-                fi.target = f.split(destdir)[1]
-            else:
-                logging.error(" The path '%s' does not start with given destdir '%s'" % (f, destdir))
-                raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
-        else:
-            fi.target = f
-
-        p = filelist_db.get(fi.target, False)
-
-        if p and p != pkg['name']:
-            logging.info(" %s is owned by %s, that is, it will be conflicts with %s" % (f, p, p))
-            conflicts[fi.target] = p
-
-        fileinfos.append(fi)
-
-    pkg['fileinfos'] = fileinfos
-
+    pkg['fileinfos'] = collect(list_f, pkg['name'], options)
     pkg['conflicts'] = {
-        'names': unique(conflicts.values()),
-        'files': conflicts.keys(),
+        'names': unique((fi.conflicts for fi in pkg['fileinfos'] if fi.conflicts)),
+        'files': unique((fi.target for fi in pkg['fileinfos'] if fi.conflicts)),
     }
 
     if options.summary:
