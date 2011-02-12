@@ -1749,22 +1749,26 @@ Examples:
 
     bog = optparse.OptionGroup(p, "Build options")
     bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
-    bog.add_option('', '--build-rpm', action='store_true', help='Whether to build binary rpm [no - srpm only]')
-    bog.add_option('', '--no-mock', action="store_true",
-        help='Build RPM with using rpmbuild instead of mock (not recommended)')
-    bog.add_option('', '--dist', help='Target distribution (for mock) [%default]')
-    bog.add_option('', '--pkgfmt', help='Terget package format: tgz, rpm or deb [%default]')
+    bog.add_option('', '--pkgfmt', help='Terget package format: tgz, rpm or deb (experimental) [%default]')
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
         "make it installed as '/usr/share/foo/a.dat' with the package , you can accomplish "
         "that by this option: '--destdir=/builddir/destdir'")
-
     p.add_option_group(bog)
 
-    rog = optparse.OptionGroup(p, "Rpm DB options")
+    rog = optparse.OptionGroup(p, "Rpm related options")
+    rog.add_option('', '--build-rpm', action='store_true', help='Whether to build binary rpm [no - srpm only: default]')
+    rog.add_option('', '--no-mock', action="store_true", help='Build RPM with only using rpmbuild (not recommended)')
+    rog.add_option('', '--dist', help='Target distribution (for mock) [%default]')
     rog.add_option('', '--no-rpmdb', action='store_true', help='Do not refer rpm db to get extra information of target files')
     p.add_option_group(rog)
+
+    tog = optparse.OptionGroup(p, "Test options")
+    tog.add_option('', '--test', action="store_true", help='Run all tests')
+    tog.add_option('', '--doctests', action="store_true", help='Run doc tests')
+    tog.add_option('', '--unittests', action="store_true", help='Run unit tests')
+    p.add_option_group(tog)
 
     aog = optparse.OptionGroup(p, "Other advanced options")
     aog.add_option('', '--with-pyxattr', action='store_true', help='Get/set xattributes of files with pure python code.')
@@ -1774,12 +1778,6 @@ Examples:
     p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
 
     p.add_option('', '--show-examples', action="store_true", help='Show examples')
-
-    tog = optparse.OptionGroup(p, "Test options")
-    tog.add_option('', '--test', action="store_true", help='Run all tests')
-    tog.add_option('', '--doctests', action="store_true", help='Run doc tests')
-    tog.add_option('', '--unittests', action="store_true", help='Run unit tests')
-    p.add_option_group(tog)
 
     return p
 
