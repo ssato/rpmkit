@@ -252,7 +252,7 @@ rm -rf \$RPM_BUILD_ROOT
 %doc MANIFEST
 #for $fi in $fileinfos
 #if not $fi.conflicts
-$fi.rpm_attr$fi.target
+$fi.rpm_attr()$fi.target
 #end if
 #end for
 
@@ -263,7 +263,7 @@ $fi.rpm_attr$fi.target
 %doc MANIFEST.overrides
 #for $fi in $fileinfos
 #if $fi.conflicts
-$fi.rpm_attr$fi.target
+$fi.rpm_attr()$fi.target
 #end if
 #end for
 #end if
@@ -1093,6 +1093,12 @@ class FileInfo(ObjDict):
 
         return True
 
+    def rpm_attr(self):
+        if self.need_to_chmod() or self.need_to_chown():
+            return rpm_attr(self)
+        else:
+            return ""
+
 
 
 class DirInfo(FileInfo):
@@ -1300,11 +1306,6 @@ class RpmFileInfoFactory(FileInfoFactory):
         """
         fi = super(RpmFileInfoFactory, self).create(path)
 
-        if fi.need_to_chmod() or fi.need_to_chown():
-            fi.rpm_attr = rpm_attr(fi)
-        else:
-            fi.rpm_attr = ""
-
         return fi
 
 
@@ -1338,11 +1339,18 @@ def collect(list_f, pkg_name, options):
     fileinfos = []
 
     destdir = options.destdir
+    force_set_uid_and_gid = options.ignore_owner
 
     fs = read_files_from_listfile(list_f)
 
     for p in fs:
         fi = ff.create(p)
+
+        if force_set_uid_and_gid:
+            logging.debug(" force set uid and gid of %s" % fi.path)
+            fi.uid = fi.gid = 0
+            import pprint
+            pprint.pprint(fi)
 
         f = fi.path
 
@@ -1355,6 +1363,7 @@ def collect(list_f, pkg_name, options):
                 logging.error(" The path '%s' does not start with given destdir '%s'" % (f, destdir))
                 raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
         else:
+            logging.debug(" Do not need to rewrite its path: %s" % f)
             fi.target = f
 
         p = filelist_db.get(fi.target, False)
@@ -1580,15 +1589,17 @@ def do_packaging(pkg, options):
     pm.finish()
 
 
-def do_packaging_self(version=__version__, workdir=tempfile.mkdtemp(dir='/tmp', prefix='xpack-build')):
-    destdir = os.path.join(workdir, "destdir")
-    instdir = os.path.join(destdir, 'usr', 'bin')
+def do_packaging_self(version=__version__, workdir=None):
+    if workdir is None:
+        workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
+
+    instdir = os.path.join(workdir, 'usr', 'bin')
 
     createdir(instdir)
     shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
 
-    cmd = "echo %s | python %s -n xpack --package-version %s -w %s --build-rpm --no-rpmdb --no-mock --destdir=%s -" % \
-        (os.path.join(instdir, 'xpack'), sys.argv[0], version, workdir, destdir)
+    cmd = "echo %s/xpack | python %s -n xpack --package-version %s -w %s --debug --build-rpm --no-rpmdb --no-mock --destdir=%s --ignore-owner -" % \
+        (instdir, sys.argv[0], version, workdir, workdir)
 
     logging.info(" executing: %s" % cmd)
     os.system(cmd)
@@ -1722,6 +1733,7 @@ def option_parser(V=__version__):
         'unittests': False,
         'with_pyxattr': False,
         'build_self': False,
+        'ignore_owner': False,
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -1761,7 +1773,8 @@ Examples:
     pog.add_option('', '--requires', help='Specify the package requirements as comma separated list')
     pog.add_option('', '--packager-name', help="Specify packager's name [%default]")
     pog.add_option('', '--packager-mail', help="Specify packager's mail address [%default]")
-    pog.add_option('', '--package-version', help='Specify the package version [%default]')
+    pog.add_option('', '--package-version', help="Specify the package version [%default]")
+    pog.add_option('', '--ignore-owner', action='store_true', help="Ignore owner and group of files and then treat as root's")
     p.add_option_group(pog)
 
     bog = optparse.OptionGroup(p, "Build options")
@@ -1843,7 +1856,8 @@ def main():
         sys.exit()
 
     if options.build_self:
-        do_packaging_self(version=options.package_version, workdir=options.workdir)
+        #do_packaging_self(version=options.package_version, workdir=options.workdir)
+        do_packaging_self()
         sys.exit()
 
     if len(args) < 1:
