@@ -1060,7 +1060,7 @@ class FileInfo(ObjDict):
                 os.makedirs(destdir)
             shutil.copystat(os.path.dirname(self.path), destdir)
 
-        logging.info(" Copying from '%s' to '%s'" % (self.path, dest))
+        logging.debug(" Copying from '%s' to '%s'" % (self.path, dest))
         self._copy(dest)
 
         return True
@@ -1608,12 +1608,12 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
 
 
 
-def run_doctests():
-    doctest.testmod(verbose=True)
+def run_doctests(verbose):
+    doctest.testmod(verbose=verbose)
 
 
-def run_unittests():
-    unittest.main(argv=sys.argv[:1], verbosity=2)
+def run_unittests(verbose):
+    unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 1))
 
 
 def option_parser(V=__version__):
@@ -1729,6 +1729,8 @@ Examples:
 def main():
     global PKG_COMPRESSORS, USE_PYXATTR, PKG_METADATA_FMTS
 
+    verbose_test = False
+
     loglevel = logging.INFO
     logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
     logformat = '%(asctime)s [%(levelname)-4s] %(message)s'
@@ -1746,21 +1748,23 @@ def main():
 
     if options.quiet:
         logging.getLogger().setLevel(logging.WARN)
+        verbose_test = False
 
     if options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
+        verbose_test = True
 
     if options.test:
-        run_doctests()
-        run_unittests()
+        run_doctests(verbose_test)
+        run_unittests(verbose_test)
         sys.exit()
 
     if options.doctests:
-        run_doctests()
+        run_doctests(verbose_test)
         sys.exit()
 
     if options.unittests:
-        run_unittests()
+        run_unittests(verbose_test)
         sys.exit()
 
     if len(args) < 1:
