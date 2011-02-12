@@ -485,6 +485,38 @@ $ rpm -qlp w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1
 /usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1/README
 $
 """,
+    """## Packaging itself:
+$ python xpack.py --build-self
+06:58:45 [INFO]  executing: echo /tmp/xpack-build-VjhfuD/usr/bin/xpack | python xpack.py -n xpack --package-version 0.0.99 -w /tmp/xpack-build-VjhfuD --debug --build-rpm --no-rpmdb --no-mock --destdir=/tmp/xpack-build-VjhfuD --ignore-owner -
+06:58:46 [DEBUG]  force set uid and gid of /tmp/xpack-build-VjhfuD/usr/bin/xpack
+06:58:46 [DEBUG]  Rewrote target path of fi from /tmp/xpack-build-VjhfuD/usr/bin/xpack to /usr/bin/xpack
+06:58:46 [INFO] Setting up src tree in /tmp/xpack-build-VjhfuD/xpack-0.0.99: xpack
+06:58:46 [DEBUG]  Creating a directory: /tmp/xpack-build-VjhfuD/xpack-0.0.99
+06:58:46 [DEBUG]  Creating a directory: /tmp/xpack-build-VjhfuD/xpack-0.0.99/src
+06:58:46 [DEBUG]  Copying from '/tmp/xpack-build-VjhfuD/usr/bin/xpack' to '/tmp/xpack-build-VjhfuD/xpack-0.0.99/src/usr/bin/xpack'
+06:58:46 [DEBUG]  Run: cp -a /tmp/xpack-build-VjhfuD/usr/bin/xpack /tmp/xpack-build-VjhfuD/xpack-0.0.99/src/usr/bin/xpack [/tmp/t]
+06:58:46 [INFO] Configuring src distribution: xpack
+06:58:46 [DEBUG]  Run: autoreconf -vfi [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
+06:58:54 [INFO] Building packages: xpack
+06:58:54 [DEBUG]  Run: ./configure [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
+06:58:57 [DEBUG]  Run: make dist [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
+06:58:57 [DEBUG]  Run: make srpm [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
+06:58:58 [DEBUG]  Run: make rpm [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
+06:59:02 [INFO] Successfully created packages in /tmp/xpack-build-VjhfuD/xpack-0.0.99: xpack
+$ rpm -qlp /tmp/xpack-build-VjhfuD/xpack-0.0.99/xpack-0.0.99-1.fc14.noarch.rpm
+/usr/bin/xpack
+/usr/share/doc/xpack-0.0.99
+/usr/share/doc/xpack-0.0.99/MANIFEST
+/usr/share/doc/xpack-0.0.99/README
+$ sed -n "/^%files/,/^$/p" /tmp/xpack-build-VjhfuD/xpack-0.0.99/xpack.spec
+%files
+%defattr(-,root,root,-)
+%doc README
+%doc MANIFEST
+%attr(755, -, -) /usr/bin/xpack
+
+$
+""",
 ]
 
 
