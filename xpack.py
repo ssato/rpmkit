@@ -676,7 +676,7 @@ def shell(cmd_s, workdir="", log=True):
 def createdir(dir, mode=0700):
     """Create a dir with specified mode.
     """
-    logging.info(" Creating a directory: %s" % dir)
+    logging.debug(" Creating a directory: %s" % dir)
 
     if os.path.exists(dir):
         if os.path.isdir(dir):
@@ -768,7 +768,7 @@ class TestDecoratedFuncs(unittest.TestCase):
 class TestFuncsWithSideEffects(unittest.TestCase):
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp()
+        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -1280,13 +1280,19 @@ class RpmFileInfoFactory(FileInfoFactory):
 
 
 
-def process_listfile(list_f):
+def read_files_from_listfile(list_f):
     """Read paths from given file line by line and returns path list sorted by
-    dir names. Empty lines or lines start with '#' are ignored.
+    dir names. There some speical parsing rules for the file list:
+
+    * Empty lines or lines start with '#' are ignored.
+    * The lines contain '*' (glob match) will be expanded to real dir or file
+      names: ex. '/etc/httpd/conf/*' will be
+      ['/etc/httpd/conf/httpd.conf', '/etc/httpd/conf/magic', ...] .
 
     @list_f  File obj of file list.
     """
-    return unique([l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')], key=dirname)
+    fs = [l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')]
+    return unique(concat([glob.glob(g) for g in fs if '*' in g]) + [f for f in fs if '*' not in f])
 
 
 def collect(list_f, pkg_name, options):
@@ -1304,7 +1310,7 @@ def collect(list_f, pkg_name, options):
 
     destdir = options.destdir
 
-    fs = unique(process_listfile(list_f))
+    fs = read_files_from_listfile(list_f)
 
     for p in fs:
         fi = ff.create(p)
@@ -1546,8 +1552,8 @@ def show_examples(logs=EXAMPLE_LOGS):
 class TestMainProgram00SingleFileCases(unittest.TestCase):
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp()
-        logging.info("") # dummy log
+        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
+        logging.info("start") # dummy log
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -1556,6 +1562,11 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.src.rpm" % self.workdir)) > 0)
+
+    def test_packaging_build_rpm_wo_rpmdb(self):
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm --no-rpmdb --no-mock -" % (sys.argv[0], self.workdir)
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
     def test_packaging_build_rpm(self):
         cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm --no-mock -" % (sys.argv[0], self.workdir)
@@ -1572,11 +1583,16 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 class TestMainProgram01MultipleFilesCases(unittest.TestCase):
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp()
-        logging.info("")
+        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
+        logging.info("start")
 
         self.filelist = os.path.join(self.workdir, 'file.list')
 
+        targets = [
+            '/etc/auto.*', '/etc/modprobe.d/*', '/etc/resolv.conf',
+            '/etc/security/limits.conf', '/etc/security/access.conf',
+        ]
+        x = """
         targets = [
             '/etc/auto.master', '/etc/auto.misc', '/etc/auto.net', '/etc/auto.smb',
             '/etc/modprobe.d/blacklist.conf', '/etc/modprobe.d/dist-alsa.conf',
@@ -1584,20 +1600,13 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
             '/etc/resolv.conf',
             '/etc/security/limits.conf', '/etc/security/access.conf',
         ]
+        """
         self.files = [f for f in targets if os.path.exists(f)]
 
     def tearDown(self):
         rm_rf(self.workdir)
 
-    def test_packaging_wo_rpmdb_wo_mock(self):
-        open(self.filelist, 'w').write("\n".join(self.files))
-
-        cmd = "python %s -n etcdata -w %s --build-rpm --no-rpmdb --no-mock %s" % (sys.argv[0], self.workdir, self.filelist)
-        self.assertEquals(os.system(cmd), 0)
-        self.assertEquals(len(glob.glob("%s/*/*.src.rpm" % self.workdir)), 1)
-        self.assertEquals(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)), 1)
-
-    def test_packaging_w_rpmdb_wo_mock(self):
+    def test_packaging_build_rpm_wo_mock(self):
         open(self.filelist, 'w').write("\n".join(self.files))
 
         cmd = "python %s -n etcdata -w %s --build-rpm --no-mock %s" % (sys.argv[0], self.workdir, self.filelist)
