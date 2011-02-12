@@ -1601,7 +1601,7 @@ class DebPackageMaker(TgzPackageMaker):
         self.genfile('debian/copyright')
         self.genfile('debian/changelog')
 
-    def build(pkg):
+    def build(self):
         super(DebPackageMaker, self).build()
         self.shell('debuild -us -uc')
 
@@ -1929,6 +1929,7 @@ def main():
     }
     pkg['host'] = hostname()
 
+    pkg['rpm'] = 0
     if options.pkgfmt == 'rpm':
         pkg['rpm'] = 1
 
