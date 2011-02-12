@@ -1350,6 +1350,7 @@ def collect(list_f, pkg_name, options):
         if destdir:
             if f.startswith(destdir):
                 fi.target = f.split(destdir)[1]
+                logging.debug(" Rewrote target path of fi from %s to %s" % (f, fi.target))
             else:
                 logging.error(" The path '%s' does not start with given destdir '%s'" % (f, destdir))
                 raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
@@ -1470,10 +1471,7 @@ class PackageMaker(object):
 
     def copyfiles(self):
         for fi in self.package['fileinfos']:
-            p = fi.path
-
-            if self.destdir:
-                p = os.path.join(self.destdir, p.strip(os.path.sep))
+            p = fi.target
 
             fi.copy(os.path.join(self.workdir, self.to_srcdir(p)))
 
@@ -1486,7 +1484,7 @@ class PackageMaker(object):
 
     def configure(self):
         logging.info("Configuring src distribution: %s" % self.pname)
-        self.package['distdata'] = distdata_in_makefile_am([fi.path for fi in self.package['fileinfos']])
+        self.package['distdata'] = distdata_in_makefile_am([fi.target for fi in self.package['fileinfos']])
 
         self.genfile('configure.ac')
         self.genfile('Makefile.am')
@@ -1619,6 +1617,17 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
+    def test_packaging_build_rpm_wo_rpmdb_w_destdir(self):
+        destdir = os.path.join(self.workdir, "destdir")
+        createdir(os.path.join(destdir, 'etc'))
+        shell("cp /etc/resolv.conf %s/etc" % destdir)
+
+        cmd = "echo %s/etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm --no-rpmdb --no-mock --destdir=%s -" % \
+            (destdir, sys.argv[0], self.workdir, destdir)
+
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
 
 
 class TestMainProgram01MultipleFilesCases(unittest.TestCase):
@@ -1713,7 +1722,7 @@ Examples:
   %prog -n foo files.list
   cat files.list | %prog -n foo -  # same as above.
 
-  %prog -n foo -v 0.2 -l GPLv3+ files.list
+  %prog -n foo --package-version 0.2 -l GPLv3+ files.list
   %prog -n foo --requires httpd,/sbin/service files.list
 
   see the output of `%prog --show-examples` for more detailed examples.""",
