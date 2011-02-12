@@ -37,8 +37,9 @@
 # * rpm-python
 #
 # TODO:
-# * add permission specifiers for targets in RPM SPECs
 # * keep permissions of targets in tar archives
+# * test --pkgfmt=deb (.deb output)
+# * sort out command line options
 #
 
 from Cheetah.Template import Template
