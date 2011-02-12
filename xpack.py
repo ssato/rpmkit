@@ -1580,6 +1580,20 @@ def do_packaging(pkg, options):
     pm.finish()
 
 
+def do_packaging_self(version=__version__, workdir=tempfile.mkdtemp(dir='/tmp', prefix='xpack-build')):
+    destdir = os.path.join(workdir, "destdir")
+    instdir = os.path.join(destdir, 'usr', 'bin')
+
+    createdir(instdir)
+    shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
+
+    cmd = "echo %s | python %s -n xpack --package-version %s -w %s --build-rpm --no-rpmdb --no-mock --destdir=%s -" % \
+        (os.path.join(instdir, 'xpack'), sys.argv[0], version, workdir, destdir)
+
+    logging.info(" executing: %s" % cmd)
+    os.system(cmd)
+
+
 def show_examples(logs=EXAMPLE_LOGS):
     for log in logs:
         print >> sys.stdout, log
@@ -1707,6 +1721,7 @@ def option_parser(V=__version__):
         'doctests': False,
         'unittests': False,
         'with_pyxattr': False,
+        'build_self': False,
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -1720,8 +1735,12 @@ Examples:
   %prog -n foo files.list
   cat files.list | %prog -n foo -  # same as above.
 
-  %prog -n foo --package-version 0.2 -l GPLv3+ files.list
+  %prog -n foo --package-version 0.2 -l MIT files.list
   %prog -n foo --requires httpd,/sbin/service files.list
+
+  %prog --test --debug  # run test suites
+
+  %prog --build-self    # package itself
 
   see the output of `%prog --show-examples` for more detailed examples.""",
     version=ver_s
@@ -1775,6 +1794,8 @@ Examples:
     p.add_option('-D', '--debug', action="store_true", help='Debug mode')
     p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
 
+    p.add_option('', '--build-self', action="store_true", help='Package itself (self-build)')
+
     p.add_option('', '--show-examples', action="store_true", help='Show examples')
 
     return p
@@ -1819,6 +1840,10 @@ def main():
 
     if options.unittests:
         run_unittests(verbose_test)
+        sys.exit()
+
+    if options.build_self:
+        do_packaging_self(version=options.package_version, workdir=options.workdir)
         sys.exit()
 
     if len(args) < 1:
