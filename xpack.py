@@ -129,8 +129,9 @@ Makefile
 AC_OUTPUT
 """,
     "Makefile.am": """\
+EXTRA_DIST = MANIFEST MANIFEST.overrides
 #if $rpm
-EXTRA_DIST = ${name}.spec rpm.mk
+EXTRA_DIST += ${name}.spec rpm.mk
 
 include \$(abs_srcdir)/rpm.mk
 #end if
@@ -143,6 +144,24 @@ $f \\
 #end for
 \$(NULL)
 
+#end for
+""",
+    "README": """\
+This package provides some backup data collected on
+$host by $packager_name at $date.date.
+""",
+    "MANIFEST": """\
+#for $fi in $fileinfos
+#if not $fi.conflicts
+$fi.target
+#end if
+#end for
+""",
+    "MANIFEST.overrides": """\
+#for $fi in $fileinfos
+#if $fi.conflicts
+$fi.target
+#end if
 #end for
 """,
     "rpm.mk": """\
@@ -190,8 +209,8 @@ Requires:       $req
 
 
 %description
-This package provides some backup data collected on $host
-by $packager_name at $date.date.
+This package provides some backup data collected on
+$host by $packager_name at $date.date.
 
 
 #if $conflicts.names
@@ -203,6 +222,7 @@ Requires:       %{name} = %{version}-%{release}
 Conflicts:      $p
 #end for
 
+
 %description    overrides
 Some more extra data will override and replace other packages'.
 #end if
@@ -210,21 +230,6 @@ Some more extra data will override and replace other packages'.
 
 %prep
 %setup -q
-
-cat <<EOF > README
-$summary
-EOF
-
-cat /dev/null > MANIFESTS
-cat /dev/null > MANIFESTS.overrides
-
-#for $fi in $fileinfos
-#if $fi.conflicts
-echo $fi.target >> MANIFESTS.overrides
-#else
-echo $fi.target >> MANIFESTS
-#end if
-#end for
 
 
 %build
@@ -236,9 +241,6 @@ make
 rm -rf \$RPM_BUILD_ROOT
 make install DESTDIR=\$RPM_BUILD_ROOT
 
-# s,%files,%files -f files.list, if enable the following:
-#find \$RPM_BUILD_ROOT -type f | sed "s,^\$RPM_BUILD_ROOT,,g" > files.list
-
 
 %clean
 rm -rf \$RPM_BUILD_ROOT
@@ -247,6 +249,7 @@ rm -rf \$RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc README
+%doc MANIFEST
 #for $fi in $fileinfos
 #if not $fi.conflicts
 $fi.rpm_attr$fi.target
@@ -257,7 +260,7 @@ $fi.rpm_attr$fi.target
 #if $conflicts.names
 %files          overrides
 %defattr(-,root,root,-)
-%doc MANIFESTS.overrides
+%doc MANIFEST.overrides
 #for $fi in $fileinfos
 #if $fi.conflicts
 $fi.rpm_attr$fi.target
@@ -296,7 +299,7 @@ include /usr/share/cdbs/1/class/autotools.mk
 DEB_INSTALL_DIRS_${name} = \\
 #set $dirs = []
 #for $fi in $fileinfos
-#if $fi.target not in $conflicts.files
+#if not $fi.conflicts
 #set $dir = os.path.dirname($fi.target)
 #if $dir not in $dirs
 \t$dir \\
@@ -311,7 +314,7 @@ install/$name::
 """,
     "debian/copyright": """\
 This package was debianized by $packager_name <$packager_mail> on
-$date.
+$date.date.
 
 This package is distributed under $license.
 """,
@@ -651,7 +654,7 @@ def shell(cmd_s, workdir="", log=True):
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
-    logging.info(" Run: %s [%s]" % (cmd_s, workdir))
+    logging.debug(" Run: %s [%s]" % (cmd_s, workdir))
 
     try:
         pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
@@ -1027,7 +1030,7 @@ class FileInfo(ObjDict):
             return False
 
         if os.path.exists(dest):
-            logging.info(" Copying destination already exists: '%s'" % dest)
+            logging.warn(" Copying destination already exists: '%s'" % dest)
 
             # TODO: It has negative impact for symlinks.
             #
@@ -1323,7 +1326,7 @@ def collect(list_f, pkg_name, options):
         p = filelist_db.get(fi.target, False)
 
         if p and p != pkg_name:
-            logging.info(" %s is owned by %s, that is, it will be conflicts with %s" % (f, p, p))
+            logging.warn(" %s is owned by %s, that is, it will be conflicts with %s" % (f, p, p))
             fi.conflicts = p
         else:
             fi.conflicts = ""
@@ -1402,6 +1405,8 @@ class PackageMaker(object):
         self.workdir = workdir
         self.destdir = destdir
 
+        self.pname = package['name']
+
         self.srcdir = os.path.join(workdir, 'src')
 
         for k,v in kwargs.iteritems():
@@ -1440,21 +1445,30 @@ class PackageMaker(object):
             fi.copy(os.path.join(self.workdir, self.to_srcdir(p)))
 
     def setup(self):
+        logging.info("Setting up src tree in %s: %s" % (self.workdir, self.pname))
         for d in ('workdir', 'srcdir'):
             createdir(self.package[d])
 
         self.copyfiles()
 
     def configure(self):
+        logging.info("Configuring src distribution: %s" % self.pname)
         self.package['distdata'] = distdata_in_makefile_am([fi.path for fi in self.package['fileinfos']])
 
         self.genfile('configure.ac')
         self.genfile('Makefile.am')
+        self.genfile('README')
+        self.genfile('MANIFEST')
+        self.genfile('MANIFEST.overrides')
         self.shell('autoreconf -vfi')
 
     def build(self):
+        logging.info("Building packages: %s" % self.pname)
         self.shell('./configure')
         self.shell('make dist')
+
+    def finish(self):
+        logging.info("Successfully created packages in %s: %s" % (self.workdir, self.pname))
 
 
 
@@ -1534,6 +1548,7 @@ def do_packaging(pkg, options):
     pm.setup()
     pm.configure()
     pm.build()
+    pm.finish()
 
 
 def show_examples(logs=EXAMPLE_LOGS):
