@@ -329,10 +329,51 @@ $name ($version) unstable; urgency=low
 
 
 EXAMPLE_LOGS = [
-"""
+    """## Packaing files in given files list, "files.list":
+
 $ ls
-xpack.py  files.list
+files.list  xpack.py
 $ cat files.list
+/etc/auto.*
+/etc/modprobe.d/*
+/etc/resolv.conf
+/etc/yum.repos.d/fedora.repo
+/tmp/x.txt
+$ python xpack.py -n foo -w ./0 -q files.list
+03:28:49 [WARNING]  /etc/auto.master is owned by autofs, that is, it will be conflicts with autofs
+03:28:49 [WARNING]  /etc/auto.misc is owned by autofs, that is, it will be conflicts with autofs
+03:28:49 [WARNING]  /etc/auto.net is owned by autofs, that is, it will be conflicts with autofs
+03:28:49 [WARNING]  /etc/auto.smb is owned by autofs, that is, it will be conflicts with autofs
+03:28:49 [WARNING]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link, that is, it will be conflicts with pilot-link
+03:28:49 [WARNING]  /etc/modprobe.d/blacklist.conf is owned by hwdata, that is, it will be conflicts with hwdata
+03:28:49 [WARNING]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
+03:28:50 [WARNING]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
+03:28:50 [WARNING]  /etc/modprobe.d/dist.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
+03:28:50 [WARNING]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4, that is, it will be conflicts with libmlx4
+03:28:50 [WARNING]  /etc/modprobe.d/poulsbo.conf is owned by xorg-x11-drv-psb, that is, it will be conflicts with xorg-x11-drv-psb
+03:28:50 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release, that is, it will be conflicts with fedora-release
+$ ls
+0  files.list  xpack.py
+$ ls 0
+foo-0.1
+$ ls 0/foo-0.1/
+MANIFEST            Makefile     Makefile.in  aclocal.m4      config.log     configure     foo-0.1-1.fc14.src.rpm  foo-0.1.tar.xz  install-sh  rpm     src
+MANIFEST.overrides  Makefile.am  README       autom4te.cache  config.status  configure.ac  foo-0.1.tar.gz          foo.spec        missing     rpm.mk
+$ rpm -qlp 0/foo-0.1/foo-0.1-1.fc14.src.rpm
+foo-0.1.tar.xz
+foo.spec
+$ (cd 0/foo-0.1/; make rpm > /dev/null 2> /dev/null)
+$ ls 0/foo-0.1/
+MANIFEST            Makefile.am  aclocal.m4      config.status  foo-0.1-1.fc14.noarch.rpm  foo-0.1.tar.xz                       install-sh  rpm.mk
+MANIFEST.overrides  Makefile.in  autom4te.cache  configure      foo-0.1-1.fc14.src.rpm     foo-overrides-0.1-1.fc14.noarch.rpm  missing     src
+Makefile            README       config.log      configure.ac   foo-0.1.tar.gz             foo.spec                             rpm
+$ rpm -qlp 0/foo-0.1/foo-0.1-1.fc14.noarch.rpm
+/etc/resolv.conf
+/tmp/x.txt
+/usr/share/doc/foo-0.1
+/usr/share/doc/foo-0.1/MANIFEST
+/usr/share/doc/foo-0.1/README
+$ rpm -qlp 0/foo-0.1/foo-overrides-0.1-1.fc14.noarch.rpm
 /etc/auto.master
 /etc/auto.misc
 /etc/auto.net
@@ -343,84 +384,90 @@ $ cat files.list
 /etc/modprobe.d/dist-oss.conf
 /etc/modprobe.d/dist.conf
 /etc/modprobe.d/libmlx4.conf
-/etc/resolv.conf
+/etc/modprobe.d/poulsbo.conf
 /etc/yum.repos.d/fedora.repo
-$ python xpack.py -n foo -w ./0 -q files.list
-$ ls
-0  xpack.py  files.list
-$ ls 0
-foo-0.1  foo-0.1-1.fc14.src.rpm  foo.spec
-$ ls 0/foo-0.1
-Makefile     Makefile.in  autom4te.cache  config.status  configure.ac            foo-0.1.tar.gz  foo.spec    missing  rpm.mk
-Makefile.am  aclocal.m4   config.log      configure      foo-0.1-1.fc14.src.rpm  foo-0.1.tar.xz  install-sh  rpm      src
-$ make -C 0/foo-0.1 rpm > /dev/null 2> /dev/null
-$ ls 0/foo-0.1
-Makefile     autom4te.cache  configure.ac               foo-0.1.tar.xz                       missing
-Makefile.am  config.log      foo-0.1-1.fc14.noarch.rpm  foo-overrides-0.1-1.fc14.noarch.rpm  rpm
-Makefile.in  config.status   foo-0.1-1.fc14.src.rpm     foo.spec                             rpm.mk
-aclocal.m4   configure       foo-0.1.tar.gz             install-sh                           src
-$
-$ cat files.list | python xpack.py -n foo -w ./1 -
-12:10:06 [INFO]  /etc/auto.master is owned by autofs, that is, it will be conflicts with autofs
-12:10:06 [INFO]  /etc/auto.misc is owned by autofs, that is, it will be conflicts with autofs
-12:10:06 [INFO]  /etc/auto.net is owned by autofs, that is, it will be conflicts with autofs
-12:10:06 [INFO]  /etc/auto.smb is owned by autofs, that is, it will be conflicts with autofs
-12:10:06 [INFO]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link, that is, it will be conflicts with pilot-link
-12:10:06 [INFO]  /etc/modprobe.d/blacklist.conf is owned by hwdata, that is, it will be conflicts with hwdata
-12:10:06 [INFO]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-12:10:06 [INFO]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-12:10:06 [INFO]  /etc/modprobe.d/dist.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-12:10:06 [INFO]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4, that is, it will be conflicts with libmlx4
-12:10:06 [INFO]  /etc/yum.repos.d/fedora.repo is owned by fedora-release, that is, it will be conflicts with fedora-release
-12:10:06 [INFO]  Creating a directory: /tmp/t/1/foo-0.1
-12:10:06 [INFO]  Creating a directory: /tmp/t/1/foo-0.1/src
-12:10:06 [INFO]  Copying: /etc/auto.master -> /tmp/t/1/foo-0.1/src/etc/auto.master
-12:10:06 [INFO]  Copying: /etc/auto.misc -> /tmp/t/1/foo-0.1/src/etc/auto.misc
-12:10:06 [INFO]  Copying: /etc/auto.net -> /tmp/t/1/foo-0.1/src/etc/auto.net
-12:10:06 [INFO]  Copying: /etc/auto.smb -> /tmp/t/1/foo-0.1/src/etc/auto.smb
-12:10:06 [INFO]  Copying: /etc/resolv.conf -> /tmp/t/1/foo-0.1/src/etc/resolv.conf
-12:10:06 [INFO]  Copying: /etc/modprobe.d/blacklist-visor.conf -> /tmp/t/1/foo-0.1/src/etc/modprobe.d/blacklist-visor.conf
-12:10:06 [INFO]  Copying: /etc/modprobe.d/blacklist.conf -> /tmp/t/1/foo-0.1/src/etc/modprobe.d/blacklist.conf
-12:10:06 [INFO]  Copying: /etc/modprobe.d/dist-alsa.conf -> /tmp/t/1/foo-0.1/src/etc/modprobe.d/dist-alsa.conf
-12:10:06 [INFO]  Copying: /etc/modprobe.d/dist-oss.conf -> /tmp/t/1/foo-0.1/src/etc/modprobe.d/dist-oss.conf
-12:10:06 [INFO]  Copying: /etc/modprobe.d/dist.conf -> /tmp/t/1/foo-0.1/src/etc/modprobe.d/dist.conf
-12:10:06 [INFO]  Copying: /etc/modprobe.d/libmlx4.conf -> /tmp/t/1/foo-0.1/src/etc/modprobe.d/libmlx4.conf
-12:10:06 [INFO]  Copying: /etc/yum.repos.d/fedora.repo -> /tmp/t/1/foo-0.1/src/etc/yum.repos.d/fedora.repo
-12:10:06 [INFO]  Copying: /tmp/t/1/foo-0.1/foo.spec -> /tmp/t/1/foo-0.1/..
-12:10:06 [INFO]  Run: autoreconf -vfi
-12:10:10 [INFO]  Run: ./configure
-12:10:11 [INFO]  Run: make srpm
-12:10:12 [INFO]  Copying: /tmp/t/1/foo-0.1/foo-0.1-1.fc14.src.rpm -> /tmp/t/1/foo-0.1/../
-$ ls 1
-foo-0.1  foo-0.1-1.fc14.src.rpm  foo.spec
-$ ls 1/foo-0.1
-Makefile     Makefile.in  autom4te.cache  config.status  configure.ac            foo-0.1.tar.gz  foo.spec    missing  rpm.mk
-Makefile.am  aclocal.m4   config.log      configure      foo-0.1-1.fc14.src.rpm  foo-0.1.tar.xz  install-sh  rpm      src
+/usr/share/doc/foo-overrides-0.1
+/usr/share/doc/foo-overrides-0.1/MANIFEST.overrides
 $
 """,
-"""
-$ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --build-rpm -
-12:12:20 [INFO]  Creating a directory: /tmp/t/2/resolvconf-0.1
-12:12:20 [INFO]  Creating a directory: /tmp/t/2/resolvconf-0.1/src
-12:12:20 [INFO]  Copying: /etc/resolv.conf -> /tmp/t/2/resolvconf-0.1/src/etc/resolv.conf
-12:12:20 [INFO]  Copying: /tmp/t/2/resolvconf-0.1/resolvconf.spec -> /tmp/t/2/resolvconf-0.1/..
-12:12:20 [INFO]  Run: autoreconf -vfi
-12:12:23 [INFO]  Run: ./configure
-12:12:25 [INFO]  Run: make srpm
-12:12:25 [INFO]  Copying: /tmp/t/2/resolvconf-0.1/resolvconf-0.1-1.fc14.src.rpm -> /tmp/t/2/resolvconf-0.1/../
-12:12:25 [INFO]  Run: mock --version > /dev/null
-12:12:26 [INFO]  Run: mock -r fedora-14-i386 resolvconf-0.1-1.*.src.rpm
-12:12:51 [INFO]  Copying: /var/lib/mock/fedora-14-i386/result/resolvconf-0.1-1.fc14.src.rpm -> /tmp/t/2/resolvconf-0.1/../
-12:12:51 [INFO]  Copying: /var/lib/mock/fedora-14-i386/result/resolvconf-0.1-1.fc14.noarch.rpm -> /tmp/t/2/resolvconf-0.1/../
-$ ls 2/
-resolvconf-0.1  resolvconf-0.1-1.fc14.noarch.rpm  resolvconf-0.1-1.fc14.src.rpm  resolvconf.spec
-$ rpm -qlp 2/resolvconf-0.1-1.fc14.noarch.rpm 
+    """## Same as above but files list is read from stdin:
+
+$ cat files.list | python xpack.py -n foo -w ./1 -q --build-rpm --no-mock -
+03:33:11 [WARNING]  /etc/auto.master is owned by autofs, that is, it will be conflicts with autofs
+03:33:11 [WARNING]  /etc/auto.misc is owned by autofs, that is, it will be conflicts with autofs
+03:33:11 [WARNING]  /etc/auto.net is owned by autofs, that is, it will be conflicts with autofs
+03:33:11 [WARNING]  /etc/auto.smb is owned by autofs, that is, it will be conflicts with autofs
+03:33:11 [WARNING]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link, that is, it will be conflicts with pilot-link
+03:33:11 [WARNING]  /etc/modprobe.d/blacklist.conf is owned by hwdata, that is, it will be conflicts with hwdata
+03:33:11 [WARNING]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
+03:33:11 [WARNING]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
+03:33:12 [WARNING]  /etc/modprobe.d/dist.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
+03:33:12 [WARNING]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4, that is, it will be conflicts with libmlx4
+03:33:12 [WARNING]  /etc/modprobe.d/poulsbo.conf is owned by xorg-x11-drv-psb, that is, it will be conflicts with xorg-x11-drv-psb
+03:33:12 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release, that is, it will be conflicts with fedora-release
+$ ls 1/foo-0.1/
+MANIFEST            Makefile.am  aclocal.m4      config.status  foo-0.1-1.fc14.noarch.rpm  foo-0.1.tar.xz                       install-sh  rpm.mk
+MANIFEST.overrides  Makefile.in  autom4te.cache  configure      foo-0.1-1.fc14.src.rpm     foo-overrides-0.1-1.fc14.noarch.rpm  missing     src
+Makefile            README       config.log      configure.ac   foo-0.1.tar.gz             foo.spec                             rpm
+$ rpm -qlp 0/foo-0.1/foo-0.1-1.fc14.noarch.rpm
+/etc/resolv.conf
+/tmp/x.txt
+/usr/share/doc/foo-0.1
+/usr/share/doc/foo-0.1/MANIFEST
+/usr/share/doc/foo-0.1/README
+$ rpm -qlp 0/foo-0.1/foo-overrides-0.1-1.fc14.noarch.rpm
+/etc/auto.master
+/etc/auto.misc
+/etc/auto.net
+/etc/auto.smb
+/etc/modprobe.d/blacklist-visor.conf
+/etc/modprobe.d/blacklist.conf
+/etc/modprobe.d/dist-alsa.conf
+/etc/modprobe.d/dist-oss.conf
+/etc/modprobe.d/dist.conf
+/etc/modprobe.d/libmlx4.conf
+/etc/modprobe.d/poulsbo.conf
+/etc/yum.repos.d/fedora.repo
+/usr/share/doc/foo-overrides-0.1
+/usr/share/doc/foo-overrides-0.1/MANIFEST.overrides
+$
+""",
+    """## Packaing a file, /etc/resolve.conf:
+
+$ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --build-rpm --debug -
+03:34:46 [DEBUG]  Could load the cache: /home/ssato/.cache/xpack.rpm.filelist.pkl
+03:34:46 [INFO] Setting up src tree in /tmp/t/2/resolvconf-0.1: resolvconf
+03:34:46 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1
+03:34:46 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1/src
+03:34:46 [DEBUG]  Copying from '/etc/resolv.conf' to '/tmp/t/2/resolvconf-0.1/src/etc/resolv.conf'
+03:34:46 [DEBUG]  Run: cp -a /etc/resolv.conf /tmp/t/2/resolvconf-0.1/src/etc/resolv.conf [/tmp/t]
+03:34:47 [INFO] Configuring src distribution: resolvconf
+03:34:47 [DEBUG]  Run: autoreconf -vfi [/tmp/t/2/resolvconf-0.1]
+03:34:54 [INFO] Building packages: resolvconf
+03:34:54 [DEBUG]  Run: ./configure [/tmp/t/2/resolvconf-0.1]
+03:34:57 [DEBUG]  Run: make dist [/tmp/t/2/resolvconf-0.1]
+03:34:57 [DEBUG]  Run: make srpm [/tmp/t/2/resolvconf-0.1]
+03:34:58 [DEBUG]  Run: mock --version > /dev/null [/tmp/t/2/resolvconf-0.1]
+03:34:59 [DEBUG]  Run: mock -r fedora-14-i386 resolvconf-0.1-1.*.src.rpm [/tmp/t/2/resolvconf-0.1]
+03:35:56 [DEBUG]  Run: mv /var/lib/mock/fedora-14-i386/result/*.rpm /tmp/t/2/resolvconf-0.1 [/tmp/t/2/resolvconf-0.1]
+03:35:56 [INFO] Successfully created packages in /tmp/t/2/resolvconf-0.1: resolvconf
+$ ls 2/resolvconf-0.1/
+MANIFEST            Makefile.am  aclocal.m4      config.status  install-sh                        resolvconf-0.1-1.fc14.src.rpm  resolvconf.spec  src
+MANIFEST.overrides  Makefile.in  autom4te.cache  configure      missing                           resolvconf-0.1.tar.gz          rpm
+Makefile            README       config.log      configure.ac   resolvconf-0.1-1.fc14.noarch.rpm  resolvconf-0.1.tar.xz          rpm.mk
+$ rpm -qlp 2/resolvconf-0.1/resolvconf-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
 /usr/share/doc/resolvconf-0.1
+/usr/share/doc/resolvconf-0.1/MANIFEST
 /usr/share/doc/resolvconf-0.1/README
+$ cat 2/resolvconf-0.1/MANIFEST
+/etc/resolv.conf
+$ cat 2/resolvconf-0.1/MANIFEST.overrides
 $
 """,
-"""
+    """## Packaing a file, /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso, will
+## be installed as srv/isos/rhel-server-5.6-i386-dvd.iso:
+
 $ ls
 xpack.py  srv
 $ ls srv/isos/
@@ -428,27 +475,13 @@ rhel-server-5.6-i386-dvd.iso
 $ echo /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso | \\
 > python xpack.py -n rhel-server-5-6-i386-dvd-iso -w ./w \\
 > --destdir /tmp/t/ --build-rpm --no-mock -
-10:50:44 [INFO]  Creating a directory: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1
-10:50:44 [INFO]  Creating a directory: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/src
-10:50:44 [INFO]  Copying: /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/src/srv/isos/rhel-server-5.6-i386-dvd.iso
-10:50:44 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso.spec -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/..
-10:50:44 [INFO]  Run: autoreconf -vfi
-10:50:52 [INFO]  Run: ./configure
-10:50:54 [INFO]  Run: make srpm
-10:50:57 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.src.rpm -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/../
-10:50:57 [INFO]  Run: make rpm
-10:51:03 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/../
-10:51:03 [INFO]  Copying: /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.src.rpm -> /tmp/t/w/rhel-server-5-6-i386-dvd-iso-0.1/../
+...(snip)...
 $ ls
 xpack.py  srv  w
-$ ls w/rhel-server-5-6-i386-dvd-iso-0.1
-Makefile     autom4te.cache  configure.ac                                        rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.src.rpm  rpm
-Makefile.am  config.log      install-sh                                          rhel-server-5-6-i386-dvd-iso-0.1.tar.gz          rpm.mk
-Makefile.in  config.status   missing                                             rhel-server-5-6-i386-dvd-iso-0.1.tar.xz          src
-aclocal.m4   configure       rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm  rhel-server-5-6-i386-dvd-iso.spec
 $ rpm -qlp w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm
 /srv/isos/rhel-server-5.6-i386-dvd.iso
 /usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1
+/usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1/MANIFEST
 /usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1/README
 $
 """,
