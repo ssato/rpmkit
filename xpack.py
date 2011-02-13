@@ -39,7 +39,8 @@
 # * keep permissions of targets in tar archives
 # * test --pkgfmt=deb (.deb output)
 # * sort out command line options
-# * handle symlinks and dirs correctly
+# * handle symlinks and dirs correctly (partially done)
+# * make it runnable on RHEL 5
 #
 
 from Cheetah.Template import Template
