@@ -785,15 +785,15 @@ def rm_rf(dir):
     >>> 
     >>> rm_rf(d)
     """
-    assert dir != '/'                    # avoid 'rm -rf /'
-    assert os.path.realpath(dir) != '/'  # likewise
-
     if not os.path.exists(dir):
         return
 
     if os.path.isfile(dir):
         os.remove(dir)
         return 
+
+    assert dir != '/'                    # avoid 'rm -rf /'
+    assert os.path.realpath(dir) != '/'  # likewise
 
     for x in glob.glob(os.path.join(dir, '*')):
         if os.path.isdir(x):
