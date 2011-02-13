@@ -39,6 +39,7 @@
 # * keep permissions of targets in tar archives
 # * test --pkgfmt=deb (.deb output)
 # * sort out command line options
+# * handle symlinks and dirs correctly
 #
 
 from Cheetah.Template import Template
@@ -129,6 +130,7 @@ Makefile
 AC_OUTPUT
 """,
     "Makefile.am": """\
+#import os.path
 EXTRA_DIST = MANIFEST MANIFEST.overrides
 #if $rpm
 EXTRA_DIST += ${name}.spec rpm.mk
@@ -144,6 +146,22 @@ $f \\
 #end for
 \$(NULL)
 
+#end for
+
+#for $fi in $fileinfos
+#if $fi.type() == 'symlink'
+#set $dir = os.path.dirname($fi.target)
+#set $bn = os.path.basename($fi.target)
+install-data-hook::
+\ttest -d \$(DESTDIR)$dir || \$(MKDIR_P) \$(DESTDIR)$dir
+\tcd \$(DESTDIR)$dir && \$(LN_S) $fi.linkto $bn
+
+#else
+#if $fi.type() == 'dir'
+install-data-hook::
+\ttest -d \$(DESTDIR)$fi.target || \$(MKDIR_P) \$(DESTDIR)$fi.target
+#end if
+#end if
 #end for
 """,
     "README": """\
@@ -829,6 +847,7 @@ class TestDecoratedFuncs(unittest.TestCase):
 class TestFuncsWithSideEffects(unittest.TestCase):
 
     def setUp(self):
+        logging.info("start") # dummy log
         self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
 
     def tearDown(self):
@@ -1003,7 +1022,6 @@ class FileInfo(ObjDict):
     """The class of which objects to hold meta data of regular files, dirs and
     symlinks. This is for regular file and the super class for other types.
     """
-    __ftype = TYPE_FILE
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs, **kwargs):
         self.path = path
@@ -1015,7 +1033,7 @@ class FileInfo(ObjDict):
         self.checksum = checksum
         self.xattrs = xattrs or {}
 
-        self.filetype = self.__ftype
+        self.filetype = TYPE_FILE
 
         self.perm_default = '644'
 
@@ -1062,6 +1080,9 @@ class FileInfo(ObjDict):
         are same, that is, that contents are exactly same.
         """
         return self.checksum == other.checksum
+
+    def type(self):
+        return self.filetype
 
     def copyable(self):
         return True
@@ -1127,7 +1148,7 @@ class FileInfo(ObjDict):
 
     def rpm_attr(self):
         if self.need_to_chmod() or self.need_to_chown():
-            return rpm_attr(self)
+            return rpm_attr(self) + " "
         else:
             return ""
 
@@ -1135,11 +1156,10 @@ class FileInfo(ObjDict):
 
 class DirInfo(FileInfo):
 
-    __ftype = TYPE_DIR
-
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(DirInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
 
+        self.filetype = TYPE_DIR
         self.perm_default = '755'
 
     def _remove(self, target):
@@ -1159,13 +1179,17 @@ class DirInfo(FileInfo):
         shutil.copystat(self.path, dest)
         self._copy_xattrs(dest)
 
+    def rpm_attr(self):
+        return super(DirInfo, self).rpm_attr() + "%dir "
+
 
 
 class SymlinkInfo(FileInfo):
-    __ftype = TYPE_SYMLINK
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(SymlinkInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
+
+        self.filetype = TYPE_SYMLINK
         self.linkto = os.path.realpath(path)
 
     def _copy(self, dest):
@@ -1179,10 +1203,10 @@ class SymlinkInfo(FileInfo):
 class OtherInfo(FileInfo):
     """$path may be a socket, FIFO (named pipe), Character Dev or Block Dev, etc.
     """
-    __ftype = TYPE_OTHER
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(OtherInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
+        self.filetype = TYPE_OTHER
 
     def copyable(self):
         return False
@@ -1192,10 +1216,10 @@ class OtherInfo(FileInfo):
 class UnknownInfo(FileInfo):
     """Special case that lstat() failed and cannot stat $path.
     """
-    __ftype = TYPE_UNKNOWN
 
     def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=checksum(), xattrs={}):
         super(UnknownInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
+        self.filetype = TYPE_UNKNOWN
 
     def copyable(self):
         return False
@@ -1371,12 +1395,20 @@ def collect(list_f, pkg_name, options):
     fileinfos = []
 
     destdir = options.destdir
+    rewrite_linkto = options.rewrite_linkto
     force_set_uid_and_gid = options.ignore_owner
 
     fs = read_files_from_listfile(list_f)
 
     for p in fs:
         fi = ff.create(p)
+
+        # Too verbose but useful in some cases:
+        #logging.debug(" fi=%s" % str(fi))
+
+        if fi.type() not in ('file', 'symlink', 'dir'):
+            logging.warn(" Sorry, only supported file type is 'file', 'symlink' or 'dir' and '%s' is not. Skip %s" % (fi.type(), p))
+            continue
 
         if force_set_uid_and_gid:
             logging.debug(" force set uid and gid of %s" % fi.path)
@@ -1389,11 +1421,17 @@ def collect(list_f, pkg_name, options):
             if f.startswith(destdir):
                 fi.target = f.split(destdir)[1]
                 logging.debug(" Rewrote target path of fi from %s to %s" % (f, fi.target))
+
+                if fi.type() == TYPE_SYMLINK and rewrite_linkto:
+                    new_linkto = fi.linkto.split(destdir)[1]
+                    logging.debug(" Rewrote link path of fi from %s to %s" % (fi.linkto, new_linkto))
+                    fi.linkto = new_linkto
             else:
                 logging.error(" The path '%s' does not start with given destdir '%s'" % (f, destdir))
                 raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
         else:
-            logging.debug(" Do not need to rewrite its path: %s" % f)
+            # Too verbose but useful in some cases:
+            #logging.debug(" Do not need to rewrite its path: %s" % f)
             fi.target = f
 
         p = filelist_db.get(fi.target, False)
@@ -1459,16 +1497,16 @@ def rpm_attr(fileinfo):
 
     >>> fi = FileInfo('/dummy/path', 33204, 0, 0, checksum(),{})
     >>> rpm_attr(fi)
-    '%attr(664, -, -) '
+    '%attr(664, -, -)'
     >>> fi = FileInfo('/bin/foo', 33261, 1, 1, checksum(),{})
     >>> rpm_attr(fi)
-    '%attr(755, bin, bin) '
+    '%attr(755, bin, bin)'
     """
     m = fileinfo.permission() # ex. '755'
     u = (fileinfo.uid == 0 and '-' or pwd.getpwuid(fileinfo.uid).pw_name)
     g = (fileinfo.gid == 0 and '-' or grp.getgrgid(fileinfo.gid).gr_name)
 
-    return "%%attr(%(m)s, %(u)s, %(g)s) " % {'m':m, 'u':u, 'g':g,}
+    return "%%attr(%(m)s, %(u)s, %(g)s)" % {'m':m, 'u':u, 'g':g,}
 
 
 class PackageMaker(object):
@@ -1521,7 +1559,7 @@ class PackageMaker(object):
 
     def configure(self):
         logging.info("Configuring src distribution: %s" % self.pname)
-        self.package['distdata'] = distdata_in_makefile_am([fi.target for fi in self.package['fileinfos']])
+        self.package['distdata'] = distdata_in_makefile_am([fi.target for fi in self.package['fileinfos'] if fi.type() == 'file'])
 
         self.genfile('configure.ac')
         self.genfile('Makefile.am')
@@ -1694,16 +1732,8 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
         targets = [
             '/etc/auto.*', '/etc/modprobe.d/*', '/etc/resolv.conf',
             '/etc/security/limits.conf', '/etc/security/access.conf',
+            '/etc/grub.conf', '/etc/system-release', '/etc/skel',
         ]
-        x = """
-        targets = [
-            '/etc/auto.master', '/etc/auto.misc', '/etc/auto.net', '/etc/auto.smb',
-            '/etc/modprobe.d/blacklist.conf', '/etc/modprobe.d/dist-alsa.conf',
-            '/etc/modprobe.d/dist-oss.conf', '/etc/modprobe.d/dist.conf',
-            '/etc/resolv.conf',
-            '/etc/security/limits.conf', '/etc/security/access.conf',
-        ]
-        """
         self.files = [f for f in targets if os.path.exists(f)]
 
     def tearDown(self):
@@ -1754,6 +1784,7 @@ def option_parser(V=__version__):
         'dist': 'fedora-14-i386',
         'pkgfmt': 'rpm',
         'destdir': '',
+        'rewrite_linkto': False,
         'no_rpmdb': False,
         'debug': False,
         'quiet': False,
@@ -1815,6 +1846,9 @@ Examples:
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
         "make it installed as '/usr/share/foo/a.dat' with the package , you can accomplish "
         "that by this option: '--destdir=/builddir/destdir'")
+    bog.add_option('', '--rewrite-linkto', action='store_true',
+        help="Whether to rewrite symlink\'s linkto (path of the objects link to)"
+            "also if --destdir is specified")
     p.add_option_group(bog)
 
     rog = optparse.OptionGroup(p, "Rpm related options")
