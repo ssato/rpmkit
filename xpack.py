@@ -161,6 +161,7 @@ install-data-hook::
 #if $fi.type() == 'dir'
 install-data-hook::
 \ttest -d \$(DESTDIR)$fi.target || \$(MKDIR_P) \$(DESTDIR)$fi.target
+
 #end if
 #end if
 #end for
