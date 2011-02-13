@@ -42,12 +42,19 @@
 # * pyxattr (option; if you want to try with --use-pyxattr)
 #
 #
+# Limitations:
+# * xpack cannot run on RHEL5: for example, use buildrpm
+#   (http://magnusg.fedorapeople.org/buildrpm/) instead.
+#
+#
 # TODO:
 # * keep permissions of targets in tar archives
 # * test --pkgfmt=deb (.deb output)
 # * sort out command line options
 # * handle symlinks and dirs correctly (partially done)
 # * make it runnable on RHEL 5
+# * eliminate the strong dependency to rpm and make it runnable on debian based
+#   systems (w/o rpm-python)
 #
 #
 # References (in random order):
