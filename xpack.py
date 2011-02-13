@@ -785,6 +785,9 @@ def rm_rf(dir):
     >>> 
     >>> rm_rf(d)
     """
+    assert dir != '/'                    # avoid 'rm -rf /'
+    assert os.path.realpath(dir) != '/'  # likewise
+
     if not os.path.exists(dir):
         return
 
