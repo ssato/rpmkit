@@ -1,8 +1,10 @@
 #! /usr/bin/python
 #
-# xpack.py - X (files, dirs, ...) Packager.
+# xpack.py - X (files, dirs, ...) Packaging tool
+# - a script to build packages from existing files on your system.
 #
-# It will try gathering files in given path list, and then:
+# It will try gathering the info of files, dirs and symlinks in given path
+# list, and then:
 #
 # * arrange src tree contains these files, dirs and symlinks with these
 #   relative path kept, and build files (Makefile.am, configure.ac, etc.)
