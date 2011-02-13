@@ -1,15 +1,22 @@
 #! /usr/bin/python
 #
-# xpack.py - X (files, dirs, ...) Packager, successor of filelist2rpm.py.
+# xpack.py - X (files, dirs, ...) Packager.
 #
-# It will try gathering files in given file list, and then:
+# It will try gathering files in given path list, and then:
 #
-# * arrange src tree contains these files with these relative path kept
+# * arrange src tree contains these files, dirs and symlinks with these
+#   relative path kept, and build files (Makefile.am, configure.ac, etc.)
+#   to install these.
+#
 # * generate packaging metadata like RPM SPEC, debian/rules, etc.
+#
 # * build package such as rpm, src.rpm, deb, etc.
 #
-# NOTE: The permissions of the files may be lost during packaging.  If you want
-# to force set permissions as you wanted, specify these explicitly.
+#
+# NOTE: The permissions of the files may be lost during packaging. If you want
+# to ensure these are saved or force set permissions as you wanted, specify
+# these explicitly.
+#
 #
 # Copyright (C) 2011 Satoru SATOH <satoru.satoh @ gmail.com>
 #
@@ -26,14 +33,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# SEE ALSO: http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-creating-rpms.html
-# SEE ALSO: http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-rpm-programming-python.html
-# SEE ALSO: http://cdbs-doc.duckcorp.org
-# SEE ALSO: https://wiki.duckcorp.org/DebianPackagingTutorial/CDBS
 #
 # Requirements:
 # * python-cheetah: EPEL should be needed for RHEL
 # * rpm-python
+# * pyxattr (option; if you want to try with --use-pyxattr)
+#
 #
 # TODO:
 # * keep permissions of targets in tar archives
@@ -41,6 +46,13 @@
 # * sort out command line options
 # * handle symlinks and dirs correctly (partially done)
 # * make it runnable on RHEL 5
+#
+#
+# References (in random order):
+# * http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-creating-rpms.html
+# * http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-rpm-programming-python.html
+# * http://cdbs-doc.duckcorp.org
+# * https://wiki.duckcorp.org/DebianPackagingTutorial/CDBS
 #
 
 from Cheetah.Template import Template
