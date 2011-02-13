@@ -1769,8 +1769,8 @@ def option_parser(V=__version__):
     defaults = {
         'name': 'foo',
         'group': 'System Environment/Base',
-        'license': 'GPLv3+',
-        'url': 'file:///' + workdir,
+        'license': 'GPLv2+',
+        'url': 'http://localhost.localdomain',
         'description': False,
         'compressor': 'xz',
         'arch': False,
