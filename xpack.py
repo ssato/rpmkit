@@ -1848,8 +1848,8 @@ Examples:
         "make it installed as '/usr/share/foo/a.dat' with the package , you can accomplish "
         "that by this option: '--destdir=/builddir/destdir'")
     bog.add_option('', '--rewrite-linkto', action='store_true',
-        help="Whether to rewrite symlink\'s linkto (path of the objects link to)"
-            "also if --destdir is specified")
+        help="Whether to rewrite symlink\'s linkto (path of the objects "
+            "that symlink point to) if --destdir is specified")
     p.add_option_group(bog)
 
     rog = optparse.OptionGroup(p, "Rpm related options")
