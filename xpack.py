@@ -574,6 +574,47 @@ $ sed -n "/^%files/,/^$/p" /tmp/xpack-build-VjhfuD/xpack-0.0.99/xpack.spec
 
 $
 """,
+    """## Packaging files under /etc which is not owned by any RPMs:
+$ list_files () { dir=$1; sudo find $dir -type f; }                                                                                                            $ is_not_from_rpm () { f=$1; LANG=C sudo rpm -qf $f | grep -q 'is not owned' 2>/dev/null; }
+$ (for f in `list_files /etc`; do is_not_from_rpm $f && echo $f; done) \\
+>  > etc.not_from_package.files
+$ sudo python xpack.py -n etcdata --package-version $(date +%Y%m%d) \\
+> --debug -w etcdata-build etc.not_from_package.files
+[sudo] password for ssato:
+14:15:03 [DEBUG]  Could load the cache: /root/.cache/xpack.rpm.filelist.pkl
+14:15:09 [INFO] Setting up src tree in /tmp/t/etcdata-build/etcdata-20110217: etcdata
+14:15:09 [DEBUG]  Creating a directory: /tmp/t/etcdata-build/etcdata-20110217
+...(snip)...
+14:15:30 [INFO] Configuring src distribution: etcdata
+14:15:30 [DEBUG]  Run: autoreconf -vfi [/tmp/t/etcdata-build/etcdata-20110217]
+14:15:40 [INFO] Building packages: etcdata
+14:15:40 [DEBUG]  Run: ./configure [/tmp/t/etcdata-build/etcdata-20110217]
+14:15:42 [DEBUG]  Run: make dist [/tmp/t/etcdata-build/etcdata-20110217]
+14:16:07 [DEBUG]  Run: make srpm [/tmp/t/etcdata-build/etcdata-20110217]
+14:16:33 [INFO] Successfully created packages in /tmp/t/etcdata-build/etcdata-20110217: etcdata
+$ sudo chown -R ssato.ssato etcdata-build/
+$ ls etcdata-build/etcdata-20110217/
+MANIFEST            Makefile.am  aclocal.m4      config.status  etcdata-20110217-1.fc14.src.rpm  etcdata.spec  rpm
+MANIFEST.overrides  Makefile.in  autom4te.cache  configure      etcdata-20110217.tar.bz2         install-sh    rpm.mk
+Makefile            README       config.log      configure.ac   etcdata-20110217.tar.gz          missing       src
+$ sudo make -C etcdata-build/etcdata-20110217/ rpm
+...(snip)...
+$ rpm -qlp etcdata-build/etcdata-20110217/etcdata-20110217-1.fc14.noarch.rpm
+/etc/.pwd.lock
+/etc/X11/xorg.conf
+/etc/X11/xorg.conf.by-psb-config-display
+/etc/X11/xorg.conf.d/01-poulsbo.conf
+/etc/X11/xorg.conf.livna-config-backup
+/etc/aliases.db
+/etc/crypttab
+/etc/gconf/gconf.xml.defaults/%gconf-tree-af.xml
+...(snip)...
+/etc/yum.repos.d/fedora-chromium.repo
+/usr/share/doc/etcdata-20110217
+/usr/share/doc/etcdata-20110217/MANIFEST
+/usr/share/doc/etcdata-20110217/README
+$
+""",
 ]
 
 
@@ -1141,7 +1182,11 @@ class FileInfo(ObjDict):
     def permission(self):
         """permission (mode) can be passed to 'chmod'.
         """
-        return oct(stat.S_IMODE(self.mode & 0777))[1:]
+        m = stat.S_IMODE(self.mode & 0777)
+        if m == 0:  # Some special cases such as /etc/gshadow-, /etc/shadow-, etc.
+            return '000'
+        else:
+            return oct(m)[1:]
 
     def need_to_chmod(self):
         return self.permission() != self.perm_default
