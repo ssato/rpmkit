@@ -749,10 +749,11 @@ def hostname():
 
 def date(rfc2822=False):
     """TODO: how to output in rfc2822 format w/o email.Utils.formatdate?
+    ('%z' for strftime does not look work.)
     """
     if rfc2822:
         # return email.Utils.formatdate()
-        return datetime.datetime.now().strftime("%a. %d %b %Y %T")
+        return datetime.datetime.now().strftime("%a. %d %b %Y %T +0000")
     else:
         return datetime.datetime.now().strftime("%a %b %_d %Y")
 
