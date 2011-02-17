@@ -37,14 +37,10 @@
 #
 #
 # Requirements:
+# * autotools: both autoconf and automake
 # * python-cheetah: EPEL should be needed for RHEL
 # * rpm-python
 # * pyxattr (option; if you want to try with --use-pyxattr)
-#
-#
-# Limitations:
-# * xpack cannot run on RHEL5: for example, use buildrpm
-#   (http://magnusg.fedorapeople.org/buildrpm/) instead.
 #
 #
 # TODO:
@@ -63,6 +59,11 @@
 # * http://cdbs-doc.duckcorp.org
 # * https://wiki.duckcorp.org/DebianPackagingTutorial/CDBS
 #
+#
+# Alternatives:
+# * buildrpm: http://magnusg.fedorapeople.org/buildrpm/
+#
+#
 
 from Cheetah.Template import Template
 from itertools import chain, count, groupby
@@ -70,7 +71,6 @@ from itertools import chain, count, groupby
 import copy
 import datetime
 import doctest
-import email
 import glob
 import grp
 import locale
@@ -115,8 +115,18 @@ except ImportError:
 try:
     from hashlib import md5, sha1 #, sha256, sha512
 except ImportError:  # python < 2.5
-    import md5
-    import sha as sha1
+    from md5 import md5
+    from sha import sha as sha1
+
+
+try:
+    all
+except NameError:  # python < 2.5
+    def all(xs):
+        for x in xs:
+            if not x:
+                return False
+        return True
 
 
 
@@ -141,8 +151,8 @@ m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
 dnl TODO: fix autoconf macros used.
 AC_PROG_LN_S
-AC_PROG_MKDIR_P
-AC_PROG_SED
+m4_ifdef([AC_PROG_MKDIR_P],[AC_PROG_MKDIR_P])
+m4_ifdef([AC_PROG_SED],[AC_PROG_SED])
 
 dnl TODO: Is it better to generate ${name}.spec from ${name}.spec.in ?
 AC_CONFIG_FILES([
@@ -157,6 +167,7 @@ EXTRA_DIST = MANIFEST MANIFEST.overrides
 #if $rpm
 EXTRA_DIST += ${name}.spec rpm.mk
 
+abs_srcdir  ?= .
 include \$(abs_srcdir)/rpm.mk
 #end if
 
@@ -186,6 +197,9 @@ install-data-hook::
 #end if
 #end if
 #end for
+
+MKDIR_P ?= mkdir -p
+SED ?= sed
 """,
     "README": """\
 This package provides some backup data collected on
@@ -207,6 +221,8 @@ $fi.target
 """,
     "rpm.mk": """\
 #raw
+abs_builddir    ?= $(shell pwd)
+
 rpmdir = $(abs_builddir)/rpm
 rpmdirs = $(addprefix $(rpmdir)/,RPMS BUILD BUILDROOT)
 
@@ -732,10 +748,13 @@ def hostname():
 
 
 def date(rfc2822=False):
+    """TODO: how to output in rfc2822 format w/o email.Utils.formatdate?
+    """
     if rfc2822:
-        return email.Utils.formatdate()
+        # return email.Utils.formatdate()
+        return datetime.datetime.now().strftime("%a. %d %b %Y %T")
     else:
-        return datetime.date.today().strftime("%a %b %_d %Y")
+        return datetime.datetime.now().strftime("%a %b %_d %Y")
 
 
 def compile_template(template, params):
@@ -766,7 +785,9 @@ def shell(cmd_s, workdir="", log=True):
         pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
         (output, errors) = pipe.communicate()
     except Exception, e:
-        raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
+        # e.message looks not available in python < 2.5:
+        #raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
+        raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), str(e)))
 
     if pipe.returncode == 0:
         return (output, errors)
@@ -888,7 +909,9 @@ class TestFuncsWithSideEffects(unittest.TestCase):
         self.assertTrue(os.path.isdir(d))
 
     def test_createdir_specials(self):
-        self.assertIsNone(createdir(self.workdir))  # try creating dir already exists.
+        # assertIsNone is not available in python < 2.5:
+        #self.assertIsNone(createdir(self.workdir))
+        self.assertEquals(createdir(self.workdir), None)  # try creating dir already exists.
 
         f = os.path.join(self.workdir, 'a')
         open(f, "w").write("test")
@@ -925,13 +948,13 @@ class Rpm(object):
         @path    Path of the file or directory (relative or absolute)
         @return  A dict; keys are fi_keys (see below)
 
-        >>> hosts = '/etc/hosts'
+        >>> f1 = '/etc/fstab'
         >>> pm = '/proc/mounts'
         >>>  
         >>> if os.path.exists('/var/lib/rpm/Basenames'):
-        ...     if os.path.exists(hosts):
-        ...         pi = Rpm.pathinfo(hosts)
-        ...         assert pi.get('path') == hosts
+        ...     if os.path.exists(f1):
+        ...         pi = Rpm.pathinfo(f1)
+        ...         assert pi.get('path') == f1
         ...         assert sorted(pi.keys()) == sorted(Rpm.fi_keys)
         ...     #
         ...     if os.path.exists(pm):
@@ -989,9 +1012,10 @@ class Rpm(object):
         """TODO: It should be a heavy and time-consuming task. How to shorten
         this time? - caching, utilize yum's file list database or whatever.
 
+        >>> f = '/etc/fstab'
         >>> if os.path.exists('/var/lib/rpm/Basenames'):
         ...     db = Rpm.filelist()
-        ...     assert db.get('/etc/hosts') == 'setup'
+        ...     assert db.get(f) == 'setup'
         """
         data = None
 
@@ -1549,8 +1573,8 @@ class PackageMaker(object):
         for k,v in kwargs.iteritems():
             setattr(self, k, v)
 
-    def shell(self, *args):
-        return shell(*args, workdir=self.workdir)
+    def shell(self, cmd_s, log=True):
+        return shell(cmd_s, workdir=self.workdir, log=log)
 
     def to_srcdir(self, path):
         """
@@ -1780,7 +1804,8 @@ def run_doctests(verbose):
 
 
 def run_unittests(verbose):
-    unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
+    u = unittest.main(argv=sys.argv[:1])
+    u.verbosity = verbose and 2 or 0
 
 
 def option_parser(V=__version__):
@@ -1797,7 +1822,7 @@ def option_parser(V=__version__):
         'license': 'GPLv2+',
         'url': 'http://localhost.localdomain',
         'description': False,
-        'compressor': 'xz',
+        'compressor': 'bz2',
         'arch': False,
         'requires': [],
         'packager_name': packager,
