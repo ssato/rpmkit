@@ -359,21 +359,16 @@ Description: $summary
 \tdh \$@
 """,
     "debian/dirs": """\
-#import os.path
-#set $dirs = []
 #for $fi in $fileinfos
-#if not $fi.conflicts
-#set $dir = os.path.dirname($fi.target)[1:]
-#if $dir not in $dirs
+#if $fi.type == 'dir'
+#set $dir = $fi.target[1:]
 $dir
-#set $dirs = $dirs + [$dir]
-#end if
 #end if
 #end for
 """,
-    "debian/compat": """7\
+    "debian/compat": """7
 """,
-    "debian/source/format": """3.0 (native)\
+    "debian/source/format": """3.0 (native)
 """,
     "debian/copyright": """\
 This package was debianized by $packager_name <$packager_mail> on
