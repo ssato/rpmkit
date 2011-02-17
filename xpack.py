@@ -58,6 +58,9 @@
 # * http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-rpm-programming-python.html
 # * http://cdbs-doc.duckcorp.org
 # * https://wiki.duckcorp.org/DebianPackagingTutorial/CDBS
+# * http://kitenet.net/~joey/talks/debhelper/debhelper-slides.pdf
+# * http://wiki.debian.org/IntroDebianPackaging
+# * http://www.debian.org/doc/maint-guide/ch-dother.ja.html
 #
 #
 # Alternatives:
@@ -334,13 +337,17 @@ $fi.rpm_attr()$fi.target
 Source: $name
 Priority: optional
 Maintainer: $packager_name <$packager_mail>
-Build-Depends: debhelper (>= 5), cdbs, autotools-dev
-Standards-Version: 3.7.3
+Build-Depends: debhelper (>= 7.3.8), autotools-dev
+Standards-Version: 3.9.0
 Homepage: $url
 
 Package: $name
 Section: database
+#if $noarch
+Architecture: all
+#else
 Architecture: any
+#end if
 #set $requires_list = ', ' + ', '.join($requires)
 Depends: \${misc:Depends}, \${shlibs:Depends}$requires_list
 Description: $summary
@@ -348,26 +355,25 @@ Description: $summary
 """,
     "debian/rules": """\
 #!/usr/bin/make -f
+%:
+\tdh \$@
+""",
+    "debian/dirs": """\
 #import os.path
-
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/autotools.mk
-
-DEB_INSTALL_DIRS_${name} = \\
 #set $dirs = []
 #for $fi in $fileinfos
 #if not $fi.conflicts
-#set $dir = os.path.dirname($fi.target)
+#set $dir = os.path.dirname($fi.target)[1:]
 #if $dir not in $dirs
-\t$dir \\
+$dir
 #set $dirs = $dirs + [$dir]
 #end if
 #end if
 #end for
-\t\$(NULL)
-
-install/$name::
-\tcp -ar debian/tmp/* debian/$name/
+""",
+    "debian/compat": """7\
+""",
+    "debian/source/format": """3.0 (native)\
 """,
     "debian/copyright": """\
 This package was debianized by $packager_name <$packager_mail> on
@@ -1685,14 +1691,23 @@ class DebPackageMaker(TgzPackageMaker):
         if not os.path.exists(debiandir):
             os.makedirs(debiandir, 0755)
 
+        os.makedirs(os.path.join(debiandir, 'source'), 0755)
+
         self.genfile('debian/rules')
         self.genfile('debian/control')
         self.genfile('debian/copyright')
         self.genfile('debian/changelog')
+        self.genfile('debian/dirs')
+        self.genfile('debian/compat')
+        self.genfile('debian/source/format')
+
+        os.chmod(os.path.join(self.workdir, 'debian/rules'), 0755)
 
     def build(self):
         super(DebPackageMaker, self).build()
-        self.shell('debuild -us -uc')
+        # FIXME: which is better?
+        #self.shell('debuild -us -uc')
+        self.shell('fakeroot debian/rules binary')
 
 
 
