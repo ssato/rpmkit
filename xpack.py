@@ -48,7 +48,6 @@
 # * test --pkgfmt=deb (.deb output)
 # * sort out command line options
 # * handle symlinks and dirs correctly (partially done)
-# * make it runnable on RHEL 5
 # * eliminate the strong dependency to rpm and make it runnable on debian based
 #   systems (w/o rpm-python)
 #
