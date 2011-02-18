@@ -1895,7 +1895,7 @@ def option_parser(V=__version__):
         'debug': False,
         'quiet': False,
         'show_examples': False,
-        'test': False,
+        'tests': False,
         'doctests': False,
         'unittests': False,
         'with_pyxattr': False,
@@ -1917,7 +1917,7 @@ Examples:
   %prog -n foo --package-version 0.2 -l MIT files.list
   %prog -n foo --requires httpd,/sbin/service files.list
 
-  %prog --test --debug  # run test suites
+  %prog --tests --debug  # run test suites
 
   %prog --build-self    # package itself
 
@@ -1965,9 +1965,9 @@ Examples:
     p.add_option_group(rog)
 
     tog = optparse.OptionGroup(p, "Test options")
-    tog.add_option('', '--test', action="store_true", help='Run all tests')
-    tog.add_option('', '--doctests', action="store_true", help='Run doc tests')
-    tog.add_option('', '--unittests', action="store_true", help='Run unit tests')
+    tog.add_option('-T', '--tests', action='store_true', help='Run tests')
+    tog.add_option('', '--doctests', action='store_true', help='Run doctest tests')
+    tog.add_option('', '--unittests', action='store_true', help='Run unittests')
     p.add_option_group(tog)
 
     aog = optparse.OptionGroup(p, "Other advanced options")
@@ -2012,7 +2012,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
         verbose_test = True
 
-    if options.test:
+    if options.tests:
         run_doctests(verbose_test)
         run_unittests(verbose_test)
         sys.exit()
