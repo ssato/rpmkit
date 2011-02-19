@@ -645,9 +645,76 @@ $ rpm -qlp etcdata-build/etcdata-20110217/etcdata-20110217-1.fc14.noarch.rpm
 /usr/share/doc/etcdata-20110217/README
 $
 """,
-    """## Packaging some files on RHEL 5 host and package it on fedora 14 host:
+    """## Packaging single file on RHEL 5 host and build it on fedora 14 host:
 
-...to be here ...
+$ ssh builder@rhel-5-6-vm-0
+builder@rhel-5-6-vm-0's password:
+[builder@rhel-5-6-vm-0 ~]$ cat /etc/redhat-release
+Red Hat Enterprise Linux Server release 5.6 (Tikanga)
+[builder@rhel-5-6-vm-0 ~]$ curl -s https://github.com/ssato/rpmkit/raw/master/xpack.py > xpack
+[builder@rhel-5-6-vm-0 ~]$ echo /etc/puppet/manifests/site.pp | \
+> python xpack -n puppet-manifests -w 0 --debug --upto setup -
+WARNING:root:python-cheetah is not found so that packaging process will go up to only 'setup' step.
+19:42:48 [INFO] Setting up src tree in /home/builder/0/puppet-manifests-0.1: puppet-manifests
+19:42:50 [DEBUG]  Could save the cache: /home/builder/.cache/xpack.rpm.filelist.pkl
+19:42:50 [DEBUG]  Creating a directory: /home/builder/0/puppet-manifests-0.1
+19:42:50 [DEBUG]  Creating a directory: /home/builder/0/puppet-manifests-0.1/src
+19:42:50 [DEBUG]  Copying from '/etc/puppet/manifests/site.pp' to '/home/builder/0/puppet-manifests-0.1/src/etc/puppet/manifests/site.pp'
+19:42:50 [DEBUG]  Run: cp -a /etc/puppet/manifests/site.pp /home/builder/0/puppet-manifests-0.1/src/etc/puppet/manifests/site.pp [/home/builder]
+19:42:50 [DEBUG]  Run: touch /home/builder/0/puppet-manifests-0.1/xpack-setup.stamp [/home/builder/0/puppet-manifests-0.1]
+[builder@rhel-5-6-vm-0 ~]$ tar jcvf puppet-manifests-0.1.tar.bz2 0/puppet-manifests-0.1/
+0/puppet-manifests-0.1/
+0/puppet-manifests-0.1/xpack-setup.stamp
+0/puppet-manifests-0.1/xpack-package-filelist.pkl
+0/puppet-manifests-0.1/src/
+0/puppet-manifests-0.1/src/etc/
+0/puppet-manifests-0.1/src/etc/puppet/
+0/puppet-manifests-0.1/src/etc/puppet/manifests/
+0/puppet-manifests-0.1/src/etc/puppet/manifests/site.pp
+[builder@rhel-5-6-vm-0 ~]$ ls
+0  puppet-manifests-0.1.tar.bz2  rpms  xpack
+[builder@rhel-5-6-vm-0 ~]$ ^D
+$ cat /etc/fedora-release
+Fedora release 14 (Laughlin)
+$ scp builder@rhel-5-6-vm-0:~/puppet-manifests-0.1.tar.bz2 ./
+builder@rhel-5-6-vm-0's password:
+puppet-manifests-0.1.tar.bz2                 100%  722     0.7KB/s   00:00
+$ tar jxvf puppet-manifests-0.1.tar.bz2
+0/puppet-manifests-0.1/
+0/puppet-manifests-0.1/xpack-setup.stamp
+0/puppet-manifests-0.1/xpack-package-filelist.pkl
+0/puppet-manifests-0.1/src/
+0/puppet-manifests-0.1/src/etc/
+0/puppet-manifests-0.1/src/etc/puppet/
+0/puppet-manifests-0.1/src/etc/puppet/manifests/
+0/puppet-manifests-0.1/src/etc/puppet/manifests/site.pp
+$ echo /etc/puppet/manifests/site.pp | \\
+> python xpack.py -n puppet-manifests -w 0 --upto build \\
+> --dist epel-5-i386 --debug -
+05:27:55 [INFO] Setting up src tree in /tmp/w/0/puppet-manifests-0.1: puppet-manifests
+05:27:55 [INFO] ...It looks already done. Skip the step: setup
+05:27:55 [INFO] Configuring src distribution: puppet-manifests
+05:27:55 [DEBUG]  Run: autoreconf -vfi [/tmp/w/0/puppet-manifests-0.1]
+05:27:58 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/xpack-configure.stamp [/tmp/w/0/puppet-manifests-0.1]
+05:27:58 [INFO] Building src packages: puppet-manifests
+05:27:58 [DEBUG]  Run: ./configure [/tmp/w/0/puppet-manifests-0.1]
+05:27:59 [DEBUG]  Run: make dist [/tmp/w/0/puppet-manifests-0.1]
+05:28:00 [DEBUG]  Run: make srpm [/tmp/w/0/puppet-manifests-0.1]
+05:28:00 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/xpack-sbuild.stamp [/tmp/w/0/puppet-manifests-0.1]
+05:28:00 [INFO] Building bin packages: puppet-manifests
+05:28:00 [DEBUG]  Run: mock --version > /dev/null [/tmp/w/0/puppet-manifests-0.1]
+05:28:00 [DEBUG]  Run: mock -r epel-5-i386 puppet-manifests-0.1-1.*.src.rpm [/tmp/w/0/puppet-manifests-0.1]
+05:28:59 [DEBUG]  Run: mv /var/lib/mock/epel-5-i386/result/*.rpm /tmp/w/0/puppet-manifests-0.1 [/tmp/w/0/puppet-manifests-0.1]
+05:28:59 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/xpack-build.stamp [/tmp/w/0/puppet-manifests-0.1]
+05:28:59 [INFO] Successfully created packages in /tmp/w/0/puppet-manifests-0.1: puppet-manifests
+$ rpm -qlp 0/puppet-manifests-0.1/puppet-manifests-0.1-1.^I
+puppet-manifests-0.1-1.el5.noarch.rpm  puppet-manifests-0.1-1.el5.src.rpm  puppet-manifests-0.1-1.fc14.src.rpm
+$ rpm -qlp 0/puppet-manifests-0.1/puppet-manifests-0.1-1.el5.noarch.rpm
+/etc/puppet/manifests/site.pp
+/usr/share/doc/puppet-manifests-0.1
+/usr/share/doc/puppet-manifests-0.1/MANIFEST
+/usr/share/doc/puppet-manifests-0.1/README
+$
 """,
 ]
 
