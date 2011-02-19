@@ -46,6 +46,7 @@
 #
 # TODO:
 # * correct wrong English expressions
+# * configuration file support
 # * make it runnable on rhel 5 w/o python-cheetah (almost done)
 # * keep permissions of targets in tar archives
 # * test --format=deb = .deb output (partially done)
