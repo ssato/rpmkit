@@ -409,46 +409,46 @@ $ cat files.list
 /etc/modprobe.d/*
 /etc/resolv.conf
 /etc/yum.repos.d/fedora.repo
-/tmp/x.txt
-$ python xpack.py -n foo -w ./0 -q files.list
-03:28:49 [WARNING]  /etc/auto.master is owned by autofs, that is, it will be conflicts with autofs
-03:28:49 [WARNING]  /etc/auto.misc is owned by autofs, that is, it will be conflicts with autofs
-03:28:49 [WARNING]  /etc/auto.net is owned by autofs, that is, it will be conflicts with autofs
-03:28:49 [WARNING]  /etc/auto.smb is owned by autofs, that is, it will be conflicts with autofs
-03:28:49 [WARNING]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link, that is, it will be conflicts with pilot-link
-03:28:49 [WARNING]  /etc/modprobe.d/blacklist.conf is owned by hwdata, that is, it will be conflicts with hwdata
-03:28:49 [WARNING]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-03:28:50 [WARNING]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-03:28:50 [WARNING]  /etc/modprobe.d/dist.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-03:28:50 [WARNING]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4, that is, it will be conflicts with libmlx4
-03:28:50 [WARNING]  /etc/modprobe.d/poulsbo.conf is owned by xorg-x11-drv-psb, that is, it will be conflicts with xorg-x11-drv-psb
-03:28:50 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release, that is, it will be conflicts with fedora-release
+#/etc/aliases.db
+/etc/system-release
+/etc/httpd/conf.d
+$ python xpack.py -n sysdata -w ./0 -q files.list
+03:52:50 [WARNING]  /etc/auto.master is owned by autofs and it (sysdata) will conflict with autofs
+03:52:50 [WARNING]  /etc/auto.misc is owned by autofs and it (sysdata) will conflict with autofs
+03:52:51 [WARNING]  /etc/auto.net is owned by autofs and it (sysdata) will conflict with autofs
+03:52:51 [WARNING]  /etc/auto.smb is owned by autofs and it (sysdata) will conflict with autofs
+03:52:51 [WARNING]  /etc/httpd/conf.d is owned by httpd and it (sysdata) will conflict with httpd
+03:52:51 [WARNING]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link and it (sysdata) will conflict with pilot-link
+03:52:51 [WARNING]  /etc/modprobe.d/blacklist.conf is owned by hwdata and it (sysdata) will conflict with hwdata
+03:52:51 [WARNING]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
+03:52:52 [WARNING]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
+03:52:52 [WARNING]  /etc/modprobe.d/dist.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
+03:52:52 [WARNING]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4 and it (sysdata) will conflict with libmlx4
+03:52:52 [WARNING]  /etc/modprobe.d/poulsbo.conf is owned by xorg-x11-drv-psb and it (sysdata) will conflict with xorg-x11-drv-psb
+03:52:52 [WARNING]  /etc/system-release is owned by fedora-release and it (sysdata) will conflict with fedora-release
+03:52:53 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release and it (sysdata) will conflict with fedora-release
+03:52:53 [WARNING] [Errno 1] Operation not permitted: '/tmp/t/0/sysdata-0.1/src/etc/httpd/conf.d'
 $ ls
 0  files.list  xpack.py
 $ ls 0
-foo-0.1
-$ ls 0/foo-0.1/
-MANIFEST            Makefile     Makefile.in  aclocal.m4      config.log     configure     foo-0.1-1.fc14.src.rpm  foo-0.1.tar.xz  install-sh  rpm     src
-MANIFEST.overrides  Makefile.am  README       autom4te.cache  config.status  configure.ac  foo-0.1.tar.gz          foo.spec        missing     rpm.mk
-$ rpm -qlp 0/foo-0.1/foo-0.1-1.fc14.src.rpm
-foo-0.1.tar.xz
-foo.spec
-$ (cd 0/foo-0.1/; make rpm > /dev/null 2> /dev/null)
-$ ls 0/foo-0.1/
-MANIFEST            Makefile.am  aclocal.m4      config.status  foo-0.1-1.fc14.noarch.rpm  foo-0.1.tar.xz                       install-sh  rpm.mk
-MANIFEST.overrides  Makefile.in  autom4te.cache  configure      foo-0.1-1.fc14.src.rpm     foo-overrides-0.1-1.fc14.noarch.rpm  missing     src
-Makefile            README       config.log      configure.ac   foo-0.1.tar.gz             foo.spec                             rpm
-$ rpm -qlp 0/foo-0.1/foo-0.1-1.fc14.noarch.rpm
+sysdata-0.1
+$ ls 0/sysdata-0.1/
+MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       xpack-package-filelist.pkl
+MANIFEST.overrides  aclocal.m4      configure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  xpack-sbuild.stamp
+Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             xpack-setup.stamp
+Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     xpack-build.stamp
+Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            xpack-configure.stamp
+$ rpm -qlp 0/sysdata-0.1/sysdata-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
-/tmp/x.txt
-/usr/share/doc/foo-0.1
-/usr/share/doc/foo-0.1/MANIFEST
-/usr/share/doc/foo-0.1/README
-$ rpm -qlp 0/foo-0.1/foo-overrides-0.1-1.fc14.noarch.rpm
+/usr/share/doc/sysdata-0.1
+/usr/share/doc/sysdata-0.1/MANIFEST
+/usr/share/doc/sysdata-0.1/README
+$ rpm -qlp 0/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
 /etc/auto.master
 /etc/auto.misc
 /etc/auto.net
 /etc/auto.smb
+/etc/httpd/conf.d
 /etc/modprobe.d/blacklist-visor.conf
 /etc/modprobe.d/blacklist.conf
 /etc/modprobe.d/dist-alsa.conf
@@ -456,41 +456,49 @@ $ rpm -qlp 0/foo-0.1/foo-overrides-0.1-1.fc14.noarch.rpm
 /etc/modprobe.d/dist.conf
 /etc/modprobe.d/libmlx4.conf
 /etc/modprobe.d/poulsbo.conf
+/etc/system-release
 /etc/yum.repos.d/fedora.repo
-/usr/share/doc/foo-overrides-0.1
-/usr/share/doc/foo-overrides-0.1/MANIFEST.overrides
+/usr/share/doc/sysdata-overrides-0.1
+/usr/share/doc/sysdata-overrides-0.1/MANIFEST.overrides
 $
 """,
-    """## Same as above but files list is read from stdin:
+    """## Same as above except that files list is read from stdin and mock is not used for building rpms:
 
-$ cat files.list | python xpack.py -n foo -w ./1 -q --build-rpm --no-mock -
-03:33:11 [WARNING]  /etc/auto.master is owned by autofs, that is, it will be conflicts with autofs
-03:33:11 [WARNING]  /etc/auto.misc is owned by autofs, that is, it will be conflicts with autofs
-03:33:11 [WARNING]  /etc/auto.net is owned by autofs, that is, it will be conflicts with autofs
-03:33:11 [WARNING]  /etc/auto.smb is owned by autofs, that is, it will be conflicts with autofs
-03:33:11 [WARNING]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link, that is, it will be conflicts with pilot-link
-03:33:11 [WARNING]  /etc/modprobe.d/blacklist.conf is owned by hwdata, that is, it will be conflicts with hwdata
-03:33:11 [WARNING]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-03:33:11 [WARNING]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-03:33:12 [WARNING]  /etc/modprobe.d/dist.conf is owned by module-init-tools, that is, it will be conflicts with module-init-tools
-03:33:12 [WARNING]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4, that is, it will be conflicts with libmlx4
-03:33:12 [WARNING]  /etc/modprobe.d/poulsbo.conf is owned by xorg-x11-drv-psb, that is, it will be conflicts with xorg-x11-drv-psb
-03:33:12 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release, that is, it will be conflicts with fedora-release
-$ ls 1/foo-0.1/
-MANIFEST            Makefile.am  aclocal.m4      config.status  foo-0.1-1.fc14.noarch.rpm  foo-0.1.tar.xz                       install-sh  rpm.mk
-MANIFEST.overrides  Makefile.in  autom4te.cache  configure      foo-0.1-1.fc14.src.rpm     foo-overrides-0.1-1.fc14.noarch.rpm  missing     src
-Makefile            README       config.log      configure.ac   foo-0.1.tar.gz             foo.spec                             rpm
-$ rpm -qlp 0/foo-0.1/foo-0.1-1.fc14.noarch.rpm
+$ ls
+files.list  xpack.py
+$ cat files.list | python xpack.py -n sysdata -w ./0 -q --no-mock -
+04:03:35 [WARNING]  /etc/auto.master is owned by autofs and it (sysdata) will conflict with autofs
+04:03:35 [WARNING]  /etc/auto.misc is owned by autofs and it (sysdata) will conflict with autofs
+04:03:35 [WARNING]  /etc/auto.net is owned by autofs and it (sysdata) will conflict with autofs
+04:03:36 [WARNING]  /etc/auto.smb is owned by autofs and it (sysdata) will conflict with autofs
+04:03:36 [WARNING]  /etc/httpd/conf.d is owned by httpd and it (sysdata) will conflict with httpd
+04:03:36 [WARNING]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link and it (sysdata) will conflict with pilot-link
+04:03:36 [WARNING]  /etc/modprobe.d/blacklist.conf is owned by hwdata and it (sysdata) will conflict with hwdata
+04:03:36 [WARNING]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
+04:03:37 [WARNING]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
+04:03:37 [WARNING]  /etc/modprobe.d/dist.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
+04:03:37 [WARNING]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4 and it (sysdata) will conflict with libmlx4
+04:03:37 [WARNING]  /etc/modprobe.d/poulsbo.conf is owned by xorg-x11-drv-psb and it (sysdata) will conflict with xorg-x11-drv-psb
+04:03:37 [WARNING]  /etc/system-release is owned by fedora-release and it (sysdata) will conflict with fedora-release
+04:03:38 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release and it (sysdata) will conflict with fedora-release
+04:03:38 [WARNING] [Errno 1] Operation not permitted: '/tmp/t/0/sysdata-0.1/src/etc/httpd/conf.d'
+$ ls 0/sysdata-0.1/
+MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       xpack-package-filelist.pkl
+MANIFEST.overrides  aclocal.m4      configure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  xpack-sbuild.stamp
+Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             xpack-setup.stamp
+Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     xpack-build.stamp
+Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            xpack-configure.stamp
+$ rpm -qlp 0/sysdata-0.1/sysdata-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
-/tmp/x.txt
-/usr/share/doc/foo-0.1
-/usr/share/doc/foo-0.1/MANIFEST
-/usr/share/doc/foo-0.1/README
-$ rpm -qlp 0/foo-0.1/foo-overrides-0.1-1.fc14.noarch.rpm
+/usr/share/doc/sysdata-0.1
+/usr/share/doc/sysdata-0.1/MANIFEST
+/usr/share/doc/sysdata-0.1/README
+$ rpm -qlp 0/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
 /etc/auto.master
 /etc/auto.misc
 /etc/auto.net
 /etc/auto.smb
+/etc/httpd/conf.d
 /etc/modprobe.d/blacklist-visor.conf
 /etc/modprobe.d/blacklist.conf
 /etc/modprobe.d/dist-alsa.conf
@@ -498,34 +506,41 @@ $ rpm -qlp 0/foo-0.1/foo-overrides-0.1-1.fc14.noarch.rpm
 /etc/modprobe.d/dist.conf
 /etc/modprobe.d/libmlx4.conf
 /etc/modprobe.d/poulsbo.conf
+/etc/system-release
 /etc/yum.repos.d/fedora.repo
-/usr/share/doc/foo-overrides-0.1
-/usr/share/doc/foo-overrides-0.1/MANIFEST.overrides
+/usr/share/doc/sysdata-overrides-0.1
+/usr/share/doc/sysdata-overrides-0.1/MANIFEST.overrides
 $
 """,
-    """## Packaing a file, /etc/resolve.conf:
+    """## Packaing single file, /etc/resolve.conf:
 
-$ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --build-rpm --debug -
-03:34:46 [DEBUG]  Could load the cache: /home/ssato/.cache/xpack.rpm.filelist.pkl
-03:34:46 [INFO] Setting up src tree in /tmp/t/2/resolvconf-0.1: resolvconf
-03:34:46 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1
-03:34:46 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1/src
-03:34:46 [DEBUG]  Copying from '/etc/resolv.conf' to '/tmp/t/2/resolvconf-0.1/src/etc/resolv.conf'
-03:34:46 [DEBUG]  Run: cp -a /etc/resolv.conf /tmp/t/2/resolvconf-0.1/src/etc/resolv.conf [/tmp/t]
-03:34:47 [INFO] Configuring src distribution: resolvconf
-03:34:47 [DEBUG]  Run: autoreconf -vfi [/tmp/t/2/resolvconf-0.1]
-03:34:54 [INFO] Building packages: resolvconf
-03:34:54 [DEBUG]  Run: ./configure [/tmp/t/2/resolvconf-0.1]
-03:34:57 [DEBUG]  Run: make dist [/tmp/t/2/resolvconf-0.1]
-03:34:57 [DEBUG]  Run: make srpm [/tmp/t/2/resolvconf-0.1]
-03:34:58 [DEBUG]  Run: mock --version > /dev/null [/tmp/t/2/resolvconf-0.1]
-03:34:59 [DEBUG]  Run: mock -r fedora-14-i386 resolvconf-0.1-1.*.src.rpm [/tmp/t/2/resolvconf-0.1]
-03:35:56 [DEBUG]  Run: mv /var/lib/mock/fedora-14-i386/result/*.rpm /tmp/t/2/resolvconf-0.1 [/tmp/t/2/resolvconf-0.1]
-03:35:56 [INFO] Successfully created packages in /tmp/t/2/resolvconf-0.1: resolvconf
+$ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --debug -
+04:06:53 [INFO] Setting up src tree in /tmp/t/2/resolvconf-0.1: resolvconf
+04:06:55 [DEBUG]  Could load the cache: /home/ssato/.cache/xpack.rpm.filelist.pkl
+04:06:55 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1
+04:06:55 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1/src
+04:06:55 [DEBUG]  Copying from '/etc/resolv.conf' to '/tmp/t/2/resolvconf-0.1/src/etc/resolv.conf'
+04:06:55 [DEBUG]  Run: cp -a /etc/resolv.conf /tmp/t/2/resolvconf-0.1/src/etc/resolv.conf [/tmp/t]
+04:06:55 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-setup.stamp [/tmp/t/2/resolvconf-0.1]
+04:06:55 [INFO] Configuring src distribution: resolvconf
+04:06:56 [DEBUG]  Run: autoreconf -vfi [/tmp/t/2/resolvconf-0.1]
+04:07:15 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-configure.stamp [/tmp/t/2/resolvconf-0.1]
+04:07:15 [INFO] Building src packages: resolvconf
+04:07:15 [DEBUG]  Run: ./configure [/tmp/t/2/resolvconf-0.1]
+04:07:19 [DEBUG]  Run: make dist [/tmp/t/2/resolvconf-0.1]
+04:07:20 [DEBUG]  Run: make srpm [/tmp/t/2/resolvconf-0.1]
+04:07:21 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-sbuild.stamp [/tmp/t/2/resolvconf-0.1]
+04:07:21 [INFO] Building bin packages: resolvconf
+04:07:21 [DEBUG]  Run: mock --version > /dev/null [/tmp/t/2/resolvconf-0.1]
+04:07:24 [DEBUG]  Run: mock -r fedora-14-i386 resolvconf-0.1-1.*.src.rpm [/tmp/t/2/resolvconf-0.1]
+04:09:18 [DEBUG]  Run: mv /var/lib/mock/fedora-14-i386/result/*.rpm /tmp/t/2/resolvconf-0.1 [/tmp/t/2/resolvconf-0.1]
+04:09:18 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-build.stamp [/tmp/t/2/resolvconf-0.1]
+04:09:18 [INFO] Successfully created packages in /tmp/t/2/resolvconf-0.1: resolvconf
 $ ls 2/resolvconf-0.1/
-MANIFEST            Makefile.am  aclocal.m4      config.status  install-sh                        resolvconf-0.1-1.fc14.src.rpm  resolvconf.spec  src
-MANIFEST.overrides  Makefile.in  autom4te.cache  configure      missing                           resolvconf-0.1.tar.gz          rpm
-Makefile            README       config.log      configure.ac   resolvconf-0.1-1.fc14.noarch.rpm  resolvconf-0.1.tar.xz          rpm.mk
+MANIFEST            Makefile.in     config.log     install-sh                        resolvconf-0.1.tar.bz2  rpm.mk                 xpack-package-filelist.pkl
+MANIFEST.overrides  README          config.status  missing                           resolvconf-0.1.tar.gz   src                    xpack-sbuild.stamp
+Makefile            aclocal.m4      configure      resolvconf-0.1-1.fc14.noarch.rpm  resolvconf.spec         xpack-build.stamp      xpack-setup.stamp
+Makefile.am         autom4te.cache  configure.ac   resolvconf-0.1-1.fc14.src.rpm     rpm                     xpack-configure.stamp
 $ rpm -qlp 2/resolvconf-0.1/resolvconf-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
 /usr/share/doc/resolvconf-0.1
@@ -536,7 +551,7 @@ $ cat 2/resolvconf-0.1/MANIFEST
 $ cat 2/resolvconf-0.1/MANIFEST.overrides
 $
 """,
-    """## Packaing a file, /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso, will
+    """## Packaing single file, /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso, will
 ## be installed as srv/isos/rhel-server-5.6-i386-dvd.iso:
 
 $ ls
@@ -545,7 +560,7 @@ $ ls srv/isos/
 rhel-server-5.6-i386-dvd.iso
 $ echo /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso | \\
 > python xpack.py -n rhel-server-5-6-i386-dvd-iso -w ./w \\
-> --destdir /tmp/t/ --build-rpm --no-mock -
+> --destdir /tmp/t/ --upto build --no-mock -
 ...(snip)...
 $ ls
 xpack.py  srv  w
@@ -557,29 +572,35 @@ $ rpm -qlp w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1
 $
 """,
     """## Packaging itself:
+
 $ python xpack.py --build-self
-06:58:45 [INFO]  executing: echo /tmp/xpack-build-VjhfuD/usr/bin/xpack | python xpack.py -n xpack --package-version 0.0.99 -w /tmp/xpack-build-VjhfuD --debug --build-rpm --no-rpmdb --no-mock --destdir=/tmp/xpack-build-VjhfuD --ignore-owner -
-06:58:46 [DEBUG]  force set uid and gid of /tmp/xpack-build-VjhfuD/usr/bin/xpack
-06:58:46 [DEBUG]  Rewrote target path of fi from /tmp/xpack-build-VjhfuD/usr/bin/xpack to /usr/bin/xpack
-06:58:46 [INFO] Setting up src tree in /tmp/xpack-build-VjhfuD/xpack-0.0.99: xpack
-06:58:46 [DEBUG]  Creating a directory: /tmp/xpack-build-VjhfuD/xpack-0.0.99
-06:58:46 [DEBUG]  Creating a directory: /tmp/xpack-build-VjhfuD/xpack-0.0.99/src
-06:58:46 [DEBUG]  Copying from '/tmp/xpack-build-VjhfuD/usr/bin/xpack' to '/tmp/xpack-build-VjhfuD/xpack-0.0.99/src/usr/bin/xpack'
-06:58:46 [DEBUG]  Run: cp -a /tmp/xpack-build-VjhfuD/usr/bin/xpack /tmp/xpack-build-VjhfuD/xpack-0.0.99/src/usr/bin/xpack [/tmp/t]
-06:58:46 [INFO] Configuring src distribution: xpack
-06:58:46 [DEBUG]  Run: autoreconf -vfi [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
-06:58:54 [INFO] Building packages: xpack
-06:58:54 [DEBUG]  Run: ./configure [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
-06:58:57 [DEBUG]  Run: make dist [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
-06:58:57 [DEBUG]  Run: make srpm [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
-06:58:58 [DEBUG]  Run: make rpm [/tmp/xpack-build-VjhfuD/xpack-0.0.99]
-06:59:02 [INFO] Successfully created packages in /tmp/xpack-build-VjhfuD/xpack-0.0.99: xpack
-$ rpm -qlp /tmp/xpack-build-VjhfuD/xpack-0.0.99/xpack-0.0.99-1.fc14.noarch.rpm
+04:20:47 [INFO]  executing: echo /tmp/xpack-build-YaDaOn/usr/bin/xpack | python xpack.py -n xpack --package-version 0.0.99 -w /tmp/xpack-build-YaDaOn --debug --upto build --no-rpmdb --no-mock --destdir=/tmp/xpack-build-YaDaOn --ignore-owner -
+04:20:49 [INFO] Setting up src tree in /tmp/xpack-build-YaDaOn/xpack-0.0.99: xpack
+04:20:49 [DEBUG]  force set uid and gid of /tmp/xpack-build-YaDaOn/usr/bin/xpack
+04:20:49 [DEBUG]  Rewrote target path of fi from /tmp/xpack-build-YaDaOn/usr/bin/xpack to /usr/bin/xpack
+04:20:49 [DEBUG]  Creating a directory: /tmp/xpack-build-YaDaOn/xpack-0.0.99
+04:20:49 [DEBUG]  Creating a directory: /tmp/xpack-build-YaDaOn/xpack-0.0.99/src
+04:20:49 [DEBUG]  Copying from '/tmp/xpack-build-YaDaOn/usr/bin/xpack' to '/tmp/xpack-build-YaDaOn/xpack-0.0.99/src/usr/bin/xpack'
+04:20:49 [DEBUG]  Run: cp -a /tmp/xpack-build-YaDaOn/usr/bin/xpack /tmp/xpack-build-YaDaOn/xpack-0.0.99/src/usr/bin/xpack [/tmp/t]
+04:20:49 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-setup.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:20:49 [INFO] Configuring src distribution: xpack
+04:20:50 [DEBUG]  Run: autoreconf -vfi [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:21:10 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-configure.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:21:10 [INFO] Building src packages: xpack
+04:21:10 [DEBUG]  Run: ./configure [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:21:13 [DEBUG]  Run: make dist [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:21:14 [DEBUG]  Run: make srpm [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:21:16 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-sbuild.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:21:16 [INFO] Building bin packages: xpack
+04:21:16 [DEBUG]  Run: make rpm [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:21:22 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-build.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:21:22 [INFO] Successfully created packages in /tmp/xpack-build-YaDaOn/xpack-0.0.99: xpack
+$ rpm -qlp /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-0.0.99-1.fc14.noarch.rpm
 /usr/bin/xpack
 /usr/share/doc/xpack-0.0.99
 /usr/share/doc/xpack-0.0.99/MANIFEST
 /usr/share/doc/xpack-0.0.99/README
-$ sed -n "/^%files/,/^$/p" /tmp/xpack-build-VjhfuD/xpack-0.0.99/xpack.spec
+$ sed -n "/^%files/,/^$/p" /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack.spec
 %files
 %defattr(-,root,root,-)
 %doc README
@@ -589,6 +610,7 @@ $ sed -n "/^%files/,/^$/p" /tmp/xpack-build-VjhfuD/xpack-0.0.99/xpack.spec
 $
 """,
     """## Packaging files under /etc which is not owned by any RPMs:
+
 $ list_files () { dir=$1; sudo find $dir -type f; }                                                                                                            $ is_not_from_rpm () { f=$1; LANG=C sudo rpm -qf $f | grep -q 'is not owned' 2>/dev/null; }
 $ (for f in `list_files /etc`; do is_not_from_rpm $f && echo $f; done) \\
 >  > etc.not_from_package.files
@@ -599,12 +621,6 @@ $ sudo python xpack.py -n etcdata --package-version $(date +%Y%m%d) \\
 14:15:09 [INFO] Setting up src tree in /tmp/t/etcdata-build/etcdata-20110217: etcdata
 14:15:09 [DEBUG]  Creating a directory: /tmp/t/etcdata-build/etcdata-20110217
 ...(snip)...
-14:15:30 [INFO] Configuring src distribution: etcdata
-14:15:30 [DEBUG]  Run: autoreconf -vfi [/tmp/t/etcdata-build/etcdata-20110217]
-14:15:40 [INFO] Building packages: etcdata
-14:15:40 [DEBUG]  Run: ./configure [/tmp/t/etcdata-build/etcdata-20110217]
-14:15:42 [DEBUG]  Run: make dist [/tmp/t/etcdata-build/etcdata-20110217]
-14:16:07 [DEBUG]  Run: make srpm [/tmp/t/etcdata-build/etcdata-20110217]
 14:16:33 [INFO] Successfully created packages in /tmp/t/etcdata-build/etcdata-20110217: etcdata
 $ sudo chown -R ssato.ssato etcdata-build/
 $ ls etcdata-build/etcdata-20110217/
@@ -628,6 +644,10 @@ $ rpm -qlp etcdata-build/etcdata-20110217/etcdata-20110217-1.fc14.noarch.rpm
 /usr/share/doc/etcdata-20110217/MANIFEST
 /usr/share/doc/etcdata-20110217/README
 $
+""",
+    """## Packaging some files on RHEL 5 host and package it on fedora 14 host:
+
+...to be here ...
 """,
 ]
 
