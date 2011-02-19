@@ -1830,10 +1830,9 @@ class DebPackageMaker(TgzPackageMaker):
 
 
 def do_packaging(pkg, filelist, options):
-    pm = globals().get("%sPackageMaker" % options.pkgfmt.title(), TgzPackageMaker)(
+    globals().get("%sPackageMaker" % options.pkgfmt.title(), TgzPackageMaker)(
         pkg, filelist, options
-    )
-    pm.run()
+    ).run()
 
 
 def do_packaging_self(version=__version__, workdir=None):
