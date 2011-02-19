@@ -37,19 +37,17 @@
 #
 #
 # Requirements:
-# * autotools: both autoconf and automake
-# * python-cheetah: EPEL should be needed for RHEL
+# * python-cheetah: EPEL should be needed for RHEL (option: it's not needed if
+#   you just want to setup src tree)
+# * autotools: both autoconf and automake (option: see the above comment)
 # * rpm-python
 # * pyxattr (option; if you want to try with --use-pyxattr)
 #
 #
 # TODO:
-# * split build steps:
-#   1. copying files [on target host]
-#   2. setup src tree [on target or another host to make a package]
-#   3. creating src/binary package [on target or another host to make a package]
+# * make it runnable on rhel 5 w/o python-cheetah (almost done)
 # * keep permissions of targets in tar archives
-# * test --format=deb (.deb output)
+# * test --format=deb = .deb output (partially done)
 # * sort out command line options
 # * handle symlinks and dirs correctly (partially done)
 # * eliminate the strong dependency to rpm and make it runnable on debian based
@@ -71,7 +69,6 @@
 #
 #
 
-from Cheetah.Template import Template
 from itertools import chain, count, groupby
 
 import copy
@@ -95,6 +92,18 @@ import unittest
 import tempfile
 
 import rpm
+
+try:
+    from Cheetah.Template import Template
+    UPTO = 'build'
+except ImportError:
+    logging.warn("python-cheetah is not found so that packaging process will go up to only 'setup' step.")
+
+    UPTO = 'setup'
+
+    def Template(*args, **kwargs):
+        raise RuntimeError("python-cheetah is missing and cannot proceed any more.")
+
 
 try:
     import xattr   # pyxattr
@@ -1636,7 +1645,7 @@ def do_nothing(*args, **kwargs):
 
 class PackageMaker(object):
 
-    def __init__(self, package, filelist, options=None, *args, **kwargs):
+    def __init__(self, package, filelist, options, *args, **kwargs):
         self.package = package
         self.filelist = filelist
         self.options = options
@@ -1646,6 +1655,8 @@ class PackageMaker(object):
 
         #self.skip = options.skip
         self.skip = True
+
+        self.upto = options.upto
 
         self.pname = package['name']
 
@@ -1659,7 +1670,10 @@ class PackageMaker(object):
 
     def to_srcdir(self, path):
         """
-        >>> pm = PackageMaker({'name': 'foo', 'workdir': '/tmp/w', 'destdir': '',}, '/tmp/filelist')
+        >>> class O(object):
+        ...     pass
+        >>> o = O(); o.upto = "build"
+        >>> pm = PackageMaker({'name': 'foo', 'workdir': '/tmp/w', 'destdir': '',}, '/tmp/filelist', o)
         >>> pm.to_srcdir('/a/b/c')
         '/tmp/w/src/a/b/c'
         >>> pm.to_srcdir('a/b')
@@ -1700,6 +1714,11 @@ class PackageMaker(object):
             getattr(self, step, do_nothing)() # TODO: or eval("self." + step)() ?
             self.shell("touch %s" % self.touch_file(step), log=False)
 
+        if step == self.upto:
+            if step == 'build':
+                logging.info("Successfully created packages in %s: %s" % (self.workdir, self.pname))
+            sys.exit()
+
     def setup(self):
         list_f = (self.filelist == '-' and sys.stdin or open(self.filelist))
         self.package['fileinfos'] = collect(list_f, self.pname, self.options)
@@ -1733,23 +1752,26 @@ class PackageMaker(object):
         self.genfile('MANIFEST.overrides')
         self.shell('autoreconf -vfi')
 
-    def build(self):
+    def sbuild(self):
         self.shell('./configure')
         self.shell('make dist')
+
+    def build(self):
+        pass
 
     def run(self):
         """run all of the packaging processes: setup, configure, build, ...
         """
-        logging.info("Setting up src tree in %s: %s" % (self.workdir, self.pname))
-        self.try_the_step('setup')
+        steps = (
+            ("setup", "Setting up src tree in %s: %s" % (self.workdir, self.pname)),
+            ("configure", "Configuring src distribution: %s" % self.pname),
+            ("sbuild", "Building src packages: %s" % self.pname),
+            ("build", "Building bin packages: %s" % self.pname),
+        )
 
-        logging.info("Configuring src distribution: %s" % self.pname)
-        self.try_the_step('configure')
-
-        logging.info("Building packages: %s" % self.pname)
-        self.try_the_step('build')
-
-        logging.info("Successfully created packages in %s: %s" % (self.workdir, self.pname))
+        for step,msg in steps:
+            logging.info(msg)
+            self.try_the_step(step)
 
 
 
@@ -1763,7 +1785,6 @@ class RpmPackageMaker(TgzPackageMaker):
     def __init__(self, package, filelist, options, *args, **kwargs):
         super(RpmPackageMaker, self).__init__(package, filelist, options)
         self.use_mock = (not options.no_mock)
-        self.build_all = options.build_rpm
         self.package['rpm'] = "yes"
 
     def build_srpm(self):
@@ -1789,13 +1810,15 @@ class RpmPackageMaker(TgzPackageMaker):
         self.genfile('rpm.mk')
         self.genfile("package.spec", "%s.spec" % self.pname)
 
-    def build(self):
-        super(RpmPackageMaker, self).build()
+    def sbuild(self):
+        super(RpmPackageMaker, self).sbuild()
 
         self.build_srpm()
 
-        if self.build_all:
-            self.build_rpm()
+    def build(self):
+        super(RpmPackageMaker, self).build()
+
+        self.build_rpm()
 
 
 
@@ -1821,8 +1844,14 @@ class DebPackageMaker(TgzPackageMaker):
 
         os.chmod(os.path.join(self.workdir, 'debian/rules'), 0755)
 
+    def sbuild(self):
+        """FIXME
+        """
+        super(DebPackageMaker, self).build()
+
     def build(self):
         super(DebPackageMaker, self).build()
+
         # FIXME: which is better?
         #self.shell('debuild -us -uc')
         self.shell('fakeroot debian/rules binary')
@@ -1844,7 +1873,7 @@ def do_packaging_self(version=__version__, workdir=None):
     createdir(instdir)
     shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
 
-    cmd = "echo %s/xpack | python %s -n xpack --package-version %s -w %s --debug --build-rpm --no-rpmdb --no-mock --destdir=%s --ignore-owner -" % \
+    cmd = "echo %s/xpack | python %s -n xpack --package-version %s -w %s --debug --upto build --no-rpmdb --no-mock --destdir=%s --ignore-owner -" % \
         (instdir, sys.argv[0], version, workdir, workdir)
 
     logging.info(" executing: %s" % cmd)
@@ -1866,23 +1895,31 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
     def tearDown(self):
         rm_rf(self.workdir)
 
+    def test_packaging_setup_wo_rpmdb(self):
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto setup --no-rpmdb -" % (sys.argv[0], self.workdir)
+        self.assertEquals(os.system(cmd), 0)
+
+    def test_packaging_configure_wo_rpmdb(self):
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto configure --no-rpmdb -" % (sys.argv[0], self.workdir)
+        self.assertEquals(os.system(cmd), 0)
+
     def test_packaging(self):
         cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.src.rpm" % self.workdir)) > 0)
 
     def test_packaging_build_rpm_wo_rpmdb(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm --no-rpmdb --no-mock -" % (sys.argv[0], self.workdir)
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto build --no-rpmdb --no-mock -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
     def test_packaging_build_rpm(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm --no-mock -" % (sys.argv[0], self.workdir)
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto build --no-mock -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
     def test_packaging_build_rpm_with_mock(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm -" % (sys.argv[0], self.workdir)
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto build -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
@@ -1891,11 +1928,18 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         createdir(os.path.join(destdir, 'etc'))
         shell("cp /etc/resolv.conf %s/etc" % destdir)
 
-        cmd = "echo %s/etc/resolv.conf | python %s -n resolvconf -w %s --build-rpm --no-rpmdb --no-mock --destdir=%s -" % \
+        cmd = "echo %s/etc/resolv.conf | python %s -n resolvconf -w %s --upto build --no-rpmdb --no-mock --destdir=%s -" % \
             (destdir, sys.argv[0], self.workdir, destdir)
 
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
+    def test_packaging_deb(self):
+        """
+        'dh' may not be found on this system so that it will only go up to 'configure' step.
+        """
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto configure --format deb --no-rpmdb -" % (sys.argv[0], self.workdir)
+        self.assertEquals(os.system(cmd), 0)
 
 
 
@@ -1920,7 +1964,7 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
     def test_packaging_build_rpm_wo_mock(self):
         open(self.filelist, 'w').write("\n".join(self.files))
 
-        cmd = "python %s -n etcdata -w %s --build-rpm --no-mock %s" % (sys.argv[0], self.workdir, self.filelist)
+        cmd = "python %s -n etcdata -w %s --upto build --no-mock %s" % (sys.argv[0], self.workdir, self.filelist)
         self.assertEquals(os.system(cmd), 0)
         self.assertEquals(len(glob.glob("%s/*/*.src.rpm" % self.workdir)), 1)
         self.assertEquals(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)), 2) # etcdata and etcdata-overrides
@@ -1937,12 +1981,25 @@ def run_unittests(verbose):
 
 
 def option_parser(V=__version__):
-    global PKG_COMPRESSORS
+    global PKG_COMPRESSORS, UPTO
 
     ver_s = "%prog " + V
 
     workdir = os.path.join(os.path.abspath(os.curdir), 'workdir')
     packager = os.environ.get('USER', 'root')
+
+    steps = (
+        ("setup", "setup the package dir and copy target files in it"),
+        ("configure", "arrange build files such like configure.ac, Makefile.am, rpm spec file, debian/*, etc."),
+        ("sbuild", "build src package[s]"),
+        ("build", "build binary package[s]"),
+    )
+
+    upto_params = {
+        "choices": [fst for fst,snd in steps],
+        "choices_str": ", ".join(("%s (%s)" % (fst,snd) for fst,snd in steps)),
+        "default": UPTO,
+    }
 
     defaults = {
         'name': 'foo',
@@ -1957,7 +2014,6 @@ def option_parser(V=__version__):
         'packager_mail': "%s@localhost.localdomain" % packager,
         'package_version': '0.1',
         'workdir': workdir,
-        'build_rpm': False,
         'no_mock': False,
          # TODO: Detect appropriate distribution (for mock) automatically.
         'dist': 'fedora-14-i386',
@@ -1974,6 +2030,7 @@ def option_parser(V=__version__):
         'with_pyxattr': False,
         'build_self': False,
         'ignore_owner': False,
+        'upto': upto_params['default'],
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -2019,6 +2076,8 @@ Examples:
 
     bog = optparse.OptionGroup(p, "Build options")
     bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
+    bog.add_option('', '--upto', type="choice", choices=upto_params['choices'],
+        help="Which packaging step you want to proceed to: " + upto_params['choices_str'] + " [Default: %default]")
     bog.add_option('', '--format', help='Terget package format: tgz, rpm or deb (experimental) [%default]')
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
@@ -2030,8 +2089,7 @@ Examples:
             "that symlink point to) if --destdir is specified")
     p.add_option_group(bog)
 
-    rog = optparse.OptionGroup(p, "Rpm related options")
-    rog.add_option('', '--build-rpm', action='store_true', help='Whether to build binary rpm [no - srpm only: default]')
+    rog = optparse.OptionGroup(p, "Options for rpm")
     rog.add_option('', '--no-mock', action="store_true", help='Build RPM with only using rpmbuild (not recommended)')
     rog.add_option('', '--dist', help='Target distribution (for mock) [%default]')
     rog.add_option('', '--no-rpmdb', action='store_true', help='Do not refer rpm db to get extra information of target files')
