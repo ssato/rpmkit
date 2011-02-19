@@ -1566,7 +1566,7 @@ def collect(list_f, pkg_name, options):
         p = filelist_db.get(fi.target, False)
 
         if p and p != pkg_name:
-            logging.warn(" %s is owned by %s and it (%s) will be conflicts with %s" % (f, p, pkg_name, p))
+            logging.warn(" %s is owned by %s and it (%s) will conflict with %s" % (f, p, pkg_name, p))
             fi.conflicts = p
         else:
             fi.conflicts = ""
