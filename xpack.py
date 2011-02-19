@@ -49,7 +49,7 @@
 #   2. setup src tree [on target or another host to make a package]
 #   3. creating src/binary package [on target or another host to make a package]
 # * keep permissions of targets in tar archives
-# * test --pkgfmt=deb (.deb output)
+# * test --format=deb (.deb output)
 # * sort out command line options
 # * handle symlinks and dirs correctly (partially done)
 # * eliminate the strong dependency to rpm and make it runnable on debian based
@@ -1505,9 +1505,9 @@ def collect(list_f, pkg_name, options):
     """
     Collect FileInfo objects from given file list.
     """
-    ff = (options.pkgfmt == 'rpm' and RpmFileInfoFactory() or FileInfoFactory())
+    ff = (options.format == 'rpm' and RpmFileInfoFactory() or FileInfoFactory())
 
-    if options.pkgfmt != 'rpm' or options.no_rpmdb:
+    if options.format != 'rpm' or options.no_rpmdb:
         filelist_db = dict()
     else:
         filelist_db = Rpm.filelist()
@@ -1830,7 +1830,7 @@ class DebPackageMaker(TgzPackageMaker):
 
 
 def do_packaging(pkg, filelist, options):
-    globals().get("%sPackageMaker" % options.pkgfmt.title(), TgzPackageMaker)(
+    globals().get("%sPackageMaker" % options.format.title(), TgzPackageMaker)(
         pkg, filelist, options
     ).run()
 
@@ -1961,7 +1961,7 @@ def option_parser(V=__version__):
         'no_mock': False,
          # TODO: Detect appropriate distribution (for mock) automatically.
         'dist': 'fedora-14-i386',
-        'pkgfmt': 'rpm',
+        'format': 'rpm',
         'destdir': '',
         'rewrite_linkto': False,
         'no_rpmdb': False,
@@ -2019,7 +2019,7 @@ Examples:
 
     bog = optparse.OptionGroup(p, "Build options")
     bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
-    bog.add_option('', '--pkgfmt', help='Terget package format: tgz, rpm or deb (experimental) [%default]')
+    bog.add_option('', '--format', help='Terget package format: tgz, rpm or deb (experimental) [%default]')
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
@@ -2143,7 +2143,7 @@ def main():
     pkg['host'] = hostname()
 
     pkg['rpm'] = 0
-    if options.pkgfmt == 'rpm':
+    if options.format == 'rpm':
         pkg['rpm'] = 1
 
     if options.with_pyxattr:
