@@ -44,6 +44,10 @@
 #
 #
 # TODO:
+# * split build steps:
+#   1. copying files [on target host]
+#   2. setup src tree [on target or another host to make a package]
+#   3. creating src/binary package [on target or another host to make a package]
 # * keep permissions of targets in tar archives
 # * test --pkgfmt=deb (.deb output)
 # * sort out command line options
@@ -1100,17 +1104,37 @@ class ObjDict(dict):
     >>> o.a = 'bbb'
     >>> assert o.a == 'bbb'
     >>> assert o['a'] == o.a
+    >>> 
+
+    TODO: pickle support:
+
+    #>>> workdir = tempfile.mkdtemp(dir='/tmp', prefix='objdict-doctest-')
+    #>>> pkl_f = os.path.join(workdir, 'objdict.pkl')
+    #>>> pickle.dump(o, open(pkl_f, 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
+    #>>> assert o == pickle.load(open(pkl_f))
     """
 
     def __getattr__(self, key):
-        return self.get(key, None)
+        return self.__dict__.get(key, None)
 
     def __setattr__(self, key, val):
-        self[key] = val
+        self.__dict__[key] = val
+
+    def __getitem__(self, key):
+        return self.__dict__.get(key, None)
+
+    def __setitem__(self, key, val):
+        self.__dict__[key] = val
+
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
 
 
 
-class FileInfo(ObjDict):
+class FileInfo(object):
     """The class of which objects to hold meta data of regular files, dirs and
     symlinks. This is for regular file and the super class for other types.
     """
@@ -1605,16 +1629,27 @@ def rpm_attr(fileinfo):
     return "%%attr(%(m)s, %(u)s, %(g)s)" % {'m':m, 'u':u, 'g':g,}
 
 
+def do_nothing(*args, **kwargs):
+    return
+
+
+
 class PackageMaker(object):
 
-    def __init__(self, package, workdir, destdir="", *args, **kwargs):
+    def __init__(self, package, filelist, options=None, *args, **kwargs):
         self.package = package
-        self.workdir = workdir
-        self.destdir = destdir
+        self.filelist = filelist
+        self.options = options
+
+        self.workdir = package['workdir']
+        self.destdir = package['destdir']
+
+        #self.skip = options.skip
+        self.skip = True
 
         self.pname = package['name']
 
-        self.srcdir = os.path.join(workdir, 'src')
+        self.srcdir = os.path.join(self.workdir, 'src')
 
         for k,v in kwargs.iteritems():
             setattr(self, k, v)
@@ -1624,7 +1659,7 @@ class PackageMaker(object):
 
     def to_srcdir(self, path):
         """
-        >>> pm = PackageMaker({'name': 'foo',}, '/tmp/w')
+        >>> pm = PackageMaker({'name': 'foo', 'workdir': '/tmp/w', 'destdir': '',}, '/tmp/filelist')
         >>> pm.to_srcdir('/a/b/c')
         '/tmp/w/src/a/b/c'
         >>> pm.to_srcdir('a/b')
@@ -1646,15 +1681,49 @@ class PackageMaker(object):
         for fi in self.package['fileinfos']:
             fi.copy(os.path.join(self.workdir, self.to_srcdir(fi.target)))
 
+    def dumpfile_path(self):
+        return os.path.join(self.workdir, "xpack-package-filelist.pkl")
+
+    def save(self, pkl_proto=pickle.HIGHEST_PROTOCOL):
+        pickle.dump(self.package['fileinfos'], open(self.dumpfile_path(), 'wb'), pkl_proto)
+
+    def load(self):
+        self.package['fileinfos'] = pickle.load(open(self.dumpfile_path()))
+
+    def touch_file(self, step):
+        return os.path.join(self.workdir, "xpack-%s.stamp" % step)
+
+    def try_the_step(self, step):
+        if self.skip and os.path.exists(self.touch_file(step)):
+            logging.info("...It looks already done. Skip the step: " + step)
+        else:
+            getattr(self, step, do_nothing)() # TODO: or eval("self." + step)() ?
+            self.shell("touch %s" % self.touch_file(step), log=False)
+
     def setup(self):
-        logging.info("Setting up src tree in %s: %s" % (self.workdir, self.pname))
+        list_f = (self.filelist == '-' and sys.stdin or open(self.filelist))
+        self.package['fileinfos'] = collect(list_f, self.pname, self.options)
+
         for d in ('workdir', 'srcdir'):
             createdir(self.package[d])
 
         self.copyfiles()
 
+        self.save()
+
+    def pre_configure(self):
+        if not self.package.get('fileinfos', False):
+            self.load()
+
+        if not self.package.get('conflicts', False):
+            self.package['conflicts'] = {
+                'names': unique((fi.conflicts for fi in self.package['fileinfos'] if fi.conflicts)),
+                'files': unique((fi.target for fi in self.package['fileinfos'] if fi.conflicts)),
+            }
+
     def configure(self):
-        logging.info("Configuring src distribution: %s" % self.pname)
+        self.pre_configure()
+
         self.package['distdata'] = distdata_in_makefile_am([fi.target for fi in self.package['fileinfos'] if fi.type() == 'file'])
 
         self.genfile('configure.ac')
@@ -1665,11 +1734,21 @@ class PackageMaker(object):
         self.shell('autoreconf -vfi')
 
     def build(self):
-        logging.info("Building packages: %s" % self.pname)
         self.shell('./configure')
         self.shell('make dist')
 
-    def finish(self):
+    def run(self):
+        """run all of the packaging processes: setup, configure, build, ...
+        """
+        logging.info("Setting up src tree in %s: %s" % (self.workdir, self.pname))
+        self.try_the_step('setup')
+
+        logging.info("Configuring src distribution: %s" % self.pname)
+        self.try_the_step('configure')
+
+        logging.info("Building packages: %s" % self.pname)
+        self.try_the_step('build')
+
         logging.info("Successfully created packages in %s: %s" % (self.workdir, self.pname))
 
 
@@ -1681,10 +1760,10 @@ class TgzPackageMaker(PackageMaker):
 
 class RpmPackageMaker(TgzPackageMaker):
 
-    def __init__(self, package, workdir, destdir="", use_mock=False, build_all=False):
-        super(RpmPackageMaker, self).__init__(package, workdir, destdir, use_mock, build_all)
-        self.use_mock = use_mock
-        self.build_all = build_all
+    def __init__(self, package, filelist, options, *args, **kwargs):
+        super(RpmPackageMaker, self).__init__(package, filelist, options)
+        self.use_mock = (not options.no_mock)
+        self.build_all = options.build_rpm
         self.package['rpm'] = "yes"
 
     def build_srpm(self):
@@ -1705,10 +1784,10 @@ class RpmPackageMaker(TgzPackageMaker):
             return self.shell("make rpm")
 
     def configure(self):
-        self.genfile('rpm.mk')
-        self.genfile("package.spec", "%s.spec" % self.package['name'])
-
         super(RpmPackageMaker, self).configure()
+
+        self.genfile('rpm.mk')
+        self.genfile("package.spec", "%s.spec" % self.pname)
 
     def build(self):
         super(RpmPackageMaker, self).build()
@@ -1750,16 +1829,11 @@ class DebPackageMaker(TgzPackageMaker):
 
 
 
-def do_packaging(pkg, options):
+def do_packaging(pkg, filelist, options):
     pm = globals().get("%sPackageMaker" % options.pkgfmt.title(), TgzPackageMaker)(
-        pkg, pkg['workdir'], options.destdir,
-        use_mock=(not options.no_mock),
-        build_all=options.build_rpm,
+        pkg, filelist, options
     )
-    pm.setup()
-    pm.configure()
-    pm.build()
-    pm.finish()
+    pm.run()
 
 
 def do_packaging_self(version=__version__, workdir=None):
@@ -2073,25 +2147,13 @@ def main():
     if options.pkgfmt == 'rpm':
         pkg['rpm'] = 1
 
-    if filelist == '-':
-        list_f = sys.stdin
-    else:
-        list_f = open(filelist)
-
     if options.with_pyxattr:
         if not USE_PYXATTR:
             logging.warn(" pyxattr module is not found so that it will not be used.")
     else:
         USE_PYXATTR = False
 
-    destdir = options.destdir.rstrip(os.path.sep)
-    pkg['destdir'] = destdir
-
-    pkg['fileinfos'] = collect(list_f, pkg['name'], options)
-    pkg['conflicts'] = {
-        'names': unique((fi.conflicts for fi in pkg['fileinfos'] if fi.conflicts)),
-        'files': unique((fi.target for fi in pkg['fileinfos'] if fi.conflicts)),
-    }
+    pkg['destdir'] = options.destdir.rstrip(os.path.sep)
 
     if options.summary:
         pkg['summary'] = options.summary
@@ -2103,7 +2165,7 @@ def main():
     else:
         pkg['requires'] = []
 
-    do_packaging(pkg, options)
+    do_packaging(pkg, filelist, options)
 
 
 if __name__ == '__main__':
