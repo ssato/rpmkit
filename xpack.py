@@ -974,7 +974,7 @@ def hostname():
         return os.uname()[1]
 
 
-def date(rfc2822=False):
+def date(rfc2822=False, simple=False):
     """TODO: how to output in rfc2822 format w/o email.Utils.formatdate?
     ('%z' for strftime does not look work.)
     """
@@ -982,7 +982,10 @@ def date(rfc2822=False):
         # return email.Utils.formatdate()
         return datetime.datetime.now().strftime("%a. %d %b %Y %T +0000")
     else:
-        return datetime.datetime.now().strftime("%a %b %_d %Y")
+        if simple:
+            return datetime.datetime.now().strftime("%Y%m%d")
+        else:
+            return datetime.datetime.now().strftime("%a %b %_d %Y")
 
 
 def compile_template(template, params):
@@ -2038,6 +2041,8 @@ def do_packaging(pkg, filelist, options):
 
 
 def do_packaging_self(version=__version__, workdir=None):
+    version = __version__ + ".%s" % date(simple=True)
+
     if workdir is None:
         workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
 
