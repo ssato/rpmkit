@@ -46,7 +46,7 @@
 #
 # TODO:
 # * correct wrong English expressions
-# * configuration file support
+# * configuration file support (almost done)
 # * make it runnable on rhel 5 w/o python-cheetah (almost done)
 # * keep permissions of targets in tar archives
 # * test --format=deb = .deb output (partially done)
@@ -73,6 +73,7 @@
 
 from itertools import chain, count, groupby
 
+import ConfigParser as cp
 import copy
 import datetime
 import doctest
@@ -85,6 +86,7 @@ import os
 import os.path
 import cPickle as pickle
 import pwd
+import re
 import shutil
 import socket
 import stat
@@ -220,7 +222,7 @@ SED ?= sed
 """,
     "README": """\
 This package provides some backup data collected on
-$host by $packager_name at $date.date.
+$host by $packager at $date.date.
 """,
     "MANIFEST": """\
 #for $fi in $fileinfos
@@ -284,7 +286,7 @@ Requires:       $req
 
 %description
 This package provides some backup data collected on
-$host by $packager_name at $date.date.
+$host by $packager at $date.date.
 
 
 #if $conflicts.names
@@ -344,13 +346,13 @@ $fi.rpm_attr()$fi.target
 
 
 %changelog
-* $date.timestamp ${packager_name} <${packager_mail}> - ${version}-${release}
+* $date.timestamp ${packager} <${mail}> - ${version}-${release}
 - Initial packaging.
 """,
     "debian/control": """\
 Source: $name
 Priority: optional
-Maintainer: $packager_name <$packager_mail>
+Maintainer: $packager <$mail>
 Build-Depends: debhelper (>= 7.3.8), autotools-dev
 Standards-Version: 3.9.0
 Homepage: $url
@@ -385,7 +387,7 @@ $dir
     "debian/source/format": """3.0 (native)
 """,
     "debian/copyright": """\
-This package was debianized by $packager_name <$packager_mail> on
+This package was debianized by $packager <$mail> on
 $date.date.
 
 This package is distributed under $license.
@@ -395,7 +397,7 @@ $name ($version) unstable; urgency=low
 
   * New upstream release
 
- -- $packager_name <$packager_mail> $date.date
+ -- $packager <$mail> $date.date
 """,
 }
 
@@ -718,6 +720,88 @@ $ rpm -qlp 0/puppet-manifests-0.1/puppet-manifests-0.1-1.el5.noarch.rpm
 $
 """,
 ]
+
+
+EXAMPLE_RC = """\
+#
+# This is a configuration file example for xpack.py
+#
+# Read the output of `xpack.py --help` and edit the followings as needed.
+#
+[common]
+# working directory in absolute path:
+workdir =
+
+# packaging process will go up to this step:
+upto    = build
+
+# package format:
+format  = rpm
+
+# the tool to compress collected data archive. choices are xz, bz2 or gz:
+compressor = bz2
+
+# flags to control logging levels:
+debug   = False
+quiet   = False
+
+# set to True if owners of target objects are ignore during packaging process:
+ignore_owner    = False
+
+# destination directory to be stripped from installed path in absolute path:
+destdir =
+
+# Whether to rewrite symlink's linkto (path of the objects that symlink point
+# to) if --destdir is specified:
+rewrite_linkto  = False
+
+# advanced option to be enabled if you want to use pyxattr to get extended
+# attributes of target files, dirs and symlinks:
+with_pyxattr    = False
+
+
+[package]
+# package's name:
+name    = xpacked-data
+
+# package's name:
+pversion = 0.1
+
+# package's group:
+group   = System Environment/Base
+
+# package's license
+license = GPLv2+
+
+# url of the package to provide information:
+url     = http://localhost.localdomain
+
+# package's summary:
+summary =
+
+# Is the package dependent on architecture?:
+arch    = False
+
+# a list of other package names separated with comma, required for the output package:
+requires        =
+
+# Full name of the packager, ex. John Doe
+packager =
+
+# Mail address of the packager
+mail    = %(packager)s@localhost.localdomain
+
+
+[rpm]
+# build target distribution (used for mock):
+dist    = fedora-14-i386
+
+# whether to refer rpm database:
+no_rpmdb   = False
+
+# build rpm with only rpmbuild w/o mock (not recommended):
+no_mock    = False
+"""
 
 
 (TYPE_FILE, TYPE_DIR, TYPE_SYMLINK, TYPE_OTHER, TYPE_UNKNOWN) = \
@@ -1975,6 +2059,11 @@ def show_examples(logs=EXAMPLE_LOGS):
 
 
 
+def show_rc(rc=EXAMPLE_RC):
+    print >> sys.stdout, rc
+
+
+
 class TestMainProgram00SingleFileCases(unittest.TestCase):
 
     def setUp(self):
@@ -2030,6 +2119,20 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto configure --format deb --no-rpmdb -" % (sys.argv[0], self.workdir)
         self.assertEquals(os.system(cmd), 0)
 
+    def test_packaging_with_rc(self):
+        """
+        'dh' may not be found on this system so that it will only go up to 'configure' step.
+        """
+        rc = os.path.join(self.workdir, "rc")
+        prog = sys.argv[0]
+
+        #XPACKRC=./xpackrc.sample python xpack.py files.list --upto configure
+        cmd = "python %s --show-rc > %s" % (prog, rc)
+        self.assertEquals(os.system(cmd), 0)
+
+        cmd = "echo /etc/resolv.conf | XPACKRC=%s python %s -w %s --upto configure -" % (rc, prog, self.workdir)
+        self.assertEquals(os.system(cmd), 0)
+
 
 
 class TestMainProgram01MultipleFilesCases(unittest.TestCase):
@@ -2069,13 +2172,77 @@ def run_unittests(verbose):
     u.verbosity = verbose and 2 or 0
 
 
+def parse_conf_value(s):
+    """Simple and naive parser to parse value expressions in config files.
+
+    >>> assert 0 == parse_conf_value("0")
+    >>> assert 123 == parse_conf_value("123")
+    >>> assert True == parse_conf_value("True")
+    >>> assert [1,2,3] == parse_conf_value("[1,2,3]")
+    >>> assert "a string" == parse_conf_value("a string")
+    >>> assert "0.1" == parse_conf_value("0.1")
+    """
+    intp = re.compile(r"^([0-9]|([1-9][0-9]+))$")
+    boolp = re.compile(r"^(true|false)$", re.I)
+    listp = re.compile(r"^(\[\s*((\S+),?)*\s*\])$")
+
+    def matched(pat, s):
+        m = pat.match(s)
+        return m is not None
+
+    if not s:
+        return ""
+
+    if matched(boolp, s):
+        return bool(s)
+
+    if matched(intp, s):
+        return int(s)
+
+    if matched(listp, s):
+        return eval(s)  # TODO: too danger. safer parsing should be needed.
+
+    return s
+
+
+def init_defaults_by_conffile():
+    """
+    Initialize default values for options by loading config files.
+    """
+    def set_default(v):
+        if v is None:
+            return False
+
+    home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
+    confs = (
+        "/etc/xpackrc",
+        os.environ.get("XPACKRC", os.path.join(home, ".xpackrc")),
+    )
+
+    cparser = cp.SafeConfigParser()
+    loaded = False
+
+    for c in confs:
+        if os.path.exists(c):
+            logging.debug("Loading config: %s" % c)
+            cparser.read(c)
+            loaded = True
+
+    if not loaded:
+        return {}
+
+    defaults = dict()
+
+    for sec in cparser.sections():
+        defaults.update(dict(((k,parse_conf_value(v)) for k,v in cparser.items(sec))))
+
+    return defaults
+
+
 def option_parser(V=__version__):
     global PKG_COMPRESSORS, UPTO
 
     ver_s = "%prog " + V
-
-    workdir = os.path.join(os.path.abspath(os.curdir), 'workdir')
-    packager = os.environ.get('USER', 'root')
 
     steps = (
         ("setup", "setup the package dir and copy target files in it"),
@@ -2090,36 +2257,48 @@ def option_parser(V=__version__):
         "default": UPTO,
     }
 
+    username = os.environ.get("USERNAME", "root")
+    mail = "%s@localhost.localdomain" % username
+
+    workdir = os.path.join(os.path.abspath(os.curdir), 'workdir')
+
+    cds = init_defaults_by_conffile()
+
     defaults = {
-        'name': 'foo',
-        'group': 'System Environment/Base',
-        'license': 'GPLv2+',
-        'url': 'http://localhost.localdomain',
-        'description': False,
-        'compressor': 'bz2',
-        'arch': False,
-        'requires': [],
-        'packager_name': packager,
-        'packager_mail': "%s@localhost.localdomain" % packager,
-        'package_version': '0.1',
-        'workdir': workdir,
-        'no_mock': False,
+        'workdir': cds.get("workdir", workdir),
+        'upto': cds.get("upto", upto_params["default"]),
+        'format': cds.get("format", "rpm"),
+        'compressor': cds.get("compressor", "bz2"),
+        'debug': cds.get("debug", False),
+        'quiet': cds.get("quiet", False),
+        'ignore_owner': cds.get("ignore_owner", False),
+        'destdir': cds.get("destdir", ''),
+        'rewrite_linkto': cds.get("rewrite_linkto", False),
+        'with_pyxattr': cds.get("with_pyxattr", False),
+
+        'name': cds.get("name", ""),
+        'pversion': cds.get("pversion", "0.1"),
+        'group': cds.get("group", "System Environment/Base"),
+        'license': cds.get("license", "GPLv2+"),
+        'url': cds.get("url", "http://localhost.localdomain"),
+        'summary': cds.get("summary", ""),
+        'arch': cds.get("arch", False),
+        'requires': cds.get("requires", ""),
+        'packager': cds.get("packager", username),
+        'mail': cds.get("mail", mail),
+
          # TODO: Detect appropriate distribution (for mock) automatically.
-        'dist': 'fedora-14-i386',
-        'format': 'rpm',
-        'destdir': '',
-        'rewrite_linkto': False,
-        'no_rpmdb': False,
-        'debug': False,
-        'quiet': False,
+        'dist': cds.get("dist", "fedora-14-i386"),
+        'no_rpmdb': cds.get("no_rpmdb", False),
+        'no_mock': cds.get("no_mock", False),
+
+        # these are not in conf file:
         'show_examples': False,
+        'show_rc': False,
         'tests': False,
         'doctests': False,
         'unittests': False,
-        'with_pyxattr': False,
         'build_self': False,
-        'ignore_owner': False,
-        'upto': upto_params['default'],
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -2128,6 +2307,9 @@ def option_parser(V=__version__):
                      paths list from stdin).
 
                      The lines starting with '#' in the list file are ignored.
+
+                     The '*' character in lines will be treated as glob pattern
+                     and expanded to the real file names list.
 
 Examples:
   %prog -n foo files.list
@@ -2146,23 +2328,6 @@ Examples:
     
     p.set_defaults(**defaults)
 
-    pog = optparse.OptionGroup(p, "Package metadata options")
-    pog.add_option('-n', '--name', help='Package name [%default]')
-    pog.add_option('', '--group', help='The group of the package [%default]')
-    pog.add_option('', '--license', help='The license of the package [%default]')
-    pog.add_option('', '--url', help='The url of the package [%default]')
-    pog.add_option('', '--summary', help='The summary of the package')
-    pog.add_option('', '--description', help='The text file contains package description')
-    pog.add_option('-z', '--compressor', type="choice", choices=PKG_COMPRESSORS.keys(),
-        help="Tool to compress src archives [%default]")
-    pog.add_option('', '--arch', action='store_true', help='Make package arch-dependent [false - noarch]')
-    pog.add_option('', '--requires', help='Specify the package requirements as comma separated list')
-    pog.add_option('', '--packager-name', help="Specify packager's name [%default]")
-    pog.add_option('', '--packager-mail', help="Specify packager's mail address [%default]")
-    pog.add_option('', '--package-version', help="Specify the package version [%default]")
-    pog.add_option('', '--ignore-owner', action='store_true', help="Ignore owner and group of files and then treat as root's")
-    p.add_option_group(pog)
-
     bog = optparse.OptionGroup(p, "Build options")
     bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
     bog.add_option('', '--upto', type="choice", choices=upto_params['choices'],
@@ -2176,30 +2341,43 @@ Examples:
     bog.add_option('', '--rewrite-linkto', action='store_true',
         help="Whether to rewrite symlink\'s linkto (path of the objects "
             "that symlink point to) if --destdir is specified")
+    bog.add_option('', '--with-pyxattr', action='store_true', help='Get/set xattributes of files with pure python code.')
     p.add_option_group(bog)
 
+    pog = optparse.OptionGroup(p, "Package metadata options")
+    pog.add_option('-n', '--name', help='Package name [%default]')
+    pog.add_option('', '--group', help='The group of the package [%default]')
+    pog.add_option('', '--license', help='The license of the package [%default]')
+    pog.add_option('', '--url', help='The url of the package [%default]')
+    pog.add_option('', '--summary', help='The summary of the package')
+    pog.add_option('-z', '--compressor', type="choice", choices=PKG_COMPRESSORS.keys(),
+        help="Tool to compress src archives [%default]")
+    pog.add_option('', '--arch', action='store_true', help='Make package arch-dependent [false - noarch]')
+    pog.add_option('', '--requires', help='Specify the package requirements as comma separated list')
+    pog.add_option('', '--packager', help="Specify packager's name [%default]")
+    pog.add_option('', '--mail', help="Specify packager's mail address [%default]")
+    pog.add_option('', '--pversion', help="Specify the package version [%default]")
+    pog.add_option('', '--ignore-owner', action='store_true', help="Ignore owner and group of files and then treat as root's")
+    p.add_option_group(pog)
+
     rog = optparse.OptionGroup(p, "Options for rpm")
-    rog.add_option('', '--no-mock', action="store_true", help='Build RPM with only using rpmbuild (not recommended)')
     rog.add_option('', '--dist', help='Target distribution (for mock) [%default]')
     rog.add_option('', '--no-rpmdb', action='store_true', help='Do not refer rpm db to get extra information of target files')
+    rog.add_option('', '--no-mock', action="store_true", help='Build RPM with only using rpmbuild (not recommended)')
     p.add_option_group(rog)
 
     tog = optparse.OptionGroup(p, "Test options")
-    tog.add_option('-T', '--tests', action='store_true', help='Run tests')
+    tog.add_option('', '--tests', action='store_true', help='Run both types (doctests and unittests) of tests')
     tog.add_option('', '--doctests', action='store_true', help='Run doctest tests')
     tog.add_option('', '--unittests', action='store_true', help='Run unittests')
     p.add_option_group(tog)
-
-    aog = optparse.OptionGroup(p, "Other advanced options")
-    aog.add_option('', '--with-pyxattr', action='store_true', help='Get/set xattributes of files with pure python code.')
-    p.add_option_group(aog)
 
     p.add_option('-D', '--debug', action="store_true", help='Debug mode')
     p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
 
     p.add_option('', '--build-self', action="store_true", help='Package itself (self-build)')
-
     p.add_option('', '--show-examples', action="store_true", help='Show examples')
+    p.add_option('', '--show-rc', action="store_true", help='Show conf file example')
 
     return p
 
@@ -2224,6 +2402,10 @@ def main():
         show_examples()
         sys.exit(0)
 
+    if options.show_rc:
+        show_rc()
+        sys.exit(0)
+
     if options.quiet:
         logging.getLogger().setLevel(logging.WARNING)
         verbose_test = False
@@ -2246,7 +2428,6 @@ def main():
         sys.exit()
 
     if options.build_self:
-        #do_packaging_self(version=options.package_version, workdir=options.workdir)
         do_packaging_self()
         sys.exit()
 
@@ -2261,15 +2442,19 @@ def main():
     else:
         pkg['noarch'] = True
 
+    if not options.name:
+        print >> sys.stderr, "You must specify the package name with '--name' option"
+        sys.exit(-1)
+
     pkg['name'] = options.name
     pkg['release'] = '1'
     pkg['group'] = options.group
     pkg['license'] = options.license
     pkg['url'] = options.url
 
-    pkg['version'] = options.package_version
-    pkg['packager_name'] = options.packager_name
-    pkg['packager_mail'] = options.packager_mail
+    pkg['version'] = options.pversion
+    pkg['packager'] = options.packager
+    pkg['mail'] = options.mail
 
     pkg['workdir'] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
     pkg['srcdir'] = os.path.join(pkg['workdir'], 'src')
