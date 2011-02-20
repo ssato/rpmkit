@@ -577,7 +577,7 @@ $
     """## Packaging itself:
 
 $ python xpack.py --build-self
-04:20:47 [INFO]  executing: echo /tmp/xpack-build-YaDaOn/usr/bin/xpack | python xpack.py -n xpack --package-version 0.0.99 -w /tmp/xpack-build-YaDaOn --debug --upto build --no-rpmdb --no-mock --destdir=/tmp/xpack-build-YaDaOn --ignore-owner -
+04:20:47 [INFO]  executing: echo /tmp/xpack-build-YaDaOn/usr/bin/xpack | python xpack.py -n xpack --pversion 0.0.99 -w /tmp/xpack-build-YaDaOn --debug --upto build --no-rpmdb --no-mock --destdir=/tmp/xpack-build-YaDaOn --ignore-owner -
 04:20:49 [INFO] Setting up src tree in /tmp/xpack-build-YaDaOn/xpack-0.0.99: xpack
 04:20:49 [DEBUG]  force set uid and gid of /tmp/xpack-build-YaDaOn/usr/bin/xpack
 04:20:49 [DEBUG]  Rewrote target path of fi from /tmp/xpack-build-YaDaOn/usr/bin/xpack to /usr/bin/xpack
@@ -617,7 +617,7 @@ $
 $ list_files () { dir=$1; sudo find $dir -type f; }                                                                                                            $ is_not_from_rpm () { f=$1; LANG=C sudo rpm -qf $f | grep -q 'is not owned' 2>/dev/null; }
 $ (for f in `list_files /etc`; do is_not_from_rpm $f && echo $f; done) \\
 >  > etc.not_from_package.files
-$ sudo python xpack.py -n etcdata --package-version $(date +%Y%m%d) \\
+$ sudo python xpack.py -n etcdata --pversion $(date +%Y%m%d) \\
 > --debug -w etcdata-build etc.not_from_package.files
 [sudo] password for ssato:
 14:15:03 [DEBUG]  Could load the cache: /root/.cache/xpack.rpm.filelist.pkl
@@ -2046,7 +2046,7 @@ def do_packaging_self(version=__version__, workdir=None):
     createdir(instdir)
     shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
 
-    cmd = "echo %s/xpack | python %s -n xpack --package-version %s -w %s --debug --upto build --no-rpmdb --no-mock --destdir=%s --ignore-owner -" % \
+    cmd = "echo %s/xpack | python %s -n xpack --pversion %s -w %s --debug --upto build --no-rpmdb --no-mock --destdir=%s --ignore-owner -" % \
         (instdir, sys.argv[0], version, workdir, workdir)
 
     logging.info(" executing: %s" % cmd)
@@ -2315,7 +2315,7 @@ Examples:
   %prog -n foo files.list
   cat files.list | %prog -n foo -  # same as above.
 
-  %prog -n foo --package-version 0.2 -l MIT files.list
+  %prog -n foo --pversion 0.2 -l MIT files.list
   %prog -n foo --requires httpd,/sbin/service files.list
 
   %prog --tests --debug  # run test suites
