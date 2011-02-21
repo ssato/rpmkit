@@ -404,7 +404,7 @@ $name ($version) unstable; urgency=low
 
 
 EXAMPLE_LOGS = [
-    """## Packaing files in given files list, "files.list":
+    """## A. Packaing files in given files list, "files.list":
 
 $ ls
 files.list  xpack.py
@@ -466,7 +466,8 @@ $ rpm -qlp 0/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
 /usr/share/doc/sysdata-overrides-0.1/MANIFEST.overrides
 $
 """,
-    """## Same as above except that files list is read from stdin and mock is not used for building rpms:
+    """## B. Same as above except that files list is read from stdin and mock
+## is not used for building rpms:
 
 $ ls
 files.list  xpack.py
@@ -516,7 +517,7 @@ $ rpm -qlp 0/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
 /usr/share/doc/sysdata-overrides-0.1/MANIFEST.overrides
 $
 """,
-    """## Packaing single file, /etc/resolve.conf:
+    """## C. Packaing single file, /etc/resolve.conf:
 
 $ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --debug -
 04:06:53 [INFO] Setting up src tree in /tmp/t/2/resolvconf-0.1: resolvconf
@@ -555,8 +556,8 @@ $ cat 2/resolvconf-0.1/MANIFEST
 $ cat 2/resolvconf-0.1/MANIFEST.overrides
 $
 """,
-    """## Packaing single file, /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso, will
-## be installed as srv/isos/rhel-server-5.6-i386-dvd.iso:
+    """## D. Packaing single file, /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso,
+## will be installed as srv/isos/rhel-server-5.6-i386-dvd.iso:
 
 $ ls
 xpack.py  srv
@@ -575,7 +576,7 @@ $ rpm -qlp w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1
 /usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1/README
 $
 """,
-    """## Packaging itself:
+    """## E. Packaging itself:
 
 $ python xpack.py --build-self
 04:20:47 [INFO]  executing: echo /tmp/xpack-build-YaDaOn/usr/bin/xpack | python xpack.py -n xpack --pversion 0.0.99 -w /tmp/xpack-build-YaDaOn --debug --upto build --no-rpmdb --no-mock --destdir=/tmp/xpack-build-YaDaOn --ignore-owner -
@@ -613,7 +614,7 @@ $ sed -n "/^%files/,/^$/p" /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack.spec
 
 $
 """,
-    """## Packaging files under /etc which is not owned by any RPMs:
+    """## F. Packaging files under /etc which is not owned by any RPMs:
 
 $ list_files () { dir=$1; sudo find $dir -type f; }                                                                                                            $ is_not_from_rpm () { f=$1; LANG=C sudo rpm -qf $f | grep -q 'is not owned' 2>/dev/null; }
 $ (for f in `list_files /etc`; do is_not_from_rpm $f && echo $f; done) \\
@@ -649,7 +650,7 @@ $ rpm -qlp etcdata-build/etcdata-20110217/etcdata-20110217-1.fc14.noarch.rpm
 /usr/share/doc/etcdata-20110217/README
 $
 """,
-    """## Packaging single file on RHEL 5 host and build it on fedora 14 host:
+    """## G. Packaging single file on RHEL 5 host and build it on fedora 14 host:
 
 $ ssh builder@rhel-5-6-vm-0
 builder@rhel-5-6-vm-0's password:
