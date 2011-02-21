@@ -1821,6 +1821,14 @@ def rpm_attr(fileinfo):
     return "%%attr(%(m)s, %(u)s, %(g)s)" % {'m':m, 'u':u, 'g':g,}
 
 
+def srcrpm_name_by_rpmspec(rpmspec, workdir):
+    """Returns the name of src.rpm gotten from given RPM spec file.
+    """
+    cmd = 'rpm -q --specfile --qf "%{n}-%{v}-%{r}.src.rpm" ' + rpmspec
+    (o,e) = shell(cmd, workdir, log=False)
+    return o
+
+
 def do_nothing(*args, **kwargs):
     return
 
@@ -1969,6 +1977,9 @@ class RpmPackageMaker(TgzPackageMaker):
         super(RpmPackageMaker, self).__init__(package, filelist, options)
         self.use_mock = (not options.no_mock)
 
+    def rpmspec(self):
+        return os.path.join(self.workdir, "%s.spec" % self.pname)
+
     def build_srpm(self):
         return self.shell('make srpm')
 
@@ -1981,7 +1992,9 @@ class RpmPackageMaker(TgzPackageMaker):
                 self.use_mock = False
 
         if self.use_mock:
-            self.shell("mock -r %(dist)s %(name)s-%(version)s-%(release)s.*.src.rpm" % self.package)
+            self.shell("mock -r %s %s" % \
+                (self.package['dist'], srcrpm_name_by_rpmspec(self.rpmspec(), self.workdir))
+            )
             return self.shell("mv /var/lib/mock/%(dist)s/result/*.rpm %(workdir)s" % self.package)
         else:
             return self.shell("make rpm")
