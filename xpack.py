@@ -1108,9 +1108,13 @@ class TestDecoratedFuncs(unittest.TestCase):
         pass
 
     def test_checksum_null(self):
+        """if checksum() returns null
+        """
         self.assertEquals(checksum(), '0' * len(sha1('').hexdigest()))
 
     def test_flattern(self):
+        """if flattern() works as expected.
+        """
         self.assertEquals(flattern([]),                               [])
         self.assertEquals(flattern([[1,2,3],[4,5]]),                  [1, 2, 3, 4, 5])
         self.assertEquals(flattern([[1,2,[3]],[4,[5,6]]]),            [1, 2, 3, 4, 5, 6])
@@ -1118,6 +1122,8 @@ class TestDecoratedFuncs(unittest.TestCase):
         self.assertEquals(flattern(((i, i * 2) for i in range(0,5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
 
     def test_unique(self):
+        """if unique() works as expected.
+        """
         self.assertEquals(unique([]),                       [])
         self.assertEquals(unique([0, 3, 1, 2, 1, 0, 4, 5]), [0, 1, 2, 3, 4, 5])
 
