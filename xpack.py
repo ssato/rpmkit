@@ -15,9 +15,9 @@
 # * build package such as rpm, src.rpm, deb, etc.
 #
 #
-# NOTE: The permissions of the files may be lost during packaging. If you want
-# to ensure these are saved or force set permissions as you wanted, specify
-# these explicitly.
+# NOTE: The permissions of the files might be lost during packaging. If you
+# want to ensure these are saved or force set permissions as you wanted,
+# specify these explicitly in Makefile.am or rpm spec, etc.
 #
 #
 # Copyright (C) 2011 Satoru SATOH <satoru.satoh @ gmail.com>
@@ -46,6 +46,7 @@
 #
 # TODO:
 # * correct wrong English expressions
+# * more complete tests
 # * configuration file support (almost done)
 # * make it runnable on rhel 5 w/o python-cheetah (almost done)
 # * keep permissions of targets in tar archives
@@ -183,7 +184,7 @@ AC_OUTPUT
     "Makefile.am": """\
 #import os.path
 EXTRA_DIST = MANIFEST MANIFEST.overrides
-#if $rpm
+#if $format == 'rpm'
 EXTRA_DIST += ${name}.spec rpm.mk
 
 abs_srcdir  ?= .
@@ -1961,7 +1962,6 @@ class RpmPackageMaker(TgzPackageMaker):
     def __init__(self, package, filelist, options, *args, **kwargs):
         super(RpmPackageMaker, self).__init__(package, filelist, options)
         self.use_mock = (not options.no_mock)
-        self.package['rpm'] = "yes"
 
     def build_srpm(self):
         return self.shell('make srpm')
@@ -2040,19 +2040,34 @@ def do_packaging(pkg, filelist, options):
     ).run()
 
 
-def do_packaging_self(version=__version__, workdir=None):
+def do_packaging_self(options):
+    url = "https://github.com/ssato/rpmkit"
     version = __version__ + ".%s" % date(simple=True)
-
-    if workdir is None:
-        workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
+    workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
+    summary = "A python script to build packages from existing files on your system"
+    requires = ""
+    packager = "Satoru SATOH"
+    mail = "satoru.satoh@gmail.com"
 
     instdir = os.path.join(workdir, 'usr', 'bin')
+
+    cmd_opts = "-n xpack --pversion %s -w %s --license GPLv3+ --ignore-owner --destdir %s --no-rpmdb --url %s --upto %s" \
+        % (version, workdir, workdir, url, options.upto)
+    cmd_opts += " --summary '%s' --packager '%s' --mail %s" % (summary, packager, mail)
+
+    if options.debug:
+        cmd_opts += " --debug"
+
+    if options.no_mock:
+        cmd_opts += " --no-mock"
+
+    if options.dist:
+        cmd_opts += " --dist %s" % options.dist
 
     createdir(instdir)
     shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
 
-    cmd = "echo %s/xpack | python %s -n xpack --pversion %s -w %s --debug --upto build --no-rpmdb --no-mock --destdir=%s --ignore-owner -" % \
-        (instdir, sys.argv[0], version, workdir, workdir)
+    cmd = "echo %s/xpack | python %s -n xpack %s -" % (instdir, sys.argv[0], cmd_opts)
 
     logging.info(" executing: %s" % cmd)
     os.system(cmd)
@@ -2251,7 +2266,7 @@ def option_parser(V=__version__):
 
     steps = (
         ("setup", "setup the package dir and copy target files in it"),
-        ("configure", "arrange build files such like configure.ac, Makefile.am, rpm spec file, debian/*, etc."),
+        ("configure", "arrange build files such like configure.ac, Makefile.am, rpm spec file, debian/*, etc. autotools and python-cheetah will be needed"),
         ("sbuild", "build src package[s]"),
         ("build", "build binary package[s]"),
     )
@@ -2261,6 +2276,9 @@ def option_parser(V=__version__):
         "choices_str": ", ".join(("%s (%s)" % (fst,snd) for fst,snd in steps)),
         "default": UPTO,
     }
+
+    package_formats = ('tgz', 'rpm', 'deb')
+    package_format_help = "Target package format: " + ", ".join(package_formats) + " (experimental) [%default]"
 
     username = os.environ.get("USERNAME", "root")
     mail = "%s@localhost.localdomain" % username
@@ -2337,7 +2355,7 @@ Examples:
     bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
     bog.add_option('', '--upto', type="choice", choices=upto_params['choices'],
         help="Which packaging step you want to proceed to: " + upto_params['choices_str'] + " [Default: %default]")
-    bog.add_option('', '--format', help='Terget package format: tgz, rpm or deb (experimental) [%default]')
+    bog.add_option('', '--format', type="choice", choices=package_formats, help=package_format_help)
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
@@ -2433,7 +2451,7 @@ def main():
         sys.exit()
 
     if options.build_self:
-        do_packaging_self()
+        do_packaging_self(options)
         sys.exit()
 
     if len(args) < 1:
@@ -2479,9 +2497,7 @@ def main():
     }
     pkg['host'] = hostname()
 
-    pkg['rpm'] = 0
-    if options.format == 'rpm':
-        pkg['rpm'] = 1
+    pkg['format'] = options.format
 
     if options.with_pyxattr:
         if not USE_PYXATTR:
