@@ -766,7 +766,7 @@ with_pyxattr    = False
 # package's name:
 name    = xpacked-data
 
-# package's name:
+# package's version:
 pversion = 0.1
 
 # package's group:
