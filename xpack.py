@@ -150,7 +150,7 @@ except NameError:  # python < 2.5
 
 
 
-__version__ = "0.0.99"
+__version__ = "0.1"
 
 
 PKG_COMPRESSORS = {
@@ -2060,9 +2060,11 @@ def do_packaging(pkg, filelist, options):
     ).run()
 
 
-def do_packaging_self(options):
+def do_packaging_self(options, latest=False):
     url = "https://github.com/ssato/rpmkit"
-    version = __version__ + ".%s" % date(simple=True)
+
+    version = (latest and __version__ + ".%s" % date(simple=True) or __version__)
+
     workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
     summary = "A python script to build packages from existing files on your system"
     requires = ""
