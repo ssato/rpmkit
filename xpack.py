@@ -530,7 +530,7 @@ $ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --debug -
 04:06:55 [INFO] Configuring src distribution: resolvconf
 04:06:56 [DEBUG]  Run: autoreconf -vfi [/tmp/t/2/resolvconf-0.1]
 04:07:15 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-configure.stamp [/tmp/t/2/resolvconf-0.1]
-04:07:15 [INFO] Building src packages: resolvconf
+04:07:15 [INFO] Building src package: resolvconf
 04:07:15 [DEBUG]  Run: ./configure [/tmp/t/2/resolvconf-0.1]
 04:07:19 [DEBUG]  Run: make dist [/tmp/t/2/resolvconf-0.1]
 04:07:20 [DEBUG]  Run: make srpm [/tmp/t/2/resolvconf-0.1]
@@ -591,7 +591,7 @@ $ python xpack.py --build-self
 04:20:49 [INFO] Configuring src distribution: xpack
 04:20:50 [DEBUG]  Run: autoreconf -vfi [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
 04:21:10 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-configure.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:10 [INFO] Building src packages: xpack
+04:21:10 [INFO] Building src package: xpack
 04:21:10 [DEBUG]  Run: ./configure [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
 04:21:13 [DEBUG]  Run: make dist [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
 04:21:14 [DEBUG]  Run: make srpm [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
@@ -701,7 +701,7 @@ $ echo /etc/puppet/manifests/site.pp | \\
 05:27:55 [INFO] Configuring src distribution: puppet-manifests
 05:27:55 [DEBUG]  Run: autoreconf -vfi [/tmp/w/0/puppet-manifests-0.1]
 05:27:58 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/xpack-configure.stamp [/tmp/w/0/puppet-manifests-0.1]
-05:27:58 [INFO] Building src packages: puppet-manifests
+05:27:58 [INFO] Building src package: puppet-manifests
 05:27:58 [DEBUG]  Run: ./configure [/tmp/w/0/puppet-manifests-0.1]
 05:27:59 [DEBUG]  Run: make dist [/tmp/w/0/puppet-manifests-0.1]
 05:28:00 [DEBUG]  Run: make srpm [/tmp/w/0/puppet-manifests-0.1]
@@ -978,7 +978,7 @@ def hostname():
 
 def date(rfc2822=False, simple=False):
     """TODO: how to output in rfc2822 format w/o email.Utils.formatdate?
-    ('%z' for strftime does not look work.)
+    ('%z' for strftime does not look working.)
     """
     if rfc2822:
         # return email.Utils.formatdate()
@@ -1359,7 +1359,7 @@ class FileInfo(object):
         1. Copy itself and its some metadata (owner, mode, etc.)
         2. Copy extra metadata not copyable with the above.
 
-        'cp -a' do these at once and might be suited for most cases.
+        'cp -a' does these at once and might be suited for most cases.
         """
         global USE_PYXATTR
 
@@ -1957,7 +1957,7 @@ class PackageMaker(object):
         steps = (
             ("setup", "Setting up src tree in %s: %s" % (self.workdir, self.pname)),
             ("configure", "Configuring src distribution: %s" % self.pname),
-            ("sbuild", "Building src packages: %s" % self.pname),
+            ("sbuild", "Building src package: %s" % self.pname),
             ("build", "Building bin packages: %s" % self.pname),
         )
 
@@ -2098,8 +2098,7 @@ def show_examples(logs=EXAMPLE_LOGS):
         print >> sys.stdout, log
 
 
-
-def show_rc(rc=EXAMPLE_RC):
+def dump_rc(rc=EXAMPLE_RC):
     print >> sys.stdout, rc
 
 
@@ -2167,7 +2166,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         prog = sys.argv[0]
 
         #XPACKRC=./xpackrc.sample python xpack.py files.list --upto configure
-        cmd = "python %s --show-rc > %s" % (prog, rc)
+        cmd = "python %s --dump-rc > %s" % (prog, rc)
         self.assertEquals(os.system(cmd), 0)
 
         cmd = "echo /etc/resolv.conf | XPACKRC=%s python %s -w %s --upto configure -" % (rc, prog, self.workdir)
@@ -2208,8 +2207,12 @@ def run_doctests(verbose):
 
 
 def run_unittests(verbose):
-    u = unittest.main(argv=sys.argv[:1])
-    u.verbosity = verbose and 2 or 0
+    minor = sys.version_info[1]
+
+    if minor >= 5:
+        unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
+    else:
+        unittest.main(argv=sys.argv[:1])
 
 
 def parse_conf_value(s):
@@ -2249,10 +2252,6 @@ def init_defaults_by_conffile():
     """
     Initialize default values for options by loading config files.
     """
-    def set_default(v):
-        if v is None:
-            return False
-
     home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
     confs = (
         "/etc/xpackrc",
@@ -2337,7 +2336,7 @@ def option_parser(V=__version__):
 
         # these are not in conf file:
         'show_examples': False,
-        'show_rc': False,
+        'dump_rc': False,
         'tests': False,
         'doctests': False,
         'unittests': False,
@@ -2346,13 +2345,19 @@ def option_parser(V=__version__):
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
 
-  where FILE_LIST  = a file contains absolute file paths list or '-' (read
-                     paths list from stdin).
+Arguments:
 
-                     The lines starting with '#' in the list file are ignored.
+  FILE_LIST  a file contains absolute file paths list or '-' (read paths list
+             from stdin).
 
-                     The '*' character in lines will be treated as glob pattern
-                     and expanded to the real file names list.
+             The lines starting with '#' in the list file are ignored.
+
+             The '*' character in lines will be treated as glob pattern and
+             expanded to the real file names list.
+
+Environment Variables:
+
+  XPACKRC    Configuration file path. see also: `%prog --dump-rc`
 
 Examples:
   %prog -n foo files.list
@@ -2420,7 +2425,7 @@ Examples:
 
     p.add_option('', '--build-self', action="store_true", help='Package itself (self-build)')
     p.add_option('', '--show-examples', action="store_true", help='Show examples')
-    p.add_option('', '--show-rc', action="store_true", help='Show conf file example')
+    p.add_option('', '--dump-rc', action="store_true", help='Show conf file example')
 
     return p
 
@@ -2445,8 +2450,8 @@ def main():
         show_examples()
         sys.exit(0)
 
-    if options.show_rc:
-        show_rc()
+    if options.dump_rc:
+        dump_rc()
         sys.exit(0)
 
     if options.quiet:
