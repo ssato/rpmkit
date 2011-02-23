@@ -657,7 +657,7 @@ builder@rhel-5-6-vm-0's password:
 [builder@rhel-5-6-vm-0 ~]$ cat /etc/redhat-release
 Red Hat Enterprise Linux Server release 5.6 (Tikanga)
 [builder@rhel-5-6-vm-0 ~]$ curl -s https://github.com/ssato/rpmkit/raw/master/xpack.py > xpack
-[builder@rhel-5-6-vm-0 ~]$ echo /etc/puppet/manifests/site.pp | \
+[builder@rhel-5-6-vm-0 ~]$ echo /etc/puppet/manifests/site.pp | \\
 > python xpack -n puppet-manifests -w 0 --debug --upto setup -
 WARNING:root:python-cheetah is not found so that packaging process will go up to only 'setup' step.
 19:42:48 [INFO] Setting up src tree in /home/builder/0/puppet-manifests-0.1: puppet-manifests
