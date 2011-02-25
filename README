@@ -1,3 +1,22 @@
-rpmkit = rpm toolkit
+Here are some rpm related scripts distributed under GPLv3+.
 
-License: GPLv3+
+* COPYING.GPLv3: license file
+* README: this file
+* list-requires-by-package-name.sh: list required rpms by package name
+* list-srpmnames-by-file.sh: list names of src.rpms by file
+* rpm2json.py: dump json expression of rpm metadata
+* rpms2sqldb.py: scan rpm files and generated metadata database (sqlite)
+* xpack.py: "super" packaging tool. gen package (tgz, rpm, deb) from file list
+
+
+NOTES
+========================
+
+* filelist2rpm.py was replaced with its successor, xpack.py
+
+
+
+Author
+=======================
+
+Satoru SATOH <ssato@redhat.com>
