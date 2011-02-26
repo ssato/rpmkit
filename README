@@ -12,7 +12,7 @@ Here are some rpm related scripts distributed under GPLv3+.
 NOTES
 ========================
 
-* filelist2rpm.py was replaced with its successor, xpack.py
+* filelist2rpm.py was removed as it was replaced with its successor, xpack.py
 
 
 
