@@ -747,7 +747,7 @@ compressor = bz2
 debug   = False
 quiet   = False
 
-# set to True if owners of target objects are ignore during packaging process:
+# set to True if owners of target objects are ignored during packaging process:
 ignore_owner    = False
 
 # destination directory to be stripped from installed path in absolute path:
@@ -763,25 +763,25 @@ with_pyxattr    = False
 
 
 [package]
-# package's name:
+# name of the package:
 name    = xpacked-data
 
-# package's version:
+# version of the package:
 pversion = 0.1
 
-# package's group:
+# group of the package:
 group   = System Environment/Base
 
-# package's license
+# license of the package
 license = GPLv2+
 
 # url of the package to provide information:
 url     = http://localhost.localdomain
 
-# package's summary:
+# summary (short description) of the package:
 summary =
 
-# Is the package dependent on architecture?:
+# Does the package depend on architecture?:
 arch    = False
 
 # a list of other package names separated with comma, required for the output package:
@@ -795,7 +795,7 @@ mail    = %(packager)s@localhost.localdomain
 
 
 [rpm]
-# build target distribution (used for mock):
+# build target distribution will be used for mock:
 dist    = fedora-14-i386
 
 # whether to refer rpm database:
