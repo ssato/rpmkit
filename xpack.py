@@ -1989,7 +1989,7 @@ class RpmPackageMaker(TgzPackageMaker):
             try:
                 self.shell("mock --version > /dev/null")
             except RuntimeError, e:
-                logging.warn(" It sesms mock is not found on your system. Fallback to plain rpmbuild...")
+                logging.warn(" It seems mock is not found on your system. Fallback to plain rpmbuild...")
                 self.use_mock = False
 
         if self.use_mock:
