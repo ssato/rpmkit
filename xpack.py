@@ -374,6 +374,9 @@ Description: $summary
 #!/usr/bin/make -f
 %:
 \tdh \$@
+
+override_dh_builddeb:
+\tdh_builddeb -- Zbzip2
 """,
     "debian/dirs": """\
 #for $fi in $fileinfos
@@ -386,6 +389,11 @@ $dir
     "debian/compat": """7
 """,
     "debian/source/format": """3.0 (native)
+""",
+    "debian/source/options": """\
+# Use bzip2 instead of gzip
+compression = "bzip2"
+compression-level = 9
 """,
     "debian/copyright": """\
 This package was debianized by $packager <$mail> on
@@ -2037,6 +2045,7 @@ class DebPackageMaker(TgzPackageMaker):
         self.genfile('debian/dirs')
         self.genfile('debian/compat')
         self.genfile('debian/source/format')
+        self.genfile('debian/source/options')
 
         os.chmod(os.path.join(self.workdir, 'debian/rules'), 0755)
 
