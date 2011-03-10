@@ -2487,7 +2487,7 @@ def main():
         sys.exit()
 
     if options.build_self:
-        do_packaging_self(options)
+        do_packaging_self(options, latest=True)
         sys.exit()
 
     if len(args) < 1:
