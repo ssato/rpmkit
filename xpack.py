@@ -322,6 +322,7 @@ make install DESTDIR=\$RPM_BUILD_ROOT
 %clean
 rm -rf \$RPM_BUILD_ROOT
 
+$getVar('scriptlets', '')
 
 %files
 %defattr(-,root,root,-)
@@ -2423,6 +2424,7 @@ Examples:
     rog.add_option('', '--dist', help='Target distribution (for mock) [%default]')
     rog.add_option('', '--no-rpmdb', action='store_true', help='Do not refer rpm db to get extra information of target files')
     rog.add_option('', '--no-mock', action="store_true", help='Build RPM with only using rpmbuild (not recommended)')
+    rog.add_option('', '--scriptlets', help='Specify the file contains rpm scriptlets')
     p.add_option_group(rog)
 
     tog = optparse.OptionGroup(p, "Test options")
@@ -2500,6 +2502,15 @@ def main():
         pkg['noarch'] = False
     else:
         pkg['noarch'] = True
+
+    if options.scriptlets:
+        try:
+            scriptlets = open(options.scriptlets).read()
+        except IOError:
+            logging.warn(" Could not open %s to read scriptlets" % options.scriptlets)
+            scriptlets = ""
+
+        pkg['scriptlets'] = scriptlets
 
     if not options.name:
         print >> sys.stderr, "You must specify the package name with '--name' option"
