@@ -999,14 +999,16 @@ def date(rfc2822=False, simple=False):
             return datetime.datetime.now().strftime("%a %b %_d %Y")
 
 
-def compile_template(template, params):
+def compile_template(template, params, is_file=False):
     """
+    TODO: Add test case that $template is a filename.
+
     >>> tmpl_s = "a=$a b=$b"
     >>> params = {'a':1, 'b':'b'}
     >>> 
     >>> assert "a=1 b=b" == compile_template(tmpl_s, params)
     """
-    if isinstance(template, file):
+    if is_file:
         tmpl = Template(file=template, searchList=params)
     else:
         tmpl = Template(source=template, searchList=params)
@@ -2171,9 +2173,6 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         self.assertEquals(os.system(cmd), 0)
 
     def test_packaging_with_rc(self):
-        """
-        'dh' may not be found on this system so that it will only go up to 'configure' step.
-        """
         rc = os.path.join(self.workdir, "rc")
         prog = sys.argv[0]
 
@@ -2183,6 +2182,19 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 
         cmd = "echo /etc/resolv.conf | XPACKRC=%s python %s -w %s --upto configure -" % (rc, prog, self.workdir)
         self.assertEquals(os.system(cmd), 0)
+
+    def test_packaging_with_a_custom_template(self):
+        global TEMPLATES
+
+        prog = sys.argv[0]
+        tmpl0 = os.path.join(self.workdir, "package.spec")
+
+        open(tmpl0, 'w').write(TEMPLATES['package.spec'])
+
+        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --templates=\"package.spec:%s\" -" % \
+            (prog, self.workdir, tmpl0)
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.src.rpm" % self.workdir)) > 0)
 
 
 
@@ -2258,6 +2270,20 @@ def parse_conf_value(s):
         return eval(s)  # TODO: too danger. safer parsing should be needed.
 
     return s
+
+
+def parse_template_list_str(templates):
+    """
+    simple parser for options.templates.
+
+    >>> assert parse_template_list_str("") == {}
+    >>> assert parse_template_list_str("a:b") == {'a': 'b'}
+    >>> assert parse_template_list_str("a:b,c:d") == {'a': 'b', 'c': 'd'}
+    """
+    if templates:
+        return dict((kv.split(':') for kv in templates.split(',')))
+    else:
+        return dict()
 
 
 def init_defaults_by_conffile():
@@ -2398,6 +2424,11 @@ Examples:
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
         "make it installed as '/usr/share/foo/a.dat' with the package , you can accomplish "
         "that by this option: '--destdir=/builddir/destdir'")
+    bog.add_option('', '--templates', help="Use custom template files. "
+        "TEMPLATES is a comma separated list of template output and file after the form of "
+        "RELATIVE_OUTPUT_PATH_IN_SRCDIR:TEMPLATE_FILE such like 'package.spec:/tmp/foo.spec.tmpl', "
+        "and 'debian/rules:mydebrules.tmpl,Makefile.am:/etc/foo/mymakefileam.tmpl'. "
+        "Supported template syntax is Python Cheetah: http://www.cheetahtemplate.org .")
     bog.add_option('', '--rewrite-linkto', action='store_true',
         help="Whether to rewrite symlink\'s linkto (path of the objects "
             "that symlink point to) if --destdir is specified")
@@ -2444,7 +2475,7 @@ Examples:
 
 
 def main():
-    global PKG_COMPRESSORS, USE_PYXATTR
+    global PKG_COMPRESSORS, TEMPLATES, USE_PYXATTR
 
     verbose_test = False
 
@@ -2502,6 +2533,13 @@ def main():
         pkg['noarch'] = False
     else:
         pkg['noarch'] = True
+
+    if options.templates:
+        for tgt, tmpl in parse_template_list_str(options.templates).iteritems():
+            if TEMPLATES.has_key(tgt):
+                TEMPLATES[tgt] = open(tmpl).read()
+            else:
+                logging.warn(" target output %s is not defined in template list" % tgt)
 
     if options.scriptlets:
         try:
