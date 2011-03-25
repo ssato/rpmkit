@@ -27,6 +27,7 @@
 #
 
 import ConfigParser as cp
+import copy
 import glob
 import logging
 import multiprocessing
@@ -97,7 +98,7 @@ def rshell(self, cmd, user, host, workdir, log=True, dryrun=False):
     if is_remote:
         cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
 
-    return shell(cmd, workdir='.', log, dryrun)
+    return shell(cmd, workdir='.', log=log, dryrun=dryrun)
 
 
 def pshell(cmds):
@@ -126,7 +127,7 @@ class Repo(object):
         self.user = user
         self.mail = mail
         self.fullname = fullname
-        self.archs = archs
+        self.archs = archs.split(',')
 
         (self.dist_name, self.dist_version) = dist.split('-')
         self.topdir = os.path.join(topdir, self.dist_name, self.dist_version)
@@ -204,14 +205,6 @@ class Repo(object):
                 if e != "":  # indicates any error.
                     raise RuntimeError(" out=%s, errmsg=%s" % (o,e))
 
-
-"""
-yum repo metadat -> server side (yum repo topdir).
-
-    multiprocessing.log_to_stderr()
-    logger = multiprocessing.get_logger()
-    logger.setLevel(logging.INFO)
-"""
 
 
 def get_username():
@@ -330,13 +323,21 @@ Examples:
     if not defaults.get('repodir'):
         defaults['repodir'] = "~/public_html/yum"
 
+    defaults['dist'] = ""
+    defaults['archs'] = "i386,x86_64"
+    defaults['tests'] = False
+    defaults['reponame'] = ""
+    defaults['no_release_pkg'] = False
+
+    p.set_defaults(**defaults)
+
     p.add_option('-s', '--server', help='Server to provide your yum repos [%default]')
     p.add_option('-u', '--user', help='Your username on the server [%default]')
     p.add_option('-m', '--mail', help='Your mail address [%default]')
     p.add_option('-F', '--fullname', help='Your full name [%default]')
     p.add_option('-R', '--repodir', help='Top directory of your yum repo [%default]')
 
-    p.add_option('-D', '--dists', help='Comma separated list of target distribution names [%default]')
+    p.add_option('-D', '--dist', help='Target distribution name [%default]')
     p.add_option('-A', '--archs', help='Comma separated list of target architecures [%default]')
 
     p.add_option('-T', '--tests', action='store_true', help='Run test suite')
@@ -351,13 +352,17 @@ Examples:
 
 
 def main(argv=sys.argv[1:]):
-    (CMD_INIT, CMD_BUILD, CMD_DEPLOY) = (1,2,3)
+    (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = (1,2,3,4)
 
     p = opt_parser()
 
     if not argv:
         p.print_usage()
         sys.exit(1)
+
+    multiprocessing.log_to_stderr()
+    logger = multiprocessing.get_logger()
+    logger.setLevel(logging.INFO)
 
     a0 = argv[0]
     if a0.startswith('i'):
@@ -371,20 +376,38 @@ def main(argv=sys.argv[1:]):
         sys.exit(1)
 
     (options, args) = p.parse_args(argv[1:])
-#def __init__(self, server, user, mail, fullname, topdir, dist, archs):
 
-    if cmd == CMD_DEPLOY:
+    config = copy.copy(options.__dict__)
+
+    if not options.dist:
+        config['dist'] = raw_input("Distribution > ")
+
+    if not options.reponame:
+        config['reponame'] = raw_input("Repository name > ")
+
+    config['topdir'] = config['repodir']
+
+    repo = Repo(**config)
+
+    if cmd == CMD_INIT:
+        repo.init()
+
+    elif cmd == CMD_UPDATE:
+        repo.update()
+
+    else:
         if not args:
-            logging.error(" 'deploy' command requires an argument to specify src.rpm")
+            logging.error(" 'build' and 'deploy' command requires an argument to specify srpm")
             sys.exit(1)
 
+        if cmd == CMD_DEPLOY:
+            f = repo.build
+
+        elif cmd == CMD_DEPLOY:
+            f = repo.deploy
+
         for srpm in args:
-            tsk = Task(options)
-            tsk.build()
-            tsk.deploy()
-    else:
-        repo = YumRepo()
-        repo.init()
+            f(srpm)
 
 
 if __name__ == '__main__':
