@@ -303,8 +303,8 @@ Examples:
   %prog build xpack-0.1-1.src.rpm 
 
   # build SRPM and deploy RPMs and SRPMs into your yum repos:
-  %prog deploy xpack-0.1-1.src.rpm 
-  %prog d --dists fedora-14,rhel-6 --arch i386,x86_64 xpack-0.1-1.src.rpm 
+  %prog deploy --dist fedora-14 xpack-0.1-1.src.rpm 
+  %prog d --dist rhel-6 --archs x86_64 xpack-0.1-1.src.rpm 
   """
     )
 
@@ -323,7 +323,7 @@ Examples:
     if not defaults.get('repodir'):
         defaults['repodir'] = "~/public_html/yum"
 
-    defaults['dist'] = ""
+    defaults['dist'] = "fedora-14"
     defaults['archs'] = "i386,x86_64"
     defaults['tests'] = False
     defaults['reponame'] = ""
@@ -360,9 +360,13 @@ def main(argv=sys.argv[1:]):
 
     p = opt_parser()
 
-    if not argv or argv[0].startswith('-h') or argv[0].startswith('--h'):
+    if not argv:
         p.print_usage()
         sys.exit(1)
+
+    if argv[0].startswith('-h') or argv[0].startswith('--h'):
+        p.print_help()
+        sys.exit(0)
 
     a0 = argv[0]
     if a0.startswith('i'):
@@ -385,18 +389,19 @@ def main(argv=sys.argv[1:]):
     if not options.reponame:
         config['reponame'] = raw_input("Repository name > ")
 
-    if options.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    else:
-        logging.getLogger().setLevel(logging.WARNING)
-
     config['topdir'] = config['repodir']
 
     repo = Repo(**config)
 
     multiprocessing.log_to_stderr()
     logger = multiprocessing.get_logger()
-    logger.setLevel(logging.INFO)
+
+    if options.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.setLevel(logging.INFO)
+    else:
+        logging.getLogger().setLevel(logging.WARNING)
+        logger.setLevel(logging.WARNING)
 
     if cmd == CMD_INIT:
         repo.init()
