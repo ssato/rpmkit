@@ -88,7 +88,7 @@ def shell(cmd_s, workdir="", log=True, dryrun=False):
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
 
 
-def rshell(self, cmd, user, host, workdir, log=True, dryrun=False):
+def rshell(cmd, user, host, workdir, log=True, dryrun=False):
     """
     @user     str  (remote) user to run given command.
     @host     str  on which host to run given command?
@@ -122,7 +122,7 @@ class Repo(object):
     """Yum repository.
     """
 
-    def __init__(self, server, user, mail, fullname, topdir, dist, archs):
+    def __init__(self, server, user, mail, fullname, topdir, dist, archs, *args, **kwargs):
         self.server = server
         self.user = user
         self.mail = mail
@@ -171,7 +171,7 @@ class Repo(object):
         return pshell(self._deploy_cmds(arch, srpm))
 
     def init(self):
-        uhw = (self.user, self.server, self.workdir)
+        uhw = (self.user, self.server, '~')
 
         rshell("mkdir -p " + os.path.join(self.topdir, 'sources'), *uhw)
         for arch in self.archs:
@@ -181,7 +181,7 @@ class Repo(object):
         """
         Same as 'createrepo --update ...'.
         """
-        uhw = (self.user, self.server, self.workdir)
+        uhw = (self.user, self.server, '~')
         subdirs = ['sources'] + self.archs
 
         # hack:
@@ -328,6 +328,7 @@ Examples:
     defaults['tests'] = False
     defaults['reponame'] = ""
     defaults['no_release_pkg'] = False
+    defaults['verbose'] = True
 
     p.set_defaults(**defaults)
 
@@ -337,8 +338,11 @@ Examples:
     p.add_option('-F', '--fullname', help='Your full name [%default]')
     p.add_option('-R', '--repodir', help='Top directory of your yum repo [%default]')
 
-    p.add_option('-D', '--dist', help='Target distribution name [%default]')
-    p.add_option('-A', '--archs', help='Comma separated list of target architecures [%default]')
+    p.add_option('-d', '--dist', help='Target distribution name [%default]')
+    p.add_option('-a', '--archs', help='Comma separated list of target architecures [%default]')
+
+    p.add_option('-q', '--quiet', dest="verbose", action='store_false', help='Quiet mode')
+    p.add_option('-v', '--verbose', action='store_true', help='Verbose mode')
 
     p.add_option('-T', '--tests', action='store_true', help='Run test suite')
 
@@ -356,13 +360,9 @@ def main(argv=sys.argv[1:]):
 
     p = opt_parser()
 
-    if not argv:
+    if not argv or argv[0].startswith('-h') or argv[0].startswith('--h'):
         p.print_usage()
         sys.exit(1)
-
-    multiprocessing.log_to_stderr()
-    logger = multiprocessing.get_logger()
-    logger.setLevel(logging.INFO)
 
     a0 = argv[0]
     if a0.startswith('i'):
@@ -385,9 +385,18 @@ def main(argv=sys.argv[1:]):
     if not options.reponame:
         config['reponame'] = raw_input("Repository name > ")
 
+    if options.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.WARNING)
+
     config['topdir'] = config['repodir']
 
     repo = Repo(**config)
+
+    multiprocessing.log_to_stderr()
+    logger = multiprocessing.get_logger()
+    logger.setLevel(logging.INFO)
 
     if cmd == CMD_INIT:
         repo.init()
