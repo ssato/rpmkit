@@ -633,6 +633,15 @@ Examples:
 
     p.set_defaults(**defaults)
 
+    defaults['dist'] = ""
+    defaults['archs'] = "i386,x86_64"
+    defaults['tests'] = False
+    defaults['reponame'] = ""
+    defaults['no_release_pkg'] = False
+    defaults['verbose'] = True
+
+    p.set_defaults(**defaults)
+
     p.add_option('-s', '--server', help='Server to provide your yum repos [%default]')
     p.add_option('-u', '--user', help='Your username on the server [%default]')
     p.add_option('-m', '--mail', help='Your mail address [%default]')
@@ -661,7 +670,7 @@ def main(argv=sys.argv[1:]):
 
     p = opt_parser()
 
-    if not argv:
+    if not argv or argv[0].startswith('-h') or argv[0].startswith('--h'):
         p.print_usage()
         sys.exit(1)
 
@@ -712,6 +721,28 @@ def main(argv=sys.argv[1:]):
     elif cmd == CMD_UPDATE:
         cs = repocmds.update()
         shell_recur(cs)
+
+    if not options.reponame:
+        config['reponame'] = raw_input("Repository name > ")
+
+    if options.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.WARNING)
+
+    config['topdir'] = config['repodir']
+
+    repo = Repo(**config)
+
+    multiprocessing.log_to_stderr()
+    logger = multiprocessing.get_logger()
+    logger.setLevel(logging.INFO)
+
+    if cmd == CMD_INIT:
+        repo.init()
+
+    elif cmd == CMD_UPDATE:
+        repo.update()
 
     else:
         if not args:
