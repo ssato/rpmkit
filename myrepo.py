@@ -31,11 +31,13 @@ from itertools import chain
 
 import ConfigParser as cp
 import copy
+import doctest
 import glob
 import logging
 import multiprocessing
 import optparse
 import os
+import re
 import rpm
 import subprocess
 import sys
@@ -134,8 +136,11 @@ def rshell(cmd, user, host, workdir, log=True, dryrun=False):
 
 
 class Command(object):
+    """Object to wrap command to run.
+    """
 
-    def __init__(self, cmd, user, host="localhost", workdir=os.curdir, log=True, dryrun=False):
+    def __init__(self, cmd, user, host="localhost", workdir=os.curdir,
+            log=True, dryrun=False):
         self.cmd = cmd
         self.user = user
         self.host = host
@@ -151,24 +156,22 @@ class Command(object):
 
 
 
-def shell_recur(cmds=[], res_acc=[]):
+def shell_recur(cmds=[], acc=[]):
     """
-    @cmds  [cmd]  A list of Command objects.
+    @cmds [Command]     A list of Command objects.
+    @acc  [(str,str)]   Accumurator
 
-    >>> cmds = Command(
-    (['ls /dev/null', 'ls /dev/zero'])
-    >>> oes = shell_recur(['ls /dev/null', 'ls /dev/zero'])  # :: [(o,e)]
-    [("/dev/null", ""), ("/dev/zero", "")]
+    >>> cmds = [Command(c, get_username()) for c in ('ls /dev/null', 'ls /dev/zero')]
     """
     if not cmds:
-        return res_acc
+        return acc
 
     try:
-        (o,e) = rshell(cmds[0].run)
-        return rshell_recur(cmds[1:], res_acc + [(o,e)])
+        (o,e) = cmds[0].run()
+        return shell_recur(cmds[1:], acc + [(o,e)])
 
     except RuntimeError, e:
-        return res_acc + [(o,e)]
+        return acc + [("", e)]
 
 
 def pshell(cmdss, timeout=60*10):
@@ -176,7 +179,9 @@ def pshell(cmdss, timeout=60*10):
     @cmds  [[cmd]]  A list of list of Command objects.
     @timeout  int   Timeout to wait for all jobs completed.
 
-    >>> oes = pshell([['ls /dev/null', 'ls /dev/zero'], ['echo OK']])  # :: [(o,e)]
+    >>> cmds = [[Command(c, get_username()) for c in ('ls /dev/null', 'ls /dev/zero')]]
+    >>> cmds += [[Command('echo OK', get_username())]]
+    >>> oes = pshell(cmds)
     """
     cpus = multiprocessing.cpu_count()
 
@@ -184,10 +189,9 @@ def pshell(cmdss, timeout=60*10):
     if n > cpus:
         n = cpus
 
-    logging.debug("# of workers = %d, jobs:\n%s" % \
-        (n, "\n\t".join(concat([[str(c) for c in cmds] for cmds in cmdss]))))
+    logging.debug("# of workers = %d" % n)
 
-    results = multiprocessing.Pool(n).apply_async(rshell_recur, cmdss)
+    results = multiprocessing.Pool(n).apply_async(shell_recur, cmdss)
     return results.get(timeout=timeout)
 
 
@@ -587,6 +591,10 @@ def init_defaults_by_conffile(profile=None):
     return defaults
 
 
+def test(verbose):
+    doctest.testmod(verbose=verbose)
+
+
 def opt_parser():
     defaults = init_defaults_by_conffile()
 
@@ -677,6 +685,10 @@ def main(argv=sys.argv[1:]):
     if argv[0].startswith('-h') or argv[0].startswith('--h'):
         p.print_help()
         sys.exit(0)
+
+    if argv[0].startswith('-T') or argv[0].startswith('--test'):
+        test(True)
+        sys.exit()
 
     a0 = argv[0]
     if a0.startswith('i'):
