@@ -2101,6 +2101,12 @@ def do_packaging_self(options, latest=False):
     createdir(instdir)
     shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
 
+    if options.tests:
+        (o,e) = shell("python %s --tests --debug" % sys.argv[0])
+        # TODO:
+        # if pred(o,e): 
+        #     ...
+
     cmd = "echo %s/xpack | python %s -n xpack %s -" % (instdir, sys.argv[0], cmd_opts)
 
     logging.info(" executing: %s" % cmd)
