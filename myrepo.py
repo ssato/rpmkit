@@ -189,10 +189,9 @@ def pshell(cmdss, timeout=60*10):
     if n > cpus:
         n = cpus
 
-    logging.debug("# of workers = %d" % n)
+    logging.info("# of workers = %d" % n)
 
-    results = multiprocessing.Pool(n).apply_async(shell_recur, cmdss)
-    return results.get(timeout=timeout)
+    return multiprocessing.Pool(n).apply_async(shell_recur, cmdss).get(timeout=timeout)
 
 
 def rm_rf(dir):
@@ -275,7 +274,7 @@ def rpm_header_from_rpmfile(rpmfile):
 def is_noarch(srpm):
     """Determine if given srpm is noarch (arch-independent).
     """
-    return h[rpm.RPMTAG_ARCH] == 'noarch'
+    return rpm_header_from_rpmfile(sprm)[rpm.RPMTAG_ARCH] == 'noarch'
 
 
 
@@ -293,6 +292,13 @@ class TestFuncsWithSideEffects(unittest.TestCase):
 class Distribution(object):
 
     def __init__(self, dist):
+        """
+        >>> d = Distribution('fedora-14-i386')
+        >>> d.label
+        'fedora-14-i386'
+        >>> (d.name, d.version, d.arch)
+        ('fedora', '14', 'i386')
+        """
         self.label = dist
         (self.name, self.version, self.arch) = self.parse(dist)
 
@@ -319,9 +325,33 @@ class Distribution(object):
         return "mock -r %s %s" % (self.label, srpm)
 
 
+def repo_baseurl(server, user, repo_topdir, dist_s, scheme='http'):
+    """Base URL of repository such like "http://yum-repo-server.local/yum/foo".
 
-class Repo(object):
-    """Yum repository.
+    >>> repo_baseurl("yum-server.local", "bar", "~/public_html/repo", 'rhel-6-x86_64')
+    'http://yum-server.local/bar/repo/rhel/6/'
+    """
+    dir = repo_topdir.split(os.path.sep)[-1]
+    d = Distribution(dist_s)
+
+    return "%s://%s/%s/%s/%s/%s/" % (scheme, server, user, dir, d.name, d.version)
+
+
+def repo_name(server, user, dist_s):
+    """Repository name.
+
+    >>> repo_name("rhns.local", "foo", "rhel-5-i386")
+    'rhel-rhns-foo'
+    """
+    (n, v, a) = Distribution.parse(dist_s)
+    ss = server.split('.')[0]
+
+    return "%s-%s-%s" % (n, ss, user)
+
+
+
+class RepoManager(object):
+    """Yum repository related commands.
     """
 
     server = 'localhost'
@@ -331,10 +361,8 @@ class Repo(object):
     dir = '~/public_html/yum'
     dist = 'fedora-14-x86_64'
 
-    baseurl = "http://%s/%s/%s/%s" % (server, user, \
-        dir.split(os.path.sep)[-1], os.path.sep.join(dist.split('-')[:2]))
-
-    name = "%s-%s-%s" % (dist.split('-')[0], server.split('.')[0], user)
+    baseurl = repo_baseurl(server, user, dir, dist)
+    name = repo_name(server, user, dist)
 
     def __init__(self, server=None, user=None, mail=None,
                     fullname=None, baseurl=None, name=None,
@@ -367,12 +395,6 @@ class Repo(object):
         else:
             self.dist = Distribution(Repo.dist)
 
-        if baseurl is None:
-            self.baseurl = "http://%s/%s/yum/%s/%s/" % \
-                (self.server, self.user, self.dist.name, self.dist.version)
-        else:
-            self.baseurl = baseurl
-
         if name is None:
             self.name = "%s-%s-%s" % (self.dist.name, self.server.split('.')[0], self.user)
         else:
@@ -380,6 +402,11 @@ class Repo(object):
 
         if dir is None:
             dir = Repo.dir
+
+        if baseurl is None:
+            self.baseurl = repo_baseurl(self.server, self.user, self.dir, self.dist)
+        else:
+            self.baseurl = baseurl
 
         self.topdir = os.path.join(dir, self.dist.name, self.dists.version)
         self.is_remote = not self.server.startswith('localhost')
@@ -413,13 +440,14 @@ class Repo(object):
 
         return cmds
 
-    def deploy_release_package_cmds(self,
-            workdir=tempfile.mkdtemp(dir='/tmp', prefix='yum-repo-release-'),
-            tmpl=None):
+    def deploy_release_package_cmds(self, workdir=None, tmpl=None):
         """Generate (yum repo) release package.
 
         @tmpl     str   Template string
         """
+        if workdir is None:
+            workdir=tempfile.mkdtemp(dir='/tmp', prefix='yum-repo-release-')
+
         cmds = []
 
         if tmpl is None:
@@ -616,28 +644,28 @@ Examples:
     )
 
     if not defaults.get('server'):
-        defaults['server'] = Repo.server
+        defaults['server'] = RepoManager.server
 
     if not defaults.get('uesr'):
-        defaults['user'] = Repo.user
+        defaults['user'] = RepoManager.user
 
     if not defaults.get('mail'):
-        defaults['mail'] = Repo.mail
+        defaults['mail'] = RepoManager.mail
 
     if not defaults.get('fullname'):
-        defaults['fullname'] = Repo.fullname
+        defaults['fullname'] = RepoManager.fullname
 
     if not defaults.get('repodir'):
-        defaults['repodir'] = Repo.dir
+        defaults['repodir'] = RepoManager.dir
 
-    defaults['dists'] = Repo.dist
+    defaults['dists'] = RepoManager.dist
     defaults['tests'] = False
-    defaults['name'] = Repo.name
+    defaults['name'] = RepoManager.name
     defaults['no_release_pkg'] = False
     defaults['verbose'] = True
 
     if not defaults.get('baseurl'):
-        defaults['baseurl'] = Repo.baseurl
+        defaults['baseurl'] = RepoManager.baseurl
 
     p.set_defaults(**defaults)
 
@@ -713,7 +741,7 @@ def main(argv=sys.argv[1:]):
 
     config['topdir'] = config['repodir']
 
-    repos = [Repo(dist=d, **config) for d in config['dists']]
+    repos = [RepoManager(dist=d, **config) for d in config['dists']]
     repocmds = LazyRepoCommands(repos)
  
     multiprocessing.log_to_stderr()
@@ -739,7 +767,7 @@ def main(argv=sys.argv[1:]):
 
     config['topdir'] = config['repodir']
 
-    repo = Repo(**config)
+    repo = RepoManager(**config)
 
     multiprocessing.log_to_stderr()
     logger = multiprocessing.get_logger()
