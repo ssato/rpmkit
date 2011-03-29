@@ -37,6 +37,7 @@ import logging
 import multiprocessing
 import optparse
 import os
+import pprint
 import re
 import rpm
 import subprocess
@@ -190,7 +191,7 @@ def pshell(cmdss, timeout=60*10):
         n = cpus
 
     logging.info("# of workers = %d" % n)
-
+    pprint.pprint(cmdss)
     return multiprocessing.Pool(n).apply_async(shell_recur, cmdss).get(timeout=timeout)
 
 
@@ -237,7 +238,7 @@ def get_username():
     return os.environ.get('USER', False) or os.getlogin()
 
 
-def get_mail(use_git=USE_GIT):
+def get_email(use_git=USE_GIT):
     if use_git:
         try:
             (email, e) = shell('git config --get user.email 2>/dev/null')
@@ -358,7 +359,7 @@ class Repo(object):
 
     server = 'localhost'
     user = get_username()
-    mail = get_mail()
+    mail = get_email()
     fullname  = get_fullname()
     dir = '~/public_html/yum'
     dist = 'fedora-14-x86_64'
@@ -368,7 +369,7 @@ class Repo(object):
 
     def __init__(self, server=None, user=None, mail=None,
                     fullname=None, baseurl=None, name=None,
-                    dir=None, dist=None,
+                    dir=None, dist=None, dryrun=False,
                     *args, **kwargs):
         """
         @server    server's fqdn to provide this yum repo via http
@@ -379,6 +380,7 @@ class Repo(object):
         @name      repository name, e.g. 'rpmfusion-free'
         @dir       repo topdir, e.g. ~/public_html/yum/.
         @dist      distribution string, e.g. 'fedora-14-x86_64'
+        @dryrun    dryrun mode
         """
         if server is not None:
             self.server = server
@@ -410,7 +412,9 @@ class Repo(object):
         else:
             self.baseurl = baseurl
 
-        self.topdir = os.path.join(dir, self.dist.name, self.dists.version)
+        self.dryrun = dryrun
+
+        self.topdir = os.path.join(dir, self.dist.name, self.dist.version)
         self.is_remote = not self.server.startswith('localhost')
 
     def copy_cmd(self, src, dst):
@@ -419,7 +423,7 @@ class Repo(object):
         else:
             cmd = "cp -a %s %s" % (src, dst)
 
-        return Command(cmd, self.user, "localhost", '.')
+        return Command(cmd, self.user)
 
     def build_cmd(self, srpm):
         return self.dist.build_cmd(srpm)
@@ -489,7 +493,7 @@ xpack -n ${repo.name}-release --license MIT -w ${repo.workdir} \
     --no-rpmdb --no-mock --upto sbuild --debug \
     --destdir ${repo.workdir} - """
 
-        cmd = Command(compile_template(tmpl, params), self.user, "localhost", '.')
+        cmd = Command(compile_template(tmpl, params), self.user)
         cmds.append(cmd)
 
         srpm = "%s/%s-%s/%s-release*.src.rpm" % (workdir, self.name, self.dist.version, self.name)
@@ -528,7 +532,8 @@ class RepoManager(object):
             ["mkdir -p %s" % os.path.join(self.topdir, arch) for arch in self.archs]
         cmds = [Command(c, self.user, self.server, '~') for c in cs]
 
-        return cmds + [repo.deploy_release_package_cmds() for repo in self.repos]
+        css = [[c] for c in cmds + [repo.deploy_release_package_cmds() for repo in self.repos]]
+        return pshell(css, timeout=60*5)
 
     def update(self):
         """
@@ -543,13 +548,16 @@ class RepoManager(object):
             c = Command("cd %s/i386 && ln -sf ../x86_64/*.noarch.rpm ./" % self.topdir, self.user, self.server, '~')
             cmds.append(c)
 
-        return cmds
+        css = [[c] for c in cmds]
+        return pshell(css, timeout=10)
 
     def build(self, srpm):
-        return [r.build_cmd(srpm) for r in self.repos]
+        css = [[r.build_cmd(srpm)] for r in self.repos]
+        return pshell(css, timeout=10)
 
     def deploy(self, srpm):
-        return concat([r.deploy_cmds(srpm) for r in self.repos])
+        css = [[c] for c in concat([r.deploy_cmds(srpm) for r in self.repos])]
+        return pshell(css, timeout=10)
 
 
 
@@ -753,12 +761,10 @@ def main(argv=sys.argv[1:]):
         logger.setLevel(logging.WARNING)
 
     if cmd == CMD_INIT:
-        cs = rmgr.init()
-        shell_recur(cs)
+        rmgr.init()
 
     elif cmd == CMD_UPDATE:
-        cs = rmgr.update()
-        shell_recur(cs)
+        rmgr.update()
 
     else:
         if not args:
@@ -771,9 +777,8 @@ def main(argv=sys.argv[1:]):
         elif cmd == CMD_DEPLOY:
             f = rmgr.deploy
 
-        css = [f(srpm) for srpm in args]
-        for cs in css:
-            shell_recur(cs)
+        for srpm in args:
+            f(srpm)
 
 
 if __name__ == '__main__':
