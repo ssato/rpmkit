@@ -322,7 +322,9 @@ class Distribution(object):
         return "/var/lib/mock/%s/result" % self.label
 
     def build_cmd(self, srpm):
-        return "mock -r %s %s" % (self.label, srpm)
+        cmd = "mock -r %s %s" % (self.label, srpm)
+        return Command(cmd, self.user, "localhost", '.')
+
 
 
 def repo_baseurl(server, user, repo_topdir, dist_s, scheme='http'):
@@ -350,8 +352,8 @@ def repo_name(server, user, dist_s):
 
 
 
-class RepoManager(object):
-    """Yum repository related commands.
+class Repo(object):
+    """Yum repository object.
     """
 
     server = 'localhost'
@@ -396,7 +398,7 @@ class RepoManager(object):
             self.dist = Distribution(Repo.dist)
 
         if name is None:
-            self.name = "%s-%s-%s" % (self.dist.name, self.server.split('.')[0], self.user)
+            self.name = repo_name(self.server, self.user, self.dist)
         else:
             self.name = name
 
@@ -417,7 +419,7 @@ class RepoManager(object):
         else:
             cmd = "cp -a %s %s" % (src, dst)
 
-        return cmd
+        return Command(cmd, self.user, "localhost", '.')
 
     def build_cmd(self, srpm):
         return self.dist.build_cmd(srpm)
@@ -487,7 +489,7 @@ xpack -n ${repo.name}-release --license MIT -w ${repo.workdir} \
     --no-rpmdb --no-mock --upto sbuild --debug \
     --destdir ${repo.workdir} - """
 
-        cmd = compile_template(tmpl, params)
+        cmd = Command(compile_template(tmpl, params), self.user, "localhost", '.')
         cmds.append(cmd)
 
         srpm = "%s/%s-%s/%s-release*.src.rpm" % (workdir, self.name, self.dist.version, self.name)
@@ -498,11 +500,11 @@ xpack -n ${repo.name}-release --license MIT -w ${repo.workdir} \
 
 
 
-class LazyRepoCommands(object):
+class RepoManager(object):
 
     def __init__(self, repos=[]):
         """
-        @repos  [Repo]  Repository objects
+        @repos  [Repo]  Repo objects
         """
         self.repos = repos
 
@@ -518,41 +520,36 @@ class LazyRepoCommands(object):
 
         self.archs = [repo.dist.arch for repo in self.repos]
 
-    def make_Commands(self, cmds, host=None):
-        (h, w) = host is None and (self.server, '~') or (host, os.curdir)
-
-        return [Command(cmd, self.user, h, w) for cmd in cmds]
-
     def init(self):
         """
         @return  [Command]  Command objects to initialize these repos.
         """
-        cmds = ["mkdir -p %s" % os.path.join(self.topdir, 'sources')] + \
+        cs = ["mkdir -p %s" % os.path.join(self.topdir, 'sources')] + \
             ["mkdir -p %s" % os.path.join(self.topdir, arch) for arch in self.archs]
+        cmds = [Command(c, self.user, self.server, '~') for c in cs]
 
-        rcs = self.make_Commands(cmds)  # remote
-        lcs = self.make_Commands([repo.deploy_release_package_cmds() for repo in self.repos], 'localhost')
-        
-        return rcs + lcs
+        return cmds + [repo.deploy_release_package_cmds() for repo in self.repos]
 
     def update(self):
         """
         'createrepo --update ...', etc.
         """
         cfmt = "test -d %(d)s/repodata && createrepo --update --deltas %(d)s || createrepo --deltas %(d)s"
-        cmds = [cfmt % {'d': os.path.join(self.topdir, d)} for d in ['sources'] + self.archs]
+        cs = [cfmt % {'d': os.path.join(self.topdir, d)} for d in ['sources'] + self.archs]
+        cmds = [Command(c, self.user, self.server, '~') for c in cs]
 
         # hack:
         if 'i386' in self.archs and 'x86_64' in self.archs:
-            cmds.append("cd %s/i386 && ln -sf ../x86_64/*.noarch.rpm ./" % self.topdir)
+            c = Command("cd %s/i386 && ln -sf ../x86_64/*.noarch.rpm ./" % self.topdir, self.user, self.server, '~')
+            cmds.append(c)
 
-        return self.make_Commands(cmds)
+        return cmds
 
     def build(self, srpm):
-        return self.make_Commands((r.build_cmd(srpm) for r in self.repos), 'localhost')
+        return [r.build_cmd(srpm) for r in self.repos]
 
     def deploy(self, srpm):
-        return self.make_Commands(concat([r.deploy_cmds(srpm) for r in self.repos]))
+        return concat([r.deploy_cmds(srpm) for r in self.repos])
 
 
 
@@ -638,43 +635,34 @@ Examples:
   %prog build xpack-0.1-1.src.rpm 
 
   # build SRPM and deploy RPMs and SRPMs into your yum repos:
-  %prog deploy --dist fedora-14 xpack-0.1-1.src.rpm 
-  %prog d --dist rhel-6 --archs x86_64 xpack-0.1-1.src.rpm 
+  %prog deploy --dists fedora-14 xpack-0.1-1.src.rpm 
+  %prog d --dists rhel-6 --archs x86_64 xpack-0.1-1.src.rpm 
   """
     )
 
     if not defaults.get('server'):
-        defaults['server'] = RepoManager.server
+        defaults['server'] = Repo.server
 
     if not defaults.get('uesr'):
-        defaults['user'] = RepoManager.user
+        defaults['user'] = Repo.user
 
     if not defaults.get('mail'):
-        defaults['mail'] = RepoManager.mail
+        defaults['mail'] = Repo.mail
 
     if not defaults.get('fullname'):
-        defaults['fullname'] = RepoManager.fullname
+        defaults['fullname'] = Repo.fullname
 
     if not defaults.get('repodir'):
-        defaults['repodir'] = RepoManager.dir
+        defaults['repodir'] = Repo.dir
 
-    defaults['dists'] = RepoManager.dist
+    defaults['dists'] = Repo.dist
     defaults['tests'] = False
-    defaults['name'] = RepoManager.name
+    defaults['name'] = Repo.name
     defaults['no_release_pkg'] = False
     defaults['verbose'] = True
 
     if not defaults.get('baseurl'):
-        defaults['baseurl'] = RepoManager.baseurl
-
-    p.set_defaults(**defaults)
-
-    defaults['dist'] = "fedora-14"
-    defaults['archs'] = "i386,x86_64"
-    defaults['tests'] = False
-    defaults['reponame'] = ""
-    defaults['no_release_pkg'] = False
-    defaults['verbose'] = True
+        defaults['baseurl'] = Repo.baseurl
 
     p.set_defaults(**defaults)
 
@@ -733,16 +721,26 @@ def main(argv=sys.argv[1:]):
 
     config = copy.copy(options.__dict__)
 
-    if not options.dist:
-        config['dist'] = raw_input("Distribution > ")
+    if not options.dists:
+        config['dists'] = raw_input("Distributions > ")
 
     if not options.name:
         config['name'] = raw_input("Repository name > ")
 
     config['topdir'] = config['repodir']
 
-    repos = [RepoManager(dist=d, **config) for d in config['dists']]
-    repocmds = LazyRepoCommands(repos)
+    params = (
+        options.server,
+        options.user,
+        options.mail,
+        options.fullname,
+        options.baseurl,
+        options.name,
+        config['topdir']
+    )
+
+    repos = [Repo(*params, dist=dist) for dist in config['dists'].split(',')]
+    rmgr = RepoManager(repos)
  
     multiprocessing.log_to_stderr()
     logger = multiprocessing.get_logger()
@@ -755,35 +753,12 @@ def main(argv=sys.argv[1:]):
         logger.setLevel(logging.WARNING)
 
     if cmd == CMD_INIT:
-        cs = repocmds.init()
+        cs = rmgr.init()
         shell_recur(cs)
 
     elif cmd == CMD_UPDATE:
-        cs = repocmds.update()
+        cs = rmgr.update()
         shell_recur(cs)
-
-    if not options.reponame:
-        config['reponame'] = raw_input("Repository name > ")
-
-    config['topdir'] = config['repodir']
-
-    repo = RepoManager(**config)
-
-    multiprocessing.log_to_stderr()
-    logger = multiprocessing.get_logger()
-
-    if options.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logger.setLevel(logging.INFO)
-    else:
-        logging.getLogger().setLevel(logging.WARNING)
-        logger.setLevel(logging.WARNING)
-
-    if cmd == CMD_INIT:
-        repo.init()
-
-    elif cmd == CMD_UPDATE:
-        repo.update()
 
     else:
         if not args:
@@ -791,13 +766,14 @@ def main(argv=sys.argv[1:]):
             sys.exit(1)
 
         if cmd == CMD_DEPLOY:
-            f = repocmds.build
+            f = rmgr.build
 
         elif cmd == CMD_DEPLOY:
-            f = repocmds.deploy
+            f = rmgr.deploy
 
-        cs = [f(srpm) for srpm in args]
-        shell_recur(cs)
+        css = [f(srpm) for srpm in args]
+        for cs in css:
+            shell_recur(cs)
 
 
 if __name__ == '__main__':
