@@ -176,12 +176,12 @@ def shell_recur(cmds=[], acc=[]):
 
 def pshell(cmdss, timeout=60*10):
     """
-    @cmds  [[cmd]]  A list of list of Command objects.
-    @timeout  int   Timeout to wait for all jobs completed.
+    @cmdss  [[cmd]]  A list of list of Command objects.
+    @timeout  int    Timeout to wait for all jobs completed.
 
-    >>> cmds = [[Command(c, get_username()) for c in ('ls /dev/null', 'ls /dev/zero')]]
-    >>> cmds += [[Command('echo OK', get_username())]]
-    >>> oes = pshell(cmds)
+    >>> cmdss = [[Command(c, get_username()) for c in ('ls /dev/null', 'ls /dev/zero')]]
+    >>> cmdss += [[Command('echo OK', get_username())]]
+    >>> oes = pshell(cmdss)
     """
     cpus = multiprocessing.cpu_count()
 
