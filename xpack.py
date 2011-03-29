@@ -2101,12 +2101,6 @@ def do_packaging_self(options, latest=False):
     createdir(instdir)
     shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
 
-    if options.tests:
-        (o,e) = shell("python %s --tests --debug" % sys.argv[0])
-        # TODO:
-        # if pred(o,e): 
-        #     ...
-
     cmd = "echo %s/xpack | python %s -n xpack %s -" % (instdir, sys.argv[0], cmd_opts)
 
     logging.info(" executing: %s" % cmd)
@@ -2243,6 +2237,11 @@ def run_unittests(verbose):
         unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
     else:
         unittest.main(argv=sys.argv[:1])
+
+
+def run_alltests(verbose):
+    run_doctests(verbose)
+    run_unittests(verbose)
 
 
 def parse_conf_value(s):
@@ -2512,9 +2511,17 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
         verbose_test = True
 
+    if options.build_self:
+        if options.tests:
+            rc = os.system("python %s --tests --debug" % sys.argv[0])
+            if rc != 0:
+                sys.exit(rc)
+
+        do_packaging_self(options, latest=True)
+        sys.exit()
+
     if options.tests:
-        run_doctests(verbose_test)
-        run_unittests(verbose_test)
+        run_alltests(verbose_test)
         sys.exit()
 
     if options.doctests:
@@ -2523,10 +2530,6 @@ def main():
 
     if options.unittests:
         run_unittests(verbose_test)
-        sys.exit()
-
-    if options.build_self:
-        do_packaging_self(options, latest=True)
         sys.exit()
 
     if len(args) < 1:
