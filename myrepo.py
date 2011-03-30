@@ -206,10 +206,20 @@ def pshell(css, stop_on_error=True, timeout=60*5):
 
     for cs in css:
         if isinstance(cs, Command):
-            results.append(pshell_single((cs, stop_on_error, timeout)))
+            logging.info("Single run: '%s', stop_on_error=%s, timeout=%d" % (cs, stop_on_error, timeout))
+
+            ret = pshell_single((cs, stop_on_error, timeout))
+            results.append(ret)
+
+            logging.info("Result of '%s': %s" % (cs, ret))
         else:
+            logging.info("Run in parallel: %s" % ", ".join((str(c) for c in cs)))
+
             cs2 = [(c, stop_on_error, timeout) for c in cs]
-            results += multiprocessing.Pool(ncpus).map_async(pshell_single, cs2).get(timeout=timeout)
+            rets = multiprocessing.Pool(ncpus).map_async(pshell_single, cs2).get(timeout=timeout)
+            results += rets
+
+            logging.info("Result of '%s': %s" % (cs, ", ".join((str(r) for r in rets))))
 
     return results
 
@@ -351,12 +361,12 @@ def repo_baseurl(server, user, repo_topdir, dist_s, scheme='http'):
     """Base URL of repository such like "http://yum-repo-server.local/yum/foo".
 
     >>> repo_baseurl("yum-server.local", "bar", "~/public_html/repo", 'rhel-6-x86_64')
-    'http://yum-server.local/bar/repo/rhel/6/'
+    'http://yum-server.local/bar/repo/rhel/6'
     """
     dir = repo_topdir.split(os.path.sep)[-1]
     d = Distribution(dist_s)
 
-    return "%s://%s/%s/%s/%s/%s/" % (scheme, server, user, dir, d.name, d.version)
+    return "%s://%s/%s/%s/%s/%s" % (scheme, server, user, dir, d.name, d.version)
 
 
 def repo_name(server, user, dist_s):
@@ -452,18 +462,18 @@ class Repo(object):
         arch = self.dist.arch
         repodir = self.topdir
 
-        cmds = []
+        cs = []
 
         if d.deploy_srpm:
             srpm = glob.glob("%s/*.src.rpm" % mockdir)[0]  # FIXME
             cmd = self.copy_cmd(srpm, os.path.join(repodir, "sources"))
-            cmds.append(cmd)
+            cs.append(cmd)
 
         for _rpm in glob.glob("%s/*.noarch.rpm" % mockdir) + glob.glob("%s/*.%s.rpm" % (mockdir, arch)):
             cmd = self.copy_cmd(_rpm, os.path.join(repodir, arch))
-            cmds.append(cmd)
+            cs.append(cmd)
 
-        return cmds
+        return [cs]  # run in parallel.
 
     def deploy_release_package_cmds(self, workdir=None, tmpl=None):
         """Generate (yum repo) release package.
@@ -473,7 +483,7 @@ class Repo(object):
         if workdir is None:
             workdir=tempfile.mkdtemp(dir='/tmp', prefix='yum-repo-release-')
 
-        cmds = []
+        cs = []
 
         if tmpl is None:
             tmpl = """
@@ -513,13 +523,13 @@ xpack -n ${repo.name}-release --license MIT -w ${repo.workdir} \
     --destdir ${repo.workdir} - """
 
         cmd = Command(compile_template(tmpl, params), self.user)
-        cmds.append(cmd)
+        cs.append(cmd)
 
-        srpm = "%s/%s-%s/%s-release*.src.rpm" % (workdir, self.name, self.dist.version, self.name)
+        srpm = "%s/%s-%s/%s-release\*.src.rpm" % (workdir, self.name, self.dist.version, self.name)
         cmd = self.copy_cmd(srpm, os.path.join(self.topdir, "sources"))
-        cmds.append(cmd)
+        cs.append(cmd)
 
-        return cmds
+        return cs  # run sequentially.
 
 
 
@@ -549,9 +559,10 @@ class RepoManager(object):
         """
         cs = ["mkdir -p %s" % os.path.join(self.topdir, 'sources')] + \
             ["mkdir -p %s" % os.path.join(self.topdir, arch) for arch in self.archs]
-        cmds = [Command(c, self.user, self.server, '~') for c in cs]
+        css = [[Command(c, self.user, self.server, '~') for c in cs]]
 
-        css = [[c] for c in cmds + [repo.deploy_release_package_cmds() for repo in self.repos]]
+        css += [repo.deploy_release_package_cmds() for repo in self.repos]
+
         return pshell(css, timeout=60*5)
 
     def update(self):
@@ -559,24 +570,23 @@ class RepoManager(object):
         'createrepo --update ...', etc.
         """
         cfmt = "test -d %(d)s/repodata && createrepo --update --deltas %(d)s || createrepo --deltas %(d)s"
-        cs = [cfmt % {'d': os.path.join(self.topdir, d)} for d in ['sources'] + self.archs]
-        cmds = [Command(c, self.user, self.server, '~') for c in cs]
+        ss = [cfmt % {'d': os.path.join(self.topdir, d)} for d in ['sources'] + self.archs]
+        cs = [Command(c, self.user, self.server, '~') for c in ss]
 
         # hack:
         if 'i386' in self.archs and 'x86_64' in self.archs:
             c = Command("cd %s/i386 && ln -sf ../x86_64/*.noarch.rpm ./" % self.topdir, self.user, self.server, '~')
-            cmds.append(c)
+            cs.append(c)
 
-        css = [[c] for c in cmds]
-        return pshell(css, timeout=10)
+        return pshell([cs], timeout=10)  # run in parallel
 
     def build(self, srpm):
-        css = [[r.build_cmd(srpm)] for r in self.repos]
-        return pshell(css, timeout=10)
+        cs = [r.build_cmd(srpm) for r in self.repos]
+        return pshell([cs], timeout=10)  # Likewise
 
     def deploy(self, srpm):
-        css = [[c] for c in concat([r.deploy_cmds(srpm) for r in self.repos])]
-        return pshell(css, timeout=10)
+        cs = concat(concat([r.deploy_cmds(srpm) for r in self.repos]))
+        return pshell([cs], timeout=10)  # Likewise
 
 
 
@@ -686,7 +696,8 @@ Examples:
     defaults['tests'] = False
     defaults['name'] = Repo.name
     defaults['no_release_pkg'] = False
-    defaults['verbose'] = True
+    defaults['verbose'] = False
+    defaults['debug'] = False
 
     if not defaults.get('baseurl'):
         defaults['baseurl'] = Repo.baseurl
@@ -703,6 +714,7 @@ Examples:
 
     p.add_option('-q', '--quiet', dest="verbose", action='store_false', help='Quiet mode')
     p.add_option('-v', '--verbose', action='store_true', help='Verbose mode')
+    p.add_option('-D', '--debug', action='store_true', help='Debug mode')
 
     p.add_option('-T', '--tests', action='store_true', help='Run test suite')
 
@@ -769,15 +781,13 @@ def main(argv=sys.argv[1:]):
     repos = [Repo(*params, dist=dist) for dist in config['dists'].split(',')]
     rmgr = RepoManager(repos)
  
-    multiprocessing.log_to_stderr()
-    logger = multiprocessing.get_logger()
-
     if options.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logger.setLevel(logging.INFO)
+        logging.getLogger().setLevel(logging.INFO)
     else:
         logging.getLogger().setLevel(logging.WARNING)
-        logger.setLevel(logging.WARNING)
+
+    if options.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     if cmd == CMD_INIT:
         rmgr.init()
