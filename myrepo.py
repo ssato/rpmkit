@@ -157,42 +157,61 @@ class Command(object):
 
 
 
-def shell_recur(cmds=[], acc=[]):
+def pshell_single(args):
     """
-    @cmds [Command]     A list of Command objects.
-    @acc  [(str,str)]   Accumurator
+    @args[0]  Command  A Command object to run
+    @args[1]  bool     Whether to stop at once if any error occurs.
+    @args[2]  int      Timeout to wait for given job completion.
 
-    >>> cmds = [Command(c, get_username()) for c in ('ls /dev/null', 'ls /dev/zero')]
+    >>> c = Command('echo OK', get_username())
+    >>> res = pshell_single((c,))
+    >>> assert res == (str(c), "OK\\n", ""), str(res)
     """
-    if not cmds:
-        return acc
+    # Hack:
+    cmd = args[0]
+    stop_on_error = (len(args) >= 2 and args[1] or True)
+    timeout = (len(args) >= 3 and args[2] or 60)
 
+    s = str(cmd)
     try:
-        (o,e) = cmds[0].run()
-        return shell_recur(cmds[1:], acc + [(o,e)])
+        (o,e) = cmd.run()
+        return (s,o,e)
 
     except RuntimeError, e:
-        return acc + [("", e)]
+        if stop_on_error:
+            raise
+        else:
+            return (s, "", str(e))
 
 
-def pshell(cmdss, timeout=60*10):
+def pshell(css, stop_on_error=True, timeout=60*5):
     """
-    @cmdss  [[cmd]]  A list of list of Command objects.
-    @timeout  int    Timeout to wait for all jobs completed.
+    @css  [x] where x = [cmd] or cmd   A list of Command objects or list of Command objects.
+    @stop_on_error  bool  Whether to stop at once if any error occurs.
+    @timeout int  Timeout to wait for all jobs completed.
 
-    >>> cmdss = [[Command(c, get_username()) for c in ('ls /dev/null', 'ls /dev/zero')]]
-    >>> cmdss += [[Command('echo OK', get_username())]]
-    >>> oes = pshell(cmdss)
+    >>> f = lambda x: Command("echo -ne \\"%s\\"" % str(x), get_username())
+    >>> cs = [f(0), f(1), f(2), f(3)]
+    >>> css = [f(0), [f(1), f(2)], f(3)]
+    >>> res = pshell(css)
+    >>> assert res == [(str(c), str(x), "") for c, x in zip(cs, range(0,4))], str(res)
     """
-    cpus = multiprocessing.cpu_count()
+    ncpus = multiprocessing.cpu_count()
+    logging.info("# of workers = %d" % ncpus)
 
-    n = len(cmdss)
-    if n > cpus:
-        n = cpus
+    multiprocessing.log_to_stderr()
+    multiprocessing.get_logger().setLevel(logging.getLogger().level)
 
-    logging.info("# of workers = %d" % n)
-    pprint.pprint(cmdss)
-    return multiprocessing.Pool(n).apply_async(shell_recur, cmdss).get(timeout=timeout)
+    results = []
+
+    for cs in css:
+        if isinstance(cs, Command):
+            results.append(pshell_single((cs, stop_on_error, timeout)))
+        else:
+            cs2 = [(c, stop_on_error, timeout) for c in cs]
+            results += multiprocessing.Pool(ncpus).map_async(pshell_single, cs2).get(timeout=timeout)
+
+    return results
 
 
 def rm_rf(dir):
