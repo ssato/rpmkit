@@ -37,6 +37,7 @@ import logging
 import multiprocessing
 import optparse
 import os
+import os.path
 import pprint
 import re
 import rpm
@@ -81,12 +82,13 @@ def compile_template(template, params, is_file=False):
     return tmpl.respond()
 
 
-def shell(cmd, workdir="", log=True, dryrun=False):
+def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
     """
     @cmd      str   command string, e.g. 'ls -l ~'.
     @workdir  str   in which dir to run given command?
     @log      bool  whether to print log messages or not.
     @dryrun   bool  if True, just print command string to run and returns.
+    @stop_on_error bool  if True, RuntimeError will not be raised.
     
     TODO: Popen.communicate might be blocked. How about using Popen.wait
     instead?
@@ -119,10 +121,14 @@ def shell(cmd, workdir="", log=True, dryrun=False):
     if pipe.returncode == 0:
         return (output, errors)
     else:
-        raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd, errors))
+        if stop_on_error:
+            raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd, errors))
+        else:
+            logging.error(" cmd=%s, error=%s" % (cmd, errors))
+            return ("", errors)
 
 
-def rshell(cmd, user, host, workdir, log=True, dryrun=False):
+def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True):
     """
     @user     str  (remote) user to run given command.
     @host     str  on which host to run given command?
@@ -130,9 +136,9 @@ def rshell(cmd, user, host, workdir, log=True, dryrun=False):
     is_remote = not host.startswith('localhost')
 
     if is_remote:
-        cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
+        cmd = "ssh %s@%s \"cd %s && %s\"" % (user, host, workdir, cmd)
 
-    return shell(cmd, workdir='.', log=log, dryrun=dryrun)
+    return shell(cmd, workdir='.', log=log, dryrun=dryrun, stop_on_error=stop_on_error)
 
 
 
@@ -140,20 +146,21 @@ class Command(object):
     """Object to wrap command to run.
     """
 
-    def __init__(self, cmd, user, host="localhost", workdir=os.curdir,
-            log=True, dryrun=False):
+    def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
+            log=True, dryrun=False, stop_on_error=True):
         self.cmd = cmd
-        self.user = user
+        self.user = get_username()
         self.host = host
         self.workdir = workdir
         self.log = log
         self.dryrun = dryrun
+        self.stop_on_error = stop_on_error
 
     def __str__(self):
         return "%s in %s on %s@%s" % (self.cmd, self.workdir, self.user, self.host)
 
     def run(self):
-        return rshell(self.cmd, self.user, self.host, self.workdir, self.log, self.dryrun)
+        return rshell(self.cmd, self.user, self.host, self.workdir, self.log, self.dryrun, self.stop_on_error)
 
 
 
@@ -320,131 +327,140 @@ class TestFuncsWithSideEffects(unittest.TestCase):
 
 
 class Distribution(object):
+    """Distribution object.
 
-    def __init__(self, dist):
-        """
-        >>> d = Distribution('fedora-14-i386')
-        >>> d.label
-        'fedora-14-i386'
-        >>> (d.name, d.version, d.arch)
-        ('fedora', '14', 'i386')
-        """
-        self.label = dist
-        (self.name, self.version, self.arch) = self.parse(dist)
+    >>> d = Distribution("fedora-14", "x86_64")
+    >>> (d.name, d.version, d.arch)
+    ('fedora', '14', 'x86_64')
+    >>> d.mockdir()
+    '/var/lib/mock/fedora-14-x86_64/result'
+    >>> d._build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
+    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm'
+    """
 
-        self.deploy_srpm = False
-        self.symlink = False
+    def __init__(self, dist, arch="x86_64"):
+        """
+        @dist  str   Distribution label, e.g. "fedora-14"
+        @arch  str   Architecture, e.g. "i386"
+        """
+        self.label = "%s-%s" % (dist, arch)
+        (self.name, self.version) = self.parse_dist(dist)
+        self.arch = arch
 
     @classmethod
-    def parse(self, dist):
-        """
-        >>> Distribution.parse('fedora-14-x86_64')
-        ['fedora', '14', 'x86_64']
-        """
+    def parse_dist(self, dist):
         return dist.split('-')
 
     def mockdir(self):
-        """
-        >>> d = Distribution('fedora-14-x86_64')
-        >>> d.mockdir()
-        '/var/lib/mock/fedora-14-x86_64/result'
-        """
         return "/var/lib/mock/%s/result" % self.label
 
+    def _build_cmd(self, srpm):
+        return "mock -r %s %s" % (self.label, srpm)
+
     def build_cmd(self, srpm):
-        cmd = "mock -r %s %s" % (self.label, srpm)
-        return Command(cmd, self.user, "localhost", '.')
-
-
-
-def repo_baseurl(server, user, repo_topdir, dist_s, scheme='http'):
-    """Base URL of repository such like "http://yum-repo-server.local/yum/foo".
-
-    >>> repo_baseurl("yum-server.local", "bar", "~/public_html/repo", 'rhel-6-x86_64')
-    'http://yum-server.local/bar/repo/rhel/6'
-    """
-    dir = repo_topdir.split(os.path.sep)[-1]
-    d = Distribution(dist_s)
-
-    return "%s://%s/%s/%s/%s/%s" % (scheme, server, user, dir, d.name, d.version)
-
-
-def repo_name(server, user, dist_s):
-    """Repository name.
-
-    >>> repo_name("rhns.local", "foo", "rhel-5-i386")
-    'rhel-rhns-foo'
-    """
-    (n, v, a) = Distribution.parse(dist_s)
-    ss = server.split('.')[0]
-
-    return "%s-%s-%s" % (n, ss, user)
+        """Returns Command object to build src.rpm
+        """
+        return Command(self._build_cmd(srpm), self.user, "localhost", os.curdir)
 
 
 
 class Repo(object):
-    """Yum repository object.
+    """Yum repository objects.
     """
 
-    server = 'localhost'
+    # defaults:
     user = get_username()
-    mail = get_email()
-    fullname  = get_fullname()
-    dir = '~/public_html/yum'
-    dist = 'fedora-14-x86_64'
+    email = get_email()
+    fullname = get_fullname()
 
-    baseurl = repo_baseurl(server, user, dir, dist)
-    name = repo_name(server, user, dist)
+    dist = "fedora-14"
+    archs = "i386,x86_64"
+    repodir = "yum"
+    baseurl_pattern = "http://%(server)s/%(topdir)s/%(distdir)s/"
 
-    def __init__(self, server=None, user=None, mail=None,
-                    fullname=None, baseurl=None, name=None,
-                    dir=None, dist=None, dryrun=False,
-                    *args, **kwargs):
+    def __init__(self, server=False,
+                       user=False,
+                       email=False,
+                       fullname=False,
+                       name=False,
+                       dist=False,
+                       archs=False,
+                       repodir=False,
+                       baseurl_pattern=False,
+                       *args, **kwargs):
         """
-        @server    server's fqdn to provide this yum repo via http
-        @user      your username on the server
-        @mail      your mail address
-        @fullname  your full name.
-        @baseurl   base url, e.g. 'http://yum-server.example.com/foo/yum/fedora/14/'.
+        @server    server's hostname to provide this yum repo via http
+        @user      username on the server
+        @email     email address
+        @fullname  full name, e.g. "John Doe".
         @name      repository name, e.g. 'rpmfusion-free'
-        @dir       repo topdir, e.g. ~/public_html/yum/.
-        @dist      distribution string, e.g. 'fedora-14-x86_64'
-        @dryrun    dryrun mode
+        @dist      distribution string, e.g. 'fedora-14'
+        @archs     architecture list, e.g. "i386,x86_64"
+        @repodir   repo's topdir relative to ~/public_html/, e.g. yum.
+        @baseurl_pattern   base url pattern, e.g. "http://%(server)s/%(topdir)s/%(distdir)s".
         """
-        if server is not None:
-            self.server = server
+        assert server, "server parameter must be given."
+        self.server = server
 
-        if user is not None:
+        if user:
             self.user = user
 
-        if mail is not None:
-            self.mail = mail
+        if email:
+            self.email = email
 
-        if fullname is not None:
+        if fullname:
             self.fullname = fullname
 
-        if dist is not None:
-            self.dist = Distribution(dist)
-        else:
-            self.dist = Distribution(Repo.dist)
+        if dist:
+            self.dist = dist
 
-        if name is None:
-            self.name = repo_name(self.server, self.user, self.dist)
+        if archs:
+            self.archs = archs.split(',')
+
+        if "i386" in self.archs and "x86_64" in self.archs:
+            self.multiarch = True
         else:
+            self.multiarch = False
+
+        self.dists = [Distribution(self.dist, arch) for arch in self.archs]
+        self.distdir = os.path.join(*Distribution.parse_dist(self.dist))
+
+        if repodir:
+            self.repodir = repodir
+
+        self.topdir = "%(user)s/%(repodir)s" % {"user": self.user, "repodir": self.repodir}
+
+        if baseurl_pattern:
+            self.baseurl_pattern = baseurl_pattern
+
+        if name:
             self.name = name
-
-        if dir is None:
-            dir = Repo.dir
-
-        if baseurl is None:
-            self.baseurl = repo_baseurl(self.server, self.user, self.dir, self.dist)
         else:
-            self.baseurl = baseurl
+            self.name = self.gen_name(self.server, self.user, self.dist)
 
-        self.dryrun = dryrun
+        self.deploy_topdir = "~%(user)s/public_html/%(repodir)s/" % {"user": self.user, "repodir": self.repodir}
+        self.is_remote = not self.server.startswith("localhost")
 
-        self.topdir = os.path.join(dir, self.dist.name, self.dist.version)
-        self.is_remote = not self.server.startswith('localhost')
+    def baseurl(self):
+        params = {
+            "server": self.server,
+            "user": self.user,
+            "topdir": self.topdir,
+            "distdir": self.distdir,
+        }
+        return self.baseurl_pattern % params
+
+    def gen_name(self, server, user, dist):
+        """Repository name.
+
+        >>> repo = Repo("rhns.local")
+        >>> repo.gen_name("rhns.local", "foo", "rhel-5")
+        'rhel-rhns-foo'
+        """
+        (n, v) = Distribution.parse_dist(dist)
+        s = server.split('.')[0]
+
+        return "%s-%s-%s" % (n, s, user)
 
     def copy_cmd(self, src, dst):
         if self.is_remote:
@@ -454,139 +470,125 @@ class Repo(object):
 
         return Command(cmd, self.user)
 
-    def build_cmd(self, srpm):
-        return self.dist.build_cmd(srpm)
+    def seq_run(self, cmds, stop_on_error=True):
+        oes = []
+        for c in cmds:
+            (o, e) = c.run()
+            oes.append((o, e))
 
-    def deploy_cmds(self, srpm):
-        mockdir = self.dist.mockdir()
-        arch = self.dist.arch
-        repodir = self.topdir
+            if stop_on_error and e:
+                logging.error(" Failed: %s,\n error=%s" % (str(c), e))
+                sys.exit(1)
 
-        cs = []
+        return oes
 
-        if d.deploy_srpm:
-            srpm = glob.glob("%s/*.src.rpm" % mockdir)[0]  # FIXME
-            cmd = self.copy_cmd(srpm, os.path.join(repodir, "sources"))
-            cs.append(cmd)
+    def dists_by_srpm(self, srpm):
+        return (is_noarch(srpm) and self.dists[:1] or self.dists)
 
-        for _rpm in glob.glob("%s/*.noarch.rpm" % mockdir) + glob.glob("%s/*.%s.rpm" % (mockdir, arch)):
-            cmd = self.copy_cmd(_rpm, os.path.join(repodir, arch))
-            cs.append(cmd)
+    def build(self, srpm):
+        cs = [d.build_cmd(srpm) for d in self.dists_by_srpm(srpm)]
 
-        return [cs]  # run in parallel.
+        return self.seq_run(cs)
 
-    def deploy_release_package_cmds(self, workdir=None, tmpl=None):
+    def deploy(self, srpm):
+        destdir = os.path.join(self.deploy_topdir, self.distdir)
+
+        cs = [self.copy_cmd(srpm, os.path.join(destdir, "sources"))]
+
+        for d in self.dists_by_srpm(srpm):
+            for _rpm in glob.glob("%s/*.noarch.rpm" % d.mockdir()) + \
+                    glob.glob("%s/*.%s.rpm" % (d.mockdir(), d.arch)):
+                cs.append(self.copy_cmd(_rpm, os.path.join(destdir, d.arch)))
+
+        return self.seq_run(cs)
+
+    def deploy_release_rpm(self, workdir=False):
         """Generate (yum repo) release package.
 
-        @tmpl     str   Template string
+        @workdir str   Working directory
         """
-        if workdir is None:
-            workdir=tempfile.mkdtemp(dir='/tmp', prefix='yum-repo-release-')
+        if not workdir:
+            workdir = tempfile.mkdtemp(dir='/tmp', prefix="%s-release-" % self.name)
 
-        cs = []
+        dist = self.dists[0]  # this package will be noarch (arch-independent).
 
-        if tmpl is None:
-            tmpl = """
+        tmpl = """
 [${repo.name}]
-name=Custom yum repository on ${repo.server} by ${repo.user} (${repo.dist.label})
-baseurl=${repo.baseurl}/${repo.dist.arch}/
+name=Custom yum repository on ${repo.server} by ${repo.user} (\$basearch)
+baseurl=${repo.baseurl}/\$basearch/
 enabled=1
 gpgcheck=0
 
 [${repo.name}-source]
-name=Custom yum repository on ${repo.server} by ${repo.user} (${repo.dist.label} source)
+name=Custom yum repository on ${repo.server} by ${repo.user} (source)
 baseurl=${repo.baseurl}/sources/
 enabled=0
 gpgcheck=0
 """
-        params = {'repo': self}
+        params = {"repo": self, "dist": dist}
 
         c = compile_template(tmpl, params)
 
-        reldir = os.path.join(workdir, 'etc', 'yum.repos.d')
+        reldir = os.path.join(workdir, "etc", "yum.repos.d")
         f = os.path.join(reldir, "%s.repo" % self.name)
 
         os.makedirs(reldir)
         open(f, 'w').write(c)
 
-        self.release_file = f
-        self.workdir = workdir
+        params["pkg"] = {
+            "release_file": f,
+            "workdir": workdir,
+        }
 
-        tmpl = """echo ${repo.release_file} | \
-xpack -n ${repo.name}-release --license MIT -w ${repo.workdir} \
+        tmpl = """echo ${pkg.release_file} | \
+xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \
     --group "System Environment/Base" \
     --url ${repo.baseurl} \
     --summary "Yum repo files for ${repo.name}" \
-    --packager "${repo.fullname}" --mail ${repo.mail} \
-    --ignore-owner --pversion ${repo.dist.version}  \
+    --packager "${repo.fullname}" --mail ${repo.email} \
+    --ignore-owner --pversion ${dist.version}  \
     --no-rpmdb --no-mock --upto sbuild --debug \
-    --destdir ${repo.workdir} - """
+    --destdir ${pkg.workdir} - """
 
         cmd = Command(compile_template(tmpl, params), self.user)
-        cs.append(cmd)
+        cmd.run()
 
-        srpm = "%s/%s-%s/%s-release\*.src.rpm" % (workdir, self.name, self.dist.version, self.name)
-        cmd = self.copy_cmd(srpm, os.path.join(self.topdir, "sources"))
-        cs.append(cmd)
+        srpms = glob.glob("%s/%s-%s/%s-release*.src.rpm" % (workdir, self.name, dist.version, self.name))
+        if not srpms:
+            logging.error("Failed to build src.rpm")
+            sys.exit(1)
 
-        return cs  # run sequentially.
-
-
-
-class RepoManager(object):
-
-    def __init__(self, repos=[]):
-        """
-        @repos  [Repo]  Repo objects
-        """
-        self.repos = repos
-
-        # These must be the same among repos.
-        self.server = self.repos[0].server
-        self.user = self.repos[0].user
-        self.mail = self.repos[0].mail
-        self.fullname = self.repos[0].fullname
-        self.baseurl = self.repos[0].baseurl
-        self.name = self.repos[0].name
-        self.topdir = self.repos[0].topdir
-        self.is_remote = self.repos[0].is_remote
-
-        self.archs = [repo.dist.arch for repo in self.repos]
+        destdir = os.path.join(self.deploy_topdir, self.distdir)
+        cmd = self.copy_cmd(srpm, os.path.join(destdir, "sources"))
+        cmd.run()
 
     def init(self):
+        """Initialize yum repository.
         """
-        @return  [Command]  Command objects to initialize these repos.
-        """
-        cs = ["mkdir -p %s" % os.path.join(self.topdir, 'sources')] + \
-            ["mkdir -p %s" % os.path.join(self.topdir, arch) for arch in self.archs]
-        css = [[Command(c, self.user, self.server, '~') for c in cs]]
+        destdir = os.path.join(self.deploy_topdir, self.distdir)
 
-        css += [repo.deploy_release_package_cmds() for repo in self.repos]
+        xs = ["mkdir -p %s" % os.path.join(destdir, d) for d in ["sources"] + self.archs] 
+        cs = [Command(c, self.user, self.server, '~') for c in xs]
 
-        return pshell(css, timeout=60*5)
+        return self.seq_run(cs)
 
     def update(self):
         """
         'createrepo --update ...', etc.
         """
-        cfmt = "test -d %(d)s/repodata && createrepo --update --deltas %(d)s || createrepo --deltas %(d)s"
-        ss = [cfmt % {'d': os.path.join(self.topdir, d)} for d in ['sources'] + self.archs]
-        cs = [Command(c, self.user, self.server, '~') for c in ss]
+        destdir = os.path.join(self.deploy_topdir, self.distdir)
+        dirs = [os.path.join(destdir, d) for d in ["sources"] + self.archs]
+        c = "test -d repodata && createrepo --update --deltas . || createrepo --deltas ."
+
+        cs = [Command(c, self.user, self.server, d) for d in dirs]
 
         # hack:
-        if 'i386' in self.archs and 'x86_64' in self.archs:
-            c = Command("cd %s/i386 && ln -sf ../x86_64/*.noarch.rpm ./" % self.topdir, self.user, self.server, '~')
-            cs.append(c)
+        if len(self.archs) > 1:
+            c = "for d in %s; do (cd $d && ln -sf ../%s/*.noarch.rpm ./); done" % \
+                (" ".join(self.archs[1:]), self.dists[0].arch)
+            cs.append(Command(c, self.user, self.server, destdir, stop_on_error=False))
 
-        return pshell([cs], timeout=10)  # run in parallel
-
-    def build(self, srpm):
-        cs = [r.build_cmd(srpm) for r in self.repos]
-        return pshell([cs], timeout=10)  # Likewise
-
-    def deploy(self, srpm):
-        cs = concat(concat([r.deploy_cmds(srpm) for r in self.repos]))
-        return pshell([cs], timeout=10)  # Likewise
+        return self.seq_run(cs)
 
 
 
@@ -677,40 +679,26 @@ Examples:
   """
     )
 
-    if not defaults.get('server'):
-        defaults['server'] = Repo.server
+    for k in ("user", "email", "fullname", "dist", "archs", "repodir", "baseurl_pattern"):
+        if not defaults.get(k, False):
+            defaults[k] = getattr(Repo, k, False)
 
-    if not defaults.get('uesr'):
-        defaults['user'] = Repo.user
-
-    if not defaults.get('mail'):
-        defaults['mail'] = Repo.mail
-
-    if not defaults.get('fullname'):
-        defaults['fullname'] = Repo.fullname
-
-    if not defaults.get('repodir'):
-        defaults['repodir'] = Repo.dir
-
-    defaults['dists'] = Repo.dist
+    defaults['server'] = False
+    defaults['name'] = False
     defaults['tests'] = False
-    defaults['name'] = Repo.name
-    defaults['no_release_pkg'] = False
     defaults['verbose'] = False
     defaults['debug'] = False
 
-    if not defaults.get('baseurl'):
-        defaults['baseurl'] = Repo.baseurl
-
     p.set_defaults(**defaults)
 
-    p.add_option('-s', '--server', help='Server to provide your yum repos [%default]')
+    p.add_option('-s', '--server', help='Server to provide your yum repos.')
     p.add_option('-u', '--user', help='Your username on the server [%default]')
-    p.add_option('-m', '--mail', help='Your mail address [%default]')
+    p.add_option('-m', '--email', help='Your email address [%default]')
     p.add_option('-F', '--fullname', help='Your full name [%default]')
     p.add_option('-R', '--repodir', help='Top directory of your yum repo [%default]')
 
-    p.add_option('-d', '--dists', help='Target distribution name [%default]')
+    p.add_option('-d', '--dist', help='Target distribution name [%default]')
+    p.add_option('-A', '--archs', help='Comma separated list of architectures [%default]')
 
     p.add_option('-q', '--quiet', dest="verbose", action='store_false', help='Quiet mode')
     p.add_option('-v', '--verbose', action='store_true', help='Verbose mode')
@@ -720,9 +708,7 @@ Examples:
 
     iog = optparse.OptionGroup(p, "Options for 'init' command")
     iog.add_option('', '--name', help='Name of your yum repo. ')
-    iog.add_option('', '--baseurl', help='Base url of your yum repo [%default]')
-    iog.add_option('', '--no-release-pkg', action='store_true',
-        help='Do not build release package contains yum repo files')
+    iog.add_option('', '--baseurl-pattern', help='Base URL pattern [%default]')
     p.add_option_group(iog)
 
     return p
@@ -748,6 +734,8 @@ def main(argv=sys.argv[1:]):
     a0 = argv[0]
     if a0.startswith('i'):
         cmd = CMD_INIT 
+    elif a0.startswith('u'):
+        cmd = CMD_UPDATE
     elif a0.startswith('b'):
         cmd = CMD_BUILD
     elif a0.startswith('d'):
@@ -758,29 +746,6 @@ def main(argv=sys.argv[1:]):
 
     (options, args) = p.parse_args(argv[1:])
 
-    config = copy.copy(options.__dict__)
-
-    if not options.dists:
-        config['dists'] = raw_input("Distributions > ")
-
-    if not options.name:
-        config['name'] = raw_input("Repository name > ")
-
-    config['topdir'] = config['repodir']
-
-    params = (
-        options.server,
-        options.user,
-        options.mail,
-        options.fullname,
-        options.baseurl,
-        options.name,
-        config['topdir']
-    )
-
-    repos = [Repo(*params, dist=dist) for dist in config['dists'].split(',')]
-    rmgr = RepoManager(repos)
- 
     if options.verbose:
         logging.getLogger().setLevel(logging.INFO)
     else:
@@ -789,22 +754,34 @@ def main(argv=sys.argv[1:]):
     if options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    config = copy.copy(options.__dict__)
+
+    if not options.server:
+        config['server'] = raw_input("Server > ")
+
+    if not options.dist:
+        config['dist'] = raw_input("Distribution, e.g. fedora-14 > ")
+
+    config['topdir'] = config['repodir']
+
+    repo = Repo(**config)
+ 
     if cmd == CMD_INIT:
-        rmgr.init()
+        repo.init()
 
     elif cmd == CMD_UPDATE:
-        rmgr.update()
+        repo.update()
 
     else:
         if not args:
-            logging.error(" 'build' and 'deploy' command requires an argument to specify srpm")
+            logging.error(" 'build' and 'deploy' command requires an argument to specify srpm[s]")
             sys.exit(1)
 
-        if cmd == CMD_DEPLOY:
-            f = rmgr.build
+        if cmd == CMD_BUILD:
+            f = repo.build
 
         elif cmd == CMD_DEPLOY:
-            f = rmgr.deploy
+            f = repo.deploy
 
         for srpm in args:
             f(srpm)
