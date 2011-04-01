@@ -96,6 +96,9 @@ def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
     >>> (o, e) = shell('echo "ok" > /dev/null', '.', False)
     >>> assert e == "", 'errmsg=' + e
     >>> 
+    >>> (o, e) = shell('ls null', '/dev', False)
+    >>> assert e == "", 'errmsg=' + e
+    >>> 
     >>> try:
     ...    (o, e) = shell('ls /root', '.', False)
     ... except RuntimeError:
@@ -137,8 +140,9 @@ def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True)
 
     if is_remote:
         cmd = "ssh %s@%s \"cd %s && %s\"" % (user, host, workdir, cmd)
+        workdir = os.curdir
 
-    return shell(cmd, workdir='.', log=log, dryrun=dryrun, stop_on_error=stop_on_error)
+    return shell(cmd, workdir, log, dryrun, stop_on_error)
 
 
 
@@ -279,7 +283,7 @@ def get_email(use_git=USE_GIT):
         try:
             (email, e) = shell('git config --get user.email 2>/dev/null')
             if not e:
-                return email
+                return email.rstrip()
         except RuntimeError, e:
             logging.warn(str(e))
             pass
@@ -294,7 +298,7 @@ def get_fullname(use_git=USE_GIT):
         try:
             (fullname, e) = shell('git config --get user.name 2>/dev/null')
             if not e:
-                return fullname
+                return fullname.rstrip()
         except RuntimeError, e:
             logging.warn(str(e))
             pass
@@ -311,7 +315,7 @@ def rpm_header_from_rpmfile(rpmfile):
 def is_noarch(srpm):
     """Determine if given srpm is noarch (arch-independent).
     """
-    return rpm_header_from_rpmfile(sprm)[rpm.RPMTAG_ARCH] == 'noarch'
+    return rpm_header_from_rpmfile(srpm)[rpm.RPMTAG_ARCH] == 'noarch'
 
 
 
@@ -334,8 +338,8 @@ class Distribution(object):
     ('fedora', '14', 'x86_64')
     >>> d.mockdir()
     '/var/lib/mock/fedora-14-x86_64/result'
-    >>> d._build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
-    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm'
+    >>> d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
+    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm 2>&1 2> /dev/null'
     """
 
     def __init__(self, dist, arch="x86_64"):
@@ -354,13 +358,8 @@ class Distribution(object):
     def mockdir(self):
         return "/var/lib/mock/%s/result" % self.label
 
-    def _build_cmd(self, srpm):
-        return "mock -r %s %s" % (self.label, srpm)
-
     def build_cmd(self, srpm):
-        """Returns Command object to build src.rpm
-        """
-        return Command(self._build_cmd(srpm), self.user, "localhost", os.curdir)
+        return "mock -r %s %s 2>&1 2> /dev/null" % (self.label, srpm)
 
 
 
@@ -374,7 +373,7 @@ class Repo(object):
     fullname = get_fullname()
 
     dist = "fedora-14"
-    archs = "i386,x86_64"
+    archs = "x86_64,i386"
     repodir = "yum"
     baseurl_pattern = "http://%(server)s/%(topdir)s/%(distdir)s/"
 
@@ -468,7 +467,14 @@ class Repo(object):
         else:
             cmd = "cp -a %s %s" % (src, dst)
 
+        logging.debug("copy: " + cmd)
+
         return Command(cmd, self.user)
+
+    def build_cmd(self, srpm, dist):
+        """Returns Command object to build src.rpm
+        """
+        return Command(dist.build_cmd(srpm), self.user, "localhost", os.curdir)
 
     def seq_run(self, cmds, stop_on_error=True):
         oes = []
@@ -486,7 +492,7 @@ class Repo(object):
         return (is_noarch(srpm) and self.dists[:1] or self.dists)
 
     def build(self, srpm):
-        cs = [d.build_cmd(srpm) for d in self.dists_by_srpm(srpm)]
+        cs = [self.build_cmd(srpm, d) for d in self.dists_by_srpm(srpm)]
 
         return self.seq_run(cs)
 
@@ -496,9 +502,13 @@ class Repo(object):
         cs = [self.copy_cmd(srpm, os.path.join(destdir, "sources"))]
 
         for d in self.dists_by_srpm(srpm):
-            for _rpm in glob.glob("%s/*.noarch.rpm" % d.mockdir()) + \
-                    glob.glob("%s/*.%s.rpm" % (d.mockdir(), d.arch)):
-                cs.append(self.copy_cmd(_rpm, os.path.join(destdir, d.arch)))
+            if is_noarch(srpm):
+                rpms = glob.glob("%s/*.noarch.rpm" % d.mockdir())
+            else:
+                rpms = glob.glob("%s/*.%s.rpm" % (d.mockdir(), d.arch))
+
+            for p in rpms:
+                cs.append(self.copy_cmd(p, os.path.join(destdir, d.arch)))
 
         return self.seq_run(cs)
 
@@ -512,16 +522,15 @@ class Repo(object):
 
         dist = self.dists[0]  # this package will be noarch (arch-independent).
 
-        tmpl = """
-[${repo.name}]
+        tmpl = """[${repo.name}]
 name=Custom yum repository on ${repo.server} by ${repo.user} (\$basearch)
-baseurl=${repo.baseurl}/\$basearch/
+baseurl=${repo.baseurl}\$basearch/
 enabled=1
 gpgcheck=0
 
 [${repo.name}-source]
 name=Custom yum repository on ${repo.server} by ${repo.user} (source)
-baseurl=${repo.baseurl}/sources/
+baseurl=${repo.baseurl}sources/
 enabled=0
 gpgcheck=0
 """
@@ -540,27 +549,29 @@ gpgcheck=0
             "workdir": workdir,
         }
 
-        tmpl = """echo ${pkg.release_file} | \
-xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \
-    --group "System Environment/Base" \
-    --url ${repo.baseurl} \
-    --summary "Yum repo files for ${repo.name}" \
-    --packager "${repo.fullname}" --mail ${repo.email} \
-    --ignore-owner --pversion ${dist.version}  \
-    --no-rpmdb --no-mock --upto sbuild --debug \
+        tmpl = """echo ${pkg.release_file} | \\
+xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
+    --group "System Environment/Base" \\
+    --url ${repo.baseurl} \\
+    --summary "Yum repo files for ${repo.name}" \\
+    --packager "${repo.fullname}" --mail "${repo.email}" \\
+    --ignore-owner --pversion ${dist.version}  \\
+    --no-rpmdb --no-mock --debug \\
     --destdir ${pkg.workdir} - """
 
         cmd = Command(compile_template(tmpl, params), self.user)
         cmd.run()
 
-        srpms = glob.glob("%s/%s-%s/%s-release*.src.rpm" % (workdir, self.name, dist.version, self.name))
+        srpms = glob.glob("%s/%s-release-%s/%s-release*.src.rpm" % (workdir, self.name, dist.version, self.name))
         if not srpms:
             logging.error("Failed to build src.rpm")
             sys.exit(1)
 
-        destdir = os.path.join(self.deploy_topdir, self.distdir)
-        cmd = self.copy_cmd(srpm, os.path.join(destdir, "sources"))
-        cmd.run()
+        srpm = srpms[0]
+
+        self.build(srpm)
+        self.deploy(srpm)
+        self.update()
 
     def init(self):
         """Initialize yum repository.
@@ -570,7 +581,9 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \
         xs = ["mkdir -p %s" % os.path.join(destdir, d) for d in ["sources"] + self.archs] 
         cs = [Command(c, self.user, self.server, '~') for c in xs]
 
-        return self.seq_run(cs)
+        self.seq_run(cs)
+
+        self.deploy_release_rpm()
 
     def update(self):
         """
