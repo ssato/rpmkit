@@ -71,6 +71,13 @@
 # * buildrpm: http://magnusg.fedorapeople.org/buildrpm/
 #
 #
+# Internal:
+#
+# Make some pylint errors ignored:
+# pylint: disable=E0611
+# pylint: disable=E1101
+# pylint: disable=W0613
+#
 
 from itertools import chain, count, groupby
 
@@ -118,10 +125,11 @@ except ImportError:
     # Make up a 'Null-Object' like class mimics xattr module.
     class xattr:
         @classmethod
-        def get_all(*args):
+        def get_all(cls, *args):
             return ()
+
         @classmethod
-        def set(*args):
+        def set(cls, *args):
             return ()
 
         # TODO: Older versions of python do not support decorator expressions
@@ -977,12 +985,9 @@ def dirname(path):
 
 def hostname():
     """
-    FIXME: Is there any cases exist that socket.gethostname() fails?
+    Is there any cases exist that socket.gethostname() fails?
     """
-    try:
-        return socket.gethostname()
-    except:
-        return os.uname()[1]
+    return socket.gethostname() or os.uname()[1]
 
 
 def date(rfc2822=False, simple=False):
@@ -1016,7 +1021,7 @@ def compile_template(template, params, is_file=False):
     return tmpl.respond()
 
 
-def shell(cmd_s, workdir="", log=True):
+def shell(cmd_s, workdir=""):
     """TODO: Popen.communicate might be blocked. How about using
     Popen.wait instead?
     """
@@ -1040,21 +1045,21 @@ def shell(cmd_s, workdir="", log=True):
 
 
 
-def createdir(dir, mode=0700):
+def createdir(targetdir, mode=0700):
     """Create a dir with specified mode.
     """
-    logging.debug(" Creating a directory: %s" % dir)
+    logging.debug(" Creating a directory: %s" % targetdir)
 
-    if os.path.exists(dir):
-        if os.path.isdir(dir):
-            logging.warn(" Directory already exists! Skip it: %s" % dir)
+    if os.path.exists(targetdir):
+        if os.path.isdir(targetdir):
+            logging.warn(" Directory already exists! Skip it: %s" % targetdir)
         else:
-            raise RuntimeError(" Already exists but not a directory: %s" % dir)
+            raise RuntimeError(" Already exists but not a directory: %s" % targetdir)
     else:
-        os.makedirs(dir, mode)
+        os.makedirs(targetdir, mode)
 
 
-def rm_rf(dir):
+def rm_rf(targetdir):
     """'rm -rf' in python.
 
     >>> d = tempfile.mkdtemp(dir='/tmp')
@@ -1071,24 +1076,24 @@ def rm_rf(dir):
     >>> 
     >>> rm_rf(d)
     """
-    if not os.path.exists(dir):
+    if not os.path.exists(targetdir):
         return
 
-    if os.path.isfile(dir):
-        os.remove(dir)
+    if os.path.isfile(targetdir):
+        os.remove(targetdir)
         return 
 
-    assert dir != '/'                    # avoid 'rm -rf /'
-    assert os.path.realpath(dir) != '/'  # likewise
+    assert targetdir != '/'                    # avoid 'rm -rf /'
+    assert os.path.realpath(targetdir) != '/'  # likewise
 
-    for x in glob.glob(os.path.join(dir, '*')):
+    for x in glob.glob(os.path.join(targetdir, '*')):
         if os.path.isdir(x):
             rm_rf(x)
         else:
             os.remove(x)
 
-    if os.path.exists(dir):
-        os.removedirs(dir)
+    if os.path.exists(targetdir):
+        os.removedirs(targetdir)
 
 
 def cache_needs_updates_p(cache_file, expires=0):
@@ -1127,11 +1132,11 @@ class TestDecoratedFuncs(unittest.TestCase):
     def test_flattern(self):
         """if flattern() works as expected.
         """
-        self.assertEquals(flattern([]),                               [])
-        self.assertEquals(flattern([[1,2,3],[4,5]]),                  [1, 2, 3, 4, 5])
-        self.assertEquals(flattern([[1,2,[3]],[4,[5,6]]]),            [1, 2, 3, 4, 5, 6])
-        self.assertEquals(flattern([(1,2,3),(4,5)]),                  [1, 2, 3, 4, 5])
-        self.assertEquals(flattern(((i, i * 2) for i in range(0,5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
+        self.assertEquals(flattern([]),                                [])
+        self.assertEquals(flattern([[1, 2, 3], [4, 5]]),               [1, 2, 3, 4, 5])
+        self.assertEquals(flattern([[1, 2, [3]], [4, [5, 6]]]),        [1, 2, 3, 4, 5, 6])
+        self.assertEquals(flattern([(1, 2, 3), (4, 5)]),               [1, 2, 3, 4, 5])
+        self.assertEquals(flattern(((i, i * 2) for i in range(0, 5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
 
     def test_unique(self):
         """if unique() works as expected.
@@ -1168,11 +1173,11 @@ class TestFuncsWithSideEffects(unittest.TestCase):
         self.assertRaises(RuntimeError, createdir, f)
 
     def test_shell(self):
-        (o, e) = shell('echo "" > /dev/null', '.', False)
+        (o, e) = shell('echo "" > /dev/null', '.')
         self.assertEquals(e, "")
         self.assertEquals(o, "")
 
-        self.assertRaises(RuntimeError, shell, 'grep xyz /dev/null')
+        self.assertRaises(RuntimeError, shell, "grep xyz /dev/null")
 
         if os.getuid() != 0:
             self.assertRaises(RuntimeError, shell, 'ls', '/root')
@@ -1357,11 +1362,11 @@ class FileInfo(object):
 
         self.perm_default = '644'
 
-        for k,v in kwargs.iteritems():
+        for k, v in kwargs.iteritems():
             self[k] = v
 
     def _copy_xattrs(self, dest):
-        for k,v in self.xattrs.iteritems():
+        for k, v in self.xattrs.iteritems():
             xattr.set(dest, k, v)
 
     def _copy(self, dest):
@@ -1390,8 +1395,11 @@ class FileInfo(object):
         TODO: Compare the part of the path?
           ex. lhs.path: '/path/to/xyz', rhs.path: '/var/lib/sp2/updates/path/to/xyz'
         """
-        if dicts_comp(self, other, ('mode', 'uid', 'gid', 'checksum', 'filetype')):
-            return dicts_comp(self.get('xattrs', {}), other.get('xattrs', {}))
+        keys = ('mode', 'uid', 'gid', 'checksum', 'filetype')
+        res = all([getattr(self, k) == getattr(other, k) for k in keys])
+
+        if res:
+            return dicts_comp(self.xattrs, other.xattrs)
         else:
             return False
 
@@ -1837,7 +1845,7 @@ def srcrpm_name_by_rpmspec(rpmspec, workdir):
     """Returns the name of src.rpm gotten from given RPM spec file.
     """
     cmd = 'rpm -q --specfile --qf "%{n}-%{v}-%{r}.src.rpm" ' + rpmspec
-    (o,e) = shell(cmd, workdir, log=False)
+    (o, e) = shell(cmd, workdir)
     return o
 
 
@@ -1865,11 +1873,11 @@ class PackageMaker(object):
 
         self.srcdir = os.path.join(self.workdir, 'src')
 
-        for k,v in kwargs.iteritems():
+        for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
-    def shell(self, cmd_s, log=True):
-        return shell(cmd_s, workdir=self.workdir, log=log)
+    def shell(self, cmd_s):
+        return shell(cmd_s, workdir=self.workdir)
 
     def to_srcdir(self, path):
         """
@@ -1915,7 +1923,7 @@ class PackageMaker(object):
             logging.info("...It looks already done. Skip the step: " + step)
         else:
             getattr(self, step, do_nothing)() # TODO: or eval("self." + step)() ?
-            self.shell("touch %s" % self.touch_file(step), log=False)
+            self.shell("touch %s" % self.touch_file(step))
 
         if step == self.upto:
             if step == 'build':
@@ -1972,7 +1980,7 @@ class PackageMaker(object):
             ("build", "Building bin packages: %s" % self.pname),
         )
 
-        for step,msg in steps:
+        for step, msg in steps:
             logging.info(msg)
             self.try_the_step(step)
 
@@ -2316,7 +2324,7 @@ def init_defaults_by_conffile():
     defaults = dict()
 
     for sec in cparser.sections():
-        defaults.update(dict(((k,parse_conf_value(v)) for k,v in cparser.items(sec))))
+        defaults.update(dict(((k, parse_conf_value(v)) for k, v in cparser.items(sec))))
 
     return defaults
 
@@ -2334,8 +2342,8 @@ def option_parser(V=__version__):
     )
 
     upto_params = {
-        "choices": [fst for fst,snd in steps],
-        "choices_str": ", ".join(("%s (%s)" % (fst,snd) for fst,snd in steps)),
+        "choices": [fst for fst, snd in steps],
+        "choices_str": ", ".join(("%s (%s)" % (fst, snd) for fst, snd in steps)),
         "default": UPTO,
     }
 
