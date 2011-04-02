@@ -591,7 +591,7 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
         """
         destdir = os.path.join(self.deploy_topdir, self.distdir)
         dirs = [os.path.join(destdir, d) for d in ["sources"] + self.archs]
-        c = "test -d repodata && createrepo --update --deltas . || createrepo --deltas ."
+        c = "test -d repodata && createrepo --update --deltas --database . || createrepo --deltas --database ."
 
         cs = [Command(c, self.user, self.server, d) for d in dirs]
 
