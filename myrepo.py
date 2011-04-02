@@ -48,7 +48,7 @@ import unittest
 
 
 
-if os.system('git --version > /dev/null 2> /dev/null') == 0:
+if os.system("git --version > /dev/null 2> /dev/null") == 0:
     USE_GIT = True
 else:
     USE_GIT = False
@@ -84,7 +84,7 @@ def compile_template(template, params, is_file=False):
 
 def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
     """
-    @cmd      str   command string, e.g. 'ls -l ~'.
+    @cmd      str   command string, e.g. "ls -l ~".
     @workdir  str   in which dir to run given command?
     @log      bool  whether to print log messages or not.
     @dryrun   bool  if True, just print command string to run and returns.
@@ -93,14 +93,14 @@ def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
     TODO: Popen.communicate might be blocked. How about using Popen.wait
     instead?
 
-    >>> (o, e) = shell('echo "ok" > /dev/null', '.', False)
-    >>> assert e == "", 'errmsg=' + e
+    >>> (o, e) = shell("echo ok > /dev/null", '.', False)
+    >>> assert e == "", "errmsg=" + e
     >>> 
-    >>> (o, e) = shell('ls null', '/dev', False)
-    >>> assert e == "", 'errmsg=' + e
+    >>> (o, e) = shell("ls null", "/dev", False)
+    >>> assert e == "", "errmsg=" + e
     >>> 
     >>> try:
-    ...    (o, e) = shell('ls /root', '.', False)
+    ...    (o, e) = shell("ls /root", '.', False)
     ... except RuntimeError:
     ...    pass
     """
@@ -136,7 +136,7 @@ def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True)
     @user     str  (remote) user to run given command.
     @host     str  on which host to run given command?
     """
-    is_remote = not host.startswith('localhost')
+    is_remote = not host.startswith("localhost")
 
     if is_remote:
         cmd = "ssh %s@%s \"cd %s && %s\"" % (user, host, workdir, cmd)
@@ -174,7 +174,7 @@ def pshell_single(args):
     @args[1]  bool     Whether to stop at once if any error occurs.
     @args[2]  int      Timeout to wait for given job completion.
 
-    >>> c = Command('echo OK', get_username())
+    >>> c = Command("echo OK", get_username())
     >>> res = pshell_single((c,))
     >>> assert res == (str(c), "OK\\n", ""), str(res)
     """
@@ -238,11 +238,11 @@ def pshell(css, stop_on_error=True, timeout=60*5):
 def rm_rf(dir):
     """'rm -rf' in python.
 
-    >>> d = tempfile.mkdtemp(dir='/tmp')
+    >>> d = tempfile.mkdtemp(dir="/tmp")
     >>> rm_rf(d)
     >>> rm_rf(d)
     >>> 
-    >>> d = tempfile.mkdtemp(dir='/tmp')
+    >>> d = tempfile.mkdtemp(dir="/tmp")
     >>> for c in "abc":
     ...     os.makedirs(os.path.join(d, c))
     >>> os.makedirs(os.path.join(d, "c", "d"))
@@ -259,7 +259,7 @@ def rm_rf(dir):
         os.remove(dir)
         return
 
-    assert dir != '/'                    # avoid 'rm -rf /'
+    assert dir != '/'                    # avoid "rm -rf /"
     assert os.path.realpath(dir) != '/'  # likewise
 
     for x in glob.glob(os.path.join(dir, '*')):
@@ -275,20 +275,20 @@ def rm_rf(dir):
 def get_username():
     """Get username.
     """
-    return os.environ.get('USER', False) or os.getlogin()
+    return os.environ.get("USER", False) or os.getlogin()
 
 
 def get_email(use_git=USE_GIT):
     if use_git:
         try:
-            (email, e) = shell('git config --get user.email 2>/dev/null')
+            (email, e) = shell("git config --get user.email 2>/dev/null")
             if not e:
                 return email.rstrip()
         except RuntimeError, e:
             logging.warn(str(e))
             pass
 
-    return os.environ.get('MAIL_ADDRESS', False) or "%s@localhost.localdomain" % get_username()
+    return os.environ.get("MAIL_ADDRESS", False) or "%s@localhost.localdomain" % get_username()
 
 
 def get_fullname(use_git=USE_GIT):
@@ -296,14 +296,14 @@ def get_fullname(use_git=USE_GIT):
     """
     if use_git:
         try:
-            (fullname, e) = shell('git config --get user.name 2>/dev/null')
+            (fullname, e) = shell("git config --get user.name 2>/dev/null")
             if not e:
                 return fullname.rstrip()
         except RuntimeError, e:
             logging.warn(str(e))
             pass
 
-    return os.environ.get('FULLNAME', False) or get_username()
+    return os.environ.get("FULLNAME", False) or get_username()
 
 
 def rpm_header_from_rpmfile(rpmfile):
@@ -315,7 +315,7 @@ def rpm_header_from_rpmfile(rpmfile):
 def is_noarch(srpm):
     """Determine if given srpm is noarch (arch-independent).
     """
-    return rpm_header_from_rpmfile(srpm)[rpm.RPMTAG_ARCH] == 'noarch'
+    return rpm_header_from_rpmfile(srpm)[rpm.RPMTAG_ARCH] == "noarch"
 
 
 
@@ -323,7 +323,7 @@ class TestFuncsWithSideEffects(unittest.TestCase):
 
     def setUp(self):
         logging.info("start") # dummy log
-        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="xpack-tests")
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -392,8 +392,8 @@ class Repo(object):
         @user      username on the server
         @email     email address
         @fullname  full name, e.g. "John Doe".
-        @name      repository name, e.g. 'rpmfusion-free'
-        @dist      distribution string, e.g. 'fedora-14'
+        @name      repository name, e.g. "rpmfusion-free"
+        @dist      distribution string, e.g. "fedora-14"
         @archs     architecture list, e.g. "i386,x86_64"
         @repodir   repo's topdir relative to ~/public_html/, e.g. yum.
         @baseurl_pattern   base url pattern, e.g. "http://%(server)s/%(topdir)s/%(distdir)s".
@@ -518,7 +518,7 @@ class Repo(object):
         @workdir str   Working directory
         """
         if not workdir:
-            workdir = tempfile.mkdtemp(dir='/tmp', prefix="%s-release-" % self.name)
+            workdir = tempfile.mkdtemp(dir="/tmp", prefix="%s-release-" % self.name)
 
         dist = self.dists[0]  # this package will be noarch (arch-independent).
 
@@ -587,7 +587,7 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
 
     def update(self):
         """
-        'createrepo --update ...', etc.
+        "createrepo --update ...", etc.
         """
         destdir = os.path.join(self.deploy_topdir, self.distdir)
         dirs = [os.path.join(destdir, d) for d in ["sources"] + self.archs]
@@ -696,32 +696,32 @@ Examples:
         if not defaults.get(k, False):
             defaults[k] = getattr(Repo, k, False)
 
-    defaults['server'] = False
-    defaults['name'] = False
-    defaults['tests'] = False
-    defaults['verbose'] = False
-    defaults['debug'] = False
+    defaults["server"] = False
+    defaults["name"] = False
+    defaults["tests"] = False
+    defaults["verbose"] = False
+    defaults["debug"] = False
 
     p.set_defaults(**defaults)
 
-    p.add_option('-s', '--server', help='Server to provide your yum repos.')
-    p.add_option('-u', '--user', help='Your username on the server [%default]')
-    p.add_option('-m', '--email', help='Your email address [%default]')
-    p.add_option('-F', '--fullname', help='Your full name [%default]')
-    p.add_option('-R', '--repodir', help='Top directory of your yum repo [%default]')
+    p.add_option("-s", "--server", help="Server to provide your yum repos.")
+    p.add_option("-u", "--user", help="Your username on the server [%default]")
+    p.add_option("-m", "--email", help="Your email address [%default]")
+    p.add_option("-F", "--fullname", help="Your full name [%default]")
+    p.add_option("-R", "--repodir", help="Top directory of your yum repo [%default]")
 
-    p.add_option('-d', '--dist', help='Target distribution name [%default]')
-    p.add_option('-A', '--archs', help='Comma separated list of architectures [%default]')
+    p.add_option("-d", "--dist", help="Target distribution name [%default]")
+    p.add_option("-A", "--archs", help="Comma separated list of architectures [%default]")
 
-    p.add_option('-q', '--quiet', dest="verbose", action='store_false', help='Quiet mode')
-    p.add_option('-v', '--verbose', action='store_true', help='Verbose mode')
-    p.add_option('-D', '--debug', action='store_true', help='Debug mode')
+    p.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Quiet mode")
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+    p.add_option("-D", "--debug", action="store_true", help="Debug mode")
 
-    p.add_option('-T', '--tests', action='store_true', help='Run test suite')
+    p.add_option("-T", "--tests", action="store_true", help="Run test suite")
 
     iog = optparse.OptionGroup(p, "Options for 'init' command")
-    iog.add_option('', '--name', help='Name of your yum repo. ')
-    iog.add_option('', '--baseurl-pattern', help='Base URL pattern [%default]')
+    iog.add_option('', "--name", help="Name of your yum repo.")
+    iog.add_option('', "--baseurl-pattern", help="Base URL pattern [%default]")
     p.add_option_group(iog)
 
     return p
@@ -736,11 +736,11 @@ def main(argv=sys.argv[1:]):
         p.print_usage()
         sys.exit(1)
 
-    if argv[0].startswith('-h') or argv[0].startswith('--h'):
+    if argv[0].startswith("-h") or argv[0].startswith("--h"):
         p.print_help()
         sys.exit(0)
 
-    if argv[0].startswith('-T') or argv[0].startswith('--test'):
+    if argv[0].startswith("-T") or argv[0].startswith("--test"):
         test(True)
         sys.exit()
 
@@ -770,12 +770,12 @@ def main(argv=sys.argv[1:]):
     config = copy.copy(options.__dict__)
 
     if not options.server:
-        config['server'] = raw_input("Server > ")
+        config["server"] = raw_input("Server > ")
 
     if not options.dist:
-        config['dist'] = raw_input("Distribution, e.g. fedora-14 > ")
+        config["dist"] = raw_input("Distribution, e.g. fedora-14 > ")
 
-    config['topdir'] = config['repodir']
+    config["topdir"] = config["repodir"]
 
     repo = Repo(**config)
  
