@@ -717,7 +717,7 @@ Examples:
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
     p.add_option("-D", "--debug", action="store_true", help="Debug mode")
 
-    p.add_option("-T", "--tests", action="store_true", help="Run test suite")
+    p.add_option("-T", "--test", action="store_true", help="Run test suite")
 
     iog = optparse.OptionGroup(p, "Options for 'init' command")
     iog.add_option('', "--name", help="Name of your yum repo.")
@@ -727,24 +727,30 @@ Examples:
     return p
 
 
-def main(argv=sys.argv[1:]):
+def main():
     (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = (1,2,3,4)
 
     p = opt_parser()
+    (options, args) = p.parse_args()
 
-    if not argv:
+    if options.verbose:
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.getLogger().setLevel(logging.WARNING)
+
+    if options.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    if options.test:
+        verbose_test = (options.verbose or options.debug)
+        test(verbose_test)
+        sys.exit()
+
+    if not args:
         p.print_usage()
         sys.exit(1)
 
-    if argv[0].startswith("-h") or argv[0].startswith("--h"):
-        p.print_help()
-        sys.exit(0)
-
-    if argv[0].startswith("-T") or argv[0].startswith("--test"):
-        test(True)
-        sys.exit()
-
-    a0 = argv[0]
+    a0 = args[0]
     if a0.startswith('i'):
         cmd = CMD_INIT 
     elif a0.startswith('u'):
@@ -756,16 +762,6 @@ def main(argv=sys.argv[1:]):
     else:
         logging.error(" Unknown command '%s'" % a0)
         sys.exit(1)
-
-    (options, args) = p.parse_args(argv[1:])
-
-    if options.verbose:
-        logging.getLogger().setLevel(logging.INFO)
-    else:
-        logging.getLogger().setLevel(logging.WARNING)
-
-    if options.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
 
     config = copy.copy(options.__dict__)
 
@@ -786,7 +782,7 @@ def main(argv=sys.argv[1:]):
         repo.update()
 
     else:
-        if not args:
+        if len(args) < 2:
             logging.error(" 'build' and 'deploy' command requires an argument to specify srpm[s]")
             sys.exit(1)
 
