@@ -705,7 +705,7 @@ def main():
         elif cmd == CMD_DEPLOY:
             f = repo.deploy
 
-        for srpm in args:
+        for srpm in args[1:]:
             f(srpm)
 
 
