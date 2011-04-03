@@ -590,7 +590,7 @@ def opt_parser():
 
     p = optparse.OptionParser("""%prog COMMAND [OPTION ...] [ARGS]
 
-Commands: i[init], b[uild], d[eploy]
+Commands: i[init], b[uild], d[eploy], u[pdate]
 
 Examples:
   # initialize your yum repos:
