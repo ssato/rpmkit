@@ -88,7 +88,7 @@ def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
     if not workdir:
         workdir = os.path.abspath(os.curdir)
 
-    logging.debug(" Run: %s [%s]" % (cmd, workdir))
+    logging.info(" Run: %s [%s]" % (cmd, workdir))
 
     if dryrun:
         logging.info(" exit as we're in dry run mode.")
