@@ -34,11 +34,9 @@ import copy
 import doctest
 import glob
 import logging
-import multiprocessing
 import optparse
 import os
 import os.path
-import pprint
 import re
 import rpm
 import subprocess
@@ -46,23 +44,6 @@ import sys
 import tempfile
 import unittest
 
-
-
-if os.system("git --version > /dev/null 2> /dev/null") == 0:
-    USE_GIT = True
-else:
-    USE_GIT = False
-
-
-
-def concat(xss):
-    """
-    >>> concat([[]])
-    []
-    >>> concat([[1,2,3],[4,5]])
-    [1, 2, 3, 4, 5]
-    """
-    return list(chain(*xss))
 
 
 def compile_template(template, params, is_file=False):
@@ -168,73 +149,6 @@ class Command(object):
 
 
 
-def pshell_single(args):
-    """
-    @args[0]  Command  A Command object to run
-    @args[1]  bool     Whether to stop at once if any error occurs.
-    @args[2]  int      Timeout to wait for given job completion.
-
-    >>> c = Command("echo OK", get_username())
-    >>> res = pshell_single((c,))
-    >>> assert res == (str(c), "OK\\n", ""), str(res)
-    """
-    # Hack:
-    cmd = args[0]
-    stop_on_error = (len(args) >= 2 and args[1] or True)
-    timeout = (len(args) >= 3 and args[2] or 60)
-
-    s = str(cmd)
-    try:
-        (o,e) = cmd.run()
-        return (s,o,e)
-
-    except RuntimeError, e:
-        if stop_on_error:
-            raise
-        else:
-            return (s, "", str(e))
-
-
-def pshell(css, stop_on_error=True, timeout=60*5):
-    """
-    @css  [x] where x = [cmd] or cmd   A list of Command objects or list of Command objects.
-    @stop_on_error  bool  Whether to stop at once if any error occurs.
-    @timeout int  Timeout to wait for all jobs completed.
-
-    >>> f = lambda x: Command("echo -ne \\"%s\\"" % str(x), get_username())
-    >>> cs = [f(0), f(1), f(2), f(3)]
-    >>> css = [f(0), [f(1), f(2)], f(3)]
-    >>> res = pshell(css)
-    >>> assert res == [(str(c), str(x), "") for c, x in zip(cs, range(0,4))], str(res)
-    """
-    ncpus = multiprocessing.cpu_count()
-    logging.info("# of workers = %d" % ncpus)
-
-    multiprocessing.log_to_stderr()
-    multiprocessing.get_logger().setLevel(logging.getLogger().level)
-
-    results = []
-
-    for cs in css:
-        if isinstance(cs, Command):
-            logging.info("Single run: '%s', stop_on_error=%s, timeout=%d" % (cs, stop_on_error, timeout))
-
-            ret = pshell_single((cs, stop_on_error, timeout))
-            results.append(ret)
-
-            logging.info("Result of '%s': %s" % (cs, ret))
-        else:
-            logging.info("Run in parallel: %s" % ", ".join((str(c) for c in cs)))
-
-            cs2 = [(c, stop_on_error, timeout) for c in cs]
-            rets = multiprocessing.Pool(ncpus).map_async(pshell_single, cs2).get(timeout=timeout)
-            results += rets
-
-            logging.info("Result of '%s': %s" % (cs, ", ".join((str(r) for r in rets))))
-
-    return results
-
-
 def rm_rf(dir):
     """'rm -rf' in python.
 
@@ -278,7 +192,7 @@ def get_username():
     return os.environ.get("USER", False) or os.getlogin()
 
 
-def get_email(use_git=USE_GIT):
+def get_email(use_git):
     if use_git:
         try:
             (email, e) = shell("git config --get user.email 2>/dev/null")
@@ -291,7 +205,7 @@ def get_email(use_git=USE_GIT):
     return os.environ.get("MAIL_ADDRESS", False) or "%s@localhost.localdomain" % get_username()
 
 
-def get_fullname(use_git=USE_GIT):
+def get_fullname(use_git):
     """Get full name of the user.
     """
     if use_git:
@@ -368,9 +282,11 @@ class Repo(object):
     """
 
     # defaults:
+    use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
+
     user = get_username()
-    email = get_email()
-    fullname = get_fullname()
+    email = get_email(use_git)
+    fullname = get_fullname(use_git)
 
     dist = "fedora-14"
     archs = "x86_64,i386"
@@ -413,19 +329,16 @@ class Repo(object):
         if dist:
             self.dist = dist
 
+        if repodir:
+            self.repodir = repodir
+
         if archs:
             self.archs = archs.split(',')
 
-        if "i386" in self.archs and "x86_64" in self.archs:
-            self.multiarch = True
-        else:
-            self.multiarch = False
+        self.multiarch = "i386" in self.archs and "x86_64" in self.archs
 
         self.dists = [Distribution(self.dist, arch) for arch in self.archs]
         self.distdir = os.path.join(*Distribution.parse_dist(self.dist))
-
-        if repodir:
-            self.repodir = repodir
 
         self.topdir = "%(user)s/%(repodir)s" % {"user": self.user, "repodir": self.repodir}
 
