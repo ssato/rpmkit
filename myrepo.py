@@ -120,7 +120,7 @@ def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True)
     is_remote = not host.startswith("localhost")
 
     if is_remote:
-        cmd = "ssh %s@%s \"cd %s && %s\"" % (user, host, workdir, cmd)
+        cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
         workdir = os.curdir
 
     return shell(cmd, workdir, log, dryrun, stop_on_error)
