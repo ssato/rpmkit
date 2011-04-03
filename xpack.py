@@ -995,13 +995,11 @@ def date(rfc2822=False, simple=False):
     ('%z' for strftime does not look working.)
     """
     if rfc2822:
-        # return email.Utils.formatdate()
-        return datetime.datetime.now().strftime("%a. %d %b %Y %T +0000")
+        fmt = "%a. %d %b %Y %T +0000"
     else:
-        if simple:
-            return datetime.datetime.now().strftime("%Y%m%d")
-        else:
-            return datetime.datetime.now().strftime("%a %b %_d %Y")
+        fmt = (simple and "%Y%m%d" or "%a %b %_d %Y"
+
+    return datetime.datetime.now().strftime(fmt)
 
 
 def compile_template(template, params, is_file=False):
