@@ -997,7 +997,7 @@ def date(rfc2822=False, simple=False):
     if rfc2822:
         fmt = "%a. %d %b %Y %T +0000"
     else:
-        fmt = (simple and "%Y%m%d" or "%a %b %_d %Y"
+        fmt = (simple and "%Y%m%d" or "%a %b %_d %Y")
 
     return datetime.datetime.now().strftime(fmt)
 
