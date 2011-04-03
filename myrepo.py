@@ -410,6 +410,8 @@ class Repo(object):
         return self.seq_run(cs)
 
     def deploy(self, srpm):
+        self.build(srpm)
+
         destdir = os.path.join(self.deploy_topdir, self.distdir)
 
         cs = [self.copy_cmd(srpm, os.path.join(destdir, "sources"))]
@@ -423,7 +425,9 @@ class Repo(object):
             for p in rpms:
                 cs.append(self.copy_cmd(p, os.path.join(destdir, d.arch)))
 
-        return self.seq_run(cs)
+        self.seq_run(cs)
+
+        self.update()
 
     def deploy_release_rpm(self, workdir=False):
         """Generate (yum repo) release package.
