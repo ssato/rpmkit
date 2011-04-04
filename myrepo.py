@@ -508,16 +508,18 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
         "createrepo --update ...", etc.
         """
         destdir = os.path.join(self.deploy_topdir, self.distdir)
-        dirs = [os.path.join(destdir, d) for d in ["sources"] + self.archs]
-        c = "test -d repodata && createrepo --update --deltas --database . || createrepo --deltas --database ."
-
-        cs = [Command(c, self.user, self.server, d) for d in dirs]
+        cs = []
 
         # hack:
         if len(self.archs) > 1:
             c = "for d in %s; do (cd $d && ln -sf ../%s/*.noarch.rpm ./); done" % \
                 (" ".join(self.archs[1:]), self.dists[0].arch)
             cs.append(Command(c, self.user, self.server, destdir, stop_on_error=False))
+
+        dirs = [os.path.join(destdir, d) for d in ["sources"] + self.archs]
+        c = "test -d repodata && createrepo --update --deltas --database . || createrepo --deltas --database ."
+
+        cs += [Command(c, self.user, self.server, d) for d in dirs]
 
         return self.seq_run(cs)
 
