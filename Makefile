@@ -37,16 +37,16 @@ $(bindir):
 	mkdir -p $@
 
 $(bindir)/%: %.py
-	test -d $(bindir) || mkdir -p $(bindir)
+	@test -d $(bindir) || mkdir -p $(bindir)
 	install -m 755 $< $@
 
 $(bindir)/%: %.sh
-	test -d $(bindir) || mkdir -p $(bindir)
+	@test -d $(bindir) || mkdir -p $(bindir)
 	install -m 755 $< $@
 
 build: $(py_SCRIPTS) $(sh_SCRIPTS)
 	find $(bindir) -type f | python xpack.py -n rpmkit --license GPLv3+ \
-		--group "System Environment/Base" \
+		--group "System Environment/Base" --pversion $(VERSION) \
 		--url https://github.com/ssato/rpmkit/ \
 		--summary "RPM toolKit" --requires $(REQUIRES) \
 		--packager "$(FULLNAME)" --mail $(EMAIL) \
