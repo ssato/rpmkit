@@ -689,7 +689,8 @@ def main():
 
     if options.config:
         params = init_defaults_by_conffile(options.config)
-        config.update(params)
+        params.update(config)  # avoid to overwrite option parameters given.
+        config = params
 
     if not options.server:
         config["server"] = raw_input("Server > ")
