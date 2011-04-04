@@ -2360,8 +2360,9 @@ def option_parser(V=__version__):
         'upto': cds.get("upto", upto_params["default"]),
         'format': cds.get("format", "rpm"),
         'compressor': cds.get("compressor", "bz2"),
-        'debug': cds.get("debug", False),
+        'verbose': cds.get("debug", False),
         'quiet': cds.get("quiet", False),
+        'debug': cds.get("debug", False),
         'ignore_owner': cds.get("ignore_owner", False),
         'destdir': cds.get("destdir", ''),
         'rewrite_linkto': cds.get("rewrite_linkto", False),
@@ -2475,8 +2476,9 @@ Examples:
     tog.add_option('', '--unittests', action='store_true', help='Run unittests')
     p.add_option_group(tog)
 
-    p.add_option('-D', '--debug', action="store_true", help='Debug mode')
+    p.add_option('-v', '--verbose', action="store_true", help='Verbose mode')
     p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
+    p.add_option('-D', '--debug', action="store_true", help='Debug mode')
 
     p.add_option('', '--build-self', action="store_true", help='Package itself (self-build)')
     p.add_option('', '--show-examples', action="store_true", help='Show examples')
@@ -2509,7 +2511,10 @@ def main():
         dump_rc()
         sys.exit(0)
 
-    if options.quiet:
+    if options.verbose:
+        logging.getLogger().setLevel(logging.INFO)
+        verbose_test = False
+    else:
         logging.getLogger().setLevel(logging.WARNING)
         verbose_test = False
 
