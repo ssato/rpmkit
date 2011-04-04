@@ -555,15 +555,18 @@ def parse_conf_value(s):
     return s
 
 
-def init_defaults_by_conffile(profile=None):
+def init_defaults_by_conffile(config=None, profile=None):
     """
     Initialize default values for options by loading config files.
     """
-    home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
-    confs = (
-        "/etc/myreporc",
-        os.environ.get("MYREPORC", os.path.join(home, ".myreporc")),
-    )
+    if config is None:
+        home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
+        confs = (
+            "/etc/myreporc",
+            os.environ.get("MYREPORC", os.path.join(home, ".myreporc")),
+        )
+    else:
+        confs = (config,)
 
     cparser = cp.SafeConfigParser()
     loaded = False
@@ -621,6 +624,8 @@ Examples:
 
     p.set_defaults(**defaults)
 
+    p.add_option("-C", "--config", help="Configuration file")
+
     p.add_option("-s", "--server", help="Server to provide your yum repos.")
     p.add_option("-u", "--user", help="Your username on the server [%default]")
     p.add_option("-m", "--email", help="Your email address [%default]")
@@ -645,7 +650,7 @@ Examples:
 
 
 def main():
-    (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = (1,2,3,4)
+    (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = (1, 2, 3, 4)
 
     p = opt_parser()
     (options, args) = p.parse_args()
@@ -681,6 +686,10 @@ def main():
         sys.exit(1)
 
     config = copy.copy(options.__dict__)
+
+    if options.config:
+        params = init_defaults_by_conffile(options.config)
+        config.update(params)
 
     if not options.server:
         config["server"] = raw_input("Server > ")
