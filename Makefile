@@ -7,7 +7,8 @@ VERSION	?= 0.1.$(shell date +%Y%m%d).$(REVISION)
 
 DEBUG	?= 0
 
-py_SOURCES = rpm2json.py xpack.py myrepo.py rpms2sqldb.py
+#py_SOURCES = rpm2json.py xpack.py myrepo.py rpms2sqldb.py
+py_SOURCES = rpm2json.py myrepo.py rpms2sqldb.py
 sh_SOURCES = list-srpmnames-by-file.sh list-requires-by-package-name.sh
 
 REQUIRES = python-cheetah,rpm-python,mock,rpm-build,sqlite,autoconf,automake
@@ -45,6 +46,7 @@ $(bindir)/%: %.sh
 	install -m 755 $< $@
 
 build: $(py_SCRIPTS) $(sh_SCRIPTS)
+	python xpack.py --build-self $(logopt)
 	find $(bindir) -type f | python xpack.py -n rpmkit --license GPLv3+ \
 		--group "System Environment/Base" --pversion $(VERSION) \
 		--url https://github.com/ssato/rpmkit/ \
