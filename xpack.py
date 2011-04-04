@@ -1842,9 +1842,9 @@ def rpm_attr(fileinfo):
 def srcrpm_name_by_rpmspec(rpmspec, workdir):
     """Returns the name of src.rpm gotten from given RPM spec file.
     """
-    cmd = 'rpm -q --specfile --qf "%{n}-%{v}-%{r}.src.rpm" ' + rpmspec
+    cmd = 'rpm -q --specfile --qf "%{n}-%{v}-%{r}.src.rpm\n" ' + rpmspec
     (o, e) = shell(cmd, workdir)
-    return o
+    return o.split("\n")[0]
 
 
 def do_nothing(*args, **kwargs):
