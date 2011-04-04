@@ -37,6 +37,7 @@ import logging
 import optparse
 import os
 import os.path
+import pprint
 import re
 import rpm
 import subprocess
@@ -685,17 +686,23 @@ def main():
         logging.error(" Unknown command '%s'" % a0)
         sys.exit(1)
 
-    config = copy.copy(options.__dict__)
-
     if options.config:
         params = init_defaults_by_conffile(options.config)
-        params.update(config)  # avoid to overwrite option parameters given.
-        config = params
+        p.set_defaults(**params)
 
-    if not options.server:
+        # re-parse to overwrite configurations with given options.
+        (options, args) = p.parse_args()
+
+    config = copy.copy(options.__dict__)
+
+    # Kept for DEBUG:
+    #pprint.pprint(config)
+    #sys.exit()
+
+    if not config.get("server", False):
         config["server"] = raw_input("Server > ")
 
-    if not options.dist:
+    if not config.get("dist", False):
         config["dist"] = raw_input("Distribution, e.g. fedora-14 > ")
 
     config["topdir"] = config["repodir"]
