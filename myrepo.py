@@ -75,14 +75,10 @@ def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
     TODO: Popen.communicate might be blocked. How about using Popen.wait
     instead?
 
-    >>> (o, e) = shell("echo ok > /dev/null", '.', False)
-    >>> assert e == "", "errmsg=" + e
-    >>> 
-    >>> (o, e) = shell("ls null", "/dev", False)
-    >>> assert e == "", "errmsg=" + e
-    >>> 
+    >>> assert 0 == shell("echo ok > /dev/null", '.', False)
+    >>> assert 0 == shell("ls null", "/dev", False)
     >>> try:
-    ...    (o, e) = shell("ls /root", '.', False)
+    ...    rc = shell("ls /root", '.', False)
     ... except RuntimeError:
     ...    pass
     """
@@ -93,24 +89,25 @@ def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
 
     if dryrun:
         logging.info(" exit as we're in dry run mode.")
-        return ("", "")
+        return 0
 
     try:
-        pipe = subprocess.Popen([cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
-        (output, errors) = pipe.communicate()
+        proc = subprocess.Popen([cmd], shell=True, cwd=workdir)
+        proc.wait()
+        rc = proc.returncode
     except Exception, e:
         # NOTE: e.message looks not available in python < 2.5:
         #raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
         raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), str(e)))
 
-    if pipe.returncode == 0:
-        return (output, errors)
+    if rc == 0:
+        return rc
     else:
         if stop_on_error:
-            raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd, errors))
+            raise RuntimeError(" Failed: %s,\n rc=%d" % (cmd, rc))
         else:
-            logging.error(" cmd=%s, error=%s" % (cmd, errors))
-            return ("", errors)
+            logging.error(" cmd=%s, rc=%d" % (cmd, rc))
+            return rc
 
 
 def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True):
@@ -205,10 +202,9 @@ def get_username():
 def get_email(use_git):
     if use_git:
         try:
-            (email, e) = shell("git config --get user.email 2>/dev/null")
-            if not e:
-                return email.rstrip()
-        except RuntimeError, e:
+            email = subprocess.check_output("git config --get user.email 2>/dev/null", shell=True)
+            return email.rstrip()
+        except Exception, e:
             logging.warn(str(e))
             pass
 
@@ -220,10 +216,9 @@ def get_fullname(use_git):
     """
     if use_git:
         try:
-            (fullname, e) = shell("git config --get user.name 2>/dev/null")
-            if not e:
-                return fullname.rstrip()
-        except RuntimeError, e:
+            fullname = subprocess.check_output("git config --get user.name 2>/dev/null")
+            return fullname.rstrip()
+        except Exception, e:
             logging.warn(str(e))
             pass
 
@@ -253,10 +248,10 @@ class Distribution(object):
     '/var/lib/mock/fedora-14-x86_64/result'
     >>> logging.getLogger().setLevel(logging.WARNING)
     >>> d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
-    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm 2>&1 2> /dev/null'
+    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm > /dev/null 2> /dev/null'
     >>> logging.getLogger().setLevel(logging.INFO)
     >>> d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
-    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm 2>&1'
+    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm'
     """
 
     def __init__(self, dist, arch="x86_64"):
@@ -281,9 +276,9 @@ class Distribution(object):
         """
         # suppress log messages from mock in accordance with log level:
         if logging.getLogger().level >= logging.WARNING:
-            fmt = "mock -r %s %s 2>&1 2> /dev/null"
+            fmt = "mock -r %s %s > /dev/null 2> /dev/null"
         else:
-            fmt = "mock -r %s %s 2>&1"
+            fmt = "mock -r %s %s"
 
         return fmt % (self.label, srpm)
 
@@ -464,24 +459,14 @@ class Repo(object):
         """
         return Command(dist.build_cmd(srpm), self.user, "localhost", os.curdir)
 
-    def seq_run(self, cmds, stop_on_error=True):
-        oes = []
-        loglevel = logging.getLogger().level
+    def seq_run(self, cmds):
+        rcs = []
 
         for c in cmds:
-            (o, e) = c.run()
-            oes.append((o, e))
+            rc = c.run()
+            rcs.append(rc)
 
-            if loglevel < logging.WARNING:
-                sys.stdout.write(o)
-
-            ## FIXME: shell() must be fixed to return exitcode along with (o, e)
-            ## to implement this behavior correctly.
-            #if stop_on_error and e:
-            #    logging.error(" Failed: %s,\n error=%s" % (str(c), e))
-            #    sys.exit(1)
-
-        return oes
+        return rcs
 
     def dists_by_srpm(self, srpm):
         return (is_noarch(srpm) and self.dists[:1] or self.dists)
