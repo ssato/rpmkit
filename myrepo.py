@@ -256,7 +256,7 @@ class Distribution(object):
     'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm 2>&1 2> /dev/null'
     >>> logging.getLogger().setLevel(logging.INFO)
     >>> d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
-    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm'
+    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm 2>&1'
     """
 
     def __init__(self, dist, arch="x86_64"):
@@ -276,11 +276,14 @@ class Distribution(object):
         return "/var/lib/mock/%s/result" % self.label
 
     def build_cmd(self, srpm):
+        """
+        NOTE: mock will print log messages to stderr (not stdout).
+        """
         # suppress log messages from mock in accordance with log level:
         if logging.getLogger().level >= logging.WARNING:
             fmt = "mock -r %s %s 2>&1 2> /dev/null"
         else:
-            fmt = "mock -r %s %s"
+            fmt = "mock -r %s %s 2>&1"
 
         return fmt % (self.label, srpm)
 
@@ -463,9 +466,14 @@ class Repo(object):
 
     def seq_run(self, cmds, stop_on_error=True):
         oes = []
+        loglevel = logging.getLogger().level
+
         for c in cmds:
             (o, e) = c.run()
             oes.append((o, e))
+
+            if loglevel < logging.WARNING:
+                sys.stdout.write(o)
 
             ## FIXME: shell() must be fixed to return exitcode along with (o, e)
             ## to implement this behavior correctly.
