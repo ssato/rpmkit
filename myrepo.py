@@ -533,6 +533,8 @@ gpgcheck=0
             "workdir": workdir,
         }
 
+        logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
+
         tmpl = """echo ${pkg.release_file} | \\
 xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
     --group "System Environment/Base" \\
@@ -540,8 +542,8 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
     --summary "Yum repo files for ${repo.name}" \\
     --packager "${repo.fullname}" --mail "${repo.email}" \\
     --ignore-owner --pversion ${dist.version}  \\
-    --no-rpmdb --no-mock --debug \\
-    --destdir ${pkg.workdir} - """
+    --no-rpmdb --no-mock %(logopt)s \\
+    --destdir ${pkg.workdir} - """ % {"logopt": logopt, }
 
         cmd = Command(compile_template(tmpl, params), self.user)
         cmd.run()
@@ -583,7 +585,7 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
             cs.append(Command(c, self.user, self.server, destdir, stop_on_error=False))
 
         dirs = [os.path.join(destdir, d) for d in ["sources"] + self.archs]
-        c = "test -d repodata && createrepo --update --deltas --database . || createrepo --deltas --database ."
+        c = "test -d repodata && createrepo --update --deltas --oldpackagedirs . --database . || createrepo --deltas --oldpackagedirs . --database ."
 
         cs += [Command(c, self.user, self.server, d) for d in dirs]
 
@@ -749,7 +751,6 @@ Examples:
 
     p.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Quiet mode")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
-    p.add_option("-D", "--debug", action="store_true", help="Debug mode")
 
     p.add_option("-T", "--test", action="store_true", help="Run test suite")
 
@@ -770,12 +771,9 @@ def main():
     (options, args) = p.parse_args()
 
     if options.verbose:
-        logging.getLogger().setLevel(logging.INFO)
-    else:
-        logging.getLogger().setLevel(logging.WARNING)
-
-    if options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
 
     if options.test:
         verbose_test = (options.verbose or options.debug)
