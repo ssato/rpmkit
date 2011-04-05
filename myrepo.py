@@ -299,17 +299,20 @@ class Repo(object):
     dist = "fedora-14"
     archs = "x86_64,i386"
     repodir = "yum"
-    baseurl_pattern = "http://%(server)s/%(topdir)s/%(distdir)s/"
+
+    name_format = "%(distname)s-%(hostname)s-%(user)s"
+    baseurl_format = "http://%(server)s/%(topdir)s/%(distdir)s/"
 
     def __init__(self, server=False,
                        user=False,
                        email=False,
                        fullname=False,
                        name=False,
+                       name_format=False,
                        dist=False,
                        archs=False,
                        repodir=False,
-                       baseurl_pattern=False,
+                       baseurl_format=False,
                        *args, **kwargs):
         """
         @server    server's hostname to provide this yum repo via http
@@ -317,13 +320,15 @@ class Repo(object):
         @email     email address
         @fullname  full name, e.g. "John Doe".
         @name      repository name, e.g. "rpmfusion-free"
+        @name_format  Pattern to generate repository name
         @dist      distribution string, e.g. "fedora-14"
         @archs     architecture list, e.g. "i386,x86_64"
         @repodir   repo's topdir relative to ~/public_html/, e.g. yum.
-        @baseurl_pattern   base url pattern, e.g. "http://%(server)s/%(topdir)s/%(distdir)s".
+        @baseurl_format   base url format, e.g. "http://%(server)s/%(topdir)s/%(distdir)s".
         """
         assert server, "server parameter must be given."
         self.server = server
+        self.hostname = server.split('.')[0]
 
         if user:
             self.user = user
@@ -345,18 +350,22 @@ class Repo(object):
 
         self.multiarch = "i386" in self.archs and "x86_64" in self.archs
 
+        (self.distname, self.distversion) = Distribution.parse_dist(self.dist)
         self.dists = [Distribution(self.dist, arch) for arch in self.archs]
         self.distdir = os.path.join(*Distribution.parse_dist(self.dist))
 
         self.topdir = "%(user)s/%(repodir)s" % {"user": self.user, "repodir": self.repodir}
 
-        if baseurl_pattern:
-            self.baseurl_pattern = baseurl_pattern
+        if baseurl_format:
+            self.baseurl_format = baseurl_format
+
+        if name_format:
+            self.name_format = name_format
 
         if name:
             self.name = name
         else:
-            self.name = self.gen_name(self.server, self.user, self.dist)
+            self.name = self.gen_name()
 
         self.deploy_topdir = "~%(user)s/public_html/%(repodir)s/" % {"user": self.user, "repodir": self.repodir}
         self.is_remote = not self.server.startswith("localhost")
@@ -366,7 +375,7 @@ class Repo(object):
 
         >>> bp = "http://%(server)s/%(topdir)s/%(distdir)s/"
         >>> (s, u, r, d) = ("yum.local", "foo", "repos", "fedora-14") 
-        >>> repo = Repo(server=s, user=u, dist=d, repodir=r, baseurl_pattern=bp)
+        >>> repo = Repo(server=s, user=u, dist=d, repodir=r, baseurl_format=bp)
         >>> repo.topdir
         'foo/repos'
         >>> repo.baseurl()
@@ -377,20 +386,30 @@ class Repo(object):
             "user": self.user,
             "topdir": self.topdir,
             "distdir": self.distdir,
+            # ...: TODO
         }
-        return self.baseurl_pattern % params
+        return self.baseurl_format % params
 
-    def gen_name(self, server, user, dist):
+    def gen_name(self):
         """Repository name.
 
-        >>> repo = Repo("rhns.local")
-        >>> repo.gen_name("rhns.local", "foo", "rhel-5")
+        >>> repo = Repo("rhns.local", user="foo", dist="rhel-5")
+        >>> repo.gen_name()
         'rhel-rhns-foo'
+        >>> repo = Repo("rhns.local", user="foo", dist="rhel-5", name_format="%(distname)s-%(user)s")
+        >>> repo.gen_name()
+        'rhel-foo'
         """
-        (n, v) = Distribution.parse_dist(dist)
-        s = server.split('.')[0]
-
-        return "%s-%s-%s" % (n, s, user)
+        params = {
+            "server": self.server,
+            "hostname": self.hostname,
+            "user": self.user,
+            "dist": self.dist,
+            "distname": self.distname,
+            "distversion": self.distversion,
+            # ...: TODO
+        }
+        return self.name_format % params
 
     def copy_cmd(self, src, dst):
         """
@@ -686,12 +705,13 @@ Examples:
   """
     )
 
-    for k in ("user", "email", "fullname", "dist", "archs", "repodir", "baseurl_pattern"):
+    for k in ("user", "email", "fullname", "dist", "archs", "repodir", "name_format", "baseurl_format"):
         if not defaults.get(k, False):
             defaults[k] = getattr(Repo, k, False)
 
     defaults["server"] = False
     defaults["name"] = False
+    defaults["name_format"] = False
     defaults["tests"] = False
     defaults["verbose"] = False
     defaults["debug"] = False
@@ -717,7 +737,9 @@ Examples:
 
     iog = optparse.OptionGroup(p, "Options for 'init' command")
     iog.add_option('', "--name", help="Name of your yum repo.")
-    iog.add_option('', "--baseurl-pattern", help="Base URL pattern [%default]")
+    iog.add_option('', "--name-format",
+        help="Name format of your yum repo name. If nothing is given with --name option, the name will be generated w/ using this. [%default]")
+    iog.add_option('', "--baseurl-format", help="Base URL format [%default]")
     p.add_option_group(iog)
 
     return p
