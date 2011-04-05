@@ -251,8 +251,12 @@ class Distribution(object):
     ('fedora', '14', 'x86_64')
     >>> d.mockdir()
     '/var/lib/mock/fedora-14-x86_64/result'
+    >>> logging.getLogger().setLevel(logging.WARNING)
     >>> d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
     'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm 2>&1 2> /dev/null'
+    >>> logging.getLogger().setLevel(logging.INFO)
+    >>> d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
+    'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm'
     """
 
     def __init__(self, dist, arch="x86_64"):
@@ -272,8 +276,13 @@ class Distribution(object):
         return "/var/lib/mock/%s/result" % self.label
 
     def build_cmd(self, srpm):
-        return "mock -r %s %s 2>&1 2> /dev/null" % (self.label, srpm)
+        # suppress log messages from mock in accordance with log level:
+        if logging.getLogger().level >= logging.WARNING:
+            fmt = "mock -r %s %s 2>&1 2> /dev/null"
+        else:
+            fmt = "mock -r %s %s"
 
+        return fmt % (self.label, srpm)
 
 
 class Repo(object):
