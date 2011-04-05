@@ -145,6 +145,15 @@ class Command(object):
     def __str__(self):
         return "%s in %s on %s@%s" % (self.cmd, self.workdir, self.user, self.host)
 
+    def __eq__(self, other):
+        return self.cmd == other.cmd and \
+            self.user == other.user and \
+            self.host == other.host and \
+            self.workdir == other.workdir and \
+            self.log == other.log and \
+            self.dryrun == other.dryrun and \
+            self.stop_on_error == other.stop_on_error
+
     def run(self):
         return rshell(self.cmd, self.user, self.host, self.workdir, self.log, self.dryrun, self.stop_on_error)
 
@@ -355,6 +364,16 @@ class Repo(object):
         self.is_remote = not self.server.startswith("localhost")
 
     def baseurl(self):
+        """
+
+        >>> bp = "http://%(server)s/%(topdir)s/%(distdir)s/"
+        >>> (s, u, r, d) = ("yum.local", "foo", "repos", "fedora-14") 
+        >>> repo = Repo(server=s, user=u, dist=d, repodir=r, baseurl_pattern=bp)
+        >>> repo.topdir
+        'foo/repos'
+        >>> repo.baseurl()
+        'http://yum.local/foo/repos/fedora/14/'
+        """
         params = {
             "server": self.server,
             "user": self.user,
@@ -376,6 +395,16 @@ class Repo(object):
         return "%s-%s-%s" % (n, s, user)
 
     def copy_cmd(self, src, dst):
+        """
+        >>> r0 = Repo("localhost.localdomain", "foo")
+        >>> c0 = r0.copy_cmd("~/.screenrc", "/tmp")
+        >>> 
+        >>> r1 = Repo("rhns.local", "foo")
+        >>> c1 = r1.copy_cmd("~/.screenrc", "/tmp")
+        >>> 
+        >>> assert c0 == Command("cp -a ~/.screenrc /tmp", "foo"), c0
+        >>> assert c1 == Command("scp -p ~/.screenrc foo@rhns.local:/tmp", "foo"), c1
+        """
         if self.is_remote:
             cmd = "scp -p %s %s@%s:%s" % (src, self.user, self.server, dst)
         else:
