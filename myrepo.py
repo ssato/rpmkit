@@ -20,7 +20,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Requirements: createrepo, scp in ssh, xpack (see below)
+# Requirements: createrepo, ssh, xpack (see below)
 #
 # SEE ALSO: createrepo(8)
 # SEE ALSO: https://github.com/ssato/rpmkit/blob/xpack.py
