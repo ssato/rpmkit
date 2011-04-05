@@ -272,7 +272,10 @@ class Distribution(object):
         return "/var/lib/mock/%s/result" % self.label
 
     def build_cmd(self, srpm):
-        return "mock -r %s %s 2>&1 2> /dev/null" % (self.label, srpm)
+        if logging.getLogger().level < logging.WARNING:
+            return "mock -v -r %s %s" % (self.label, srpm)
+        else:
+            return "mock -r %s %s 2>&1 2> /dev/null"  % (self.label, srpm)
 
 
 
