@@ -744,11 +744,9 @@ Examples:
         if not defaults.get(k, False):
             defaults[k] = getattr(Repo, k, False)
 
-    defaults["server"] = False
-    defaults["name"] = False
-    defaults["tests"] = False
-    defaults["verbose"] = False
-    defaults["debug"] = False
+    for k in ("server", "name", "tests", "verbose", "debug"):
+        if not defaults.get(k, False):
+            defaults[k] = False
 
     p.set_defaults(**defaults)
 
