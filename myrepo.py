@@ -243,17 +243,6 @@ def is_noarch(srpm):
 
 
 
-class TestFuncsWithSideEffects(unittest.TestCase):
-
-    def setUp(self):
-        logging.info("start") # dummy log
-        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="xpack-tests")
-
-    def tearDown(self):
-        rm_rf(self.workdir)
-
-
-
 class Distribution(object):
     """Distribution object.
 
@@ -620,8 +609,52 @@ def init_defaults_by_conffile(config=None, profile=None):
     return defaults
 
 
+
+class TestFuncsWithSideEffects(unittest.TestCase):
+
+    def setUp(self):
+        logging.info("start") # dummy log
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="xpack-tests")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_init_defaults_by_conffile_config(self):
+        conf = """\
+[DEFAULT]
+a: aaa
+b: bbb
+"""
+        path = os.path.join(self.workdir, "config")
+        open(path, "w").write(conf)
+
+        params = init_defaults_by_conffile(path)
+        assert params["a"] == "aaa"
+        assert params["b"] == "bbb"
+
+    def test_init_defaults_by_conffile_config_and_profile_0(self):
+        conf = """\
+[profile0]
+a: aaa
+b: bbb
+"""
+        path = os.path.join(self.workdir, "config")
+        open(path, "w").write(conf)
+
+        params = init_defaults_by_conffile(path, "profile0")
+        assert params["a"] == "aaa"
+        assert params["b"] == "bbb"
+
+
+
 def test(verbose):
     doctest.testmod(verbose=verbose)
+
+    minor = sys.version_info[1]
+    if minor >= 5:
+        unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
+    else:
+        unittest.main(argv=sys.argv[:1])
 
 
 def opt_parser():
