@@ -659,11 +659,11 @@ b: bbb
 def test(verbose):
     doctest.testmod(verbose=verbose)
 
-    minor = sys.version_info[1]
-    if minor >= 5:
-        unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
-    else:
+    (major, minor) = sys.version_info[:2]
+    if major == 2 and minor < 5:
         unittest.main(argv=sys.argv[:1])
+    else:
+        unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
 
 
 def opt_parser():
