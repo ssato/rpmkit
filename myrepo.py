@@ -467,9 +467,11 @@ class Repo(object):
             (o, e) = c.run()
             oes.append((o, e))
 
-            if stop_on_error and e:
-                logging.error(" Failed: %s,\n error=%s" % (str(c), e))
-                sys.exit(1)
+            ## FIXME: shell() must be fixed to return exitcode along with (o, e)
+            ## to implement this behavior correctly.
+            #if stop_on_error and e:
+            #    logging.error(" Failed: %s,\n error=%s" % (str(c), e))
+            #    sys.exit(1)
 
         return oes
 
