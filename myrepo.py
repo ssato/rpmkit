@@ -81,6 +81,7 @@ def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
     ...    rc = shell("ls /root", '.', False)
     ... except RuntimeError:
     ...    pass
+    >>> assert 0 == shell("ls /root", '.', False, True)
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
@@ -114,6 +115,11 @@ def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True)
     """
     @user     str  (remote) user to run given command.
     @host     str  on which host to run given command?
+
+    >>> rc = shell("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
+    >>> if rc == 0:
+    ...     rc = rshell("ls /dev/null", get_username(), "127.0.0.1", os.curdir, log=False)
+    ...     assert rc == 0, rc
     """
     is_remote = not host.startswith("localhost")
 
@@ -694,6 +700,29 @@ b: bbb
         params = init_defaults_by_conffile(path, "profile0")
         assert params["a"] == "aaa"
         assert params["b"] == "bbb"
+
+
+
+class TestApp(unittest.TestCase):
+
+    def setUp(self):
+        logging.info("start") # dummy log
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="xpack-tests")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_init(self):
+        pass
+
+    def test_build(self):
+        pass
+
+    def test_deploy(self):
+        pass
+
+    def test_update(self):
+        pass
 
 
 
