@@ -586,6 +586,20 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
 
 
 
+def list_dists(arch="i386"):
+    """List available dist names, e.g. ["fedora-14", "rhel-6"]
+    """
+    reg = re.compile("/etc/mock/(?P<dist>[^-]+-[^-]+)-%s.cfg" % arch)
+
+    return [reg.match(c).groups()[0] for c in glob.glob("/etc/mock/*-*-%s.cfg" % arch)]
+
+
+def list_archs():
+    """TODO
+    """
+    return ["x86_64", "i386"]
+
+
 def parse_conf_value(s):
     """Simple and naive parser to parse value expressions in config files.
 
@@ -830,7 +844,8 @@ def main():
         config["server"] = raw_input("Server > ")
 
     if not config.get("dist", False):
-        config["dist"] = raw_input("Distribution, e.g. fedora-14 > ")
+        dists = " ".join(list_dists(options.archs.split(",")[0]))
+        config["dist"] = raw_input("Select distribution: %s > " % dists)
 
     config["topdir"] = config["repodir"]
 
