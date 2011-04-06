@@ -222,7 +222,7 @@ def get_fullname(use_git):
     """
     if use_git:
         try:
-            fullname = subprocess.check_output("git config --get user.name 2>/dev/null")
+            fullname = subprocess.check_output("git config --get user.name 2>/dev/null", shell=True)
             return fullname.rstrip()
         except Exception, e:
             logging.warn("get_fullname: " + str(e))
