@@ -14,7 +14,7 @@ sh_SOURCES = list-srpmnames-by-file.sh list-requires-by-package-name.sh
 REQUIRES = python-cheetah,rpm-python,mock,rpm-build,sqlite,autoconf,automake,xpack
 
 FULLNAME = Satoru SATOH
-EMAIL	= ssato@redhat.com
+EMAIL	= satoru.satoh@gmail.com
 
 
 # Do not edit:
@@ -52,6 +52,7 @@ build: $(py_SCRIPTS) $(sh_SCRIPTS)
 		--url https://github.com/ssato/rpmkit/ \
 		--summary "RPM toolKit" --requires $(REQUIRES) \
 		--packager "$(FULLNAME)" --mail $(EMAIL) \
+		--upto sbuild \
 		-w $(WORKDIR) --destdir $(WORKDIR) \
 		--ignore-owner $(logopt) -
 
