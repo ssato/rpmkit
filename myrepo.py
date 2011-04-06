@@ -392,12 +392,7 @@ class Repo(object):
         >>> repo.gen_email()
         'foo@example.com'
         """
-        params = {
-            "server": self.server,
-            "hostname": self.hostname,
-            "user": self.user,
-        }
-        return self.email_format % params
+        return self.email_format % self.__dict__
 
     def baseurl(self):
         """
@@ -410,14 +405,7 @@ class Repo(object):
         >>> repo.baseurl()
         'http://yum.local/foo/repos/fedora/14/'
         """
-        params = {
-            "server": self.server,
-            "user": self.user,
-            "topdir": self.topdir,
-            "distdir": self.distdir,
-            # ...: TODO
-        }
-        return self.baseurl_format % params
+        return self.baseurl_format % self.__dict__
 
     def gen_name(self):
         """Generate repository name.
@@ -429,16 +417,7 @@ class Repo(object):
         >>> repo.gen_name()
         'rhel-foo'
         """
-        params = {
-            "server": self.server,
-            "hostname": self.hostname,
-            "user": self.user,
-            "dist": self.dist,
-            "distname": self.distname,
-            "distversion": self.distversion,
-            # ...: TODO
-        }
-        return self.name_format % params
+        return self.name_format % self.__dict__
 
     def copy_cmd(self, src, dst):
         """
