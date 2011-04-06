@@ -64,7 +64,7 @@ def compile_template(template, params, is_file=False):
     return tmpl.respond()
 
 
-def shell(cmd, workdir="", log=True, dryrun=False, stop_on_error=True):
+def shell(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
     """
     @cmd      str   command string, e.g. "ls -l ~".
     @workdir  str   in which dir to run given command?
@@ -140,10 +140,14 @@ class Command(object):
         self.cmd = cmd
         self.user = get_username()
         self.host = host
-        self.workdir = workdir
         self.log = log
         self.dryrun = dryrun
         self.stop_on_error = stop_on_error
+
+        if self.host.startswith("localhost") and "~" in workdir:
+            self.workdir = os.path.expanduser(workdir)
+        else:
+            self.workdir = workdir
 
     def __str__(self):
         return "%s in %s on %s@%s" % (self.cmd, self.workdir, self.user, self.host)
@@ -441,7 +445,7 @@ class Repo(object):
         if self.is_remote:
             cmd = "scp -p %s %s@%s:%s" % (src, self.user, self.server, dst)
         else:
-            cmd = "cp -a %s %s" % (src, dst)
+            cmd = "cp -a %s %s" % (src, ("~" in dst and os.path.expanduser(dst) or dst))
 
         logging.debug("copy: " + cmd)
 
@@ -558,7 +562,7 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
         destdir = os.path.join(self.deploy_topdir, self.distdir)
 
         xs = ["mkdir -p %s" % os.path.join(destdir, d) for d in ["sources"] + self.archs] 
-        cs = [Command(c, self.user, self.server, '~') for c in xs]
+        cs = [Command(c, self.user, self.server) for c in xs]
 
         self.seq_run(cs)
 
