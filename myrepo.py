@@ -638,10 +638,10 @@ def init_defaults_by_conffile(config=None, profile=None):
     """
     if config is None:
         home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
-        confs = (
-            "/etc/myreporc",
-            os.environ.get("MYREPORC", os.path.join(home, ".myreporc")),
-        )
+
+        confs = ["/etc/myreporc"]
+        confs += glob.glob("/etc/myrepo.d/*.conf")
+        confs += [os.environ.get("MYREPORC", os.path.join(home, ".myreporc"))]
     else:
         confs = (config,)
 
@@ -650,7 +650,7 @@ def init_defaults_by_conffile(config=None, profile=None):
 
     for c in confs:
         if os.path.exists(c):
-            logging.debug("Loading config: %s" % c)
+            logging.info("Loading config: %s" % c)
             cparser.read(c)
             loaded = True
 
