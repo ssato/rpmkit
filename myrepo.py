@@ -211,7 +211,7 @@ def get_email(use_git):
             email = subprocess.check_output("git config --get user.email 2>/dev/null", shell=True)
             return email.rstrip()
         except Exception, e:
-            logging.warn(str(e))
+            logging.warn("get_email: " + str(e))
             pass
 
     return os.environ.get("MAIL_ADDRESS", False) or "%s@localhost.localdomain" % get_username()
@@ -225,7 +225,7 @@ def get_fullname(use_git):
             fullname = subprocess.check_output("git config --get user.name 2>/dev/null")
             return fullname.rstrip()
         except Exception, e:
-            logging.warn(str(e))
+            logging.warn("get_fullname: " + str(e))
             pass
 
     return os.environ.get("FULLNAME", False) or get_username()
@@ -258,6 +258,11 @@ class Distribution(object):
     >>> logging.getLogger().setLevel(logging.INFO)
     >>> d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
     'mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm'
+    >>> d.arch_pattern
+    'x86_64'
+    >>> d = Distribution("fedora-14", "i386")
+    >>> d.arch_pattern
+    'i*86'
     """
 
     def __init__(self, dist, arch="x86_64"):
@@ -268,6 +273,8 @@ class Distribution(object):
         self.label = "%s-%s" % (dist, arch)
         (self.name, self.version) = self.parse_dist(dist)
         self.arch = arch
+
+        self.arch_pattern = (arch == "i386" and "i*86" or self.arch)
 
     @classmethod
     def parse_dist(self, dist):
@@ -287,6 +294,7 @@ class Distribution(object):
             fmt = "mock -r %s %s"
 
         return fmt % (self.label, srpm)
+
 
 
 class Repo(object):
@@ -472,7 +480,7 @@ class Repo(object):
             if is_noarch(srpm):
                 rpms = glob.glob("%s/*.noarch.rpm" % d.mockdir())
             else:
-                rpms = glob.glob("%s/*.%s.rpm" % (d.mockdir(), d.arch))
+                rpms = glob.glob("%s/*.%s.rpm" % (d.mockdir(), d.arch_pattern))
 
             for p in rpms:
                 cs.append(self.copy_cmd(p, os.path.join(destdir, d.arch)))
