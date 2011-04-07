@@ -87,7 +87,7 @@ def list_dists():
     arch = list_archs()[0]
     reg = re.compile("%s/(?P<dist>[^-]+-[^-]+)-%s.cfg" % (mockdir, arch))
 
-    return [reg.match(c).groups()[0] for c in glob.glob("%s/*-*-%s.cfg" % (mockdir, arch))]
+    return [reg.match(c).groups()[0] for c in sorted(glob.glob("%s/*-*-%s.cfg" % (mockdir, arch)))]
 
 
 @memoize
@@ -653,7 +653,7 @@ def init_defaults_by_conffile(config=None, profile=None):
         home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
 
         confs = ["/etc/myreporc"]
-        confs += glob.glob("/etc/myrepo.d/*.conf")
+        confs += sorted(glob.glob("/etc/myrepo.d/*.conf"))
         confs += [os.environ.get("MYREPORC", os.path.join(home, ".myreporc"))]
     else:
         confs = (config,)
