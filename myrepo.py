@@ -37,6 +37,7 @@ import logging
 import optparse
 import os
 import os.path
+import platform
 import pprint
 import re
 import rpm
@@ -45,6 +46,20 @@ import sys
 import tempfile
 import unittest
 
+
+
+def memoize(fn):
+    """memoization decorator.
+    """
+    cache = {}
+
+    def wrapped(*args, **kwargs):
+        key = repr(args) + repr(kwargs)
+        if not cache.has_key(key):
+            cache[key] = fn(*args, **kwargs)
+        return cache[key]
+
+    return wrapped
 
 
 def compile_template(template, params, is_file=False):
@@ -62,6 +77,32 @@ def compile_template(template, params, is_file=False):
         tmpl = Template(source=template, searchList=params)
 
     return tmpl.respond()
+
+
+@memoize
+def list_dists():
+    """List available dist names, e.g. ["fedora-14", "rhel-6"]
+    """
+    mockdir = "/etc/mock"
+    arch = list_archs()[0]
+    reg = re.compile("%s/(?P<dist>[^-]+-[^-]+)-%s.cfg" % (mockdir, arch))
+
+    return [reg.match(c).groups()[0] for c in glob.glob("%s/*-*-%s.cfg" % (mockdir, arch))]
+
+
+@memoize
+def list_archs():
+    """List 'normalized' architecutres this host (mock) can support.
+    """
+    default = ["x86_64", "i386"]  # This order should be kept.
+    ia32_re = re.compile(r"i.86") # i386, i686, etc.
+
+    arch = platform.machine()
+
+    if ia32_re.match(arch) is not None:
+        return ["i386"]
+    else:
+        return default
 
 
 def shell(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
@@ -316,7 +357,7 @@ class Repo(object):
     fullname = get_fullname(use_git)
 
     dist = "fedora-14"
-    archs = "x86_64,i386"
+    archs = ",".join(list_archs())
     repodir = "yum"
 
     name = "%(distname)s-%(hostname)s-%(user)s"
@@ -571,20 +612,6 @@ xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
 
 
 
-def list_dists(arch="i386"):
-    """List available dist names, e.g. ["fedora-14", "rhel-6"]
-    """
-    reg = re.compile("/etc/mock/(?P<dist>[^-]+-[^-]+)-%s.cfg" % arch)
-
-    return [reg.match(c).groups()[0] for c in glob.glob("/etc/mock/*-*-%s.cfg" % arch)]
-
-
-def list_archs():
-    """TODO
-    """
-    return ["x86_64", "i386"]
-
-
 def parse_conf_value(s):
     """Simple and naive parser to parse value expressions in config files.
 
@@ -731,14 +758,14 @@ Commands: i[init], b[uild], d[eploy], u[pdate]
 
 Examples:
   # initialize your yum repos:
-  %prog init -s yumserver.local -u foo -m foo@example.com -F "John Doe" --repodir "~/public_html/yum"
+  %prog init -s yumserver.local -u foo -m foo@example.com -F "John Doe" --repodir "repos"
 
   # build SRPM:
   %prog build xpack-0.1-1.src.rpm 
 
   # build SRPM and deploy RPMs and SRPMs into your yum repos:
-  %prog deploy --dists fedora-14 xpack-0.1-1.src.rpm 
-  %prog d --dists rhel-6 --archs x86_64 xpack-0.1-1.src.rpm 
+  %prog deploy --dist fedora-14 xpack-0.1-1.src.rpm
+  %prog d --dist rhel-6 --archs x86_64 xpack-0.1-1.src.rpm
   """
     )
 
@@ -750,6 +777,8 @@ Examples:
         if not defaults.get(k, False):
             defaults[k] = False
 
+    dist_choices = list_dists()
+
     p.set_defaults(**defaults)
 
     p.add_option("-C", "--config", help="Configuration file")
@@ -760,8 +789,9 @@ Examples:
     p.add_option("-F", "--fullname", help="Your full name [%default]")
     p.add_option("-R", "--repodir", help="Top directory of your yum repo [%default]")
 
-    p.add_option("-d", "--dist", help="Target distribution name [%default]")
-    p.add_option("-A", "--archs", help="Comma separated list of architectures [%default]")
+    p.add_option("-d", "--dist", type="choice", choices=dist_choices,
+        help="Target distribution. Choices are " + ",".join(dist_choices) + " [%default]")
+    p.add_option("-A", "--archs", help="An arch or comma separated list of architectures [%default]")
 
     p.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Quiet mode")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -826,8 +856,8 @@ def main():
         config["server"] = raw_input("Server > ")
 
     if not config.get("dist", False):
-        dists = " ".join(list_dists(options.archs.split(",")[0]))
-        config["dist"] = raw_input("Select distribution: %s > " % dists)
+        dist_choices = ",".join(list_dists())
+        config["dist"] = raw_input("Select distribution: %s > " % dist_choices)
 
     config["topdir"] = config["repodir"]
 
