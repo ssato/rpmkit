@@ -309,41 +309,39 @@ class Repo(object):
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
 
     user = get_username()
+
     #email = get_email(use_git)
+    email = "%(user)s@%(server)s"
+
     fullname = get_fullname(use_git)
 
     dist = "fedora-14"
     archs = "x86_64,i386"
     repodir = "yum"
 
-    email_format = "%(user)s@%(server)s"
-    name_format = "%(distname)s-%(hostname)s-%(user)s"
-    baseurl_format = "http://%(server)s/%(topdir)s/%(distdir)s/"
+    name = "%(distname)s-%(hostname)s-%(user)s"
+    baseurl = "http://%(server)s/%(topdir)s/%(distdir)s/"
 
     def __init__(self, server=False,
                        user=False,
                        email=False,
-                       email_format=False,
                        fullname=False,
                        name=False,
-                       name_format=False,
                        dist=False,
                        archs=False,
                        repodir=False,
-                       baseurl_format=False,
+                       baseurl=False,
                        *args, **kwargs):
         """
         @server    server's hostname to provide this yum repo via http
         @user      username on the server
-        @email     email address
-        @email_format  Format string to email address
+        @email     email address or its format string
         @fullname  full name, e.g. "John Doe".
-        @name      repository name, e.g. "rpmfusion-free"
-        @name_format  Format string to generate repository name
+        @name      repository name or its format string, e.g. "rpmfusion-free", "%(distname)s-%(hostname)s-%(user)s"
         @dist      distribution string, e.g. "fedora-14"
         @archs     architecture list, e.g. "i386,x86_64"
         @repodir   repo's topdir relative to ~/public_html/, e.g. yum.
-        @baseurl_format   base url format, e.g. "http://%(server)s/%(topdir)s/%(distdir)s".
+        @baseurl   base url or its format string, e.g. "http://%(server)s/%(topdir)s/%(distdir)s".
         """
         assert server, "server parameter must be given."
         self.server = server
@@ -351,14 +349,6 @@ class Repo(object):
 
         if user:
             self.user = user
-
-        if email_format:
-            self.email_format = email_format
-
-        if email:
-            self.email = email
-        else:
-            self.email = self.gen_email()
 
         if fullname:
             self.fullname = fullname
@@ -373,63 +363,54 @@ class Repo(object):
             self.archs = archs.split(',')
 
         self.multiarch = "i386" in self.archs and "x86_64" in self.archs
+        self.is_remote = not self.server.startswith("localhost")
 
         (self.distname, self.distversion) = Distribution.parse_dist(self.dist)
         self.dists = [Distribution(self.dist, arch) for arch in self.archs]
         self.distdir = os.path.join(*Distribution.parse_dist(self.dist))
 
         self.topdir = "%(user)s/%(repodir)s" % {"user": self.user, "repodir": self.repodir}
-
-        if baseurl_format:
-            self.baseurl_format = baseurl_format
-
-        if name_format:
-            self.name_format = name_format
-
-        if name:
-            self.name = name
-        else:
-            self.name = self.gen_name()
-
         self.deploy_topdir = "~%(user)s/public_html/%(repodir)s/" % {"user": self.user, "repodir": self.repodir}
-        self.is_remote = not self.server.startswith("localhost")
 
-    def gen_email(self):
+        self.email = self.get_email(email or Repo.email)
+        self.name = self.get_name(name or Repo.name)
+        self.baseurl = self.get_baseurl(baseurl or Repo.baseurl)
+
+    def get_email(self, email):
         """Generate email address.
 
         >>> repo = Repo("rhns.local", user="foo")
-        >>> repo.gen_email()
+        >>> repo.get_email(Repo.email)
         'foo@rhns.local'
-        >>> repo = Repo("rhns.local", user="foo", email_format="%(user)s@example.com")
-        >>> repo.gen_email()
+        >>> repo.get_email("%(user)s@example.com")
         'foo@example.com'
         """
-        return self.email_format % self.__dict__
+        return email % self.__dict__
 
-    def baseurl(self):
+    def get_baseurl(self, baseurl):
         """
 
-        >>> bp = "http://%(server)s/%(topdir)s/%(distdir)s/"
         >>> (s, u, r, d) = ("yum.local", "foo", "repos", "fedora-14") 
-        >>> repo = Repo(server=s, user=u, dist=d, repodir=r, baseurl_format=bp)
+        >>> repo = Repo(server=s, user=u, dist=d, repodir=r)
         >>> repo.topdir
         'foo/repos'
-        >>> repo.baseurl()
+        >>> repo.get_baseurl(Repo.baseurl)
         'http://yum.local/foo/repos/fedora/14/'
+        >>> repo.get_baseurl("http://repo.example.com/repos/fedora/14/")
+        'http://repo.example.com/repos/fedora/14/'
         """
-        return self.baseurl_format % self.__dict__
+        return baseurl % self.__dict__
 
-    def gen_name(self):
+    def get_name(self, name):
         """Generate repository name.
 
         >>> repo = Repo("rhns.local", user="foo", dist="rhel-5")
-        >>> repo.gen_name()
+        >>> repo.get_name(Repo.name)
         'rhel-rhns-foo'
-        >>> repo = Repo("rhns.local", user="foo", dist="rhel-5", name_format="%(distname)s-%(user)s")
-        >>> repo.gen_name()
+        >>> repo.get_name("%(distname)s-%(user)s")
         'rhel-foo'
         """
-        return self.name_format % self.__dict__
+        return name % self.__dict__
 
     def copy_cmd(self, src, dst):
         """
@@ -761,11 +742,11 @@ Examples:
   """
     )
 
-    for k in ("user", "email", "fullname", "dist", "archs", "repodir", "email_format", "name_format", "baseurl_format"):
+    for k in ("user", "email", "fullname", "dist", "archs", "repodir", "name", "baseurl"):
         if not defaults.get(k, False):
             defaults[k] = getattr(Repo, k, False)
 
-    for k in ("server", "name", "tests", "verbose", "debug"):
+    for k in ("server", "tests", "verbose", "debug"):
         if not defaults.get(k, False):
             defaults[k] = False
 
@@ -775,8 +756,7 @@ Examples:
 
     p.add_option("-s", "--server", help="Server to provide your yum repos.")
     p.add_option("-u", "--user", help="Your username on the server [%default]")
-    p.add_option("-m", "--email", help="Your email address [%default]")
-    p.add_option("", "--email-format", help="Format of email address. If nothing is given with --email, email will be generated w/ using this. [%default]")
+    p.add_option("-m", "--email", help="Your email address or its format string[%default]")
     p.add_option("-F", "--fullname", help="Your full name [%default]")
     p.add_option("-R", "--repodir", help="Top directory of your yum repo [%default]")
 
@@ -789,10 +769,8 @@ Examples:
     p.add_option("-T", "--test", action="store_true", help="Run test suite")
 
     iog = optparse.OptionGroup(p, "Options for 'init' command")
-    iog.add_option('', "--name", help="Name of your yum repo.")
-    iog.add_option('', "--name-format",
-        help="Name format of your yum repo name. If nothing is given with --name option, the name will be generated w/ using this. [%default]")
-    iog.add_option('', "--baseurl-format", help="Base URL format [%default]")
+    iog.add_option('', "--name", help="Name of your yum repo or its format string [%default].")
+    iog.add_option('', "--baseurl", help="Base URL or its format string [%default]")
     p.add_option_group(iog)
 
     return p
