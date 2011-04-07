@@ -46,7 +46,7 @@ $(bindir)/%: %.sh
 	install -m 755 $< $@
 
 build: $(py_SCRIPTS) $(sh_SCRIPTS)
-	python xpack.py --build-self $(logopt)
+	python xpack.py --build-self $(logopt) --upto sbuild --workdir $(WORKDIR)
 	find $(bindir) -type f | python xpack.py -n rpmkit --license GPLv3+ \
 		--group "System Environment/Base" --pversion $(VERSION) \
 		--url https://github.com/ssato/rpmkit/ \
