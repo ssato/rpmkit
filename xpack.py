@@ -49,13 +49,13 @@
 # * more complete tests
 # * detect parameters automatically as much as possible:
 #   * username, mail, fullname: almost done
-#   * url
-# * configuration file support (almost done)
-# * make it runnable on rhel 5 w/o python-cheetah (almost done)
+#   * url: "git config --get remote.origin.url", etc.
+# * configuration file support: almost done
+# * make it runnable on rhel 5 w/o python-cheetah: almost done
 # * keep permissions of targets in tar archives
-# * test --format=deb = .deb output (partially done)
+# * test --format=deb = .deb output: partially done
 # * sort out command line options
-# * handle symlinks and dirs correctly (partially done)
+# * handle symlinks and dirs correctly: partially done
 # * eliminate the strong dependency to rpm and make it runnable on debian based
 #   systems (w/o rpm-python)
 #
