@@ -1021,7 +1021,7 @@ def compile_template(template, params, is_file=False):
 
 
 @memoize
-def arch():
+def get_arch():
     """Returns 'normalized' architecutre this host can support.
     """
     ia32_re = re.compile(r"i.86") # i386, i686, etc.
@@ -1032,6 +1032,39 @@ def arch():
         return "i386"
     else:
         return arch
+
+
+@memoize
+def get_username():
+    """Get username.
+    """
+    return os.environ.get("USER", False) or os.getlogin()
+
+
+def get_email(use_git=True):
+    if use_git:
+        try:
+            email = subprocess.check_output("git config --get user.email 2>/dev/null", shell=True)
+            return email.rstrip()
+        except Exception, e:
+            logging.warn("get_email: " + str(e))
+            pass
+
+    return os.environ.get("MAIL_ADDRESS", False) or "%s@localhost.localdomain" % get_username()
+
+
+def get_fullname(use_git=True):
+    """Get full name of the user.
+    """
+    if use_git:
+        try:
+            fullname = subprocess.check_output("git config --get user.name 2>/dev/null", shell=True)
+            return fullname.rstrip()
+        except Exception, e:
+            logging.warn("get_fullname: " + str(e))
+            pass
+
+    return os.environ.get("FULLNAME", False) or get_username()
 
 
 def shell(cmd_s, workdir=os.curdir):
@@ -2040,10 +2073,10 @@ class PackageMaker(object):
         self.genfile('README')
         self.genfile('MANIFEST')
         self.genfile('MANIFEST.overrides')
-        self.shell('autoreconf -vfi')
+        self.shell('autoreconf -vfi') # TODO: add --quiet to make it less verbose?
 
     def sbuild(self):
-        self.shell('./configure')
+        self.shell('./configure')  # TODO: add --quiet to make it less verbose?
         self.shell('make dist')
 
     def build(self):
@@ -2429,8 +2462,11 @@ def option_parser(V=__version__):
     package_formats = ('tgz', 'rpm', 'deb')
     package_format_help = "Target package format: " + ", ".join(package_formats) + " (experimental) [%default]"
 
-    username = os.environ.get("USERNAME", "root")
-    mail = "%s@localhost.localdomain" % username
+    use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
+
+    mail = get_email(use_git)
+    packager = get_fullname(use_git)
+    dist = "fedora-14-%s" % get_arch()
 
     workdir = os.path.join(os.path.abspath(os.curdir), 'workdir')
 
@@ -2457,11 +2493,11 @@ def option_parser(V=__version__):
         'summary': cds.get("summary", ""),
         'arch': cds.get("arch", False),
         'requires': cds.get("requires", ""),
-        'packager': cds.get("packager", username),
+        'packager': cds.get("packager", packager),
         'mail': cds.get("mail", mail),
 
          # TODO: Detect appropriate distribution (for mock) automatically.
-        'dist': cds.get("dist", "fedora-14-i386"),
+        'dist': cds.get("dist", dist),
         'no_rpmdb': cds.get("no_rpmdb", False),
         'no_mock': cds.get("no_mock", False),
 
