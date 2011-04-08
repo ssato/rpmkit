@@ -47,6 +47,9 @@
 # TODO:
 # * correct wrong English expressions
 # * more complete tests
+# * detect parameters automatically as much as possible:
+#   * username, mail, fullname: almost done
+#   * url
 # * configuration file support (almost done)
 # * make it runnable on rhel 5 w/o python-cheetah (almost done)
 # * keep permissions of targets in tar archives
