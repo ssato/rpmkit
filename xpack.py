@@ -93,6 +93,7 @@ import optparse
 import os
 import os.path
 import cPickle as pickle
+import platform
 import pwd
 import re
 import shutil
@@ -1019,9 +1020,22 @@ def compile_template(template, params, is_file=False):
     return tmpl.respond()
 
 
-def shell(cmd_s, workdir=""):
-    """TODO: Popen.communicate might be blocked. How about using
-    Popen.wait instead?
+@memoize
+def arch():
+    """Returns 'normalized' architecutre this host can support.
+    """
+    ia32_re = re.compile(r"i.86") # i386, i686, etc.
+
+    arch = platform.machine() or "i386"
+
+    if ia32_re.match(arch) is not None:
+        return "i386"
+    else:
+        return arch
+
+
+def shell(cmd_s, workdir=os.curdir):
+    """NOTE: This function (subprocess.Popen.communicate()) may block.
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
@@ -1041,6 +1055,61 @@ def shell(cmd_s, workdir=""):
     else:
         raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
 
+
+
+def shell2(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
+    """
+    @cmd      str   command string, e.g. "ls -l ~".
+    @workdir  str   in which dir to run given command?
+    @log      bool  whether to print log messages or not.
+    @dryrun   bool  if True, just print command string to run and returns.
+    @stop_on_error bool  if True, RuntimeError will not be raised.
+
+    TODO: Popen.communicate might be blocked. How about using Popen.wait
+    instead?
+
+    >>> assert 0 == shell2("echo ok > /dev/null", '.', False)
+    >>> assert 0 == shell2("ls null", "/dev", False)
+    >>> try:
+    ...    rc = shell2("ls /root", '.', False)
+    ... except RuntimeError:
+    ...    pass
+    >>> assert 0 == shell2("ls /root", '.', False, True)
+    """
+    if not workdir:
+        workdir = os.path.abspath(os.curdir)
+
+    logging.info(" Run: %s [%s]" % (cmd, workdir))
+
+    if dryrun:
+        logging.info(" exit as we're in dry run mode.")
+        return 0
+
+    llevel = logging.getLogger().level
+    if llevel < logging.WARN:
+        cmd += " > /dev/null"
+    elif llevel < logging.INFO:
+        cmd += " 2> /dev/null"
+    else:
+        pass
+
+    try:
+        proc = subprocess.Popen([cmd], shell=True, cwd=workdir)
+        proc.wait()
+        rc = proc.returncode
+    except Exception, e:
+        # NOTE: e.message looks not available in python < 2.5:
+        #raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
+        raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), str(e)))
+
+    if rc == 0:
+        return rc
+    else:
+        if stop_on_error:
+            raise RuntimeError(" Failed: %s,\n rc=%d" % (cmd, rc))
+        else:
+            logging.error(" cmd=%s, rc=%d" % (cmd, rc))
+            return rc
 
 
 def createdir(targetdir, mode=0700):
@@ -1381,7 +1450,7 @@ class FileInfo(object):
             shutil.copy2(self.path, dest)
             self._copy_xattrs(dest)
         else:
-            shell("cp -a %s %s" % (self.path, dest))
+            shell2("cp -a %s %s" % (self.path, dest))
 
     def _remove(self, target):
         os.remove(target)
@@ -1839,12 +1908,24 @@ def rpm_attr(fileinfo):
     return "%%attr(%(m)s, %(u)s, %(g)s)" % {'m':m, 'u':u, 'g':g,}
 
 
-def srcrpm_name_by_rpmspec(rpmspec, workdir):
+def srcrpm_name_by_rpmspec(rpmspec):
     """Returns the name of src.rpm gotten from given RPM spec file.
     """
     cmd = 'rpm -q --specfile --qf "%{n}-%{v}-%{r}.src.rpm\n" ' + rpmspec
-    (o, e) = shell(cmd, workdir)
+    (o, e) = shell(cmd)
     return o.split("\n")[0]
+
+
+def srcrpm_name_by_rpmspec_2(rpmspec):
+    """Returns the name of src.rpm gotten from given RPM spec file.
+
+    Utilize rpm python binding instead of calling 'rpm' command.
+
+    FIXME: rpm-python does not look stable and dumps core often.
+    """
+    p = rpm.TransactionSet().parseSpec(rpmspec).packages[0]
+    h = p.header
+    return "%s-%s-%s.src.rpm" % (h["n"], h["v"], h["r"])
 
 
 def do_nothing(*args, **kwargs):
@@ -1875,7 +1956,7 @@ class PackageMaker(object):
             setattr(self, k, v)
 
     def shell(self, cmd_s):
-        return shell(cmd_s, workdir=self.workdir)
+        return shell2(cmd_s, workdir=self.workdir)
 
     def to_srcdir(self, path):
         """
@@ -2011,7 +2092,7 @@ class RpmPackageMaker(TgzPackageMaker):
 
         if self.use_mock:
             self.shell("mock -r %s %s" % \
-                (self.package['dist'], srcrpm_name_by_rpmspec(self.rpmspec(), self.workdir))
+                (self.package['dist'], srcrpm_name_by_rpmspec(self.rpmspec()))
             )
             return self.shell("mv /var/lib/mock/%(dist)s/result/*.rpm %(workdir)s" % self.package)
         else:
