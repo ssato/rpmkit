@@ -2559,7 +2559,7 @@ Examples:
     bog.add_option('', '--templates', help="Use custom template files. "
         "TEMPLATES is a comma separated list of template output and file after the form of "
         "RELATIVE_OUTPUT_PATH_IN_SRCDIR:TEMPLATE_FILE such like 'package.spec:/tmp/foo.spec.tmpl', "
-        "and 'debian/rules:mydebrules.tmpl,Makefile.am:/etc/foo/mymakefileam.tmpl'. "
+        "and 'debian/rules:mydebrules.tmpl, Makefile.am:/etc/foo/mymakefileam.tmpl'. "
         "Supported template syntax is Python Cheetah: http://www.cheetahtemplate.org .")
     bog.add_option('', '--rewrite-linkto', action='store_true',
         help="Whether to rewrite symlink\'s linkto (path of the objects "
