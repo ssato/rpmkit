@@ -751,7 +751,7 @@ EXAMPLE_RC = """\
 #
 # Read the output of `xpack.py --help` and edit the followings as needed.
 #
-[common]
+[DEFAULT]
 # working directory in absolute path:
 workdir =
 
@@ -783,7 +783,7 @@ rewrite_linkto  = False
 with_pyxattr    = False
 
 
-[package]
+## package:
 # name of the package:
 name    = xpacked-data
 
@@ -815,7 +815,7 @@ packager =
 mail    = %(packager)s@localhost.localdomain
 
 
-[rpm]
+## rpm:
 # build target distribution will be used for mock:
 dist    = fedora-14-i386
 
@@ -1284,6 +1284,32 @@ class TestFuncsWithSideEffects(unittest.TestCase):
 
         if os.getuid() != 0:
             self.assertRaises(RuntimeError, shell, 'ls', '/root')
+
+    def test_init_defaults_by_conffile_config(self):
+        conf = """\
+[DEFAULT]
+a: aaa
+b: bbb
+"""
+        path = os.path.join(self.workdir, "config")
+        open(path, "w").write(conf)
+
+        params = init_defaults_by_conffile(path)
+        assert params["a"] == "aaa"
+        assert params["b"] == "bbb"
+
+    def test_init_defaults_by_conffile_config_and_profile_0(self):
+        conf = """\
+[profile0]
+a: aaa
+b: bbb
+"""
+        path = os.path.join(self.workdir, "config")
+        open(path, "w").write(conf)
+
+        params = init_defaults_by_conffile(path, "profile0")
+        assert params["a"] == "aaa"
+        assert params["b"] == "bbb"
 
 
 
@@ -2079,7 +2105,7 @@ class PackageMaker(object):
         self.shell('autoreconf -vfi') # TODO: add --quiet to make it less verbose?
 
     def sbuild(self):
-        self.shell('./configure')  # TODO: add --quiet to make it less verbose?
+        self.shell('./configure --quiet')  # TODO: add --quiet to make it less verbose?
         self.shell('make dist')
 
     def build(self):
@@ -2414,32 +2440,38 @@ def parse_template_list_str(templates):
         return dict()
 
 
-def init_defaults_by_conffile():
+def init_defaults_by_conffile(config=None, profile=None, prog="xpack"):
     """
     Initialize default values for options by loading config files.
     """
-    home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
-    confs = (
-        "/etc/xpackrc",
-        os.environ.get("XPACKRC", os.path.join(home, ".xpackrc")),
-    )
+    if config is None:
+        home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
+
+        confs = ["/etc/%s.conf" % prog]
+        confs += sorted(glob.glob("/etc/%s.d/*.conf" % prog))
+        confs += [os.environ.get("%sRC" % prog.upper(), os.path.join(home, ".%src" % prog))]
+    else:
+        confs = (config,)
 
     cparser = cp.SafeConfigParser()
     loaded = False
 
     for c in confs:
         if os.path.exists(c):
-            logging.debug("Loading config: %s" % c)
+            logging.info("Loading config: %s" % c)
             cparser.read(c)
             loaded = True
 
     if not loaded:
         return {}
 
-    defaults = dict()
+    if profile:
+        defaults = dict((k, parse_conf_value(v)) for k,v in cparser.items(profile))
+    else:
+        defaults = cparser.defaults()
 
-    for sec in cparser.sections():
-        defaults.update(dict(((k, parse_conf_value(v)) for k, v in cparser.items(sec))))
+#    for sec in cparser.sections():
+#        defaults.update(dict(((k, parse_conf_value(v)) for k, v in cparser.items(sec))))
 
     return defaults
 
