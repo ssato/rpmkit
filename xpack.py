@@ -1044,6 +1044,7 @@ def get_username():
     return os.environ.get("USER", False) or os.getlogin()
 
 
+@memoize
 def get_email(use_git=True):
     if use_git:
         try:
@@ -1056,6 +1057,7 @@ def get_email(use_git=True):
     return os.environ.get("MAIL_ADDRESS", False) or "%s@localhost.localdomain" % get_username()
 
 
+@memoize
 def get_fullname(use_git=True):
     """Get full name of the user.
     """
