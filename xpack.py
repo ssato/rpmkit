@@ -295,6 +295,12 @@ BuildArch:      noarch
 #for $req in $requires
 Requires:       $req
 #end for
+#for $fi in $fileinfos
+#if $fi.type() == 'symlink'
+#set $linkto = $fi.linkto
+#BuildRequires:  $linkto
+#end if
+#end for
 
 
 %description
