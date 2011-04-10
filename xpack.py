@@ -549,7 +549,7 @@ $ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --debug -
 04:06:55 [DEBUG]  Run: cp -a /etc/resolv.conf /tmp/t/2/resolvconf-0.1/src/etc/resolv.conf [/tmp/t]
 04:06:55 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-setup.stamp [/tmp/t/2/resolvconf-0.1]
 04:06:55 [INFO] Configuring src distribution: resolvconf
-04:06:56 [DEBUG]  Run: autoreconf -vfi [/tmp/t/2/resolvconf-0.1]
+04:06:56 [DEBUG]  Run: autoreconf -fi [/tmp/t/2/resolvconf-0.1]
 04:07:15 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-configure.stamp [/tmp/t/2/resolvconf-0.1]
 04:07:15 [INFO] Building src package: resolvconf
 04:07:15 [DEBUG]  Run: ./configure [/tmp/t/2/resolvconf-0.1]
@@ -610,7 +610,7 @@ $ python xpack.py --build-self
 04:20:49 [DEBUG]  Run: cp -a /tmp/xpack-build-YaDaOn/usr/bin/xpack /tmp/xpack-build-YaDaOn/xpack-0.0.99/src/usr/bin/xpack [/tmp/t]
 04:20:49 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-setup.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
 04:20:49 [INFO] Configuring src distribution: xpack
-04:20:50 [DEBUG]  Run: autoreconf -vfi [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
+04:20:50 [DEBUG]  Run: autoreconf -fi [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
 04:21:10 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-configure.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
 04:21:10 [INFO] Building src package: xpack
 04:21:10 [DEBUG]  Run: ./configure [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
@@ -720,7 +720,7 @@ $ echo /etc/puppet/manifests/site.pp | \\
 05:27:55 [INFO] Setting up src tree in /tmp/w/0/puppet-manifests-0.1: puppet-manifests
 05:27:55 [INFO] ...It looks already done. Skip the step: setup
 05:27:55 [INFO] Configuring src distribution: puppet-manifests
-05:27:55 [DEBUG]  Run: autoreconf -vfi [/tmp/w/0/puppet-manifests-0.1]
+05:27:55 [DEBUG]  Run: autoreconf -fi [/tmp/w/0/puppet-manifests-0.1]
 05:27:58 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/xpack-configure.stamp [/tmp/w/0/puppet-manifests-0.1]
 05:27:58 [INFO] Building src package: puppet-manifests
 05:27:58 [DEBUG]  Run: ./configure [/tmp/w/0/puppet-manifests-0.1]
@@ -1657,6 +1657,7 @@ class SymlinkInfo(FileInfo):
 
     def _copy(self, dest):
         os.symlink(self.linkto, dest)
+        #shell2("cp -a %s %s" % (self.path, dest))
 
     def need_to_chmod(self):
         return False
@@ -2104,7 +2105,7 @@ class PackageMaker(object):
         self.genfile('README')
         self.genfile('MANIFEST')
         self.genfile('MANIFEST.overrides')
-        self.shell('autoreconf -vfi') # TODO: add --quiet to make it less verbose?
+        self.shell('autoreconf -fi')
 
     def sbuild(self):
         self.shell('./configure --quiet')  # TODO: add --quiet to make it less verbose?
