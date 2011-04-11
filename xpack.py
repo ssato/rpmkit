@@ -168,8 +168,8 @@ __version__ = "0.1"
 
 PKG_COMPRESSORS = {
     # extension: am_option,
-    'xz'    : 'dist-xz',
-    'bz2'   : 'dist-bzip2',
+    'xz'    : 'no-dist-gzip dist-xz',
+    'bz2'   : 'no-dist-gzip dist-bzip2',
     'gz'    : '',
 }
 
