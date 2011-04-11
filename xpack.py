@@ -2069,10 +2069,12 @@ class PackageMaker(object):
 
     def try_the_step(self, step):
         if os.path.exists(self.touch_file(step)):
-            logging.info("...The step looks already done: " + step)
+            msg = "...The step looks already done"
 
-            if not self.force:
-                logging.info(" Skip the step: " + step)
+            if self.force:
+                logging.info(msg + ": " + step)
+            else:
+                logging.info(msg + ". Skip the step: " + step)
                 return
 
         getattr(self, step, do_nothing)() # TODO: or eval("self." + step)() ?
