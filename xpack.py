@@ -105,8 +105,8 @@ import socket
 import stat
 import subprocess
 import sys
-import unittest
 import tempfile
+import unittest
 
 import rpm
 
@@ -2033,7 +2033,7 @@ class PackageMaker(object):
         """
         >>> class O(object):
         ...     pass
-        >>> o = O(); o.upto = "build"
+        >>> o = O(); o.upto = "build"; o.force = False
         >>> pm = PackageMaker({'name': 'foo', 'workdir': '/tmp/w', 'destdir': '',}, '/tmp/filelist', o)
         >>> pm.to_srcdir('/a/b/c')
         '/tmp/w/src/a/b/c'
@@ -2305,6 +2305,16 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 
     def test_packaging_build_rpm_wo_rpmdb(self):
         cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto build --no-rpmdb --no-mock -" % (sys.argv[0], self.workdir)
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
+    def test_packaging_symlink_build_rpm_wo_rpmdb(self):
+        idir = os.path.join(self.workdir, "var", "lib", "net")
+        os.makedirs(idir)
+        os.symlink("/etc/resolv.conf", os.path.join(idir, "resolv.conf"))
+
+        cmd = "echo %s/resolv.conf | python %s -n resolvconf -w %s --upto build --no-rpmdb --no-mock -" % (idir, sys.argv[0], self.workdir)
+
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
