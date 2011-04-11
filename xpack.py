@@ -1594,7 +1594,7 @@ class FileInfo(object):
             #    return False
 
             if force:
-                logging.info(" Removing dest: " % dest)
+                logging.info(" Removing dest: " + dest)
                 self._remove(dest)
             else:
                 logging.warn(" Do not overwrite it")
@@ -2014,8 +2014,7 @@ class PackageMaker(object):
         self.workdir = package['workdir']
         self.destdir = package['destdir']
 
-        #self.skip = options.skip
-        self.skip = True
+        self.force = options.force
 
         self.upto = options.upto
 
@@ -2054,7 +2053,7 @@ class PackageMaker(object):
 
     def copyfiles(self):
         for fi in self.package['fileinfos']:
-            fi.copy(os.path.join(self.workdir, self.to_srcdir(fi.target)))
+            fi.copy(os.path.join(self.workdir, self.to_srcdir(fi.target)), self.force)
 
     def dumpfile_path(self):
         return os.path.join(self.workdir, "xpack-package-filelist.pkl")
@@ -2069,11 +2068,15 @@ class PackageMaker(object):
         return os.path.join(self.workdir, "xpack-%s.stamp" % step)
 
     def try_the_step(self, step):
-        if self.skip and os.path.exists(self.touch_file(step)):
-            logging.info("...It looks already done. Skip the step: " + step)
-        else:
-            getattr(self, step, do_nothing)() # TODO: or eval("self." + step)() ?
-            self.shell("touch %s" % self.touch_file(step))
+        if os.path.exists(self.touch_file(step)):
+            logging.info("...The step looks already done: " + step)
+
+            if not self.force:
+                logging.info(" Skip the step: " + step)
+                return
+
+        getattr(self, step, do_nothing)() # TODO: or eval("self." + step)() ?
+        self.shell("touch %s" % self.touch_file(step))
 
         if step == self.upto:
             if step == 'build':
@@ -2545,6 +2548,8 @@ def option_parser(V=__version__):
         'no_rpmdb': cds.get("no_rpmdb", False),
         'no_mock': cds.get("no_mock", False),
 
+        'force': False,
+
         # these are not in conf file:
         'show_examples': False,
         'dump_rc': False,
@@ -2637,6 +2642,7 @@ Examples:
     tog.add_option('', '--unittests', action='store_true', help='Run unittests')
     p.add_option_group(tog)
 
+    p.add_option('', '--force', action="store_true", help='Force going steps even if the steps looks done')
     p.add_option('-v', '--verbose', action="store_true", help='Verbose mode')
     p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
     p.add_option('-D', '--debug', action="store_true", help='Debug mode')
