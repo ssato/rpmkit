@@ -50,14 +50,15 @@
 # * detect parameters automatically as much as possible:
 #   * username, mail, fullname: almost done
 #   * url: "git config --get remote.origin.url", etc.
-# * configuration file support: almost done
-# * make it runnable on rhel 5 w/o python-cheetah: almost done
-# * keep permissions of targets in tar archives
-# * test --format=deb = .deb output: partially done
 # * sort out command line options
-# * handle symlinks and dirs correctly: partially done
+# * refactor collect() and around methods and classes
 # * eliminate the strong dependency to rpm and make it runnable on debian based
 #   systems (w/o rpm-python)
+# * keep permissions of targets in tar archives
+# * configuration file support: almost done
+# * make it runnable on rhel 5 w/o python-cheetah: almost done
+# * test --format=deb = .deb output: partially done
+# * handle symlinks and dirs correctly: partially done
 #
 #
 # References (in random order):
