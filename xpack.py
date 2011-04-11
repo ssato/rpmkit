@@ -2537,7 +2537,7 @@ def option_parser(V=__version__):
         'upto': cds.get("upto", upto_params["default"]),
         'format': cds.get("format", "rpm"),
         'compressor': cds.get("compressor", "bz2"),
-        'verbose': cds.get("debug", False),
+        'verbose': cds.get("verbose", False),
         'quiet': cds.get("quiet", False),
         'debug': cds.get("debug", False),
         'ignore_owner': cds.get("ignore_owner", False),
