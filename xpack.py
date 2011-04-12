@@ -57,7 +57,7 @@
 # * keep permissions of targets in tar archives
 # * configuration file support: almost done
 # * make it runnable on rhel 5 w/o python-cheetah: almost done
-# * test --format=deb = .deb output: partially done
+# * test --format=deb = .deb output: almost done
 # * handle symlinks and dirs correctly: partially done
 #
 #
@@ -385,8 +385,12 @@ Architecture: all
 #else
 Architecture: any
 #end if
+#if $requires
 #set $requires_list = ', ' + ', '.join($requires)
-Depends: \${misc:Depends}, \${shlibs:Depends}$requires_list
+#else
+#set $requires_list = ''
+#end if
+Depends: \${shlibs:Depends}, \${misc:Depends}$requires_list
 Description: $summary
   $summary
 """,
@@ -396,7 +400,7 @@ Description: $summary
 \tdh \$@
 
 override_dh_builddeb:
-\tdh_builddeb -- Zbzip2
+\tdh_builddeb -- -Zbzip2
 """,
     "debian/dirs": """\
 #for $fi in $fileinfos
@@ -426,7 +430,7 @@ $name ($version) unstable; urgency=low
 
   * New upstream release
 
- -- $packager <$mail> $date.date
+ -- $packager <$mail>  $date.date
 """,
 }
 
@@ -749,6 +753,90 @@ $ rpm -qlp 0/puppet-manifests-0.1/puppet-manifests-0.1-1.el5.noarch.rpm
 /usr/share/doc/puppet-manifests-0.1/README
 $
 """,
+    """## H. Packaging single file on debian host:
+
+# echo /etc/resolv.conf | ./xpack.py -n resolvconf -w w --format deb -
+13:11:59 [WARNING] get_email: 'module' object has no attribute 'check_output'
+13:11:59 [WARNING] get_fullname: 'module' object has no attribute 'check_output'
+configure.ac:2: installing `./install-sh'
+configure.ac:2: installing `./missing'
+dh binary
+   dh_testdir
+   dh_auto_configure
+configure: WARNING: unrecognized options: --disable-maintainer-mode, --disable-dependency-tracking
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether build environment is sane... yes
+checking for a thread-safe mkdir -p... /bin/mkdir -p
+checking for gawk... no
+checking for mawk... mawk
+checking whether make sets $(MAKE)... yes
+checking whether ln -s works... yes
+checking for a sed that does not truncate output... /bin/sed
+configure: creating ./config.status
+config.status: creating Makefile
+configure: WARNING: unrecognized options: --disable-maintainer-mode, --disable-dependency-tracking
+   dh_auto_build
+make[1]: Entering directory `/root/w/resolvconf-0.1'
+make[1]: Nothing to be done for `all'.
+make[1]: Leaving directory `/root/w/resolvconf-0.1'
+   dh_auto_test
+   dh_testroot
+   dh_prep
+   dh_installdirs
+   dh_auto_install
+make[1]: Entering directory `/root/w/resolvconf-0.1'
+make[2]: Entering directory `/root/w/resolvconf-0.1'
+make[2]: Nothing to be done for `install-exec-am'.
+test -z "/etc" || /bin/mkdir -p "/root/w/resolvconf-0.1/debian/resolvconf/etc"
+ /usr/bin/install -c -m 644 src/etc/resolv.conf '/root/w/resolvconf-0.1/debian/resolvconf/etc'
+make[2]: Leaving directory `/root/w/resolvconf-0.1'
+make[1]: Leaving directory `/root/w/resolvconf-0.1'
+   dh_install
+   dh_installdocs
+   dh_installchangelogs
+   dh_installexamples
+   dh_installman
+   dh_installcatalogs
+   dh_installcron
+   dh_installdebconf
+   dh_installemacsen
+   dh_installifupdown
+   dh_installinfo
+   dh_pysupport
+   dh_installinit
+   dh_installmenu
+   dh_installmime
+   dh_installmodules
+   dh_installlogcheck
+   dh_installlogrotate
+   dh_installpam
+   dh_installppp
+   dh_installudev
+   dh_installwm
+   dh_installxfonts
+   dh_bugfiles
+   dh_lintian
+   dh_gconf
+   dh_icons
+   dh_perl
+   dh_usrlocal
+   dh_link
+   dh_compress
+   dh_fixperms
+   dh_strip
+   dh_makeshlibs
+   dh_shlibdeps
+   dh_installdeb
+   dh_gencontrol
+dpkg-gencontrol: warning: Depends field of package resolvconf: unknown substitution variable ${shlibs:Depends}
+   dh_md5sums
+   debian/rules override_dh_builddeb
+make[1]: Entering directory `/root/w/resolvconf-0.1'
+dh_builddeb -- -Zbzip2
+dpkg-deb: building package `resolvconf' in `../resolvconf_0.1_all.deb'.
+make[1]: Leaving directory `/root/w/resolvconf-0.1'
+#
+""",
 ]
 
 
@@ -1006,7 +1094,7 @@ def date(rfc2822=False, simple=False):
     ('%z' for strftime does not look working.)
     """
     if rfc2822:
-        fmt = "%a. %d %b %Y %T +0000"
+        fmt = "%a, %d %b %Y %T +0000"
     else:
         fmt = (simple and "%Y%m%d" or "%a %b %_d %Y")
 
