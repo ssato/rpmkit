@@ -2359,6 +2359,9 @@ def do_packaging_self(options, latest=False):
     if options.dist:
         cmd_opts += " --dist %s" % options.dist
 
+    if options.format:
+        cmd_opts += " --format %s" % options.format
+
     createdir(instdir)
     shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
 
