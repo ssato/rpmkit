@@ -83,7 +83,10 @@
 # Make some pylint errors ignored:
 # pylint: disable=E0611
 # pylint: disable=E1101
+# pylint: disable=E1103
 # pylint: disable=W0613
+#
+# How to run pylint: pylint --rcfile pylintrc xpack.py
 #
 
 from itertools import chain, count, groupby
