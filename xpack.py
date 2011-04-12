@@ -2333,7 +2333,10 @@ def do_packaging(pkg, filelist, options):
 def do_packaging_self(options, latest=False):
     url = "https://github.com/ssato/rpmkit"
 
-    version = (latest and __version__ + ".%s" % date(simple=True) or __version__)
+    if options.pversion or not latest:
+        version = __version__
+    else:
+        version = __version__ + ".%s" % date(simple=True)
 
     workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
     summary = "A python script to build packages from existing files on your system"
