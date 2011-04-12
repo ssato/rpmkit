@@ -51,7 +51,10 @@
 #   * username, mail, fullname: almost done
 #   * url: "git config --get remote.origin.url", etc.
 # * sort out command line options
+# * --tag option or something like that to support injection of other relationships
+#   among packages such as "Obsoletes: xpack" and "Provides: xpack", etc.
 # * refactor collect() and around methods and classes
+# * find causes of warnings during deb build and fix them all
 # * eliminate the strong dependency to rpm and make it runnable on debian based
 #   systems (w/o rpm-python)
 # * keep permissions of targets in tar archives
