@@ -2351,9 +2351,10 @@ class DebPackageMaker(TgzPackageMaker):
         os.chmod(os.path.join(self.workdir, 'debian/rules'), 0755)
 
     def sbuild(self):
-        """FIXME
+        """FIXME: What should be done for building source packages?
         """
-        super(DebPackageMaker, self).build()
+        super(DebPackageMaker, self).sbuild()
+        self.shell("dpkg-buildpackage -S")
 
     def build(self):
         super(DebPackageMaker, self).build()
