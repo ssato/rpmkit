@@ -89,6 +89,7 @@
 # How to run pylint: pylint --rcfile pylintrc xpack.py
 #
 
+from distutils.sysconfig import get_python_lib
 from itertools import chain, count, groupby
 
 import ConfigParser as cp
@@ -158,6 +159,13 @@ except ImportError:  # python < 2.5
     from sha import sha as sha1
 
 
+# Try to load xpack's plugins if exist:
+try:
+    from xpack.plugins import *
+except ImportError:  # It's OK and just ignore this error.
+    pass
+
+
 try:
     all
 except NameError:  # python < 2.5
@@ -170,6 +178,9 @@ except NameError:  # python < 2.5
 
 
 __version__ = "0.2"
+
+
+PACKAGE_MAKERS = {}
 
 
 PKG_COMPRESSORS = {
@@ -2100,6 +2111,25 @@ def do_nothing(*args, **kwargs):
 
 
 class PackageMaker(object):
+    """Abstract class for classes to implement various packaging processes.
+    """
+
+    _type = "filelist"
+    _format = None
+
+    @classmethod
+    def register(cls):
+        global PACKAGE_MAKERS
+
+        PACKAGE_MAKERS[(cls.type(), cls.format())] = cls
+
+    @classmethod
+    def type(cls):
+        return cls._type
+
+    @classmethod
+    def format(cls):
+        return cls._format
 
     def __init__(self, package, filelist, options, *args, **kwargs):
         self.package = package
@@ -2180,9 +2210,12 @@ class PackageMaker(object):
                 logging.info("Successfully created packages in %s: %s" % (self.workdir, self.pname))
             sys.exit()
 
+    def collect(self, *args, **kwargs):
+        return collect(*args, **kwargs)
+
     def setup(self):
         list_f = (self.filelist == '-' and sys.stdin or open(self.filelist))
-        self.package['fileinfos'] = collect(list_f, self.pname, self.options)
+        self.package['fileinfos'] = self.collect(list_f, self.pname, self.options)
 
         for d in ('workdir', 'srcdir'):
             createdir(self.package[d])
@@ -2237,11 +2270,12 @@ class PackageMaker(object):
 
 
 class TgzPackageMaker(PackageMaker):
-    pass
+    _format = "tgz"
 
 
 
 class RpmPackageMaker(TgzPackageMaker):
+    _format = "rpm"
 
     def __init__(self, package, filelist, options, *args, **kwargs):
         super(RpmPackageMaker, self).__init__(package, filelist, options)
@@ -2288,6 +2322,7 @@ class RpmPackageMaker(TgzPackageMaker):
 
 
 class DebPackageMaker(TgzPackageMaker):
+    _format = "deb"
 
     def configure(self):
         super(DebPackageMaker, self).configure()
@@ -2324,10 +2359,24 @@ class DebPackageMaker(TgzPackageMaker):
 
 
 
+TgzPackageMaker.register()
+RpmPackageMaker.register()
+DebPackageMaker.register()
+
+
+def find_pmaker_class(ptype, pformat):
+    """
+    @ptype    str  Package type: filelist [default], pkgdvm, etc.
+    @pformat  str  Package format: tgz, rpm, deb, etc.
+    """
+    global PACKAGE_MAKERS
+
+    return PACKAGE_MAKERS.get((ptype, pformat), TgzPackageMaker)
+
+
 def do_packaging(pkg, filelist, options):
-    globals().get("%sPackageMaker" % options.format.title(), TgzPackageMaker)(
-        pkg, filelist, options
-    ).run()
+    cls = find_pmaker_class(options.type, options.format)
+    cls(pkg, filelist, options).run()
 
 
 def do_packaging_self(options, latest=False):
@@ -2344,7 +2393,13 @@ def do_packaging_self(options, latest=False):
     packager = "Satoru SATOH"
     mail = "satoru.satoh@gmail.com"
 
-    instdir = os.path.join(workdir, 'usr', 'bin')
+    pkglibdir = os.path.join(workdir, get_python_lib()[1:], "xpack")
+    pluginsdir = os.path.join(pkglibdir, "plugins")
+    bin = os.path.join(workdir, 'usr', 'bin', 'xpack')
+
+    filelist = os.path.join(workdir, "files.list")
+
+    prog = sys.argv[0]
 
     cmd_opts = "-n xpack --pversion %s -w %s --license GPLv3+ --ignore-owner --destdir %s --no-rpmdb --url %s --upto %s" \
         % (version, workdir, workdir, url, options.upto)
@@ -2362,10 +2417,36 @@ def do_packaging_self(options, latest=False):
     if options.format:
         cmd_opts += " --format %s" % options.format
 
-    createdir(instdir)
-    shell("install -m 755 %s %s/xpack" % (sys.argv[0], instdir))
+    createdir(pkglibdir)
+    shell("install -m 644 %s %s/__init__.py" % (prog, pkglibdir))
 
-    cmd = "echo %s/xpack | python %s -n xpack %s -" % (instdir, sys.argv[0], cmd_opts)
+    createdir(pluginsdir)
+    shell("touch %s/__init__.py" % pluginsdir)
+
+    createdir(os.path.dirname(bin))
+    open(bin, "w").write("""\
+#! /usr/bin/python
+import sys, xpack
+
+xpack.main(sys.argv)
+""")
+    shell("chmod +x %s" % bin)
+
+    open(filelist, "w").write("""\
+%s
+%s/*
+%s/*
+""" % (bin, pkglibdir, pluginsdir))
+
+    # @see /usr/lib/rpm/brp-python-bytecompile:
+    pycompile = "import compileall, os; compileall.compile_dir(os.curdir, force=1)"
+    compile_pyc = "python -c '%s'" % pycompile
+    compile_pyo = "python -O -c '%s' > /dev/null" % pycompile
+
+    shell2(compile_pyc, pkglibdir)
+    shell2(compile_pyo, pkglibdir)
+
+    cmd = "python %s -n xpack %s %s" % (prog, cmd_opts, filelist)
 
     logging.info(" executing: %s" % cmd)
     os.system(cmd)
@@ -2602,7 +2683,7 @@ def init_defaults_by_conffile(config=None, profile=None, prog="xpack"):
 
 
 def option_parser(V=__version__):
-    global PKG_COMPRESSORS, UPTO
+    global PACKAGE_MAKERS, PKG_COMPRESSORS, UPTO
 
     ver_s = "%prog " + V
 
@@ -2619,8 +2700,11 @@ def option_parser(V=__version__):
         "default": UPTO,
     }
 
-    package_formats = ('tgz', 'rpm', 'deb')
-    package_format_help = "Target package format: " + ", ".join(package_formats) + " (experimental) [%default]"
+    package_types = unique((tf[0] for tf in PACKAGE_MAKERS.keys()))
+    package_type_help = "Target package type: " + ", ".join(package_types) + " [%default]"
+
+    package_formats = unique((tf[1] for tf in PACKAGE_MAKERS.keys()))
+    package_format_help = "Target package format: " + ", ".join(package_formats) + " [%default]"
 
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
 
@@ -2635,6 +2719,7 @@ def option_parser(V=__version__):
     defaults = {
         'workdir': cds.get("workdir", workdir),
         'upto': cds.get("upto", upto_params["default"]),
+        'type': cds.get("type", "filelist"),
         'format': cds.get("format", "rpm"),
         'compressor': cds.get("compressor", "bz2"),
         'verbose': cds.get("verbose", False),
@@ -2709,6 +2794,7 @@ Examples:
     bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
     bog.add_option('', '--upto', type="choice", choices=upto_params['choices'],
         help="Which packaging step you want to proceed to: " + upto_params['choices_str'] + " [Default: %default]")
+    bog.add_option('', '--type', type="choice", choices=package_types, help=package_type_help)
     bog.add_option('', '--format', type="choice", choices=package_formats, help=package_format_help)
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
@@ -2767,7 +2853,7 @@ Examples:
     return p
 
 
-def main():
+def main(argv=sys.argv):
     global PKG_COMPRESSORS, TEMPLATES, USE_PYXATTR
 
     verbose_test = False
@@ -2781,7 +2867,7 @@ def main():
     pkg = dict()
 
     p = option_parser()
-    (options, args) = p.parse_args()
+    (options, args) = p.parse_args(argv[1:])
 
     if options.show_examples:
         show_examples()
@@ -2804,7 +2890,7 @@ def main():
 
     if options.build_self:
         if options.tests:
-            rc = os.system("python %s --tests --debug" % sys.argv[0])
+            rc = os.system("python %s --tests --debug" % argv[0])
             if rc != 0:
                 sys.exit(rc)
 
