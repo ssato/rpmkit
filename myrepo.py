@@ -716,17 +716,32 @@ b: bbb
 
 
 
-class TestApp(unittest.TestCase):
+class TestAppLocal(unittest.TestCase):
 
     def setUp(self):
         logging.info("start") # dummy log
-        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="xpack-tests")
+        self.prog = "python %s" % sys.argv[0]
+        self.user = get_username()
+        self.email = "%s@example.com" % self.user
+        self.fullname = "John Doe"
+
+        topdir = "/home/%s/public_html" % self.user
+        if not os.path.exists(topdir):
+            os.makedirs(topdir)
+
+        self.workdir = tempfile.mkdtemp(dir="/home/%s/public_html" % self.user, prefix="myrepo-tests")
+        self.repodir = os.path.split(self.workdir)[1]
 
     def tearDown(self):
         rm_rf(self.workdir)
 
-    def test_init(self):
-        pass
+    def test_init_set_all_options_explicitly(self):
+        cmd = "%s -s localhost -u %s -m %s -F \"%s\" --repodir %s -d fedora-14 -A i386 " % \
+            (self.prog, self.user, self.email, self.fullname, self.repodir)
+        cmd += "--name myrepo --baseurl \"http://%(server)s/%(topdir)s/%(distdir)s/\" "
+        cmd += "init"
+        logging.info("cmd=" + cmd)
+        self.assertEquals(os.system(cmd), 0)
 
     def test_build(self):
         pass
