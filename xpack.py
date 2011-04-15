@@ -2400,7 +2400,8 @@ def do_packaging_self(options, latest=False):
 
     pkglibdir = os.path.join(workdir, get_python_lib()[1:], "xpack")
     pluginsdir = os.path.join(pkglibdir, "plugins")
-    bin = os.path.join(workdir, 'usr', 'bin', 'xpack')
+    bindir = os.path.join(workdir, 'usr', 'bin')
+    bin = os.path.join(bindir, 'xpack')
 
     filelist = os.path.join(workdir, "files.list")
 
@@ -2422,13 +2423,14 @@ def do_packaging_self(options, latest=False):
     if options.format:
         cmd_opts += " --format %s" % options.format
 
-    createdir(pkglibdir)
-    shell("install -m 644 %s %s/__init__.py" % (prog, pkglibdir))
+    createdir(pkglibdir, mode=0755)
+    shell2("install -m 644 %s %s/__init__.py" % (prog, pkglibdir))
 
-    createdir(pluginsdir)
-    shell("touch %s/__init__.py" % pluginsdir)
+    createdir(pluginsdir, mode=0755)
+    shell2("touch __init__.py", pluginsdir)
 
-    createdir(os.path.dirname(bin))
+    createdir(bindir)
+
     open(bin, "w").write("""\
 #! /usr/bin/python
 import sys, xpack
