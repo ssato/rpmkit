@@ -1424,12 +1424,12 @@ class Rpm(object):
     fi_keys = ('path', 'size', 'mode', 'mtime', 'flags', 'rdev', 'inode',
         'nlink', 'state', 'vflags', 'uid', 'gid', 'checksum')
 
-    @classmethod
-    def ts(self):
+    @staticmethod
+    def ts():
         return rpm.TransactionSet()
 
-    @classmethod
-    def pathinfo(self, path):
+    @staticmethod
+    def pathinfo(path):
         """Get meta data of file or dir from RPM Database.
 
         @path    Path of the file or directory (relative or absolute)
@@ -1461,8 +1461,8 @@ class Rpm(object):
 
         return dict()
 
-    @classmethod
-    def each_fileinfo_by_package(self, pname='', pred=true):
+    @staticmethod
+    def each_fileinfo_by_package(pname='', pred=true):
         """RpmFi (File Info) of installed package, matched packages or all
         packages generator.
 
@@ -1495,7 +1495,7 @@ class Rpm(object):
         del mi
 
     @classmethod
-    def filelist(self, cache=True, expires=1, pkl_proto=pickle.HIGHEST_PROTOCOL):
+    def filelist(cls, cache=True, expires=1, pkl_proto=pickle.HIGHEST_PROTOCOL):
         """TODO: It should be a heavy and time-consuming task. How to shorten
         this time? - caching, utilize yum's file list database or whatever.
 
@@ -1506,7 +1506,7 @@ class Rpm(object):
         """
         data = None
 
-        cache_file = self.RPM_FILELIST_CACHE
+        cache_file = cls.RPM_FILELIST_CACHE
         cachedir = os.path.dirname(cache_file)
 
         if not os.path.exists(cachedir):
