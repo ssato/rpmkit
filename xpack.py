@@ -51,6 +51,7 @@
 #   * username, mail, fullname: almost done
 #   * url: "git config --get remote.origin.url", etc.
 # * sort out command line options
+# * plugin system: started working on it
 # * --tag option or something like that to support injection of other relationships
 #   among packages such as "Obsoletes: xpack" and "Provides: xpack", etc.
 # * refactor collect() and around methods and classes
