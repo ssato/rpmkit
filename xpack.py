@@ -178,7 +178,11 @@ except NameError:  # python < 2.5
 
 
 
+__title__   = "Xpack"
 __version__ = "0.2"
+__author__  = "Satoru SATOH"
+__email__   = "satoru.satoh@gmail.com"
+__website__ = "https://github.com/ssato/rpmkit"
 
 
 PACKAGE_MAKERS = {}
@@ -2381,8 +2385,6 @@ def do_packaging(pkg, filelist, options):
 
 
 def do_packaging_self(options, latest=False):
-    url = "https://github.com/ssato/rpmkit"
-
     if options.pversion or not latest:
         version = __version__
     else:
@@ -2391,8 +2393,9 @@ def do_packaging_self(options, latest=False):
     workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
     summary = "A python script to build packages from existing files on your system"
     requires = ""
-    packager = "Satoru SATOH"
-    mail = "satoru.satoh@gmail.com"
+    packager = __author__
+    mail = __email__
+    url = __website__
 
     pkglibdir = os.path.join(workdir, get_python_lib()[1:], "xpack")
     pluginsdir = os.path.join(pkglibdir, "plugins")
