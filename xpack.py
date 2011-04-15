@@ -2385,8 +2385,8 @@ def do_packaging(pkg, filelist, options):
     cls(pkg, filelist, options).run()
 
 
-def do_packaging_self(options, latest=False):
-    if options.pversion or not latest:
+def do_packaging_self(options):
+    if options.release_build:
         version = __version__
     else:
         version = __version__ + ".%s" % date(simple=True)
@@ -2762,6 +2762,8 @@ def option_parser(V=__version__):
         'doctests': False,
         'unittests': False,
         'build_self': False,
+
+        "release_build": False,
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -2842,6 +2844,10 @@ Examples:
     rog.add_option('', '--scriptlets', help='Specify the file contains rpm scriptlets')
     p.add_option_group(rog)
 
+    sog = optparse.OptionGroup(p, "Self-build options")
+    sog.add_option('', '--release-build', action='store_true', help="Make a release build")
+    p.add_option_group(sog)
+
     tog = optparse.OptionGroup(p, "Test options")
     tog.add_option('', '--tests', action='store_true', help='Run both types (doctests and unittests) of tests')
     tog.add_option('', '--doctests', action='store_true', help='Run doctest tests')
@@ -2901,7 +2907,7 @@ def main(argv=sys.argv):
             if rc != 0:
                 sys.exit(rc)
 
-        do_packaging_self(options, latest=True)
+        do_packaging_self(options)
         sys.exit()
 
     if options.tests:
