@@ -2784,7 +2784,7 @@ Examples:
   %prog -n foo --pversion 0.2 -l MIT files.list
   %prog -n foo --requires httpd,/sbin/service files.list
 
-  %prog --test --debug  # run test suites
+  %prog --tests --debug  # run test suites
 
   %prog --build-self    # package itself
 
@@ -2844,7 +2844,7 @@ Examples:
     p.add_option_group(sog)
 
     tog = optparse.OptionGroup(p, "Test options")
-    tog.add_option('', '--test', action='store_true', help='Run both types (doctests and unittests) of tests')
+    tog.add_option('', '--tests', action='store_true', help='Run both types (doctests and unittests) of tests')
     tog.add_option('', '--doctests', action='store_true', help='Run doctest tests')
     tog.add_option('', '--unittests', action='store_true', help='Run unittests')
     p.add_option_group(tog)
