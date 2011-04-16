@@ -2112,13 +2112,19 @@ def do_nothing(*args, **kwargs):
 class PackageMaker(object):
     """Abstract class for classes to implement various packaging processes.
     """
+    global TEMPLATES
 
+    _templates = TEMPLATES
     _type = "filelist"
     _format = None
 
     @classmethod
     def register(cls, pmmaps=PACKAGE_MAKERS):
         pmmaps[(cls.type(), cls.format())] = cls
+
+    @classmethod
+    def templates(cls):
+        return cls._templates
 
     @classmethod
     def type(cls):
@@ -2166,10 +2172,8 @@ class PackageMaker(object):
         return os.path.join(self.srcdir, path.strip(os.path.sep))
 
     def genfile(self, path, output=False):
-        global TEMPLATES
-
         outfile = os.path.join(self.workdir, (output or path))
-        open(outfile, 'w').write(compile_template(TEMPLATES[path], self.package))
+        open(outfile, 'w').write(compile_template(self.templates()[path], self.package))
 
     def copyfiles(self):
         for fi in self.package['fileinfos']:
