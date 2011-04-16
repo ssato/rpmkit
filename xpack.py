@@ -99,6 +99,7 @@ import datetime
 import doctest
 import glob
 import grp
+import inspect
 import locale
 import logging
 import optparse
@@ -158,13 +159,6 @@ try:
 except ImportError:  # python < 2.5
     from md5 import md5
     from sha import sha as sha1
-
-
-# Try to load xpack's plugins if exist:
-try:
-    from xpack.plugins import *
-except ImportError:  # It's OK and just ignore this error.
-    pass
 
 
 try:
@@ -2123,10 +2117,8 @@ class PackageMaker(object):
     _format = None
 
     @classmethod
-    def register(cls):
-        global PACKAGE_MAKERS
-
-        PACKAGE_MAKERS[(cls.type(), cls.format())] = cls
+    def register(cls, pmmaps=PACKAGE_MAKERS):
+        pmmaps[(cls.type(), cls.format())] = cls
 
     @classmethod
     def type(cls):
@@ -2370,26 +2362,27 @@ RpmPackageMaker.register()
 DebPackageMaker.register()
 
 
-def find_pmaker_class(ptype, pformat):
-    """
-    @ptype    str  Package type: filelist [default], pkgdvm, etc.
-    @pformat  str  Package format: tgz, rpm, deb, etc.
-    """
-    global PACKAGE_MAKERS
 
-    return PACKAGE_MAKERS.get((ptype, pformat), TgzPackageMaker)
+def load_plugins(package_makers_map=PACKAGE_MAKERS):
+    plugins = os.path.join(get_python_lib(), "xpack", "plugins", "*.py")
+    csfx = "PackageMaker"
+
+    for modpy in glob.glob(plugins):
+        modn = os.path.basename(modpy).replace(".py")
+        mod = __import__("xpack.%s" % modn)
+        pms = [c for n, c in inspect.getmembers(mod) if inspect.isclass(c) and n.endswith(csfx)]
+        c.register(package_makers_map)
 
 
-def do_packaging(pkg, filelist, options):
-    cls = find_pmaker_class(options.type, options.format)
+def do_packaging(pkg, filelist, options, pmaps=PACKAGE_MAKERS):
+    cls = pmaps.get((options.type, options.format), TgzPackageMaker)
     cls(pkg, filelist, options).run()
 
 
 def do_packaging_self(options):
-    if options.release_build:
-        version = __version__
-    else:
-        version = __version__ + ".%s" % date(simple=True)
+    version = __version__
+    if not options.release_build:
+        version += ".%s" % date(simple=True)
 
     workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
     summary = "A python script to build packages from existing files on your system"
@@ -2689,8 +2682,8 @@ def init_defaults_by_conffile(config=None, profile=None, prog="xpack"):
     return defaults
 
 
-def option_parser(V=__version__):
-    global PACKAGE_MAKERS, PKG_COMPRESSORS, UPTO
+def option_parser(V=__version__, pmaps=PACKAGE_MAKERS):
+    global PKG_COMPRESSORS, UPTO
 
     ver_s = "%prog " + V
 
@@ -2707,11 +2700,11 @@ def option_parser(V=__version__):
         "default": UPTO,
     }
 
-    package_types = unique((tf[0] for tf in PACKAGE_MAKERS.keys()))
-    package_type_help = "Target package type: " + ", ".join(package_types) + " [%default]"
+    ptypes = unique([tf[0] for tf in pmaps.keys()])
+    ptypes_help = "Target package type: " + ", ".join(ptypes) + " [%default]"
 
-    package_formats = unique((tf[1] for tf in PACKAGE_MAKERS.keys()))
-    package_format_help = "Target package format: " + ", ".join(package_formats) + " [%default]"
+    pformats = unique([tf[1] for tf in pmaps.keys()])
+    pformats_help = "Target package format: " + ", ".join(pformats) + " [%default]"
 
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
 
@@ -2789,7 +2782,7 @@ Examples:
   %prog -n foo --pversion 0.2 -l MIT files.list
   %prog -n foo --requires httpd,/sbin/service files.list
 
-  %prog --tests --debug  # run test suites
+  %prog --test --debug  # run test suites
 
   %prog --build-self    # package itself
 
@@ -2803,8 +2796,8 @@ Examples:
     bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
     bog.add_option('', '--upto', type="choice", choices=upto_params['choices'],
         help="Which packaging step you want to proceed to: " + upto_params['choices_str'] + " [Default: %default]")
-    bog.add_option('', '--type', type="choice", choices=package_types, help=package_type_help)
-    bog.add_option('', '--format', type="choice", choices=package_formats, help=package_format_help)
+    bog.add_option('', '--type', type="choice", choices=ptypes, help=ptypes_help)
+    bog.add_option('', '--format', type="choice", choices=pformats, help=pformats_help)
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
@@ -2849,7 +2842,7 @@ Examples:
     p.add_option_group(sog)
 
     tog = optparse.OptionGroup(p, "Test options")
-    tog.add_option('', '--tests', action='store_true', help='Run both types (doctests and unittests) of tests')
+    tog.add_option('', '--test', action='store_true', help='Run both types (doctests and unittests) of tests')
     tog.add_option('', '--doctests', action='store_true', help='Run doctest tests')
     tog.add_option('', '--unittests', action='store_true', help='Run unittests')
     p.add_option_group(tog)
@@ -2903,7 +2896,7 @@ def main(argv=sys.argv):
 
     if options.build_self:
         if options.tests:
-            rc = os.system("python %s --tests --debug" % argv[0])
+            rc = os.system("python %s --test --debug" % argv[0])
             if rc != 0:
                 sys.exit(rc)
 
