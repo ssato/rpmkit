@@ -2135,12 +2135,10 @@ class PackageMaker(object):
 
         self.workdir = package['workdir']
         self.destdir = package['destdir']
+        self.pname = package['name']
 
         self.force = options.force
-
         self.upto = options.upto
-
-        self.pname = package['name']
 
         self.srcdir = os.path.join(self.workdir, 'src')
 
