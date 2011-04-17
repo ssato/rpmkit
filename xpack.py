@@ -2378,6 +2378,7 @@ def load_plugins(package_makers_map=PACKAGE_MAKERS):
 
 def do_packaging(pkg, filelist, options, pmaps=PACKAGE_MAKERS):
     cls = pmaps.get((options.type, options.format), TgzPackageMaker)
+    logging.info(" Use %s class: type=%s, format=%s" % (cls.__name__, cls.type(), cls.format()))
     cls(pkg, filelist, options).run()
 
 
