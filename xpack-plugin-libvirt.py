@@ -46,12 +46,11 @@
 
 import copy
 import doctest
-import glob
-import itertools
 import libvirt
 import libxml2
 import logging
 import re
+import subprocess
 import unittest
 import xpack
 
@@ -178,33 +177,124 @@ __email__   = "satoru.satoh@gmail.com"
 __website__ = "https://github.com/ssato/rpmkit"
 
 
-PKGDVM_TEMPLATES = copy.copy(xpack.TEMPLATES)
-PKGDVM_TEMPLATES.update(
+LIBVIRT_DOMAIN_TEMPLATES = copy.copy(xpack.TEMPLATES)
+LIBVIRT_DOMAIN_TEMPLATES.update(
 {
-    "scriptlets": """\
+    "package.spec": """\
+# disable debuginfo
+%define debug_package %{nil}
+
+Name:           $name
+Version:        $version
+Release:        1%{?dist}
+Summary:        libvirt domain $domain.name
+Group:          $group
+License:        $license
+URL:            $url
+Source0:        %{name}-%{version}.tar.${compressor.ext}
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+#for $req in $requires
+Requires:       $req
+#end for
+PreReq:         /usr/bin/virsh
+Requires:       /usr/bin/virsh
+Requires:       libvirt
+Requires:       %{name}-base
+
+
+%description
+Libvirt domain (virtual) hardware data and disk images for ${domain.name}
+on $host packaged by $packager at $date.date.
+
+
+%package        base
+Summary:        Base disk images for libvirt domain $domain.name
+Group:          $group
+Provides:       %{name}-base
+
+
+%description    base
+Libvirt domain (virtual) hardware data and disk images for ${domain.name}
+on $host packaged by $packager at $date.date.
+
+This package provides the (virtual) hardware definition xml data and base disk
+images required for %{name}.
+
+
+%prep
+%setup -q
+
+
+%build
+%configure
+make
+
+
+%install
+rm -rf \$RPM_BUILD_ROOT
+make install DESTDIR=\$RPM_BUILD_ROOT
+
+# saved doamin xml:
+install -d \$RPM_BUILD_ROOT$domain.xmlpath_savedir
+install -m 600 \$RPM_BUILD_ROOT$domain.xmlpath \$RPM_BUILD_ROOT$domainxml_savedir
+
+
+%clean
+rm -rf \$RPM_BUILD_ROOT
+
+
 %preun
 if [ \$1 = 0 ]; then  # erase
-    if `/usr/bin/virsh list | grep -q ${vm.name} 2>/dev/null`; then
-        echo "${vm.name} is still running and cannot be uninstalled right now. Please stop it and try again later."
+    if `/usr/bin/virsh list | grep -q $domain.name 2>/dev/null`; then
+        echo "${domain.name} is still running. Please shut it off and try again later."
         exit 1
     else
-        /usr/bin/virsh undefine ${vm.name}
+        /usr/bin/virsh undefine $domain.name
     fi
 fi
 
+
 %post
 if [ \$1 = 1 ]; then    # install
-    /usr/bin/virsh define ${vm.xmlsavedir}/${vm.name}.xml
+    /usr/bin/virsh define %{domainxml_savedir}/${domain.name.
 elif [ \$1 = 2 ]; then  # update
-    if `/usr/bin/virsh list | grep -q ${vm.name} 2>/dev/null`; then
-        echo "${vm.name} is running. Run the following later when it's stopped to update its profile:"
-        echo "   /usr/bin/virsh define ${vm.xmlsavedir}/${vm.name}.xml"
+    if `/usr/bin/virsh list | grep -q ${domain.name} 2>/dev/null`; then
+        echo "${domain.name} is running. Run the following later when it's stopped to update its profile:"
+        echo "   /usr/bin/virsh undefine ${domain.name}"
+        echo "   /usr/bin/virsh define $domain.xmlpath_saved"
     else
-        /usr/bin/virsh undefine ${vm.name}
-        /usr/bin/virsh define ${vm.xmlsavedir}/${vm.name}.xml
+        /usr/bin/virsh undefine $domain.name
+        /usr/bin/virsh define $domain.xmlpath_saved
     fi
 fi
+
+
+%files
+%defattr(-,root,root,-)
+%doc README
+#for $fi in $fileinfos
+#if $fi.target in $domain.delta_images
+$fi.rpm_attr()$fi.target
+#end if
+#end for
+
+
+%files    base
+%defattr(-,root,root,-)
+%doc README
+#for $fi in $fileinfos
+#if $fi.target not in $domain.delta_images
+$fi.rpm_attr()$fi.target
+#end if
+#end for
+$domain.xmlpath_saved
+
+
+%changelog
+* $date.timestamp ${packager} <${mail}> - ${version}-${release}
+- Initial packaging.
 """,
+
     "debian/postinst": """\
 #!/bin/sh
 #
@@ -226,16 +316,16 @@ set -e
 
 case "\$1" in
     configure)
-        if `/usr/bin/virsh list --all | grep -q ${vm.name} 2>/dev/null`; then
-            if `/usr/bin/virsh list | grep -q ${vm.name} 2>/dev/null`; then
-                echo "${vm.name} is running. Run the following later when it's stopped:"
-                echo "   /usr/bin/virsh define ${vm.xmlsavedir}/${vm.name}.xml"
+        if `/usr/bin/virsh list --all | grep -q ${domain.name} 2>/dev/null`; then
+            if `/usr/bin/virsh list | grep -q ${domain.name} 2>/dev/null`; then
+                echo "${domain.name} is running. Run the following later when it's stopped:"
+                echo "   /usr/bin/virsh define $domain.xmlpath"
             else
-                /usr/bin/virsh undefine ${vm.name}
-                /usr/bin/virsh define ${vm.xmlsavedir}/${vm.name}.xml
+                /usr/bin/virsh undefine ${domain.name}
+                /usr/bin/virsh define $domain.xmlpath
             fi
         else
-            /usr/bin/virsh define ${vm.xmlsavedir}/${vm.name}.xml
+            /usr/bin/virsh define $domain.xmlpath
         fi
     ;;
 
@@ -260,11 +350,11 @@ set -e
 
 case "\$1" in
     remove|upgrade|deconfigure)
-        if `/usr/bin/virsh list | grep -q ${vm.name} 2>/dev/null`; then
-            echo "${vm.name} is still running and cannot be uninstalled right now. Please stop it and try again later."
+        if `/usr/bin/virsh list | grep -q ${domain.name} 2>/dev/null`; then
+            echo "${domain.name} is still running and cannot be uninstalled right now. Please stop it and try again later."
             exit 1
         else
-            /usr/bin/virsh undefine ${vm.name}
+            /usr/bin/virsh undefine ${domain.name}
         fi
         ;;
     failed-upgrade)
@@ -286,9 +376,9 @@ exit 0
 # PackageMaker Inherited classes:
 class RpmLibvirtDomainPackageMaker(xpack.RpmPackageMaker):
 
-    global PKGDVM_TEMPLATES
+    global LIBVIRT_DOMAIN_TEMPLATES
 
-    _templates = PKGDVM_TEMPLATES
+    _templates = LIBVIRT_DOMAIN_TEMPLATES
     _type = "libvirt.domain"
     _format = "rpm"
 
@@ -296,27 +386,28 @@ class RpmLibvirtDomainPackageMaker(xpack.RpmPackageMaker):
         self.domain = LibvirtDomain(vmname)
         self.domain.parse()
 
-        filelist = [self.domain.xmlpath]
+        self.domain.xmlpath_savedir = "/var/lib/xpack/libvirt.domain"
+        self.domain.xmlpath_saved = os.path.join(self.domain.xmlpath_savedir, "%s.xml" % self.domain.name)
+
+        #filelist = [self.domain.xmlpath]
+        filelist = []
         filelist += self.domain.base_images
         filelist += self.domain.delta_images
 
         super(RpmLibvirtDomainPackageMaker, self).__init__(package, filelist, options)
 
-        self.package["scriptlets"] = self.templates().get("scriptlets", "")
+        self.package["domain"] = self.domain
 
 
 
 class DebLibvirtDomainPackageMaker(xpack.DebPackageMaker):
 
-    global PKGDVM_TEMPLATES
+    global LIBVIRT_DOMAIN_TEMPLATES
 
-    _templates = PKGDVM_TEMPLATES
+    _templates = LIBVIRT_DOMAIN_TEMPLATES
     _type = "libvirt.domain"
     _format = "deb"
 
 
-
-RpmLibvirtDomainPackageMaker.register()
-DebLibvirtDomainPackageMaker.register()
 
 # vim:sw=4:ts=4:et:
