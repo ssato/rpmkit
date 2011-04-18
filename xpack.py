@@ -1941,7 +1941,7 @@ class RpmFileInfoFactory(FileInfoFactory):
 
 
 
-def read_files_from_listfile(list_f):
+def read_files_from_listfile(listfile):
     """Read paths from given file line by line and returns path list sorted by
     dir names. There some speical parsing rules for the file list:
 
@@ -1950,15 +1950,20 @@ def read_files_from_listfile(list_f):
       names: ex. '/etc/httpd/conf/*' will be
       ['/etc/httpd/conf/httpd.conf', '/etc/httpd/conf/magic', ...] .
 
-    @list_f  File obj of file list.
+    @listfile  str  file list name or "-" (read files list from stdin)
     """
+    list_f = (listfile == '-' and sys.stdin or open(listfile))
     fs = [l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')]
     return unique(concat([glob.glob(g) for g in fs if '*' in g]) + [f for f in fs if '*' not in f])
 
 
-def collect(list_f, pkg_name, options):
+def collect(paths, pkg_name, options):
     """
     Collect FileInfo objects from given file list.
+
+    @paths  [str]  Path list
+    @pkg_name str  Package name to make
+    @options  optparse.Values  parsed options
     """
     ff = (options.format == 'rpm' and RpmFileInfoFactory() or FileInfoFactory())
 
@@ -1973,9 +1978,7 @@ def collect(list_f, pkg_name, options):
     rewrite_linkto = options.rewrite_linkto
     force_set_uid_and_gid = options.ignore_owner
 
-    fs = read_files_from_listfile(list_f)
-
-    for p in fs:
+    for p in paths:
         fi = ff.create(p)
 
         # Too verbose but useful in some cases:
@@ -2109,6 +2112,56 @@ def do_nothing(*args, **kwargs):
 
 
 
+class Collector(object):
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+
+class SimpleFilelistCollector(Collector):
+    """
+    Collector to collect fileinfo list from files list in simple format:
+
+    Format: A file or dir path (absolute or relative) |
+            Comment line starts with '#' |
+            Glob pattern to list multiple files or dirs
+    """
+
+    def __init__(self, filelist, pname, options):
+        """
+        @filelist  str  file to list files and dirs to collect or "-"
+                        (read files and dirs list from stdin)
+        @pname     str  package name to build
+        """
+        super(SimpleFilelistCollector, self).__init__(filelist, options)
+
+        self.filelist = filelist
+        self.pname = pname
+
+    def open(self, path):
+        return path == "-" and sys.stdin or open(path)
+
+    def parse(self, path):
+        """Read paths from given file line by line and returns path list sorted by
+        dir names. There some speical parsing rules for the file list:
+
+        * Empty lines or lines start with '#' are ignored.
+        * The lines contain '*' (glob match) will be expanded to real dir or file
+          names: ex. '/etc/httpd/conf/*' will be
+          ['/etc/httpd/conf/httpd.conf', '/etc/httpd/conf/magic', ...] .
+
+        @path  Path list file name or "-" (read list from stdin)
+        """
+        fs = (l.rstrip() for l in self.open(path).readlines() if l and not l.startswith('#'))
+        return unique(concat([glob.glob(g) for g in fs if '*' in g]) + [f for f in fs if '*' not in f])
+
+    def collect(self):
+        paths = self.parse(self.filelist)
+        return collect(paths, self.pname, options)
+
+
+
 class PackageMaker(object):
     """Abstract class for classes to implement various packaging processes.
     """
@@ -2213,8 +2266,8 @@ class PackageMaker(object):
         return collect(*args, **kwargs)
 
     def setup(self):
-        list_f = (self.filelist == '-' and sys.stdin or open(self.filelist))
-        self.package['fileinfos'] = self.collect(list_f, self.pname, self.options)
+        paths = read_files_from_listfile(self.filelist)
+        self.package['fileinfos'] = self.collect(paths, self.pname, self.options)
 
         for d in ('workdir', 'srcdir'):
             createdir(self.package[d])
