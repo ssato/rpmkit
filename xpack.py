@@ -2484,6 +2484,10 @@ def do_packaging_self(options):
     createdir(pluginsdir, mode=0755)
     shell2("touch __init__.py", pluginsdir)
     for f in plugin_files:
+        if not os.path.exists(f):
+            logging.warn("Plugin %s does not found. Skip it" % f)
+            continue
+
         shell2("install -m 644 %s %s" % (f, pluginsdir))
 
     createdir(bindir)
