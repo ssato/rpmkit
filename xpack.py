@@ -2387,6 +2387,10 @@ def do_packaging_self(options):
     if not options.release_build:
         version += ".%s" % date(simple=True)
 
+    plugin_files = []
+    if options.include_plugins:
+        plugin_files = options.include_plugins.split(",")
+
     workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
     summary = "A python script to build packages from existing files on your system"
     requires = ""
@@ -2424,6 +2428,8 @@ def do_packaging_self(options):
 
     createdir(pluginsdir, mode=0755)
     shell2("touch __init__.py", pluginsdir)
+    for f in plugin_files:
+        shell2("install -m 644 %s %s" % (f, pluginsdir))
 
     createdir(bindir)
 
@@ -2760,6 +2766,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS):
         'build_self': False,
 
         "release_build": False,
+        "include_plugins": "xpack-plugin-libvirt.py",
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -2842,6 +2849,7 @@ Examples:
 
     sog = optparse.OptionGroup(p, "Self-build options")
     sog.add_option('', '--release-build', action='store_true', help="Make a release build")
+    sog.add_option('', '--include-plugins', help="Comma separated list of plugin files to be included in dist.")
     p.add_option_group(sog)
 
     tog = optparse.OptionGroup(p, "Test options")
