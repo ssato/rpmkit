@@ -2993,14 +2993,6 @@ def main(argv=sys.argv):
         run_alltests(verbose_test, options.tlevel)
         sys.exit()
 
-    if options.doctests:
-        run_doctests(verbose_test)
-        sys.exit()
-
-    if options.unittests:
-        run_unittests(verbose_test, options.tlevel)
-        sys.exit()
-
     if len(args) < 1:
         p.print_usage()
         sys.exit(1)
