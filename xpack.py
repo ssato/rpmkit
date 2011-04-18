@@ -235,13 +235,13 @@ $f \\
 #set $dir = os.path.dirname($fi.target)
 #set $bn = os.path.basename($fi.target)
 install-data-hook::
-\ttest -d \$(DESTDIR)$dir || \$(MKDIR_P) \$(DESTDIR)$dir
-\tcd \$(DESTDIR)$dir && \$(LN_S) $fi.linkto $bn
+\t\$(AM_V_at)test -d \$(DESTDIR)$dir || \$(MKDIR_P) \$(DESTDIR)$dir
+\t\$(AM_V_at)cd \$(DESTDIR)$dir && \$(LN_S) $fi.linkto $bn
 
 #else
 #if $fi.type() == 'dir'
 install-data-hook::
-\ttest -d \$(DESTDIR)$fi.target || \$(MKDIR_P) \$(DESTDIR)$fi.target
+\t\$(AM_V_at)test -d \$(DESTDIR)$fi.target || \$(MKDIR_P) \$(DESTDIR)$fi.target
 
 #end if
 #end if
@@ -276,6 +276,7 @@ rpmdir = $(abs_builddir)/rpm
 rpmdirs = $(addprefix $(rpmdir)/,RPMS BUILD BUILDROOT)
 
 rpmbuild = rpmbuild \
+--quiet \
 --define "_topdir $(rpmdir)" \
 --define "_srcrpmdir $(abs_builddir)" \
 --define "_sourcedir $(abs_builddir)" \
@@ -283,15 +284,16 @@ rpmbuild = rpmbuild \
 $(NULL)
 
 $(rpmdirs):
-\t$(MKDIR_P) $@
+\t$(AM_V_at)$(MKDIR_P) $@
 
 rpm srpm: $(PACKAGE).spec dist $(rpmdirs)
 
 rpm:
-\t$(rpmbuild) -bb $< && mv $(rpmdir)/RPMS/*/*.rpm $(abs_builddir)
+\t$(AM_V_GEN)$(rpmbuild) -bb $<
+\t$(AM_V_at)mv $(rpmdir)/RPMS/*/*.rpm $(abs_builddir)
 
 srpm:
-\t$(rpmbuild) -bs $<
+\t$(AM_V_GEN)$(rpmbuild) -bs $<
 
 .PHONY: rpm srpm
 #end raw
@@ -345,8 +347,8 @@ Some more extra data will override and replace other packages'.
 
 
 %build
-%configure
-make
+%configure --quiet --enable-silent-rules
+make %{?_smp_mflags} V=0
 
 
 %install
@@ -537,7 +539,7 @@ $ cat files.list | python xpack.py -n sysdata -w ./0 -q --no-mock -
 04:03:38 [WARNING] [Errno 1] Operation not permitted: '/tmp/t/0/sysdata-0.1/src/etc/httpd/conf.d'
 $ ls 0/sysdata-0.1/
 MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       xpack-package-filelist.pkl
-MANIFEST.overrides  aclocal.m4      configure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  xpack-sbuild.stamp
+MANIFEST.overrides  aclocal.m4      c --silentonfigure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  xpack-sbuild.stamp
 Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             xpack-setup.stamp
 Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     xpack-build.stamp
 Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            xpack-configure.stamp
@@ -1986,7 +1988,7 @@ def collect(paths, pkg_name, options):
         # Too verbose but useful in some cases:
         #logging.debug(" fi=%s" % str(fi))
 
-        if fi.type() not in ('file', 'symlink', 'dir'):
+        if fi.type() not in (TYPE_FILE, TYPE_SYMLINK, TYPE_DIR):
             logging.warn(" Sorry, only supported file type is 'file', 'symlink' or 'dir' and '%s' is not. Skip %s" % (fi.type(), p))
             continue
 
@@ -2111,6 +2113,10 @@ def srcrpm_name_by_rpmspec_2(rpmspec):
 
 def do_nothing(*args, **kwargs):
     return
+
+
+def on_debug_mode():
+    return logging.getLogger().level < logging.INFO
 
 
 
@@ -2291,18 +2297,30 @@ class PackageMaker(object):
     def configure(self):
         self.pre_configure()
 
-        self.package['distdata'] = distdata_in_makefile_am([fi.target for fi in self.package['fileinfos'] if fi.type() == 'file'])
+        self.package['distdata'] = distdata_in_makefile_am(
+            [fi.target for fi in self.package['fileinfos'] if fi.type() == TYPE_FILE]
+        )
 
         self.genfile('configure.ac')
         self.genfile('Makefile.am')
         self.genfile('README')
         self.genfile('MANIFEST')
         self.genfile('MANIFEST.overrides')
-        self.shell('autoreconf -fi')
+
+        if on_debug_mode():
+            self.shell('autoreconf -vfi')
+        else:
+            self.shell('autoreconf -fi')
 
     def sbuild(self):
-        self.shell('./configure --quiet')  # TODO: add --quiet to make it less verbose?
-        self.shell('make dist')
+        if on_debug_mode():
+            self.shell("./configure --quiet")
+            self.shell("make")
+            self.shell("make dist")
+        else:
+            self.shell("./configure --quiet --enable-silent-rules")
+            self.shell("make V=0 > /dev/null")
+            self.shell("make dist V=0 > /dev/null")
 
     def build(self):
         pass
@@ -2339,7 +2357,10 @@ class RpmPackageMaker(TgzPackageMaker):
         return os.path.join(self.workdir, "%s.spec" % self.pname)
 
     def build_srpm(self):
-        return self.shell('make srpm')
+        if on_debug_mode:
+            return self.shell("make srpm")
+        else:
+            return self.shell("make srpm V=0 > /dev/null")
 
     def build_rpm(self):
         if self.use_mock:
@@ -2350,12 +2371,16 @@ class RpmPackageMaker(TgzPackageMaker):
                 self.use_mock = False
 
         if self.use_mock:
-            self.shell("mock -r %s %s" % \
-                (self.package['dist'], srcrpm_name_by_rpmspec(self.rpmspec()))
+            silent = (on_debug_mode() and "" or "--quiet")
+            self.shell("mock -r %s %s %s" % \
+                (self.package['dist'], srcrpm_name_by_rpmspec(self.rpmspec()), silent)
             )
             return self.shell("mv /var/lib/mock/%(dist)s/result/*.rpm %(workdir)s" % self.package)
         else:
-            return self.shell("make rpm")
+            if on_debug_mode:
+                return self.shell("make rpm")
+            else:
+                return self.shell("make rpm V=0 > /dev/null")
 
     def configure(self):
         super(RpmPackageMaker, self).configure()
@@ -2406,10 +2431,12 @@ class DebPackageMaker(TgzPackageMaker):
         self.shell("dpkg-buildpackage -S")
 
     def build(self):
-        super(DebPackageMaker, self).build()
+        """Which is better to build?
 
-        # FIXME: which is better?
-        #self.shell('debuild -us -uc')
+        * debuild -us -uc
+        * fakeroot debian/rules binary
+        """
+        super(DebPackageMaker, self).build()
         self.shell('fakeroot debian/rules binary')
 
 
@@ -2534,65 +2561,84 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
+
+        target = "/etc/resolv.conf"
+        self.cmd = "echo %s | python %s -n resolvconf -w %s " % (target, sys.argv[0], self.workdir)
+
         logging.info("start") # dummy log
 
     def tearDown(self):
         rm_rf(self.workdir)
 
     def test_packaging_setup_wo_rpmdb(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto setup --no-rpmdb -" % (sys.argv[0], self.workdir)
+        """Setup without rpm database
+        """
+        cmd = self.cmd + "--upto setup --no-rpmdb -"
         self.assertEquals(os.system(cmd), 0)
 
     def test_packaging_configure_wo_rpmdb(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto configure --no-rpmdb -" % (sys.argv[0], self.workdir)
+        """Configure without rpm database
+        """
+        cmd = self.cmd + "--upto configure --no-rpmdb -"
         self.assertEquals(os.system(cmd), 0)
 
-    def test_packaging(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s -" % (sys.argv[0], self.workdir)
+    def test_packaging_sbuild_wo_rpmdb_wo_mock(self):
+        """Build src package without rpm database without mock
+        """
+        cmd = self.cmd + "--upto sbuild --no-rpmdb --no-mock -"
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.src.rpm" % self.workdir)) > 0)
 
-    def test_packaging_build_rpm_wo_rpmdb(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto build --no-rpmdb --no-mock -" % (sys.argv[0], self.workdir)
+    def test_packaging_build_rpm_wo_rpmdb_wo_mock(self):
+        """Build package without rpm database without mock
+        """
+        cmd = self.cmd + "--upto build --no-rpmdb --no-mock -"
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
-    def test_packaging_symlink_build_rpm_wo_rpmdb(self):
+    def test_packaging_wo_rpmdb_wo_mock(self):
+        """Build package without rpm database without mock (no --upto option)
+        """
+        cmd = self.cmd + "--no-rpmdb --no-mock -"
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
+    def test_packaging_symlink_wo_rpmdb_wo_mock(self):
         idir = os.path.join(self.workdir, "var", "lib", "net")
         os.makedirs(idir)
         os.symlink("/etc/resolv.conf", os.path.join(idir, "resolv.conf"))
 
-        cmd = "echo %s/resolv.conf | python %s -n resolvconf -w %s --upto build --no-rpmdb --no-mock -" % (idir, sys.argv[0], self.workdir)
+        cmd = "echo %s/resolv.conf | python %s -n resolvconf -w %s --no-rpmdb --no-mock -" % (idir, sys.argv[0], self.workdir)
 
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
-    def test_packaging_build_rpm(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto build --no-mock -" % (sys.argv[0], self.workdir)
-        self.assertEquals(os.system(cmd), 0)
-        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
-
-    def test_packaging_build_rpm_with_mock(self):
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto build -" % (sys.argv[0], self.workdir)
-        self.assertEquals(os.system(cmd), 0)
-        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
-
-    def test_packaging_build_rpm_wo_rpmdb_w_destdir(self):
+    def test_packaging_wo_rpmdb_wo_mock_with_destdir(self):
         destdir = os.path.join(self.workdir, "destdir")
         createdir(os.path.join(destdir, 'etc'))
         shell("cp /etc/resolv.conf %s/etc" % destdir)
 
-        cmd = "echo %s/etc/resolv.conf | python %s -n resolvconf -w %s --upto build --no-rpmdb --no-mock --destdir=%s -" % \
+        cmd = "echo %s/etc/resolv.conf | python %s -n resolvconf -w %s --no-rpmdb --no-mock --destdir=%s -" % \
             (destdir, sys.argv[0], self.workdir, destdir)
 
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
+    def test_packaging_with_rpmdb_wo_mock(self):
+        cmd = self.cmd + "--no-mock -"
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
+    def test_packaging_with_rpmdb_with_mock(self):
+        cmd = self.cmd + "-"
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
     def test_packaging_deb(self):
+        """'dh' may not be found on this system so that it will only go up to
+        'configure' step.
         """
-        'dh' may not be found on this system so that it will only go up to 'configure' step.
-        """
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --upto configure --format deb --no-rpmdb -" % (sys.argv[0], self.workdir)
+        cmd = self.cmd + "--upto configure --format deb --no-rpmdb -"
         self.assertEquals(os.system(cmd), 0)
 
     def test_packaging_with_rc(self):
@@ -2606,7 +2652,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         cmd = "echo /etc/resolv.conf | XPACKRC=%s python %s -w %s --upto configure -" % (rc, prog, self.workdir)
         self.assertEquals(os.system(cmd), 0)
 
-    def test_packaging_with_a_custom_template(self):
+    def test_packaging_wo_rpmdb_wo_mock_with_a_custom_template(self):
         global TEMPLATES
 
         prog = sys.argv[0]
@@ -2614,8 +2660,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 
         open(tmpl0, 'w').write(TEMPLATES['package.spec'])
 
-        cmd = "echo /etc/resolv.conf | python %s -n resolvconf -w %s --templates=\"package.spec:%s\" -" % \
-            (prog, self.workdir, tmpl0)
+        cmd = self.cmd + "--no-rpmdb --no-mock --templates=\"package.spec:%s\" -" % tmpl0
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.src.rpm" % self.workdir)) > 0)
 
