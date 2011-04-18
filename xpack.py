@@ -941,6 +941,8 @@ no_mock    = False
 (TYPE_FILE, TYPE_DIR, TYPE_SYMLINK, TYPE_OTHER, TYPE_UNKNOWN) = \
     ('file', 'dir', 'symlink', 'other', 'unknown')
 
+TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
+
 
 
 def dicts_comp(lhs, rhs, keys=False):
@@ -2647,18 +2649,39 @@ def run_doctests(verbose):
     doctest.testmod(verbose=verbose)
 
 
-def run_unittests(verbose):
+def run_unittests(verbose, test_choice):
     minor = sys.version_info[1]
 
+    def tsuite(testcase):
+        return unittest.TestLoader().loadTestsFromTestCase(testcase)
+
+    basic_tests = [
+        TestDecoratedFuncs,
+        TestFuncsWithSideEffects,
+    ]
+
+    system_tests = [
+        TestMainProgram01MultipleFilesCases,
+        TestMainProgram00SingleFileCases,
+    ]
+
+    suites = [tsuite(c) for c in basic_tests]
+
+    if test_choice == TEST_FULL:
+        suites += [tsuite(c) for c in system_tests]
+
+    tests = unittest.TestSuite(suites)
+
     if minor >= 5:
-        unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
+        unittest.TextTestRunner(verbosity=(verbose and 2 or 0)).run(tests)
+        #unittest.main(argv=sys.argv[:1], verbosity=)
     else:
-        unittest.main(argv=sys.argv[:1])
+        unittest.TextTestRunner().run(tests)
 
 
-def run_alltests(verbose):
+def run_alltests(verbose, test_choice):
     run_doctests(verbose)
-    run_unittests(verbose)
+    run_unittests(verbose, test_choice)
 
 
 def parse_conf_value(s):
@@ -2744,7 +2767,7 @@ def init_defaults_by_conffile(config=None, profile=None, prog="xpack"):
     return defaults
 
 
-def option_parser(V=__version__, pmaps=PACKAGE_MAKERS):
+def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES):
     global PKG_COMPRESSORS, UPTO
 
     ver_s = "%prog " + V
@@ -2814,8 +2837,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS):
         'show_examples': False,
         'dump_rc': False,
         'tests': False,
-        'doctests': False,
-        'unittests': False,
+        'tlevel': test_choices[0],
         'build_self': False,
 
         "release_build": False,
@@ -2906,9 +2928,9 @@ Examples:
     p.add_option_group(sog)
 
     tog = optparse.OptionGroup(p, "Test options")
-    tog.add_option('', '--tests', action='store_true', help='Run both types (doctests and unittests) of tests')
-    tog.add_option('', '--doctests', action='store_true', help='Run doctest tests')
-    tog.add_option('', '--unittests', action='store_true', help='Run unittests')
+    tog.add_option('', '--tests', action='store_true', help="Run tests.")
+    tog.add_option('', '--tlevel', type="choice", choices=test_choices,
+        help="Select the level of tests to run. Choices are " + ", ".join(test_choices) + " [%default]")
     p.add_option_group(tog)
 
     p.add_option('', '--force', action="store_true", help='Force going steps even if the steps looks done')
@@ -2960,7 +2982,7 @@ def main(argv=sys.argv):
 
     if options.build_self:
         if options.tests:
-            rc = os.system("python %s --test --debug" % argv[0])
+            rc = os.system("python %s --tests --tlevel=full -v" % argv[0])
             if rc != 0:
                 sys.exit(rc)
 
@@ -2968,7 +2990,7 @@ def main(argv=sys.argv):
         sys.exit()
 
     if options.tests:
-        run_alltests(verbose_test)
+        run_alltests(verbose_test, options.tlevel)
         sys.exit()
 
     if options.doctests:
@@ -2976,7 +2998,7 @@ def main(argv=sys.argv):
         sys.exit()
 
     if options.unittests:
-        run_unittests(verbose_test)
+        run_unittests(verbose_test, options.tlevel)
         sys.exit()
 
     if len(args) < 1:
