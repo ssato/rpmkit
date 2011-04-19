@@ -2111,9 +2111,12 @@ class Collector(object):
     def __init__(self, *args, **kwargs):
         pass
 
+    def run(self, *args, **kwargs):
+        pass
 
 
-class SimpleFilelistCollector(Collector):
+
+class FilelistCollector(Collector):
     """
     Collector to collect fileinfo list from files list in simple format:
 
@@ -2128,10 +2131,11 @@ class SimpleFilelistCollector(Collector):
                         (read files and dirs list from stdin)
         @pname     str  package name to build
         """
-        super(SimpleFilelistCollector, self).__init__(filelist, options)
+        super(FilelistCollector, self).__init__(filelist, options)
 
         self.filelist = filelist
         self.pname = pname
+        self.options = options
 
     def open(self, path):
         return path == "-" and sys.stdin or open(path)
@@ -2150,9 +2154,9 @@ class SimpleFilelistCollector(Collector):
         fs = (l.rstrip() for l in self.open(path).readlines() if l and not l.startswith('#'))
         return unique(concat([glob.glob(g) for g in fs if '*' in g]) + [f for f in fs if '*' not in f])
 
-    def collect(self):
+    def run(self):
         paths = self.parse(self.filelist)
-        return collect(paths, self.pname, options)
+        return collect(paths, self.pname, self.options)
 
 
 
@@ -2164,6 +2168,7 @@ class PackageMaker(object):
     _templates = TEMPLATES
     _type = "filelist"
     _format = None
+    _collector = FilelistCollector
 
     @classmethod
     def register(cls, pmmaps=PACKAGE_MAKERS):
@@ -2180,6 +2185,10 @@ class PackageMaker(object):
     @classmethod
     def format(cls):
         return cls._format
+
+    @classmethod
+    def collector(cls):
+        return cls._collector
 
     def __init__(self, package, filelist, options, *args, **kwargs):
         self.package = package
@@ -2260,6 +2269,8 @@ class PackageMaker(object):
         return collect(*args, **kwargs)
 
     def setup(self):
+        #collector = self.collector()(self.filelist, self.package["name"], self.options)
+        #self.package['fileinfos'] = collector.run()
         paths = read_files_from_listfile(self.filelist)
         self.package['fileinfos'] = self.collect(paths, self.pname, self.options)
 
