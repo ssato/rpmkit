@@ -2029,20 +2029,6 @@ def collect(paths, pkg_name, options):
     return fileinfos
 
 
-def to_srcdir(path, workdir=''):
-    """
-    >>> to_srcdir('/a/b/c')
-    'src/a/b/c'
-    >>> to_srcdir('a/b')
-    'src/a/b'
-    >>> to_srcdir('/')
-    'src/'
-    """
-    assert path != '', "Empty path was given"
-
-    return os.path.join(workdir, 'src', path.strip(os.path.sep))
-
-
 def distdata_in_makefile_am(paths, srcdir='src'):
     """
     @paths  file path list
