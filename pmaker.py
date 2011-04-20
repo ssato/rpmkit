@@ -1,6 +1,7 @@
 #! /usr/bin/python
 #
-# xpack.py - X (files, dirs, ...) Packaging tool
+# PackageMaker is a tool to help making packages of files, dirs, ...
+#
 # - a script to build packages from existing files on your system.
 #
 # It will try gathering the info of files, dirs and symlinks in given path
@@ -47,6 +48,7 @@
 # TODO:
 # * correct wrong English expressions
 # * more complete tests
+# * refactor the process to collect FileInfo objects
 # * detect parameters automatically as much as possible:
 #   * username, mail, fullname: almost done
 #   * url: "git config --get remote.origin.url", etc.
@@ -87,7 +89,7 @@
 # pylint: disable=E1103
 # pylint: disable=W0613
 #
-# How to run pylint: pylint --rcfile pylintrc xpack.py
+# How to run pylint: pylint --rcfile pylintrc pmaker.py
 #
 
 from distutils.sysconfig import get_python_lib
@@ -457,7 +459,7 @@ EXAMPLE_LOGS = [
     """## A. Packaing files in given files list, "files.list":
 
 $ ls
-files.list  xpack.py
+files.list  pmaker.py
 $ cat files.list
 /etc/auto.*
 /etc/modprobe.d/*
@@ -466,7 +468,7 @@ $ cat files.list
 #/etc/aliases.db
 /etc/system-release
 /etc/httpd/conf.d
-$ python xpack.py -n sysdata -w ./0 -q files.list
+$ python pmaker.py -n sysdata -w ./0 -q files.list
 03:52:50 [WARNING]  /etc/auto.master is owned by autofs and it (sysdata) will conflict with autofs
 03:52:50 [WARNING]  /etc/auto.misc is owned by autofs and it (sysdata) will conflict with autofs
 03:52:51 [WARNING]  /etc/auto.net is owned by autofs and it (sysdata) will conflict with autofs
@@ -483,15 +485,15 @@ $ python xpack.py -n sysdata -w ./0 -q files.list
 03:52:53 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release and it (sysdata) will conflict with fedora-release
 03:52:53 [WARNING] [Errno 1] Operation not permitted: '/tmp/t/0/sysdata-0.1/src/etc/httpd/conf.d'
 $ ls
-0  files.list  xpack.py
+0  files.list  pmaker.py
 $ ls 0
 sysdata-0.1
 $ ls 0/sysdata-0.1/
-MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       xpack-package-filelist.pkl
-MANIFEST.overrides  aclocal.m4      configure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  xpack-sbuild.stamp
-Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             xpack-setup.stamp
-Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     xpack-build.stamp
-Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            xpack-configure.stamp
+MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       pmaker-package-filelist.pkl
+MANIFEST.overrides  aclocal.m4      configure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  pmaker-sbuild.stamp
+Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             pmaker-setup.stamp
+Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     pmaker-build.stamp
+Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            pmaker-configure.stamp
 $ rpm -qlp 0/sysdata-0.1/sysdata-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
 /usr/share/doc/sysdata-0.1
@@ -520,8 +522,8 @@ $
 ## is not used for building rpms:
 
 $ ls
-files.list  xpack.py
-$ cat files.list | python xpack.py -n sysdata -w ./0 -q --no-mock -
+files.list  pmaker.py
+$ cat files.list | python pmaker.py -n sysdata -w ./0 -q --no-mock -
 04:03:35 [WARNING]  /etc/auto.master is owned by autofs and it (sysdata) will conflict with autofs
 04:03:35 [WARNING]  /etc/auto.misc is owned by autofs and it (sysdata) will conflict with autofs
 04:03:35 [WARNING]  /etc/auto.net is owned by autofs and it (sysdata) will conflict with autofs
@@ -538,11 +540,11 @@ $ cat files.list | python xpack.py -n sysdata -w ./0 -q --no-mock -
 04:03:38 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release and it (sysdata) will conflict with fedora-release
 04:03:38 [WARNING] [Errno 1] Operation not permitted: '/tmp/t/0/sysdata-0.1/src/etc/httpd/conf.d'
 $ ls 0/sysdata-0.1/
-MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       xpack-package-filelist.pkl
-MANIFEST.overrides  aclocal.m4      c --silentonfigure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  xpack-sbuild.stamp
-Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             xpack-setup.stamp
-Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     xpack-build.stamp
-Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            xpack-configure.stamp
+MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       pmaker-package-filelist.pkl
+MANIFEST.overrides  aclocal.m4      c --silentonfigure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  pmaker-sbuild.stamp
+Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             pmaker-setup.stamp
+Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     pmaker-build.stamp
+Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            pmaker-configure.stamp
 $ rpm -qlp 0/sysdata-0.1/sysdata-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
 /usr/share/doc/sysdata-0.1
@@ -569,33 +571,33 @@ $
 """,
     """## C. Packaing single file, /etc/resolve.conf:
 
-$ echo /etc/resolv.conf | python xpack.py -n resolvconf -w 2 --debug -
+$ echo /etc/resolv.conf | python pmaker.py -n resolvconf -w 2 --debug -
 04:06:53 [INFO] Setting up src tree in /tmp/t/2/resolvconf-0.1: resolvconf
-04:06:55 [DEBUG]  Could load the cache: /home/ssato/.cache/xpack.rpm.filelist.pkl
+04:06:55 [DEBUG]  Could load the cache: /home/ssato/.cache/pmaker.rpm.filelist.pkl
 04:06:55 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1
 04:06:55 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1/src
 04:06:55 [DEBUG]  Copying from '/etc/resolv.conf' to '/tmp/t/2/resolvconf-0.1/src/etc/resolv.conf'
 04:06:55 [DEBUG]  Run: cp -a /etc/resolv.conf /tmp/t/2/resolvconf-0.1/src/etc/resolv.conf [/tmp/t]
-04:06:55 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-setup.stamp [/tmp/t/2/resolvconf-0.1]
+04:06:55 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/pmaker-setup.stamp [/tmp/t/2/resolvconf-0.1]
 04:06:55 [INFO] Configuring src distribution: resolvconf
 04:06:56 [DEBUG]  Run: autoreconf -fi [/tmp/t/2/resolvconf-0.1]
-04:07:15 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-configure.stamp [/tmp/t/2/resolvconf-0.1]
+04:07:15 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/pmaker-configure.stamp [/tmp/t/2/resolvconf-0.1]
 04:07:15 [INFO] Building src package: resolvconf
 04:07:15 [DEBUG]  Run: ./configure [/tmp/t/2/resolvconf-0.1]
 04:07:19 [DEBUG]  Run: make dist [/tmp/t/2/resolvconf-0.1]
 04:07:20 [DEBUG]  Run: make srpm [/tmp/t/2/resolvconf-0.1]
-04:07:21 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-sbuild.stamp [/tmp/t/2/resolvconf-0.1]
+04:07:21 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/pmaker-sbuild.stamp [/tmp/t/2/resolvconf-0.1]
 04:07:21 [INFO] Building bin packages: resolvconf
 04:07:21 [DEBUG]  Run: mock --version > /dev/null [/tmp/t/2/resolvconf-0.1]
 04:07:24 [DEBUG]  Run: mock -r fedora-14-i386 resolvconf-0.1-1.*.src.rpm [/tmp/t/2/resolvconf-0.1]
 04:09:18 [DEBUG]  Run: mv /var/lib/mock/fedora-14-i386/result/*.rpm /tmp/t/2/resolvconf-0.1 [/tmp/t/2/resolvconf-0.1]
-04:09:18 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/xpack-build.stamp [/tmp/t/2/resolvconf-0.1]
+04:09:18 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/pmaker-build.stamp [/tmp/t/2/resolvconf-0.1]
 04:09:18 [INFO] Successfully created packages in /tmp/t/2/resolvconf-0.1: resolvconf
 $ ls 2/resolvconf-0.1/
-MANIFEST            Makefile.in     config.log     install-sh                        resolvconf-0.1.tar.bz2  rpm.mk                 xpack-package-filelist.pkl
-MANIFEST.overrides  README          config.status  missing                           resolvconf-0.1.tar.gz   src                    xpack-sbuild.stamp
-Makefile            aclocal.m4      configure      resolvconf-0.1-1.fc14.noarch.rpm  resolvconf.spec         xpack-build.stamp      xpack-setup.stamp
-Makefile.am         autom4te.cache  configure.ac   resolvconf-0.1-1.fc14.src.rpm     rpm                     xpack-configure.stamp
+MANIFEST            Makefile.in     config.log     install-sh                        resolvconf-0.1.tar.bz2  rpm.mk                 pmaker-package-filelist.pkl
+MANIFEST.overrides  README          config.status  missing                           resolvconf-0.1.tar.gz   src                    pmaker-sbuild.stamp
+Makefile            aclocal.m4      configure      resolvconf-0.1-1.fc14.noarch.rpm  resolvconf.spec         pmaker-build.stamp      pmaker-setup.stamp
+Makefile.am         autom4te.cache  configure.ac   resolvconf-0.1-1.fc14.src.rpm     rpm                     pmaker-configure.stamp
 $ rpm -qlp 2/resolvconf-0.1/resolvconf-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
 /usr/share/doc/resolvconf-0.1
@@ -610,15 +612,15 @@ $
 ## will be installed as srv/isos/rhel-server-5.6-i386-dvd.iso:
 
 $ ls
-xpack.py  srv
+pmaker.py  srv
 $ ls srv/isos/
 rhel-server-5.6-i386-dvd.iso
 $ echo /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso | \\
-> python xpack.py -n rhel-server-5-6-i386-dvd-iso -w ./w \\
+> python pmaker.py -n rhel-server-5-6-i386-dvd-iso -w ./w \\
 > --destdir /tmp/t/ --upto build --no-mock -
 ...(snip)...
 $ ls
-xpack.py  srv  w
+pmaker.py  srv  w
 $ rpm -qlp w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm
 /srv/isos/rhel-server-5.6-i386-dvd.iso
 /usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1
@@ -628,39 +630,39 @@ $
 """,
     """## E. Packaging itself:
 
-$ python xpack.py --build-self
-04:20:47 [INFO]  executing: echo /tmp/xpack-build-YaDaOn/usr/bin/xpack | python xpack.py -n xpack --pversion 0.0.99 -w /tmp/xpack-build-YaDaOn --debug --upto build --no-rpmdb --no-mock --destdir=/tmp/xpack-build-YaDaOn --ignore-owner -
-04:20:49 [INFO] Setting up src tree in /tmp/xpack-build-YaDaOn/xpack-0.0.99: xpack
-04:20:49 [DEBUG]  force set uid and gid of /tmp/xpack-build-YaDaOn/usr/bin/xpack
-04:20:49 [DEBUG]  Rewrote target path of fi from /tmp/xpack-build-YaDaOn/usr/bin/xpack to /usr/bin/xpack
-04:20:49 [DEBUG]  Creating a directory: /tmp/xpack-build-YaDaOn/xpack-0.0.99
-04:20:49 [DEBUG]  Creating a directory: /tmp/xpack-build-YaDaOn/xpack-0.0.99/src
-04:20:49 [DEBUG]  Copying from '/tmp/xpack-build-YaDaOn/usr/bin/xpack' to '/tmp/xpack-build-YaDaOn/xpack-0.0.99/src/usr/bin/xpack'
-04:20:49 [DEBUG]  Run: cp -a /tmp/xpack-build-YaDaOn/usr/bin/xpack /tmp/xpack-build-YaDaOn/xpack-0.0.99/src/usr/bin/xpack [/tmp/t]
-04:20:49 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-setup.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:20:49 [INFO] Configuring src distribution: xpack
-04:20:50 [DEBUG]  Run: autoreconf -fi [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:10 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-configure.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:10 [INFO] Building src package: xpack
-04:21:10 [DEBUG]  Run: ./configure [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:13 [DEBUG]  Run: make dist [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:14 [DEBUG]  Run: make srpm [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:16 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-sbuild.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:16 [INFO] Building bin packages: xpack
-04:21:16 [DEBUG]  Run: make rpm [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:22 [DEBUG]  Run: touch /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-build.stamp [/tmp/xpack-build-YaDaOn/xpack-0.0.99]
-04:21:22 [INFO] Successfully created packages in /tmp/xpack-build-YaDaOn/xpack-0.0.99: xpack
-$ rpm -qlp /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack-0.0.99-1.fc14.noarch.rpm
-/usr/bin/xpack
-/usr/share/doc/xpack-0.0.99
-/usr/share/doc/xpack-0.0.99/MANIFEST
-/usr/share/doc/xpack-0.0.99/README
-$ sed -n "/^%files/,/^$/p" /tmp/xpack-build-YaDaOn/xpack-0.0.99/xpack.spec
+$ python pmaker.py --build-self
+04:20:47 [INFO]  executing: echo /tmp/pmaker-build-YaDaOn/usr/bin/pmaker | python pmaker.py -n pmaker --pversion 0.0.99 -w /tmp/pmaker-build-YaDaOn --debug --upto build --no-rpmdb --no-mock --destdir=/tmp/pmaker-build-YaDaOn --ignore-owner -
+04:20:49 [INFO] Setting up src tree in /tmp/pmaker-build-YaDaOn/pmaker-0.0.99: pmaker
+04:20:49 [DEBUG]  force set uid and gid of /tmp/pmaker-build-YaDaOn/usr/bin/pmaker
+04:20:49 [DEBUG]  Rewrote target path of fi from /tmp/pmaker-build-YaDaOn/usr/bin/pmaker to /usr/bin/pmaker
+04:20:49 [DEBUG]  Creating a directory: /tmp/pmaker-build-YaDaOn/pmaker-0.0.99
+04:20:49 [DEBUG]  Creating a directory: /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/src
+04:20:49 [DEBUG]  Copying from '/tmp/pmaker-build-YaDaOn/usr/bin/pmaker' to '/tmp/pmaker-build-YaDaOn/pmaker-0.0.99/src/usr/bin/pmaker'
+04:20:49 [DEBUG]  Run: cp -a /tmp/pmaker-build-YaDaOn/usr/bin/pmaker /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/src/usr/bin/pmaker [/tmp/t]
+04:20:49 [DEBUG]  Run: touch /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-setup.stamp [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:20:49 [INFO] Configuring src distribution: pmaker
+04:20:50 [DEBUG]  Run: autoreconf -fi [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:21:10 [DEBUG]  Run: touch /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-configure.stamp [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:21:10 [INFO] Building src package: pmaker
+04:21:10 [DEBUG]  Run: ./configure [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:21:13 [DEBUG]  Run: make dist [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:21:14 [DEBUG]  Run: make srpm [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:21:16 [DEBUG]  Run: touch /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-sbuild.stamp [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:21:16 [INFO] Building bin packages: pmaker
+04:21:16 [DEBUG]  Run: make rpm [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:21:22 [DEBUG]  Run: touch /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-build.stamp [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
+04:21:22 [INFO] Successfully created packages in /tmp/pmaker-build-YaDaOn/pmaker-0.0.99: pmaker
+$ rpm -qlp /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-0.0.99-1.fc14.noarch.rpm
+/usr/bin/pmaker
+/usr/share/doc/pmaker-0.0.99
+/usr/share/doc/pmaker-0.0.99/MANIFEST
+/usr/share/doc/pmaker-0.0.99/README
+$ sed -n "/^%files/,/^$/p" /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker.spec
 %files
 %defattr(-,root,root,-)
 %doc README
 %doc MANIFEST
-%attr(755, -, -) /usr/bin/xpack
+%attr(755, -, -) /usr/bin/pmaker
 
 $
 """,
@@ -669,10 +671,10 @@ $
 $ list_files () { dir=$1; sudo find $dir -type f; }                                                                                                            $ is_not_from_rpm () { f=$1; LANG=C sudo rpm -qf $f | grep -q 'is not owned' 2>/dev/null; }
 $ (for f in `list_files /etc`; do is_not_from_rpm $f && echo $f; done) \\
 >  > etc.not_from_package.files
-$ sudo python xpack.py -n etcdata --pversion $(date +%Y%m%d) \\
+$ sudo python pmaker.py -n etcdata --pversion $(date +%Y%m%d) \\
 > --debug -w etcdata-build etc.not_from_package.files
 [sudo] password for ssato:
-14:15:03 [DEBUG]  Could load the cache: /root/.cache/xpack.rpm.filelist.pkl
+14:15:03 [DEBUG]  Could load the cache: /root/.cache/pmaker.rpm.filelist.pkl
 14:15:09 [INFO] Setting up src tree in /tmp/t/etcdata-build/etcdata-20110217: etcdata
 14:15:09 [DEBUG]  Creating a directory: /tmp/t/etcdata-build/etcdata-20110217
 ...(snip)...
@@ -706,28 +708,28 @@ $ ssh builder@rhel-5-6-vm-0
 builder@rhel-5-6-vm-0's password:
 [builder@rhel-5-6-vm-0 ~]$ cat /etc/redhat-release
 Red Hat Enterprise Linux Server release 5.6 (Tikanga)
-[builder@rhel-5-6-vm-0 ~]$ curl -s https://github.com/ssato/rpmkit/raw/master/xpack.py > xpack
+[builder@rhel-5-6-vm-0 ~]$ curl -s https://github.com/ssato/rpmkit/raw/master/pmaker.py > pmaker
 [builder@rhel-5-6-vm-0 ~]$ echo /etc/puppet/manifests/site.pp | \\
-> python xpack -n puppet-manifests -w 0 --debug --upto setup -
+> python pmaker -n puppet-manifests -w 0 --debug --upto setup -
 WARNING:root:python-cheetah is not found so that packaging process will go up to only 'setup' step.
 19:42:48 [INFO] Setting up src tree in /home/builder/0/puppet-manifests-0.1: puppet-manifests
-19:42:50 [DEBUG]  Could save the cache: /home/builder/.cache/xpack.rpm.filelist.pkl
+19:42:50 [DEBUG]  Could save the cache: /home/builder/.cache/pmaker.rpm.filelist.pkl
 19:42:50 [DEBUG]  Creating a directory: /home/builder/0/puppet-manifests-0.1
 19:42:50 [DEBUG]  Creating a directory: /home/builder/0/puppet-manifests-0.1/src
 19:42:50 [DEBUG]  Copying from '/etc/puppet/manifests/site.pp' to '/home/builder/0/puppet-manifests-0.1/src/etc/puppet/manifests/site.pp'
 19:42:50 [DEBUG]  Run: cp -a /etc/puppet/manifests/site.pp /home/builder/0/puppet-manifests-0.1/src/etc/puppet/manifests/site.pp [/home/builder]
-19:42:50 [DEBUG]  Run: touch /home/builder/0/puppet-manifests-0.1/xpack-setup.stamp [/home/builder/0/puppet-manifests-0.1]
+19:42:50 [DEBUG]  Run: touch /home/builder/0/puppet-manifests-0.1/pmaker-setup.stamp [/home/builder/0/puppet-manifests-0.1]
 [builder@rhel-5-6-vm-0 ~]$ tar jcvf puppet-manifests-0.1.tar.bz2 0/puppet-manifests-0.1/
 0/puppet-manifests-0.1/
-0/puppet-manifests-0.1/xpack-setup.stamp
-0/puppet-manifests-0.1/xpack-package-filelist.pkl
+0/puppet-manifests-0.1/pmaker-setup.stamp
+0/puppet-manifests-0.1/pmaker-package-filelist.pkl
 0/puppet-manifests-0.1/src/
 0/puppet-manifests-0.1/src/etc/
 0/puppet-manifests-0.1/src/etc/puppet/
 0/puppet-manifests-0.1/src/etc/puppet/manifests/
 0/puppet-manifests-0.1/src/etc/puppet/manifests/site.pp
 [builder@rhel-5-6-vm-0 ~]$ ls
-0  puppet-manifests-0.1.tar.bz2  rpms  xpack
+0  puppet-manifests-0.1.tar.bz2  rpms  pmaker
 [builder@rhel-5-6-vm-0 ~]$ ^D
 $ cat /etc/fedora-release
 Fedora release 14 (Laughlin)
@@ -736,31 +738,31 @@ builder@rhel-5-6-vm-0's password:
 puppet-manifests-0.1.tar.bz2                 100%  722     0.7KB/s   00:00
 $ tar jxvf puppet-manifests-0.1.tar.bz2
 0/puppet-manifests-0.1/
-0/puppet-manifests-0.1/xpack-setup.stamp
-0/puppet-manifests-0.1/xpack-package-filelist.pkl
+0/puppet-manifests-0.1/pmaker-setup.stamp
+0/puppet-manifests-0.1/pmaker-package-filelist.pkl
 0/puppet-manifests-0.1/src/
 0/puppet-manifests-0.1/src/etc/
 0/puppet-manifests-0.1/src/etc/puppet/
 0/puppet-manifests-0.1/src/etc/puppet/manifests/
 0/puppet-manifests-0.1/src/etc/puppet/manifests/site.pp
 $ echo /etc/puppet/manifests/site.pp | \\
-> python xpack.py -n puppet-manifests -w 0 --upto build \\
+> python pmaker.py -n puppet-manifests -w 0 --upto build \\
 > --dist epel-5-i386 --debug -
 05:27:55 [INFO] Setting up src tree in /tmp/w/0/puppet-manifests-0.1: puppet-manifests
 05:27:55 [INFO] ...It looks already done. Skip the step: setup
 05:27:55 [INFO] Configuring src distribution: puppet-manifests
 05:27:55 [DEBUG]  Run: autoreconf -fi [/tmp/w/0/puppet-manifests-0.1]
-05:27:58 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/xpack-configure.stamp [/tmp/w/0/puppet-manifests-0.1]
+05:27:58 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/pmaker-configure.stamp [/tmp/w/0/puppet-manifests-0.1]
 05:27:58 [INFO] Building src package: puppet-manifests
 05:27:58 [DEBUG]  Run: ./configure [/tmp/w/0/puppet-manifests-0.1]
 05:27:59 [DEBUG]  Run: make dist [/tmp/w/0/puppet-manifests-0.1]
 05:28:00 [DEBUG]  Run: make srpm [/tmp/w/0/puppet-manifests-0.1]
-05:28:00 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/xpack-sbuild.stamp [/tmp/w/0/puppet-manifests-0.1]
+05:28:00 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/pmaker-sbuild.stamp [/tmp/w/0/puppet-manifests-0.1]
 05:28:00 [INFO] Building bin packages: puppet-manifests
 05:28:00 [DEBUG]  Run: mock --version > /dev/null [/tmp/w/0/puppet-manifests-0.1]
 05:28:00 [DEBUG]  Run: mock -r epel-5-i386 puppet-manifests-0.1-1.*.src.rpm [/tmp/w/0/puppet-manifests-0.1]
 05:28:59 [DEBUG]  Run: mv /var/lib/mock/epel-5-i386/result/*.rpm /tmp/w/0/puppet-manifests-0.1 [/tmp/w/0/puppet-manifests-0.1]
-05:28:59 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/xpack-build.stamp [/tmp/w/0/puppet-manifests-0.1]
+05:28:59 [DEBUG]  Run: touch /tmp/w/0/puppet-manifests-0.1/pmaker-build.stamp [/tmp/w/0/puppet-manifests-0.1]
 05:28:59 [INFO] Successfully created packages in /tmp/w/0/puppet-manifests-0.1: puppet-manifests
 $ rpm -qlp 0/puppet-manifests-0.1/puppet-manifests-0.1-1.^I
 puppet-manifests-0.1-1.el5.noarch.rpm  puppet-manifests-0.1-1.el5.src.rpm  puppet-manifests-0.1-1.fc14.src.rpm
@@ -773,7 +775,7 @@ $
 """,
     """## H. Packaging single file on debian host:
 
-# echo /etc/resolv.conf | ./xpack.py -n resolvconf -w w --format deb -
+# echo /etc/resolv.conf | ./pmaker.py -n resolvconf -w w --format deb -
 13:11:59 [WARNING] get_email: 'module' object has no attribute 'check_output'
 13:11:59 [WARNING] get_fullname: 'module' object has no attribute 'check_output'
 configure.ac:2: installing `./install-sh'
@@ -860,9 +862,9 @@ make[1]: Leaving directory `/root/w/resolvconf-0.1'
 
 EXAMPLE_RC = """\
 #
-# This is a configuration file example for xpack.py
+# This is a configuration file example for pmaker.py
 #
-# Read the output of `xpack.py --help` and edit the followings as needed.
+# Read the output of `pmaker.py --help` and edit the followings as needed.
 #
 [DEFAULT]
 # working directory in absolute path:
@@ -898,7 +900,7 @@ with_pyxattr    = False
 
 ## package:
 # name of the package:
-name    = xpacked-data
+name    = pmade-data
 
 # version of the package:
 pversion = 0.1
@@ -1370,7 +1372,7 @@ class TestFuncsWithSideEffects(unittest.TestCase):
 
     def setUp(self):
         logging.info("start") # dummy log
-        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
+        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -1432,7 +1434,7 @@ b: bbb
 
 class Rpm(object):
 
-    RPM_FILELIST_CACHE = os.path.join(os.environ['HOME'], '.cache', 'xpack.rpm.filelist.pkl')
+    RPM_FILELIST_CACHE = os.path.join(os.environ['HOME'], '.cache', 'pmaker.rpm.filelist.pkl')
 
     # RpmFi (FileInfo) keys:
     fi_keys = ('path', 'size', 'mode', 'mtime', 'flags', 'rdev', 'inode',
@@ -2285,7 +2287,7 @@ class JsonFilelistCollector(FilelistCollector):
 class TestFilelistCollector(unittest.TestCase):
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="xpack-tests")
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
         logging.info("start")
 
     def tearDown(self):
@@ -2459,7 +2461,7 @@ class PackageMaker(object):
             fi.copy(os.path.join(self.workdir, self.to_srcdir(fi.target)), self.force)
 
     def dumpfile_path(self):
-        return os.path.join(self.workdir, "xpack-package-filelist.pkl")
+        return os.path.join(self.workdir, "pmaker-package-filelist.pkl")
 
     def save(self, pkl_proto=pickle.HIGHEST_PROTOCOL):
         pickle.dump(self.package['fileinfos'], open(self.dumpfile_path(), 'wb'), pkl_proto)
@@ -2468,7 +2470,7 @@ class PackageMaker(object):
         self.package['fileinfos'] = pickle.load(open(self.dumpfile_path()))
 
     def touch_file(self, step):
-        return os.path.join(self.workdir, "xpack-%s.stamp" % step)
+        return os.path.join(self.workdir, "pmaker-%s.stamp" % step)
 
     def try_the_step(self, step):
         if os.path.exists(self.touch_file(step)):
@@ -2665,12 +2667,12 @@ DebPackageMaker.register()
 
 
 def load_plugins(package_makers_map=PACKAGE_MAKERS):
-    plugins = os.path.join(get_python_lib(), "xpack", "plugins", "*.py")
+    plugins = os.path.join(get_python_lib(), "pmaker", "plugins", "*.py")
     csfx = "PackageMaker"
 
     for modpy in glob.glob(plugins):
         modn = os.path.basename(modpy).replace(".py")
-        mod = __import__("xpack.%s" % modn)
+        mod = __import__("pmaker.%s" % modn)
         pms = [c for n, c in inspect.getmembers(mod) if inspect.isclass(c) and n.endswith(csfx)]
         c.register(package_makers_map)
 
@@ -2690,24 +2692,25 @@ def do_packaging_self(options):
     if options.include_plugins:
         plugin_files = options.include_plugins.split(",")
 
-    workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-build-')
+    name = "PackageMaker"
+    workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-build-')
     summary = "A python script to build packages from existing files on your system"
     requires = ""
     packager = __author__
     mail = __email__
     url = __website__
 
-    pkglibdir = os.path.join(workdir, get_python_lib()[1:], "xpack")
+    pkglibdir = os.path.join(workdir, get_python_lib()[1:], "pmaker")
     pluginsdir = os.path.join(pkglibdir, "plugins")
     bindir = os.path.join(workdir, 'usr', 'bin')
-    bin = os.path.join(bindir, 'xpack')
+    bin = os.path.join(bindir, 'pmaker')
 
     filelist = os.path.join(workdir, "files.list")
 
     prog = sys.argv[0]
 
-    cmd_opts = "-n xpack --pversion %s -w %s --license GPLv3+ --ignore-owner --destdir %s --no-rpmdb --url %s --upto %s" \
-        % (version, workdir, workdir, url, options.upto)
+    cmd_opts = "-n %s --pversion %s -w %s --license GPLv3+ --ignore-owner --destdir %s --no-rpmdb --url %s --upto %s" \
+        % (name, version, workdir, workdir, url, options.upto)
     cmd_opts += " --summary '%s' --packager '%s' --mail %s" % (summary, packager, mail)
 
     if options.debug:
@@ -2738,9 +2741,9 @@ def do_packaging_self(options):
 
     open(bin, "w").write("""\
 #! /usr/bin/python
-import sys, xpack
+import sys, pmaker
 
-xpack.main(sys.argv)
+pmaker.main(sys.argv)
 """)
     shell("chmod +x %s" % bin)
 
@@ -2758,7 +2761,7 @@ xpack.main(sys.argv)
     shell2(compile_pyc, pkglibdir)
     shell2(compile_pyo, pkglibdir)
 
-    cmd = "python %s -n xpack %s %s" % (prog, cmd_opts, filelist)
+    cmd = "python %s -n pmaker %s %s" % (prog, cmd_opts, filelist)
 
     logging.info(" executing: %s" % cmd)
     os.system(cmd)
@@ -2777,7 +2780,7 @@ def dump_rc(rc=EXAMPLE_RC):
 class TestMainProgram00SingleFileCases(unittest.TestCase):
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
+        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
 
         target = "/etc/resolv.conf"
         self.cmd = "echo %s | python %s -n resolvconf -w %s " % (target, sys.argv[0], self.workdir)
@@ -2862,7 +2865,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         rc = os.path.join(self.workdir, "rc")
         prog = sys.argv[0]
 
-        #XPACKRC=./xpackrc.sample python xpack.py files.list --upto configure
+        #XPACKRC=./pmakerrc.sample python pmaker.py files.list --upto configure
         cmd = "python %s --dump-rc > %s" % (prog, rc)
         self.assertEquals(os.system(cmd), 0)
 
@@ -2886,7 +2889,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 class TestMainProgram01MultipleFilesCases(unittest.TestCase):
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='xpack-tests')
+        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
         logging.info("start")
 
         self.filelist = os.path.join(self.workdir, 'file.list')
@@ -2998,7 +3001,7 @@ def parse_template_list_str(templates):
         return dict()
 
 
-def init_defaults_by_conffile(config=None, profile=None, prog="xpack"):
+def init_defaults_by_conffile(config=None, profile=None, prog="pmaker"):
     """
     Initialize default values for options by loading config files.
     """
@@ -3108,7 +3111,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'build_self': False,
 
         "release_build": False,
-        "include_plugins": "xpack-plugin-libvirt.py",
+        "include_plugins": "pmaker-plugin-libvirt.py",
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
