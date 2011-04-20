@@ -2691,7 +2691,7 @@ DebPackageMaker.register()
 
 
 def load_plugins(package_makers_map=PACKAGE_MAKERS):
-    plugins = os.path.join(get_python_lib(), "pmaker", "plugins", "*.py")
+    plugins = os.path.join(get_python_lib(), "pmaker", "*plugin*.py")
     csfx = "PackageMaker"
 
     for modpy in glob.glob(plugins):
@@ -2716,16 +2716,15 @@ def do_packaging_self(options):
     if options.include_plugins:
         plugin_files = options.include_plugins.split(",")
 
-    name = "PackageMaker"
-    workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-build-')
+    name = "packagemaker"
+    workdir = tempfile.mkdtemp(dir='/tmp', prefix='pm-')
     summary = "A python script to build packages from existing files on your system"
-    requires = ""
+    relations = ""
     packager = __author__
     mail = __email__
     url = __website__
 
     pkglibdir = os.path.join(workdir, get_python_lib()[1:], "pmaker")
-    pluginsdir = os.path.join(pkglibdir, "plugins")
     bindir = os.path.join(workdir, 'usr', 'bin')
     bin = os.path.join(bindir, 'pmaker')
 
@@ -2733,9 +2732,12 @@ def do_packaging_self(options):
 
     prog = sys.argv[0]
 
-    cmd_opts = "-n %s --pversion %s -w %s --license GPLv3+ --ignore-owner --destdir %s --no-rpmdb --url %s --upto %s" \
-        % (name, version, workdir, workdir, url, options.upto)
+    cmd_opts = "-n %s --pversion %s -w %s --license GPLv3+ --ignore-owner " % (name, version, workdir)
+    cmd_opts += " --destdir %s --no-rpmdb --url %s --upto %s" % (workdir, url, options.upto)
     cmd_opts += " --summary '%s' --packager '%s' --mail %s" % (summary, packager, mail)
+
+    if relations:
+        cmd_opts += " --relations '%s' " % relations
 
     if options.debug:
         cmd_opts += " --debug"
@@ -2752,14 +2754,13 @@ def do_packaging_self(options):
     createdir(pkglibdir, mode=0755)
     shell2("install -m 644 %s %s/__init__.py" % (prog, pkglibdir))
 
-    createdir(pluginsdir, mode=0755)
-    shell2("touch __init__.py", pluginsdir)
     for f in plugin_files:
         if not os.path.exists(f):
             logging.warn("Plugin %s does not found. Skip it" % f)
             continue
 
-        shell2("install -m 644 %s %s" % (f, pluginsdir))
+        nf = f.replace("pmaker-", "")
+        shell2("install -m 644 %s %s" % (f, os.path.join(pkglibdir, nf)))
 
     createdir(bindir)
 
@@ -2774,8 +2775,7 @@ pmaker.main(sys.argv)
     open(filelist, "w").write("""\
 %s
 %s/*
-%s/*
-""" % (bin, pkglibdir, pluginsdir))
+""" % (bin, pkglibdir))
 
     # @see /usr/lib/rpm/brp-python-bytecompile:
     pycompile = "import compileall, os; compileall.compile_dir(os.curdir, force=1)"
@@ -2785,7 +2785,7 @@ pmaker.main(sys.argv)
     shell2(compile_pyc, pkglibdir)
     shell2(compile_pyo, pkglibdir)
 
-    cmd = "python %s -n pmaker %s %s" % (prog, cmd_opts, filelist)
+    cmd = "python %s %s %s" % (prog, cmd_opts, filelist)
 
     logging.info(" executing: %s" % cmd)
     os.system(cmd)
@@ -3145,7 +3145,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'build_self': False,
 
         "release_build": False,
-        "include_plugins": "pmaker-plugin-libvirt.py",
+        "include_plugins": ",".join(glob.glob("pmaker-plugin-libvirt.py")),
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST

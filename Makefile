@@ -11,7 +11,7 @@ DEBUG	?= 0
 py_SOURCES = rpm2json.py myrepo.py rpms2sqldb.py
 sh_SOURCES = list-srpmnames-by-file.sh list-requires-by-package-name.sh
 
-REQUIRES = python-cheetah,rpm-python,mock,rpm-build,sqlite,autoconf,automake,PackageMaker
+REQUIRES = python-cheetah,rpm-python,mock,rpm-build,sqlite,autoconf,automake,packagemaker
 
 FULLNAME = Satoru SATOH
 EMAIL	= satoru.satoh@gmail.com
@@ -46,11 +46,12 @@ $(bindir)/%: %.sh
 	install -m 755 $< $@
 
 build: $(py_SCRIPTS) $(sh_SCRIPTS)
-	python xpack.py --build-self $(logopt) --upto sbuild --workdir $(WORKDIR)
-	find $(bindir) -type f | python xpack.py -n rpmkit --license GPLv3+ \
+	python pmaker.py --build-self $(logopt) --upto sbuild --workdir $(WORKDIR)
+	find $(bindir) -type f | python pmaker.py -n rpmkit --license GPLv3+ \
 		--group "System Environment/Base" --pversion $(VERSION) \
 		--url https://github.com/ssato/rpmkit/ \
-		--summary "RPM toolKit" --requires $(REQUIRES) \
+		--summary "RPM toolKit" \
+		--relations "requires:$(REQUIRES)" \
 		--packager "$(FULLNAME)" --mail $(EMAIL) \
 		--upto sbuild \
 		-w $(WORKDIR) --destdir $(WORKDIR) \
