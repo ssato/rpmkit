@@ -23,23 +23,22 @@
 import optparse
 import os
 import rpm
-import simplejson
 import sys
 import textwrap
 
 try:
-    import cjson
-    def json_dumps(s):
-        return cjson.encode(s)
+    import json
 
 except ImportError:
-    def json_dumps(s):
-        return simplejson.dumps(s, ensure_ascii=False)
+    import simplejson as json
 
 
 
-def json_dumps_H(s):
-    return simplejson.dumps(s, ensure_ascii=False, indent=2)
+def json_dumps(s, human_readable=False):
+    if human_readable:
+        return json.dumps(s, ensure_ascii=False, indent=2)
+    else:
+        return json.dumps(s, ensure_ascii=False)
 
 
 def rpmheader(rpmfile):
@@ -101,7 +100,9 @@ Examples:
         help='Show all possible rpm tags')
     p.add_option('-o', '--output', help='output filename [stdout]')
     p.add_option('-T', '--tags', default=",".join(tags),
-        help='Comma separated rpm tag list to get. [%default]')
+        help='Comma separated rpm tag list to get or \"almost\" to get almost data dump (except for \"headerimmutable\"). [%default]')
+    p.add_option('', "--blacklist", default="headerimmutable",
+        help="Comma separated tags list not to get data [%default]")
     p.add_option('-H', '--human-readable', default=False, action='store_true',
         help='Output formatted results.')
     (options, args) = p.parse_args()
@@ -117,8 +118,16 @@ Examples:
     if options.output:
         output = open(options.output, 'w')
 
+    if options.blacklist:
+        blacklist = options.blacklist.split(",")
+    else:
+        blacklist = []
+
     if options.tags:
-        tags = options.tags.split(',')
+        if options.tags == "almost":
+            tags = [t for t in rpmtags() if t not in blacklist]
+        else:
+            tags = options.tags.split(',')
 
     rpms = args
     rpmdata = []
@@ -128,10 +137,7 @@ Examples:
         if vs:
             rpmdata.append(vs)
 
-    if options.human_readable:
-        x = json_dumps_H(rpmdata)
-    else:
-        x = json_dumps(rpmdata)
+    x = json_dumps(rpmdata, options.human_readable)
 
     print >> output, x
 
