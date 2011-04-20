@@ -1,8 +1,7 @@
 #! /usr/bin/python
 #
-# PackageMaker is a tool to help making packages of files, dirs, ...
-#
-# - a script to build packages from existing files on your system.
+# PackageMaker is a successor of xpack.py, a script to build packages from
+# existing files on your system.
 #
 # It will try gathering the info of files, dirs and symlinks in given path
 # list, and then:
@@ -321,6 +320,9 @@ Requires:       $req
 #set $linkto = $fi.linkto
 #BuildRequires:  $linkto
 #end if
+#end for
+#for $rel in $relations
+$rel.type:\t$rel.targets
 #end for
 
 
@@ -927,7 +929,7 @@ requires        =
 packager =
 
 # Mail address of the packager
-mail    = %(packager)s@localhost.localdomain
+mail    =
 
 
 ## rpm:
@@ -2394,6 +2396,7 @@ class PackageMaker(object):
     _type = "filelist"
     _format = None
     _collector = FilelistCollector
+    _relations = {}
 
     @classmethod
     def register(cls, pmmaps=PACKAGE_MAKERS):
@@ -2428,6 +2431,15 @@ class PackageMaker(object):
         self.upto = options.upto
 
         self.srcdir = os.path.join(self.workdir, 'src')
+
+        relmap = []
+        if package.has_key("relations"):
+            for reltype, reltargets in package["relations"]:
+                rel = self._relations.get(reltype, False)
+                if rel:
+                    relmap.append({"type": rel, "targets": reltargets})
+
+        self.package["relations"] = relmap
 
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
@@ -2567,6 +2579,18 @@ class TgzPackageMaker(PackageMaker):
 
 class RpmPackageMaker(TgzPackageMaker):
     _format = "rpm"
+
+    _relations = {
+        "requires": "Requires",
+        "requires.pre": "Requires(pre)",
+        "requires.preun": "Requires(preun)",
+        "requires.post": "Requires(post)",
+        "requires.postun": "Requires(postun)",
+        "requires.verify": "Requires(verify)",
+        "conflicts": "Conflicts",
+        "provides": "Provides",
+        "obsoletes": "Obsoletes",
+    }
 
     def __init__(self, package, filelist, options, *args, **kwargs):
         super(RpmPackageMaker, self).__init__(package, filelist, options)
@@ -2823,6 +2847,15 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
+    def test_packaging_with_relations_wo_rpmdb_wo_mock(self):
+        """Build package with some additional relations without rpm database
+        without mock (no --upto option).
+        """
+        cmd = self.cmd + "--relations \"requires:bash,zsh;obsoletes:sysdata;conflicts:sysdata\" "
+        cmd += "--no-rpmdb --no-mock -"
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
     def test_packaging_symlink_wo_rpmdb_wo_mock(self):
         idir = os.path.join(self.workdir, "var", "lib", "net")
         os.makedirs(idir)
@@ -2865,11 +2898,11 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         rc = os.path.join(self.workdir, "rc")
         prog = sys.argv[0]
 
-        #XPACKRC=./pmakerrc.sample python pmaker.py files.list --upto configure
+        #PMAKERRC=./pmakerrc.sample python pmaker.py files.list --upto configure
         cmd = "python %s --dump-rc > %s" % (prog, rc)
         self.assertEquals(os.system(cmd), 0)
 
-        cmd = "echo /etc/resolv.conf | XPACKRC=%s python %s -w %s --upto configure -" % (rc, prog, self.workdir)
+        cmd = "echo /etc/resolv.conf | PMAKERRC=%s python %s -w %s --upto configure -" % (rc, prog, self.workdir)
         self.assertEquals(os.system(cmd), 0)
 
     def test_packaging_wo_rpmdb_wo_mock_with_a_custom_template(self):
@@ -3092,6 +3125,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'url': cds.get("url", "http://localhost.localdomain"),
         'summary': cds.get("summary", ""),
         'arch': cds.get("arch", False),
+        'relations': cds.get("relations", ""),
         'requires': cds.get("requires", ""),
         'packager': cds.get("packager", packager),
         'mail': cds.get("mail", mail),
@@ -3128,7 +3162,7 @@ Arguments:
 
 Environment Variables:
 
-  XPACKRC    Configuration file path. see also: `%prog --dump-rc`
+  PMAKERRC    Configuration file path. see also: `%prog --dump-rc`
 
 Examples:
   %prog -n foo files.list
@@ -3178,6 +3212,12 @@ Examples:
     pog.add_option('-z', '--compressor', type="choice", choices=PKG_COMPRESSORS.keys(),
         help="Tool to compress src archives [%default]")
     pog.add_option('', '--arch', action='store_true', help='Make package arch-dependent [false - noarch]')
+    pog.add_option("", "--relations",
+        help="Semicolon (;) separated list of a pair of relation type and targets "
+        "separated with comma, separated with colon (:), "
+        "e.g. 'requires:curl,sed;obsoletes:foo-old'. "
+        "Expressions of relation types and targets are varied depends on "
+        "package format to use")
     pog.add_option('', '--requires', help='Specify the package requirements as comma separated list')
     pog.add_option('', '--packager', help="Specify packager's name [%default]")
     pog.add_option('', '--mail', help="Specify packager's mail address [%default]")
@@ -3273,6 +3313,9 @@ def main(argv=sys.argv):
         pkg['noarch'] = False
     else:
         pkg['noarch'] = True
+
+    if options.relations:  # e.g. 'requires:curl,sed;obsoletes:foo-old'
+        pkg['relations'] = [rel.split(":") for rel in options.relations.split(";")]
 
     if options.templates:
         for tgt, tmpl in parse_template_list_str(options.templates).iteritems():
