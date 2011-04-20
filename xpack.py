@@ -2177,6 +2177,20 @@ class FilelistCollector(Collector):
             self.fi_factory = FileInfoFactory()
             self.filelist_db = dict()
 
+    def rewrite_target_destdir(self, path, destdir):
+        """Rewrite target (install destination) path.
+
+        By default, target path will be same as $path. This method will change
+        it as needed.
+        """
+        if path.startswith(destdir):
+            new_path = path.split(destdir)[1]
+            logging.debug("Rewrote target path from %s to %s" % (path, new_path))
+            return new_path
+        else:
+            logging.error(" The path '%s' does not start with given destdir '%s'" % (f, self.destdir))
+            raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
+
     def find_conflicts(self, path, pname, pdatabase):
         other_pname = pdatabase.get(path, False)
 
@@ -2193,8 +2207,8 @@ class FilelistCollector(Collector):
 
         @paths  [str]  Path list
         """
-        self.init_fi_factory_and_db()
         fileinfos = []
+        self.init_fi_factory_and_db()
 
         for path in self.list_paths(listfile):
             fi = self.fi_factory.create(path)
@@ -2210,25 +2224,13 @@ class FilelistCollector(Collector):
                 logging.debug(" force set uid and gid of %s" % fi.path)
                 fi.uid = fi.gid = 0
 
-            f = fi.path
-
             # FIXME: Is there any better way?
             if self.destdir:
-                if f.startswith(self.destdir):
-                    fi.target = f.split(self.destdir)[1]
-                    logging.debug(" Rewrote target path of fi from %s to %s" % (f, fi.target))
-
-                    if fi.type() == TYPE_SYMLINK and self.rewrite_linkto:
-                        new_linkto = fi.linkto.split(self.destdir)[1]
-                        logging.debug(" Rewrote link path of fi from %s to %s" % (fi.linkto, new_linkto))
-                        fi.linkto = new_linkto
-                else:
-                    logging.error(" The path '%s' does not start with given destdir '%s'" % (f, self.destdir))
-                    raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
+                fi.target = self.rewrite_target_destdir(fi.path, self.destdir)
             else:
                 # Too verbose but useful in some cases:
                 #logging.debug(" Do not need to rewrite its path: %s" % f)
-                fi.target = f
+                fi.target = fi.path
 
             fi.conflicts = self.find_conflicts(fi.target, self.pname, self.filelist_db)
 
