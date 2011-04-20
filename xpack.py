@@ -2029,20 +2029,6 @@ def collect(paths, pkg_name, options):
     return fileinfos
 
 
-def to_srcdir(path, workdir=''):
-    """
-    >>> to_srcdir('/a/b/c')
-    'src/a/b/c'
-    >>> to_srcdir('a/b')
-    'src/a/b'
-    >>> to_srcdir('/')
-    'src/'
-    """
-    assert path != '', "Empty path was given"
-
-    return os.path.join(workdir, 'src', path.strip(os.path.sep))
-
-
 def distdata_in_makefile_am(paths, srcdir='src'):
     """
     @paths  file path list
@@ -2125,9 +2111,12 @@ class Collector(object):
     def __init__(self, *args, **kwargs):
         pass
 
+    def run(self, *args, **kwargs):
+        pass
 
 
-class SimpleFilelistCollector(Collector):
+
+class FilelistCollector(Collector):
     """
     Collector to collect fileinfo list from files list in simple format:
 
@@ -2142,15 +2131,23 @@ class SimpleFilelistCollector(Collector):
                         (read files and dirs list from stdin)
         @pname     str  package name to build
         """
-        super(SimpleFilelistCollector, self).__init__(filelist, options)
+        super(FilelistCollector, self).__init__(filelist, options)
 
         self.filelist = filelist
         self.pname = pname
+        self.options = options  # Ugly.
 
-    def open(self, path):
+    @staticmethod
+    def open(path):
         return path == "-" and sys.stdin or open(path)
 
-    def parse(self, path):
+    @staticmethod
+    def expand_list(list):
+        fs = [f for f in list if not f.startswith('#')]
+        return unique(concat([glob.glob(g) for g in fs if "*" in g]) + [f for f in fs if "*" not in f])
+
+    @classmethod
+    def load(cls, listfile):
         """Read paths from given file line by line and returns path list sorted by
         dir names. There some speical parsing rules for the file list:
 
@@ -2159,14 +2156,114 @@ class SimpleFilelistCollector(Collector):
           names: ex. '/etc/httpd/conf/*' will be
           ['/etc/httpd/conf/httpd.conf', '/etc/httpd/conf/magic', ...] .
 
-        @path  Path list file name or "-" (read list from stdin)
+        @listfile  str  Path list file name or "-" (read list from stdin)
         """
-        fs = (l.rstrip() for l in self.open(path).readlines() if l and not l.startswith('#'))
-        return unique(concat([glob.glob(g) for g in fs if '*' in g]) + [f for f in fs if '*' not in f])
+        return cls.expand_list([l.rstrip() for l in cls.open(listfile).readlines() if l and not l.startswith('#')])
 
-    def collect(self):
-        paths = self.parse(self.filelist)
-        return collect(paths, self.pname, options)
+    def run(self):
+        paths = self.load(self.filelist)
+        return collect(paths, self.pname, self.options)
+
+
+
+class TestFilelistCollector(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="xpack-tests")
+        logging.info("start")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_expand_list(self):
+        ps0 = ["#/etc/resolv.conf"]
+        ps1 = ["/etc/resolv.conf"]
+        ps2 = ps1 + ps1
+        ps3 = ["/etc/resolv.conf", "/etc/rc.d/rc"]
+        ps4 = ["/etc/auto.*"]
+        ps5 = ps3 + ps4
+
+        self.assertListEqual(FilelistCollector.expand_list(ps0), [])
+        self.assertListEqual(FilelistCollector.expand_list(ps1), ps1)
+        self.assertListEqual(FilelistCollector.expand_list(ps2), ps1)
+        self.assertListEqual(FilelistCollector.expand_list(ps3), sorted(ps3))
+        self.assertListEqual(FilelistCollector.expand_list(ps4), sorted(glob.glob(ps4[0])))
+        self.assertListEqual(FilelistCollector.expand_list(ps5), sorted(ps3 + glob.glob(ps4[0])))
+
+    def test_load(self):
+        paths = [
+            "/etc/auto.*",
+            "#/etc/aliases.db",
+            "/etc/httpd/conf.d",
+            "/etc/httpd/conf.d/*",
+            "/etc/modprobe.d/*",
+            "/etc/rc.d/init.d",
+            "/etc/rc.d/rc",
+            "/etc/reslv.conf",
+        ]
+        listfile = os.path.join(self.workdir, "files.list")
+
+        f = open(listfile, "w")
+        for p in paths:
+            f.write("%s\n" % p)
+        f.close()
+
+        self.assertListEqual(FilelistCollector.load(listfile), FilelistCollector.expand_list(paths))
+
+    def test_run(self):
+        paths = [
+            "/etc/auto.*",
+            "#/etc/aliases.db",
+            "/etc/httpd/conf.d",
+            "/etc/httpd/conf.d/*",
+            "/etc/modprobe.d/*",
+            "/etc/rc.d/init.d",
+            "/etc/rc.d/rc",
+            "/etc/resolv.conf",
+            "/etc/reslv.conf",  # should not be exist.
+        ]
+        listfile = os.path.join(self.workdir, "files.list")
+
+        f = open(listfile, "w")
+        for p in paths:
+            f.write("%s\n" % p)
+        f.close()
+
+        option_values = {
+            "format": "rpm",
+            "destdir": "",
+            "rewrite_linkto": False,
+            "ignore_owner": False,
+            "no_rpmdb": False,
+        }
+
+        options = optparse.Values(option_values)
+        fc = FilelistCollector(listfile, "foo", options)
+        fs = fc.run()
+
+        option_values["format"] = "deb"
+        options = optparse.Values(option_values)
+        fc = FilelistCollector(listfile, "foo", options)
+        fs = fc.run()
+        option_values["format"] = "rpm"
+
+        option_values["destdir"] = "/etc"
+        options = optparse.Values(option_values)
+        fc = FilelistCollector(listfile, "foo", options)
+        fs = fc.run()
+        option_values["destdir"] = ""
+
+        option_values["ignore_owner"] = True
+        options = optparse.Values(option_values)
+        fc = FilelistCollector(listfile, "foo", options)
+        fs = fc.run()
+        option_values["ignore_owner"] = False
+
+        option_values["no_rpmdb"] = True
+        options = optparse.Values(option_values)
+        fc = FilelistCollector(listfile, "foo", options)
+        fs = fc.run()
+        option_values["no_rpmdb"] = False
 
 
 
@@ -2178,6 +2275,7 @@ class PackageMaker(object):
     _templates = TEMPLATES
     _type = "filelist"
     _format = None
+    _collector = FilelistCollector
 
     @classmethod
     def register(cls, pmmaps=PACKAGE_MAKERS):
@@ -2194,6 +2292,10 @@ class PackageMaker(object):
     @classmethod
     def format(cls):
         return cls._format
+
+    @classmethod
+    def collector(cls):
+        return cls._collector
 
     def __init__(self, package, filelist, options, *args, **kwargs):
         self.package = package
@@ -2274,6 +2376,8 @@ class PackageMaker(object):
         return collect(*args, **kwargs)
 
     def setup(self):
+        #collector = self.collector()(self.filelist, self.package["name"], self.options)
+        #self.package['fileinfos'] = collector.run()
         paths = read_files_from_listfile(self.filelist)
         self.package['fileinfos'] = self.collect(paths, self.pname, self.options)
 
@@ -2707,6 +2811,7 @@ def run_unittests(verbose, test_choice):
     basic_tests = [
         TestDecoratedFuncs,
         TestFuncsWithSideEffects,
+        TestFilelistCollector,
     ]
 
     system_tests = [
