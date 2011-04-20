@@ -1679,7 +1679,7 @@ class FileInfo(object):
     def remove(self):
         self._remove(self.path)
 
-    def copy(self, dest, force=False, **override_attrs):
+    def copy(self, dest, force=False):
         """Copy to $dest.  'Copy' action varys depends on actual filetype so
         that inherited class must overrride this and related methods (_remove
         and _copy).
@@ -1688,11 +1688,6 @@ class FileInfo(object):
         @force     bool    When True, force overwrite $dest even if it exists
         """
         assert self.path != dest, "Copying src and dst are same!"
-
-        if override_attrs:
-            for name, attr in override_attrs.iteritems():
-                if getattr(self, name):
-                    setattr(self, name, attr)
 
         if not self.copyable():
             logging.warn(" Not copyable: %s" % str(self))
