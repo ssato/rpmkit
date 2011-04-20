@@ -2169,6 +2169,33 @@ class FilelistCollector(Collector):
         """
         return cls.expand_list([l.rstrip() for l in cls.open(listfile).readlines() if l and not l.startswith('#')])
 
+    @classmethod
+    def rewrite_with_destdir(cls, path, destdir):
+        """Rewrite target (install destination) path.
+
+        By default, target path will be same as $path. This method will change
+        it as needed.
+
+        >>> FilelistCollector.rewrite_with_destdir("/a/b/c", "/a/b")
+        '/c'
+        >>> FilelistCollector.rewrite_with_destdir("/a/b/c", "/a/b/")
+        '/c'
+        >>> try:
+        ...     FilelistCollector.rewrite_with_destdir("/a/b/c", "/x/y")
+        ... except RuntimeError, e:
+        ...     pass
+        """
+        if path.startswith(destdir):
+            new_path = path.split(destdir)[1]
+            if not new_path.startswith(os.path.sep):
+                new_path = os.path.sep + new_path
+
+            logging.debug("Rewrote target path from %s to %s" % (path, new_path))
+            return new_path
+        else:
+            logging.error(" The path '%s' does not start with '%s'" % (path, destdir))
+            raise RuntimeError("Destdir given in --destdir and the actual file path are inconsistent.")
+
     def init_fi_factory_and_db(self):
         if self.options.format == "rpm":
             self.fi_factory = RpmFileInfoFactory()
@@ -2176,20 +2203,6 @@ class FilelistCollector(Collector):
         else:
             self.fi_factory = FileInfoFactory()
             self.filelist_db = dict()
-
-    def rewrite_target_destdir(self, path, destdir):
-        """Rewrite target (install destination) path.
-
-        By default, target path will be same as $path. This method will change
-        it as needed.
-        """
-        if path.startswith(destdir):
-            new_path = path.split(destdir)[1]
-            logging.debug("Rewrote target path from %s to %s" % (path, new_path))
-            return new_path
-        else:
-            logging.error(" The path '%s' does not start with given destdir '%s'" % (f, self.destdir))
-            raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
 
     def find_conflicts(self, path, pname, pdatabase):
         other_pname = pdatabase.get(path, False)
@@ -2226,7 +2239,7 @@ class FilelistCollector(Collector):
 
             # FIXME: Is there any better way?
             if self.destdir:
-                fi.target = self.rewrite_target_destdir(fi.path, self.destdir)
+                fi.target = self.rewrite_with_destdir(fi.path, self.destdir)
             else:
                 # Too verbose but useful in some cases:
                 #logging.debug(" Do not need to rewrite its path: %s" % f)
