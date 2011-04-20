@@ -11,7 +11,7 @@ DEBUG	?= 0
 py_SOURCES = rpm2json.py myrepo.py rpms2sqldb.py
 sh_SOURCES = list-srpmnames-by-file.sh list-requires-by-package-name.sh
 
-REQUIRES = python-cheetah,rpm-python,mock,rpm-build,sqlite,autoconf,automake,xpack
+REQUIRES = python-cheetah,rpm-python,mock,rpm-build,sqlite,autoconf,automake,PackageMaker
 
 FULLNAME = Satoru SATOH
 EMAIL	= satoru.satoh@gmail.com
