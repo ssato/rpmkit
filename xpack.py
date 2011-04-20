@@ -2108,11 +2108,20 @@ def on_debug_mode():
 
 class Collector(object):
 
+    _enabled = True
+
     def __init__(self, *args, **kwargs):
         pass
 
+    def enabled(self):
+        return self._enabled
+
+    def make_enabled(self):
+        self._enabled = False
+
     def run(self, *args, **kwargs):
-        pass
+        if not self.enabled():
+            raise RuntimeError("Pluing %s cannot run as necessary function is not available." % self.__name__)
 
 
 
@@ -2161,8 +2170,27 @@ class FilelistCollector(Collector):
         return cls.expand_list([l.rstrip() for l in cls.open(listfile).readlines() if l and not l.startswith('#')])
 
     def run(self):
+        super(FilelistCollector, self).run()
+
         paths = self.load(self.filelist)
         return collect(paths, self.pname, self.options)
+
+
+
+class JsonFilelistCollector(FilelistCollector):
+    """
+    Collector to collect fileinfo list from files list in JSON format:
+    """
+
+    try:
+        import json
+        _enabled = True
+    except:
+        _enabled = False
+
+    @classmethod
+    def load(cls, listfile):
+        pass
 
 
 
