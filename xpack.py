@@ -2196,15 +2196,14 @@ class FilelistCollector(Collector):
             logging.error(" The path '%s' does not start with '%s'" % (path, destdir))
             raise RuntimeError("Destdir given in --destdir and the actual file path are inconsistent.")
 
-    def init_fi_factory_and_db(self):
-        if self.options.format == "rpm":
-            self.fi_factory = RpmFileInfoFactory()
-            self.filelist_db = self.options.no_rpmdb and dict() or Rpm.filelist()
-        else:
-            self.fi_factory = FileInfoFactory()
-            self.filelist_db = dict()
+    @classmethod
+    def find_conflicts(cls, path, pname, pdatabase):
+        """Find the package owns given path.
 
-    def find_conflicts(self, path, pname, pdatabase):
+        @path       str   Target path
+        @pname      str   Package name will own the above path
+        @pdatabase  dict  Package name database to find the package owns the path
+        """
         other_pname = pdatabase.get(path, False)
 
         if other_pname and other_pname != pname:
@@ -2214,6 +2213,14 @@ class FilelistCollector(Collector):
             return pname
         else:
             return ""
+
+    def init_fi_factory_and_db(self):
+        if self.options.format == "rpm":
+            self.fi_factory = RpmFileInfoFactory()
+            self.filelist_db = self.options.no_rpmdb and dict() or Rpm.filelist()
+        else:
+            self.fi_factory = FileInfoFactory()
+            self.filelist_db = dict()
 
     def collect(self, listfile):
         """Collect FileInfo objects from given path list.
