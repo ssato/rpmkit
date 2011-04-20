@@ -1945,20 +1945,16 @@ class RpmFileInfoFactory(FileInfoFactory):
 
 
 
-def read_files_from_listfile(listfile):
-    """Read paths from given file line by line and returns path list sorted by
-    dir names. There some speical parsing rules for the file list:
-
-    * Empty lines or lines start with '#' are ignored.
-    * The lines contain '*' (glob match) will be expanded to real dir or file
-      names: ex. '/etc/httpd/conf/*' will be
-      ['/etc/httpd/conf/httpd.conf', '/etc/httpd/conf/magic', ...] .
-
-    @listfile  str  file list name or "-" (read files list from stdin)
+class Path(object):
     """
-    list_f = (listfile == '-' and sys.stdin or open(listfile))
-    fs = [l.rstrip() for l in list_f.readlines() if l and not l.startswith('#')]
-    return unique(concat([glob.glob(g) for g in fs if '*' in g]) + [f for f in fs if '*' not in f])
+    """
+
+    def __init__(self, path, *args):
+        self.path = path
+
+    def path(self):
+        return self.path
+
 
 
 def collect(paths, pkg_name, options):
@@ -2146,6 +2142,10 @@ class FilelistCollector(Collector):
         self.pname = pname
         self.options = options  # Ugly.
 
+        self.destdir = options.destdir
+        self.rewrite_linkto = options.rewrite_linkto
+        self.force_set_uid_and_gid = options.ignore_owner
+
     @staticmethod
     def open(path):
         return path == "-" and sys.stdin or open(path)
@@ -2156,7 +2156,7 @@ class FilelistCollector(Collector):
         return unique(concat([glob.glob(g) for g in fs if "*" in g]) + [f for f in fs if "*" not in f])
 
     @classmethod
-    def load(cls, listfile):
+    def list_paths(cls, listfile):
         """Read paths from given file line by line and returns path list sorted by
         dir names. There some speical parsing rules for the file list:
 
@@ -2169,11 +2169,77 @@ class FilelistCollector(Collector):
         """
         return cls.expand_list([l.rstrip() for l in cls.open(listfile).readlines() if l and not l.startswith('#')])
 
+    def init_fi_factory_and_db(self):
+        if self.options.format == "rpm":
+            self.fi_factory = RpmFileInfoFactory()
+            self.filelist_db = self.options.no_rpmdb and dict() or Rpm.filelist()
+        else:
+            self.fi_factory = FileInfoFactory()
+            self.filelist_db = dict()
+
+    def find_conflicts(self, path, pname, pdatabase):
+        other_pname = pdatabase.get(path, False)
+
+        if other_pname and other_pname != pname:
+            m = "%(path)s is owned by %(other)s and this package will conflict with it" % \
+                {"path": path, "other": other_pname}
+            logging.warn(m)
+            return pname
+        else:
+            return ""
+
+    def collect(self, listfile):
+        """Collect FileInfo objects from given path list.
+
+        @paths  [str]  Path list
+        """
+        self.init_fi_factory_and_db()
+        fileinfos = []
+
+        for path in self.list_paths(listfile):
+            fi = self.fi_factory.create(path)
+
+            # Too verbose but useful in some cases:
+            #logging.debug(" fi=%s" % str(fi))
+
+            if fi.type() not in (TYPE_FILE, TYPE_SYMLINK, TYPE_DIR):
+                logging.warn(" '%s' is not supported type. Skip %s" % (fi.type(), path))
+                continue
+
+            if self.force_set_uid_and_gid:
+                logging.debug(" force set uid and gid of %s" % fi.path)
+                fi.uid = fi.gid = 0
+
+            f = fi.path
+
+            # FIXME: Is there any better way?
+            if self.destdir:
+                if f.startswith(self.destdir):
+                    fi.target = f.split(self.destdir)[1]
+                    logging.debug(" Rewrote target path of fi from %s to %s" % (f, fi.target))
+
+                    if fi.type() == TYPE_SYMLINK and self.rewrite_linkto:
+                        new_linkto = fi.linkto.split(self.destdir)[1]
+                        logging.debug(" Rewrote link path of fi from %s to %s" % (fi.linkto, new_linkto))
+                        fi.linkto = new_linkto
+                else:
+                    logging.error(" The path '%s' does not start with given destdir '%s'" % (f, self.destdir))
+                    raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
+            else:
+                # Too verbose but useful in some cases:
+                #logging.debug(" Do not need to rewrite its path: %s" % f)
+                fi.target = f
+
+            fi.conflicts = self.find_conflicts(fi.target, self.pname, self.filelist_db)
+
+            fileinfos.append(fi)
+
+        return fileinfos
+
     def run(self):
         super(FilelistCollector, self).run()
 
-        paths = self.load(self.filelist)
-        return collect(paths, self.pname, self.options)
+        return self.collect(self.filelist)
 
 
 
@@ -2189,7 +2255,7 @@ class JsonFilelistCollector(FilelistCollector):
         _enabled = False
 
     @classmethod
-    def load(cls, listfile):
+    def list_paths(cls, listfile):
         pass
 
 
@@ -2218,7 +2284,7 @@ class TestFilelistCollector(unittest.TestCase):
         self.assertListEqual(FilelistCollector.expand_list(ps4), sorted(glob.glob(ps4[0])))
         self.assertListEqual(FilelistCollector.expand_list(ps5), sorted(ps3 + glob.glob(ps4[0])))
 
-    def test_load(self):
+    def test_list_paths(self):
         paths = [
             "/etc/auto.*",
             "#/etc/aliases.db",
@@ -2236,7 +2302,7 @@ class TestFilelistCollector(unittest.TestCase):
             f.write("%s\n" % p)
         f.close()
 
-        self.assertListEqual(FilelistCollector.load(listfile), FilelistCollector.expand_list(paths))
+        self.assertListEqual(FilelistCollector.list_paths(listfile), FilelistCollector.expand_list(paths))
 
     def test_run(self):
         paths = [
@@ -2406,8 +2472,6 @@ class PackageMaker(object):
     def setup(self):
         collector = self.collector()(self.filelist, self.package["name"], self.options)
         self.package['fileinfos'] = collector.run()
-        #paths = read_files_from_listfile(self.filelist)
-        #self.package['fileinfos'] = self.collect(paths, self.pname, self.options)
 
         for d in ('workdir', 'srcdir'):
             createdir(self.package[d])
