@@ -2376,16 +2376,15 @@ class PackageMaker(object):
         return collect(*args, **kwargs)
 
     def setup(self):
-        #collector = self.collector()(self.filelist, self.package["name"], self.options)
-        #self.package['fileinfos'] = collector.run()
-        paths = read_files_from_listfile(self.filelist)
-        self.package['fileinfos'] = self.collect(paths, self.pname, self.options)
+        collector = self.collector()(self.filelist, self.package["name"], self.options)
+        self.package['fileinfos'] = collector.run()
+        #paths = read_files_from_listfile(self.filelist)
+        #self.package['fileinfos'] = self.collect(paths, self.pname, self.options)
 
         for d in ('workdir', 'srcdir'):
             createdir(self.package[d])
 
         self.copyfiles()
-
         self.save()
 
     def pre_configure(self):
