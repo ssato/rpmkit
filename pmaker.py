@@ -1943,49 +1943,7 @@ class FileInfo(object):
         return self.uid != 0 or self.gid != 0  # 0 == root
 
     def copy(self, dest, force=False, use_pyxattr=USE_PYXATTR):
-        """Copy to $dest.  'Copy' action varys depends on actual filetype so
-        that inherited class must overrride this and related methods (_remove
-        and _copy).
-
-        @dest      string  The destination path to copy to
-        @force     bool    When True, force overwrite $dest even if it exists
-        """
-        assert self.path != dest, "Copying src and dst are same!"
-
-        if not self.copyable():
-            logging.warn(" Not copyable: %s" % str(self))
-            return False
-
-        if os.path.exists(dest):
-            logging.warn(" Copying destination already exists: '%s'" % dest)
-
-            # TODO: It has negative impact for symlinks.
-            #
-            #if os.path.realpath(self.path) == os.path.realpath(dest):
-            #    logging.warn("Copying src and dest are same actually.")
-            #    return False
-
-            if force:
-                logging.info(" Removing dest: " + dest)
-                self.operations.remove(dest)
-            else:
-                logging.warn(" Do not overwrite it")
-                return False
-        else:
-            destdir = os.path.dirname(dest)
-
-            # TODO: which is better?
-            #os.makedirs(os.path.dirname(dest)) or ...
-            #shutil.copytree(os.path.dirname(self.path), os.path.dirname(dest))
-
-            if not os.path.exists(destdir):
-                os.makedirs(destdir)
-            shutil.copystat(os.path.dirname(self.path), destdir)
-
-        logging.debug(" Copying from '%s' to '%s'" % (self.path, dest))
-        self.operations.copy_main(self, dest, use_pyxattr)
-
-        return True
+        return self.operations.copy(self, dest, force, use_pyxattr)
 
     def rpm_attr(self):
         if self.need_to_chmod() or self.need_to_chown():
