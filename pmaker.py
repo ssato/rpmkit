@@ -1853,6 +1853,7 @@ class FileInfo(object):
 
     operations = FileOperations
     filetype = TYPE_FILE
+    is_copyable = True
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs, **kwargs):
         self.path = path
@@ -1869,33 +1870,19 @@ class FileInfo(object):
         for k, v in kwargs.iteritems():
             self[k] = v
 
-    def _copy(self, dest):
-        """Two steps needed to keep the content and metadata of the original file:
+    @classmethod
+    def type(cls):
+        return cls.filetype
 
-        1. Copy itself and its some metadata (owner, mode, etc.)
-        2. Copy extra metadata not copyable with the above.
-
-        'cp -a' does these at once and might be suited for most cases.
-        """
-        global USE_PYXATTR
-
-        if USE_PYXATTR:
-            shutil.copy2(self.path, dest)  # correponding to "cp -p ..."
-            self.operations.copy_xattrs(self.xattrs, dest)
-        else:
-            shell2("cp -a %s %s" % (self.path, dest))
+    @classmethod
+    def copyable(cls):
+        return cls.is_copyable
 
     def __eq__(self, other):
         return self.operations(self, other)
 
     def equivalent(self, other):
         return self.operations.equivalent(self, other)
-
-    def type(self):
-        return self.filetype
-
-    def copyable(self):
-        return True
 
     def permission(self):
         return self.operations.permission(self.mode)
@@ -1982,10 +1969,6 @@ class SymlinkInfo(FileInfo):
         super(SymlinkInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
         self.linkto = os.path.realpath(path)
 
-    def _copy(self, dest):
-        os.symlink(self.linkto, dest)
-        #shell2("cp -a %s %s" % (self.path, dest))
-
     def need_to_chmod(self):
         return False
 
@@ -1995,12 +1978,10 @@ class OtherInfo(FileInfo):
     """$path may be a socket, FIFO (named pipe), Character Dev or Block Dev, etc.
     """
     filetype = TYPE_OTHER
+    is_copyable = False
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(OtherInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
-
-    def copyable(self):
-        return False
 
 
 
@@ -2008,12 +1989,10 @@ class UnknownInfo(FileInfo):
     """Special case that lstat() failed and cannot stat $path.
     """
     filetype = TYPE_UNKNOWN
+    is_copyable = False
 
     def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=checksum(), xattrs={}):
         super(UnknownInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
-
-    def copyable(self):
-        return False
 
 
 
