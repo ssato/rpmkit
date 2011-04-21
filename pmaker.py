@@ -2212,21 +2212,28 @@ class FilelistCollector(Collector):
             Glob pattern to list multiple files or dirs
     """
 
-    def __init__(self, filelist, pname, options):
+    def __init__(self, filelist, pkgname, options):
         """
         @filelist  str  file to list files and dirs to collect or "-"
                         (read files and dirs list from stdin)
-        @pname     str  package name to build
+        @pkgname     str  package name to build
         """
         super(FilelistCollector, self).__init__(filelist, options)
 
         self.filelist = filelist
-        self.pname = pname
+        self.pkgname = pkgname
         self.options = options  # Ugly.
 
         self.destdir = options.destdir
         self.rewrite_linkto = options.rewrite_linkto
         self.force_set_uid_and_gid = options.ignore_owner
+
+        if self.options.format == "rpm":
+            self.fi_factory = RpmFileInfoFactory()
+            self.database_fun = self.options.no_rpmdb and dict or Rpm.filelist
+        else:
+            self.fi_factory = FileInfoFactory()
+            self.database_fun = dict
 
     @staticmethod
     def open(path):
@@ -2277,45 +2284,36 @@ class FilelistCollector(Collector):
             logging.error(" The path '%s' does not start with '%s'" % (path, destdir))
             raise RuntimeError("Destdir given in --destdir and the actual file path are inconsistent.")
 
-    @classmethod
-    def find_conflicts(cls, path, pname, pdatabase):
+    def find_conflicts(self, path, pkgname):
         """Find the package owns given path.
 
         @path       str   Target path
-        @pname      str   Package name will own the above path
-        @pdatabase  dict  Package name database to find the package owns the path
+        @pkgname    str   Package name will own the above path
         """
-        other_pname = pdatabase.get(path, False)
+        filelist_database = self.database_fun()
+        other_pkgname = filelist_database.get(path, False)
 
-        if other_pname and other_pname != pname:
+        if other_pkgname and other_pkgname != pkgname:
             m = "%(path)s is owned by %(other)s and this package will conflict with it" % \
-                {"path": path, "other": other_pname}
+                {"path": path, "other": other_pkgname}
             logging.warn(m)
-            return pname
+            return pkgname
         else:
             return ""
 
-    def init_fi_factory_and_db(self):
-        if self.options.format == "rpm":
-            self.fi_factory = RpmFileInfoFactory()
-            self.filelist_db = self.options.no_rpmdb and dict() or Rpm.filelist()
-        else:
-            self.fi_factory = FileInfoFactory()
-            self.filelist_db = dict()
-
-    def collect(self, listfile):
+    def collect(self, listfile, trace=False):
         """Collect FileInfo objects from given path list.
 
-        @paths  [str]  Path list
+        @listfile  str  File, dir and symlink paths list
         """
         fileinfos = []
-        self.init_fi_factory_and_db()
 
         for path in self.list_paths(listfile):
             fi = self.fi_factory.create(path)
 
             # Too verbose but useful in some cases:
-            #logging.debug(" fi=%s" % str(fi))
+            if trace:
+                logging.debug(" fi=%s" % str(fi))
 
             if fi.type() not in (TYPE_FILE, TYPE_SYMLINK, TYPE_DIR):
                 logging.warn(" '%s' is not supported type. Skip %s" % (fi.type(), path))
@@ -2325,15 +2323,16 @@ class FilelistCollector(Collector):
                 logging.debug(" force set uid and gid of %s" % fi.path)
                 fi.uid = fi.gid = 0
 
-            # FIXME: Is there any better way?
             if self.destdir:
                 fi.target = self.rewrite_with_destdir(fi.path, self.destdir)
             else:
                 # Too verbose but useful in some cases:
-                #logging.debug(" Do not need to rewrite its path: %s" % f)
+                if trace:
+                    logging.debug(" Do not need to rewrite the path: " + fi.path)
+
                 fi.target = fi.path
 
-            fi.conflicts = self.find_conflicts(fi.target, self.pname, self.filelist_db)
+            fi.conflicts = self.find_conflicts(fi.target, self.pkgname)
 
             fileinfos.append(fi)
 
