@@ -1024,6 +1024,24 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
 
 
 @memoize
+def is_foldable(xs):
+    """@see http://www.haskell.org/haskellwiki/Foldable_and_Traversable
+
+    >>> is_foldable([])
+    True
+    >>> is_foldable(())
+    True
+    >>> is_foldable((x for x in range(3)))
+    True
+    """
+    return isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None))
+
+
+def listplus(list_x, foldable_y):
+    return list_x + list(foldable_y)
+
+
+@memoize
 def flatten(xss):
     """
     >>> flatten([])
@@ -1043,57 +1061,8 @@ def flatten(xss):
     >>> flatten(((i, i * 2) for i in range(0,5)))
     [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
     """
-    ret = []
-
-    for xs in xss:
-        if isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None)):
-            ret += flatten(xs)
-        else:
-            ret.append(xs)
-
-    return ret
-
-
-@memoize
-def is_foldable(xs):
-    """@see http://www.haskell.org/haskellwiki/Foldable_and_Traversable
-
-    >>> is_foldable([])
-    True
-    >>> is_foldable(())
-    True
-    >>> is_foldable((x for x in range(3)))
-    True
-    """
-    return isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None))
-
-
-def listplus(list_x, foldable_y):
-    return list_x + list(foldable_y)
-
-
-@memoize
-def flatten2(xss):
-    """
-    >>> flatten2([])
-    []
-    >>> flatten2([[1,2,3],[4,5]])
-    [1, 2, 3, 4, 5]
-    >>> flatten2([[1,2,[3]],[4,[5,6]]])
-    [1, 2, 3, 4, 5, 6]
-
-    tuple:
-
-    >>> flatten2([(1,2,3),(4,5)])
-    [1, 2, 3, 4, 5]
-
-    generator:
-
-    >>> flatten2(((i, i * 2) for i in range(0,5)))
-    [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
-    """
     if is_foldable(xss):
-        return foldl(operator.add, (flatten2(xs) for xs in xss), [])
+        return foldl(operator.add, (flatten(xs) for xs in xss), [])
     else:
         return [xss]
 
