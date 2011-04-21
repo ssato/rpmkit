@@ -141,12 +141,12 @@ try:
 except ImportError:
     # Make up a 'Null-Object' like class mimics xattr module.
     class xattr:
-        @classmethod
-        def get_all(cls, *args):
+        @staticmethod
+        def get_all(*args):
             return ()
 
-        @classmethod
-        def set(cls, *args):
+        @staticmethod
+        def set(*args):
             return ()
 
         # TODO: Older versions of python do not support decorator expressions
@@ -1643,7 +1643,7 @@ class ObjDict(dict):
     >>> assert o['a'] == o.a
     >>> 
 
-    TODO: pickle support:
+    TODO: pickle support. (The following does not work):
 
     #>>> workdir = tempfile.mkdtemp(dir='/tmp', prefix='objdict-doctest-')
     #>>> pkl_f = os.path.join(workdir, 'objdict.pkl')
@@ -1671,10 +1671,188 @@ class ObjDict(dict):
 
 
 
+class FileOperations(object):
+    """Class to implement operations for FileInfo classes.
+
+    This class will not be instatiated and mixed in FileInfo classes.
+    """
+
+    @classmethod
+    def equals(cls, lhs, rhs):
+        """lhs and rhs are identical, that is, these contents and metadata
+        (except for path) are exactly same.
+
+        TODO: Compare the part of the path?
+          ex. lhs.path: '/path/to/xyz', rhs.path: '/var/lib/sp2/updates/path/to/xyz'
+
+        >>> lhs = FileInfoFactory().create("/etc/resolv.conf")
+        >>> rhs = copy.copy(lhs)
+        >>> setattr(rhs, "other_attr", "xyz")
+        >>> 
+        >>> FileOperations.equals(lhs, rhs)
+        True
+        >>> rhs.mode = "755"
+        >>> FileOperations.equals(lhs, rhs)
+        False
+        """
+        keys = ("mode", "uid", "gid", "checksum", "filetype")
+        res = all((getattr(lhs, k) == getattr(rhs, k) for k in keys))
+
+        return res and dicts_comp(lhs.xattrs, rhs.xattrs) or False
+
+    @classmethod
+    def equivalent(cls, lhs, rhs):
+        """These metadata (path, uid, gid, etc.) do not match but the checksums
+        are same, that is, that contents are exactly same.
+
+        @lhs  FileInfo object
+        @rhs  Likewise
+
+        >>> class FakeFileInfo(object):
+        ...     checksum = checksum()
+        >>> 
+        >>> lhs = FakeFileInfo(); rhs = FakeFileInfo()
+        >>> FileOperations.equivalent(lhs, rhs)
+        True
+        >>> rhs.checksum = checksum("/etc/resolv.conf")
+        >>> FileOperations.equivalent(lhs, rhs)
+        False
+        """
+        return lhs.checksum == rhs.checksum
+
+    @classmethod
+    def permission(cls, mode):
+        """permission (mode) can be passed to 'chmod'.
+
+        NOTE: There are some special cases, e.g. /etc/gshadow- and
+        /etc/shadow-, such that mode == 0.
+
+        @mode  stat.mode
+
+        >>> file0 = "/etc/resolv.conf"
+        >>> if os.path.exists(file0):
+        ...     mode = os.lstat(file0).st_mode
+        ...     expected = oct(stat.S_IMODE(mode & 0777))[1:]
+        ...     assert expected == FileOperations.permission(mode)
+        >>> 
+        >>> gshadow = "/etc/gshadow-"
+        >>> if os.path.exists(gshadow):
+        ...     mode = os.lstat(gshadow).st_mode
+        ...     assert "000" == FileOperations.permission(mode)
+        """
+        m = stat.S_IMODE(mode & 0777)
+        return m == 0 and "000" or oct(m)[1:]
+
+    @classmethod
+    def copy_main(cls, fileinfo, dest, use_pyxattr=False):
+        """Two steps needed to keep the content and metadata of the original file:
+
+        1. Copy itself and its some metadata (owner, mode, etc.)
+        2. Copy extra metadata not copyable with the above.
+
+        'cp -a' (cp in GNU coreutils) does the above operations at once and
+        might be suited for most cases, I think.
+
+        @fileinfo   FileInfo object
+        @dest  str  Destination path to copy to
+        @use_pyxattr bool  Whether to use pyxattr module
+        """
+        if use_pyxattr:
+            shutil.copy2(fileinfo.path, dest)  # correponding to "cp -p ..."
+            cls.copy_xattrs(fileinfo.xattrs, dest)
+        else:
+            shell2("cp -a %s %s" % (fileinfo.path, dest))
+
+    @classmethod
+    def copy_xattrs(cls, src_xattrs, dest):
+        """
+        @src_xattrs  dict  Xattributes of source FileInfo object to copy
+        @dest        str   Destination path
+        """
+        for k, v in src_xattrs.iteritems():
+            xattr.set(dest, k, v)
+
+    @classmethod
+    def remove(cls, path):
+        os.remove(path)
+
+
+
+class DirOperations(FileOperations):
+
+    @classmethod
+    def remove(cls, path):
+        if not os.path.isdir(path):
+            raise RuntimeError(" '%s' is not a directory! Aborting..." % path)
+
+        os.removedirs(path)
+
+    @classmethod
+    def copy_main(cls, fileinfo, dest, use_pyxattr=False):
+        os.makedirs(dest, mode=fileinfo.mode)
+
+        try:
+            os.chown(dest, fileinfo.uid, fileinfo.gid)
+        except OSError, e:
+            logging.warn(e)
+
+        shutil.copystat(fileinfo.path, dest)
+        cls.copy_xattrs(fileinfo.xattrs, dest)
+
+
+
+class SymlinkOperations(FileOperations):
+
+    @classmethod
+    def copy_main(cls, fileinfo, dest, use_pyxattr=False):
+        os.symlink(fileinfo.linkto, dest)
+        #shell2("cp -a %s %s" % (fileinfo.path, dest))
+
+
+
+class TestFileOperations(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+        logging.info("start")
+        self.fo = FileOperations
+        self.path = [f for f in glob.glob(os.path.join(os.path.expanduser("~"), ".*")) if os.path.isfile(f)][0]
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_copy_main_and_remove(self):
+        dest = os.path.join(self.workdir, os.path.basename(self.path))
+        dest2 = dest + ".xattrs"
+
+        fileinfo = FileInfoFactory().create(self.path)
+
+        self.fo.copy_main(fileinfo, dest)
+        self.fo.copy_main(fileinfo, dest2, True)
+
+        src_attrs = xattr.get_all(self.path)
+        if src_attrs:
+            assert src_attrs == xattr.get_all(dest)
+            assert src_attrs == xattr.get_all(dest2)
+
+        assert os.path.exists(dest)
+        assert os.path.exists(dest2)
+
+        self.fo.remove(dest)
+        assert not os.path.exists(dest)
+
+        self.fo.remove(dest2)
+        assert not os.path.exists(dest2)
+
+
+
 class FileInfo(object):
     """The class of which objects to hold meta data of regular files, dirs and
     symlinks. This is for regular file and the super class for other types.
     """
+
+    operations = FileOperations
+    filetype = TYPE_FILE
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs, **kwargs):
         self.path = path
@@ -1686,16 +1864,10 @@ class FileInfo(object):
         self.checksum = checksum
         self.xattrs = xattrs or {}
 
-        self.filetype = TYPE_FILE
-
         self.perm_default = '644'
 
         for k, v in kwargs.iteritems():
             self[k] = v
-
-    def _copy_xattrs(self, dest):
-        for k, v in self.xattrs.iteritems():
-            xattr.set(dest, k, v)
 
     def _copy(self, dest):
         """Two steps needed to keep the content and metadata of the original file:
@@ -1708,34 +1880,16 @@ class FileInfo(object):
         global USE_PYXATTR
 
         if USE_PYXATTR:
-            shutil.copy2(self.path, dest)
-            self._copy_xattrs(dest)
+            shutil.copy2(self.path, dest)  # correponding to "cp -p ..."
+            self.operations.copy_xattrs(self.xattrs, dest)
         else:
             shell2("cp -a %s %s" % (self.path, dest))
 
-    def _remove(self, target):
-        os.remove(target)
-
     def __eq__(self, other):
-        """self and other are identical, that is, these contents and metadata
-        (except for path) are exactly same.
-
-        TODO: Compare the part of the path?
-          ex. lhs.path: '/path/to/xyz', rhs.path: '/var/lib/sp2/updates/path/to/xyz'
-        """
-        keys = ('mode', 'uid', 'gid', 'checksum', 'filetype')
-        res = all((getattr(self, k) == getattr(other, k) for k in keys))
-
-        if res:
-            return dicts_comp(self.xattrs, other.xattrs)
-        else:
-            return False
+        return self.operations(self, other)
 
     def equivalent(self, other):
-        """These metadata (path, uid, gid, etc.) do not match but the checksums
-        are same, that is, that contents are exactly same.
-        """
-        return self.checksum == other.checksum
+        return self.operations.equivalent(self, other)
 
     def type(self):
         return self.filetype
@@ -1744,13 +1898,7 @@ class FileInfo(object):
         return True
 
     def permission(self):
-        """permission (mode) can be passed to 'chmod'.
-        """
-        m = stat.S_IMODE(self.mode & 0777)
-        if m == 0:  # Some special cases such as /etc/gshadow-, /etc/shadow-, etc.
-            return '000'
-        else:
-            return oct(m)[1:]
+        return self.operations.permission(self.mode)
 
     def need_to_chmod(self):
         return self.permission() != self.perm_default
@@ -1758,10 +1906,7 @@ class FileInfo(object):
     def need_to_chown(self):
         return self.uid != 0 or self.gid != 0  # 0 == root
 
-    def remove(self):
-        self._remove(self.path)
-
-    def copy(self, dest, force=False):
+    def copy(self, dest, force=False, use_pyxattr=USE_PYXATTR):
         """Copy to $dest.  'Copy' action varys depends on actual filetype so
         that inherited class must overrride this and related methods (_remove
         and _copy).
@@ -1786,7 +1931,7 @@ class FileInfo(object):
 
             if force:
                 logging.info(" Removing dest: " + dest)
-                self._remove(dest)
+                self.operations.remove(dest)
             else:
                 logging.warn(" Do not overwrite it")
                 return False
@@ -1802,7 +1947,7 @@ class FileInfo(object):
             shutil.copystat(os.path.dirname(self.path), destdir)
 
         logging.debug(" Copying from '%s' to '%s'" % (self.path, dest))
-        self._copy(dest)
+        self.operations.copy_main(self, dest, use_pyxattr)
 
         return True
 
@@ -1816,28 +1961,12 @@ class FileInfo(object):
 
 class DirInfo(FileInfo):
 
+    operations = DirOperations
+    filetype = TYPE_DIR
+
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(DirInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
-
-        self.filetype = TYPE_DIR
         self.perm_default = '755'
-
-    def _remove(self, target):
-        if not os.path.isdir(target):
-            raise RuntimeError(" '%s' is not a directory! Aborting..." % target)
-
-        os.removedirs(target)
-
-    def _copy(self, dest):
-        os.makedirs(dest, mode=self.mode)
-
-        try:
-            os.chown(dest, self.uid, self.gid)
-        except OSError, e:
-            logging.warn(e)
-
-        shutil.copystat(self.path, dest)
-        self._copy_xattrs(dest)
 
     def rpm_attr(self):
         return super(DirInfo, self).rpm_attr() + "%dir "
@@ -1846,10 +1975,11 @@ class DirInfo(FileInfo):
 
 class SymlinkInfo(FileInfo):
 
+    operations = SymlinkOperations
+    filetype = TYPE_SYMLINK
+
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(SymlinkInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
-
-        self.filetype = TYPE_SYMLINK
         self.linkto = os.path.realpath(path)
 
     def _copy(self, dest):
@@ -1864,10 +1994,10 @@ class SymlinkInfo(FileInfo):
 class OtherInfo(FileInfo):
     """$path may be a socket, FIFO (named pipe), Character Dev or Block Dev, etc.
     """
+    filetype = TYPE_OTHER
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(OtherInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
-        self.filetype = TYPE_OTHER
 
     def copyable(self):
         return False
@@ -1877,10 +2007,10 @@ class OtherInfo(FileInfo):
 class UnknownInfo(FileInfo):
     """Special case that lstat() failed and cannot stat $path.
     """
+    filetype = TYPE_UNKNOWN
 
     def __init__(self, path, mode=-1, uid=-1, gid=-1, checksum=checksum(), xattrs={}):
         super(UnknownInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
-        self.filetype = TYPE_UNKNOWN
 
     def copyable(self):
         return False
@@ -2954,6 +3084,7 @@ def run_unittests(verbose, test_choice):
     basic_tests = [
         TestDecoratedFuncs,
         TestFuncsWithSideEffects,
+        TestFileOperations,
         TestFilelistCollector,
     ]
 
