@@ -1724,7 +1724,7 @@ class FileInfo(object):
           ex. lhs.path: '/path/to/xyz', rhs.path: '/var/lib/sp2/updates/path/to/xyz'
         """
         keys = ('mode', 'uid', 'gid', 'checksum', 'filetype')
-        res = all([getattr(self, k) == getattr(other, k) for k in keys])
+        res = all((getattr(self, k) == getattr(other, k) for k in keys))
 
         if res:
             return dicts_comp(self.xattrs, other.xattrs)
@@ -2025,86 +2025,6 @@ class RpmFileInfoFactory(FileInfoFactory):
 
         return fi
 
-
-
-class Path(object):
-    """
-    """
-
-    def __init__(self, path, *args):
-        self.path = path
-
-    def path(self):
-        return self.path
-
-
-
-def collect(paths, pkg_name, options):
-    """
-    Collect FileInfo objects from given file list.
-
-    @paths  [str]  Path list
-    @pkg_name str  Package name to make
-    @options  optparse.Values  parsed options
-    """
-    ff = (options.format == 'rpm' and RpmFileInfoFactory() or FileInfoFactory())
-
-    if options.format != 'rpm' or options.no_rpmdb:
-        filelist_db = dict()
-    else:
-        filelist_db = Rpm.filelist()
-
-    fileinfos = []
-
-    destdir = options.destdir
-    rewrite_linkto = options.rewrite_linkto
-    force_set_uid_and_gid = options.ignore_owner
-
-    for p in paths:
-        fi = ff.create(p)
-
-        # Too verbose but useful in some cases:
-        #logging.debug(" fi=%s" % str(fi))
-
-        if fi.type() not in (TYPE_FILE, TYPE_SYMLINK, TYPE_DIR):
-            logging.warn(" Sorry, only supported file type is 'file', 'symlink' or 'dir' and '%s' is not. Skip %s" % (fi.type(), p))
-            continue
-
-        if force_set_uid_and_gid:
-            logging.debug(" force set uid and gid of %s" % fi.path)
-            fi.uid = fi.gid = 0
-
-        f = fi.path
-
-        # FIXME: Is there any better way?
-        if destdir:
-            if f.startswith(destdir):
-                fi.target = f.split(destdir)[1]
-                logging.debug(" Rewrote target path of fi from %s to %s" % (f, fi.target))
-
-                if fi.type() == TYPE_SYMLINK and rewrite_linkto:
-                    new_linkto = fi.linkto.split(destdir)[1]
-                    logging.debug(" Rewrote link path of fi from %s to %s" % (fi.linkto, new_linkto))
-                    fi.linkto = new_linkto
-            else:
-                logging.error(" The path '%s' does not start with given destdir '%s'" % (f, destdir))
-                raise RuntimeError("Destdir specified in --destdir and the actual file path are inconsistent.")
-        else:
-            # Too verbose but useful in some cases:
-            #logging.debug(" Do not need to rewrite its path: %s" % f)
-            fi.target = f
-
-        p = filelist_db.get(fi.target, False)
-
-        if p and p != pkg_name:
-            logging.warn(" %s is owned by %s and it (%s) will conflict with %s" % (f, p, pkg_name, p))
-            fi.conflicts = p
-        else:
-            fi.conflicts = ""
-
-        fileinfos.append(fi)
-
-    return fileinfos
 
 
 def distdata_in_makefile_am(paths, srcdir='src'):
@@ -2577,8 +2497,8 @@ class PackageMaker(object):
             sys.exit()
 
     def collect(self, *args, **kwargs):
-        collector = self.collector()(self.filelist, self.package["name"], self.options)
-        return collector.collect()
+        clctr = self.collector()(self.filelist, self.package["name"], self.options)
+        return clctr.collect()
 
     def setup(self):
         self.package['fileinfos'] = self.collect()
