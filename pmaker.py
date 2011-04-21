@@ -1617,7 +1617,7 @@ class Rpm(object):
                 date = None
 
         if data is None:
-            data = dict(concat(([(f, h['name']) for f in h['filenames']] for h in Rpm.ts().dbMatch())))
+            data = dict(concat2((((f, h['name']) for f in h['filenames']) for h in Rpm.ts().dbMatch())))
 
             try:
                 # TODO: How to detect errors during/after pickle.dump.
@@ -2233,9 +2233,8 @@ class FilelistCollector(Collector):
         return path == "-" and sys.stdin or open(path)
 
     @staticmethod
-    def expand_list(list):
-        fs = [f for f in list if not f.startswith('#')]
-        return unique(concat([glob.glob(g) for g in fs if "*" in g]) + [f for f in fs if "*" not in f])
+    def expand_list(alist):
+        return unique(concat2((glob.glob(f) for f in alist if not f.startswith("#"))))
 
     @classmethod
     def list_paths(cls, listfile):
@@ -2249,7 +2248,7 @@ class FilelistCollector(Collector):
 
         @listfile  str  Path list file name or "-" (read list from stdin)
         """
-        return cls.expand_list([l.rstrip() for l in cls.open(listfile).readlines() if l and not l.startswith('#')])
+        return cls.expand_list((l.rstrip() for l in cls.open(listfile).readlines() if l and not l.startswith('#')))
 
     @classmethod
     def rewrite_with_destdir(cls, path, destdir):
