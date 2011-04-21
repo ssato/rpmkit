@@ -92,6 +92,7 @@
 #
 
 from distutils.sysconfig import get_python_lib
+from functools import reduce as foldl
 from itertools import chain, count, groupby
 
 import ConfigParser as cp
@@ -103,6 +104,7 @@ import grp
 import inspect
 import locale
 import logging
+import operator
 import optparse
 import os
 import os.path
@@ -1022,34 +1024,72 @@ def checksum(filepath='', algo=sha1, buffsize=8192):
 
 
 @memoize
-def flattern(xss):
+def flatten(xss):
     """
-    >>> flattern([])
+    >>> flatten([])
     []
-    >>> flattern([[1,2,3],[4,5]])
+    >>> flatten([[1,2,3],[4,5]])
     [1, 2, 3, 4, 5]
-    >>> flattern([[1,2,[3]],[4,[5,6]]])
+    >>> flatten([[1,2,[3]],[4,[5,6]]])
     [1, 2, 3, 4, 5, 6]
 
     tuple:
 
-    >>> flattern([(1,2,3),(4,5)])
+    >>> flatten([(1,2,3),(4,5)])
     [1, 2, 3, 4, 5]
 
     generator:
 
-    >>> flattern(((i, i * 2) for i in range(0,5)))
+    >>> flatten(((i, i * 2) for i in range(0,5)))
     [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
     """
     ret = []
 
     for xs in xss:
         if isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None)):
-            ret += flattern(xs)
+            ret += flatten(xs)
         else:
             ret.append(xs)
 
     return ret
+
+
+def is_foldable(xs):
+    """@see http://www.haskell.org/haskellwiki/Foldable_and_Traversable
+
+    >>> is_foldable([])
+    True
+    >>> is_foldable(())
+    True
+    >>> is_foldable((x for x in range(3)))
+    True
+    """
+    return isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None))
+
+
+def flatten2(xss):
+    """
+    >>> flatten2([])
+    []
+    >>> flatten2([[1,2,3],[4,5]])
+    [1, 2, 3, 4, 5]
+    >>> flatten2([[1,2,[3]],[4,[5,6]]])
+    [1, 2, 3, 4, 5, 6]
+
+    tuple:
+
+    >>> flatten2([(1,2,3),(4,5)])
+    [1, 2, 3, 4, 5]
+
+    generator:
+
+    >>> flatten2(((i, i * 2) for i in range(0,5)))
+    [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
+    """
+    if is_foldable(xss):
+        return foldl(operator.add, (flatten2(xs) for xs in xss), [])
+    else:
+        return [xss]
 
 
 def concat(xss):
@@ -1353,14 +1393,14 @@ class TestDecoratedFuncs(unittest.TestCase):
         """
         self.assertEquals(checksum(), '0' * len(sha1('').hexdigest()))
 
-    def test_flattern(self):
-        """if flattern() works as expected.
+    def test_flatten(self):
+        """if flatten() works as expected.
         """
-        self.assertEquals(flattern([]),                                [])
-        self.assertEquals(flattern([[1, 2, 3], [4, 5]]),               [1, 2, 3, 4, 5])
-        self.assertEquals(flattern([[1, 2, [3]], [4, [5, 6]]]),        [1, 2, 3, 4, 5, 6])
-        self.assertEquals(flattern([(1, 2, 3), (4, 5)]),               [1, 2, 3, 4, 5])
-        self.assertEquals(flattern(((i, i * 2) for i in range(0, 5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
+        self.assertEquals(flatten([]),                                [])
+        self.assertEquals(flatten([[1, 2, 3], [4, 5]]),               [1, 2, 3, 4, 5])
+        self.assertEquals(flatten([[1, 2, [3]], [4, [5, 6]]]),        [1, 2, 3, 4, 5, 6])
+        self.assertEquals(flatten([(1, 2, 3), (4, 5)]),               [1, 2, 3, 4, 5])
+        self.assertEquals(flatten(((i, i * 2) for i in range(0, 5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
 
     def test_unique(self):
         """if unique() works as expected.
