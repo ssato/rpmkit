@@ -2197,7 +2197,7 @@ class Collector(object):
     def make_enabled(self):
         self._enabled = False
 
-    def run(self, *args, **kwargs):
+    def collect(self, *args, **kwargs):
         if not self.enabled():
             raise RuntimeError("Pluing %s cannot run as necessary function is not available." % self.__name__)
 
@@ -2301,7 +2301,7 @@ class FilelistCollector(Collector):
         else:
             return ""
 
-    def collect(self, listfile, trace=False):
+    def _collect(self, listfile, trace=False):
         """Collect FileInfo objects from given path list.
 
         @listfile  str  File, dir and symlink paths list
@@ -2338,10 +2338,8 @@ class FilelistCollector(Collector):
 
         return fileinfos
 
-    def run(self):
-        super(FilelistCollector, self).run()
-
-        return self.collect(self.filelist)
+    def collect(self):
+        return self._collect(self.filelist)
 
 
 
@@ -2435,30 +2433,30 @@ class TestFilelistCollector(unittest.TestCase):
 
         options = optparse.Values(option_values)
         fc = FilelistCollector(listfile, "foo", options)
-        fs = fc.run()
+        fs = fc.collect()
 
         option_values["format"] = "deb"
         options = optparse.Values(option_values)
         fc = FilelistCollector(listfile, "foo", options)
-        fs = fc.run()
+        fs = fc.collect()
         option_values["format"] = "rpm"
 
         option_values["destdir"] = "/etc"
         options = optparse.Values(option_values)
         fc = FilelistCollector(listfile, "foo", options)
-        fs = fc.run()
+        fs = fc.collect()
         option_values["destdir"] = ""
 
         option_values["ignore_owner"] = True
         options = optparse.Values(option_values)
         fc = FilelistCollector(listfile, "foo", options)
-        fs = fc.run()
+        fs = fc.collect()
         option_values["ignore_owner"] = False
 
         option_values["no_rpmdb"] = True
         options = optparse.Values(option_values)
         fc = FilelistCollector(listfile, "foo", options)
-        fs = fc.run()
+        fs = fc.collect()
         option_values["no_rpmdb"] = False
 
 
@@ -2579,11 +2577,11 @@ class PackageMaker(object):
             sys.exit()
 
     def collect(self, *args, **kwargs):
-        return collect(*args, **kwargs)
+        collector = self.collector()(self.filelist, self.package["name"], self.options)
+        return collector.collect()
 
     def setup(self):
-        collector = self.collector()(self.filelist, self.package["name"], self.options)
-        self.package['fileinfos'] = collector.run()
+        self.package['fileinfos'] = self.collect()
 
         for d in ('workdir', 'srcdir'):
             createdir(self.package[d])
