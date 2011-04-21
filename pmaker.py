@@ -1098,21 +1098,21 @@ def flatten2(xss):
         return [xss]
 
 
-def concat2(xss):
+def concat(xss):
     """
-    >>> concat2([[]])
+    >>> concat([[]])
     []
-    >>> concat2((()))
+    >>> concat((()))
     []
-    >>> concat2([[1,2,3],[4,5]])
+    >>> concat([[1,2,3],[4,5]])
     [1, 2, 3, 4, 5]
-    >>> concat2([[1,2,3],[4,5,[6,7]]])
+    >>> concat([[1,2,3],[4,5,[6,7]]])
     [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat2(((1,2,3),(4,5,[6,7])))
+    >>> concat(((1,2,3),(4,5,[6,7])))
     [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat2(((1,2,3),(4,5,[6,7])))
+    >>> concat(((1,2,3),(4,5,[6,7])))
     [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat2(((i, i*2) for i in range(3)))
+    >>> concat(((i, i*2) for i in range(3)))
     [0, 0, 1, 2, 2, 4]
     """
     assert is_foldable(xss)
@@ -1607,7 +1607,7 @@ class Rpm(object):
                 date = None
 
         if data is None:
-            data = dict(concat2((((f, h['name']) for f in h['filenames']) for h in Rpm.ts().dbMatch())))
+            data = dict(concat((((f, h['name']) for f in h['filenames']) for h in Rpm.ts().dbMatch())))
 
             try:
                 # TODO: How to detect errors during/after pickle.dump.
@@ -2319,7 +2319,7 @@ class FilelistCollector(Collector):
 
     @staticmethod
     def expand_list(alist):
-        return unique(concat2((glob.glob(f) for f in alist if not f.startswith("#"))))
+        return unique(concat((glob.glob(f) for f in alist if not f.startswith("#"))))
 
     @classmethod
     def list_paths(cls, listfile):
