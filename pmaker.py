@@ -93,7 +93,7 @@
 
 from distutils.sysconfig import get_python_lib
 from functools import reduce as foldl
-from itertools import chain, count, groupby
+from itertools import count, groupby
 
 import ConfigParser as cp
 import copy
@@ -1098,17 +1098,7 @@ def flatten2(xss):
         return [xss]
 
 
-def concat(xss):
-    """
-    >>> concat([[]])
-    []
-    >>> concat([[1,2,3],[4,5]])
-    [1, 2, 3, 4, 5]
-    """
-    return list(chain(*xss))
-
-
-def concat2(xs):
+def concat2(xss):
     """
     >>> concat2([[]])
     []
@@ -1125,9 +1115,9 @@ def concat2(xs):
     >>> concat2(((i, i*2) for i in range(3)))
     [0, 0, 1, 2, 2, 4]
     """
-    assert is_foldable(xs)
+    assert is_foldable(xss)
 
-    return foldl(listplus, (x for x in xs), [])
+    return foldl(listplus, (xs for xs in xss), [])
 
 
 @memoize
@@ -1776,6 +1766,53 @@ class FileOperations(object):
     def remove(cls, path):
         os.remove(path)
 
+    @classmethod
+    def copy(cls, fileinfo, dest, force=False, use_pyxattr=USE_PYXATTR):
+        """Copy to $dest.  'Copy' action varys depends on actual filetype so
+        that inherited class must overrride this and related methods (_remove
+        and _copy).
+
+        @fileinfo  FileInfo  FileInfo object
+        @dest      string    The destination path to copy to
+        @force     bool      When True, force overwrite $dest even if it exists
+        """
+        assert fileinfo.path != dest, "Copying src and dst are same!"
+
+        if not fileinfo.copyable():
+            logging.warn(" Not copyable: %s" % str(self))
+            return False
+
+        if os.path.exists(dest):
+            logging.warn(" Copying destination already exists: '%s'" % dest)
+
+            # TODO: It has negative impact for symlinks.
+            #
+            #if os.path.realpath(self.path) == os.path.realpath(dest):
+            #    logging.warn("Copying src and dest are same actually.")
+            #    return False
+
+            if force:
+                logging.info(" Removing dest: " + dest)
+                fileinfo.operations.remove(dest)
+            else:
+                logging.warn(" Do not overwrite it")
+                return False
+        else:
+            destdir = os.path.dirname(dest)
+
+            # TODO: which is better?
+            #os.makedirs(os.path.dirname(dest)) or ...
+            #shutil.copytree(os.path.dirname(self.path), os.path.dirname(dest))
+
+            if not os.path.exists(destdir):
+                os.makedirs(destdir)
+            shutil.copystat(os.path.dirname(fileinfo.path), destdir)
+
+        logging.debug(" Copying from '%s' to '%s'" % (fileinfo.path, dest))
+        cls.copy_main(fileinfo, dest, use_pyxattr)
+
+        return True
+
 
 
 class DirOperations(FileOperations):
@@ -1843,6 +1880,18 @@ class TestFileOperations(unittest.TestCase):
 
         self.fo.remove(dest2)
         assert not os.path.exists(dest2)
+
+    def test_copy(self):
+        dest = os.path.join(self.workdir, os.path.basename(self.path))
+        fileinfo = FileInfoFactory().create(self.path)
+
+        self.fo.copy(fileinfo, dest)
+        self.fo.copy(fileinfo, dest, True)
+        self.fo.copy(fileinfo, dest, True, True)
+
+        assert os.path.exists(dest)
+        self.fo.remove(dest)
+        assert not os.path.exists(dest)
 
 
 
