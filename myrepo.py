@@ -20,10 +20,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Requirements: createrepo, ssh, xpack (see below)
+# Requirements: createrepo, ssh, packagemaker (see below)
 #
 # SEE ALSO: createrepo(8)
-# SEE ALSO: https://github.com/ssato/rpmkit/blob/xpack.py
+# SEE ALSO: https://github.com/ssato/rpmkit/blob/pmaker.py
 #
 
 from Cheetah.Template import Template
@@ -555,7 +555,7 @@ gpgcheck=0
         logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
 
         tmpl = """echo ${pkg.release_file} | \\
-xpack -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
+pmaker -n ${repo.name}-release --license MIT -w ${pkg.workdir} \\
     --group "System Environment/Base" \\
     --url ${repo.baseurl} \\
     --summary "Yum repo files for ${repo.name}" \\
@@ -683,7 +683,7 @@ class TestFuncsWithSideEffects(unittest.TestCase):
 
     def setUp(self):
         logging.info("start") # dummy log
-        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="xpack-tests")
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="myrepo-tests")
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -776,11 +776,11 @@ Examples:
   %prog init -s yumserver.local -u foo -m foo@example.com -F "John Doe" --repodir "repos"
 
   # build SRPM:
-  %prog build xpack-0.1-1.src.rpm 
+  %prog build packagemaker-0.1-1.src.rpm 
 
   # build SRPM and deploy RPMs and SRPMs into your yum repos:
-  %prog deploy --dist fedora-14 xpack-0.1-1.src.rpm
-  %prog d --dist rhel-6 --archs x86_64 xpack-0.1-1.src.rpm
+  %prog deploy --dist fedora-14 packagemaker-0.1-1.src.rpm
+  %prog d --dist rhel-6 --archs x86_64 packagemaker-0.1-1.src.rpm
   """
     )
 
