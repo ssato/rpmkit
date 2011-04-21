@@ -1054,6 +1054,7 @@ def flatten(xss):
     return ret
 
 
+@memoize
 def is_foldable(xs):
     """@see http://www.haskell.org/haskellwiki/Foldable_and_Traversable
 
@@ -1067,6 +1068,11 @@ def is_foldable(xs):
     return isinstance(xs, list) or isinstance(xs, tuple) or callable(getattr(xs, 'next', None))
 
 
+def listplus(list_x, foldable_y):
+    return list_x + list(foldable_y)
+
+
+@memoize
 def flatten2(xss):
     """
     >>> flatten2([])
@@ -1100,6 +1106,28 @@ def concat(xss):
     [1, 2, 3, 4, 5]
     """
     return list(chain(*xss))
+
+
+def concat2(xs):
+    """
+    >>> concat2([[]])
+    []
+    >>> concat2((()))
+    []
+    >>> concat2([[1,2,3],[4,5]])
+    [1, 2, 3, 4, 5]
+    >>> concat2([[1,2,3],[4,5,[6,7]]])
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat2(((1,2,3),(4,5,[6,7])))
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat2(((1,2,3),(4,5,[6,7])))
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat2(((i, i*2) for i in range(3)))
+    [0, 0, 1, 2, 2, 4]
+    """
+    assert is_foldable(xs)
+
+    return foldl(listplus, (x for x in xs), [])
 
 
 @memoize
@@ -1401,6 +1429,16 @@ class TestDecoratedFuncs(unittest.TestCase):
         self.assertEquals(flatten([[1, 2, [3]], [4, [5, 6]]]),        [1, 2, 3, 4, 5, 6])
         self.assertEquals(flatten([(1, 2, 3), (4, 5)]),               [1, 2, 3, 4, 5])
         self.assertEquals(flatten(((i, i * 2) for i in range(0, 5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
+
+    def test_is_foldable(self):
+        """if is_foldable() works as expected.
+        """
+        self.assertTrue((is_foldable([])))
+        self.assertTrue((is_foldable(())))
+        self.assertTrue((is_foldable((x for x in range(3)))))
+        self.assertFalse((is_foldable(None)))
+        self.assertFalse((is_foldable(True)))
+        self.assertFalse((is_foldable(1)))
 
     def test_unique(self):
         """if unique() works as expected.
