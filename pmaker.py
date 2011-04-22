@@ -2199,7 +2199,7 @@ class Collector(object):
         return self._enabled
 
     def make_enabled(self):
-        self._enabled = False
+        self._enabled = True
 
     def collect(self, *args, **kwargs):
         if not self.enabled():
