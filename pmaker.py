@@ -893,10 +893,6 @@ ignore_owner    = False
 # destination directory to be stripped from installed path in absolute path:
 destdir =
 
-# Whether to rewrite symlink's linkto (path of the objects that symlink point
-# to) if --destdir is specified:
-rewrite_linkto  = False
-
 # advanced option to be enabled if you want to use pyxattr to get extended
 # attributes of target files, dirs and symlinks:
 with_pyxattr    = False
@@ -2233,7 +2229,6 @@ class FilelistCollector(Collector):
         self.options = options  # Ugly.
 
         self.destdir = options.destdir
-        self.rewrite_linkto = options.rewrite_linkto
         self.force_set_uid_and_gid = options.ignore_owner
 
         if self.options.format == "rpm":
@@ -2434,7 +2429,6 @@ class TestFilelistCollector(unittest.TestCase):
         option_values = {
             "format": "rpm",
             "destdir": "",
-            "rewrite_linkto": False,
             "ignore_owner": False,
             "no_rpmdb": False,
         }
@@ -3198,7 +3192,6 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'debug': cds.get("debug", False),
         'ignore_owner': cds.get("ignore_owner", False),
         'destdir': cds.get("destdir", ''),
-        'rewrite_linkto': cds.get("rewrite_linkto", False),
         'with_pyxattr': cds.get("with_pyxattr", False),
 
         'name': cds.get("name", ""),
