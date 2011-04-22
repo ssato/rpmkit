@@ -2034,10 +2034,11 @@ class FileInfoFactory(object):
 
         return ft
 
-    def create(self, path):
+    def create(self, path, attrs=None):
         """Factory method. Create and return the *Info instance.
 
-        @path       str   Object path (relative or absolute)
+        @path   str   Object path (relative or absolute)
+        @attrs  dict  Attributes set to FileInfo object result after creation
         """
         st = self._stat(path)
 
@@ -2062,7 +2063,13 @@ class FileInfoFactory(object):
         _cls = globals().get("%sInfo" % _filetype.title(), False)
         assert _cls, "Should not reached here! _filetype.title() was '%s'" % _filetype.title()
 
-        return _cls(path, _mode, _uid, _gid, _checksum, _xattrs)
+        fi = _cls(path, _mode, _uid, _gid, _checksum, _xattrs)
+
+        if attrs:
+            for attr, val in attrs.iteritems():
+                setattr(fi, attr, val)
+
+        return fi
 
 
 
@@ -2102,10 +2109,10 @@ class RpmFileInfoFactory(FileInfoFactory):
 
         return super(RpmFileInfoFactory, self)._stat(path)
 
-    def create(self, path):
+    def create(self, path, attrs=None):
         """TODO: what should be done for objects of *infos other than fileinfo?
         """
-        fi = super(RpmFileInfoFactory, self).create(path)
+        fi = super(RpmFileInfoFactory, self).create(path, attrs)
 
         return fi
 
