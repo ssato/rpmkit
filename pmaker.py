@@ -1703,7 +1703,7 @@ class FileOperations(object):
         return m == 0 and "000" or oct(m)[1:]
 
     @classmethod
-    def copy_main(cls, fileinfo, dest, use_pyxattr=False):
+    def copy_main(cls, fileinfo, dest, use_pyxattr=USE_PYXATTR):
         """Two steps needed to keep the content and metadata of the original file:
 
         1. Copy itself and its some metadata (owner, mode, etc.)
@@ -1736,7 +1736,7 @@ class FileOperations(object):
         os.remove(path)
 
     @classmethod
-    def copy(cls, fileinfo, dest, force=False, use_pyxattr=USE_PYXATTR):
+    def copy(cls, fileinfo, dest, force=False):
         """Copy to $dest.  'Copy' action varys depends on actual filetype so
         that inherited class must overrride this and related methods (_remove
         and _copy).
@@ -1761,7 +1761,7 @@ class FileOperations(object):
             #    return False
 
             if force:
-                logging.info(" Removing dest: " + dest)
+                logging.info(" Removing old one before copying: " + dest)
                 fileinfo.operations.remove(dest)
             else:
                 logging.warn(" Do not overwrite it")
@@ -1778,7 +1778,7 @@ class FileOperations(object):
             shutil.copystat(os.path.dirname(fileinfo.path), destdir)
 
         logging.debug(" Copying from '%s' to '%s'" % (fileinfo.path, dest))
-        cls.copy_main(fileinfo, dest, use_pyxattr)
+        cls.copy_main(fileinfo, dest)
 
         return True
 
@@ -1856,7 +1856,6 @@ class TestFileOperations(unittest.TestCase):
 
         self.fo.copy(fileinfo, dest)
         self.fo.copy(fileinfo, dest, True)
-        self.fo.copy(fileinfo, dest, True, True)
 
         assert os.path.exists(dest)
         self.fo.remove(dest)
@@ -1911,8 +1910,8 @@ class FileInfo(object):
     def need_to_chown(self):
         return self.uid != 0 or self.gid != 0  # 0 == root
 
-    def copy(self, dest, force=False, use_pyxattr=USE_PYXATTR):
-        return self.operations.copy(self, dest, force, use_pyxattr)
+    def copy(self, dest, force=False):
+        return self.operations.copy(self, dest, force)
 
     def rpm_attr(self):
         if self.need_to_chmod() or self.need_to_chown():
@@ -1982,10 +1981,14 @@ class FileInfoFactory(object):
         @return  A tuple of (mode, uid, gid) or None if OSError was raised.
 
         >>> ff = FileInfoFactory()
-        >>> (_mode, uid, gid) = ff._stat('/etc/hosts')
-        >>> assert uid == 0
-        >>> assert gid == 0
-        >>> #
+        >>> f0 = "/etc/hosts"
+        >>> if os.path.exists(f0):
+        ...     (_mode, uid, gid) = ff._stat(f0)
+        ...     assert uid == 0
+        ...     assert gid == 0
+        ... else:
+        ...     print "Test target file does not exist. Skip it"
+        >>> 
         >>> if os.getuid() != 0:
         ...    assert ff._stat('/root/.bashrc') is None
         """
