@@ -1476,7 +1476,10 @@ class Rpm(object):
         'nlink', 'state', 'vflags', 'uid', 'gid', 'checksum')
 
     @staticmethod
-    def ts():
+    def ts(rpmdb_path=None):
+        if rpmdb_path is not None:
+            rpm.addMacro("_dbpath", rpmdb_path)
+
         return rpm.TransactionSet()
 
     @staticmethod
@@ -1546,7 +1549,7 @@ class Rpm(object):
         del mi
 
     @classmethod
-    def filelist(cls, cache=True, expires=1, pkl_proto=pickle.HIGHEST_PROTOCOL):
+    def filelist(cls, cache=True, expires=1, pkl_proto=pickle.HIGHEST_PROTOCOL, rpmdb_path=None):
         """TODO: It should be a heavy and time-consuming task. How to shorten
         this time? - caching, utilize yum's file list database or whatever.
 
@@ -1572,7 +1575,7 @@ class Rpm(object):
                 date = None
 
         if data is None:
-            data = dict(concat((((f, h['name']) for f in h['filenames']) for h in Rpm.ts().dbMatch())))
+            data = dict(concat((((f, h['name']) for f in h['filenames']) for h in Rpm.ts(rpmdb_path).dbMatch())))
 
             try:
                 # TODO: How to detect errors during/after pickle.dump.
@@ -2195,6 +2198,146 @@ def on_debug_mode():
 
 
 
+class Target(object):
+
+    def __init__(self, path, attrs={}):
+        self.path = path
+
+        for attr, val in attrs:
+            setattr(self, attr, val)
+
+
+
+class FileInfoFilter(object):
+    """
+    Base class to filter specific FileInfo objects not to collect unnecessary
+    ones during Collector.collect().
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def pred(self, fileinfo):
+        """
+        Pred. to filter fileinfos of which type is not file, symlink or dir.
+        (filter out rule).
+
+        @fileinfo  FileInfo object
+
+        >>> factory = FileInfoFactory()
+        >>> ff = FileInfoFilter()
+        >>> def test_ifexists(path, expected=True):
+        ...     if os.path.exists(path):
+        ...         assert expected == ff.pred(factory.create(path))
+        ...     else:
+        ...         logging.warn("%s does not exist. Skip this test" % path)
+        >>> test_ifexists("/etc/resolv.conf", False)  # file
+        >>> test_ifexists("/etc/rc", False)  # symlink
+        >>> test_ifexists("/etc", False)  # dir
+        >>> test_ifexists("/dev/null", True)  # dev
+        >>> paths = glob.glob("/tmp/orbit-%s/*" % get_username())
+        >>> if paths:
+        ...     test_ifexists(paths[0], True)  # socket
+        """
+        assert isinstance(fileinfo, FileInfo)
+
+        if fileinfo.type() in (TYPE_FILE, TYPE_SYMLINK, TYPE_DIR):
+            return False
+        else:
+            logging.warn("Not supported type and filtered out: '%s' (type=%s)" % (fileinfo.path, fileinfo.type()))
+            return True
+
+
+
+class FileInfoModifier(object):
+    """
+    Base class to transform some specific attributes of FileInfo objects during
+    Collector.collect().
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def update(self, fileinfo, *args, **kwargs):
+        """Just returns given fileinfo w/ no modification.
+
+        @fileinfo FileInfo object
+        @target   Target objecr
+        """
+        return fileinfo
+
+
+
+class DestdirModifier(FileInfoModifier):
+
+    def __init__(self, destdir):
+        self.destdir = destdir
+
+    def rewrite_with_destdir(self, path):
+        """Rewrite target (install destination) path as DESTDIR in autotools.
+
+        >>> DestdirModifier("/a/b").rewrite_with_destdir("/a/b/c")
+        '/c'
+        >>> DestdirModifier("/a/b/").rewrite_with_destdir("/a/b/c")
+        '/c'
+        >>> try:
+        ...     DestdirModifier("/x/y").rewrite_with_destdir("/a/b/c")
+        ... except RuntimeError, e:
+        ...     pass
+        """
+        if path.startswith(self.destdir):
+            new_path = path.split(self.destdir)[1]
+            if not new_path.startswith(os.path.sep):
+                new_path = os.path.sep + new_path
+
+            logging.debug("Rewrote target path from %s to %s" % (path, new_path))
+            return new_path
+        else:
+            logging.error(" The path '%s' does not start with '%s'" % (path, self.destdir))
+            raise RuntimeError("Destdir and the actual file path are inconsistent.")
+
+    def update(self, fileinfo, *args, **kwargs):
+        fileinfo.target = self.rewrite_with_destdir(fileinfo.path)
+        return fileinfo
+
+
+
+class OwnerModifier(FileInfoModifier):
+
+    def __init__(self, owner_uid=0, owner_gid=0):
+        self.uid = owner_uid
+        self.gid = owner_gid
+
+    def update(self, fileinfo, *args, **kwargs):
+        fileinfo.uid = self.uid
+        fileinfo.gid = self.gid
+
+        return fileinfo
+
+
+class RpmConflictsModifier(FileInfoModifier):
+
+    def __init__(self, package, rpmdb_path=None):
+        self.package = package
+        self.database = Rpm.filelist(rpmdb_path)
+
+    def find_conflicts(self, path):
+        """Find the package owns given path.
+        """
+        owner_package = self.database.get(path, False)
+
+        if owner_package and owner_package != self.package:
+            logging.warn("%s is owned by %s (will be conflict with it)" % (path, owner_package))
+            return owner_package
+        else:
+            return ""
+
+    def update(self, fileinfo, *args, **kwargs):
+        fileinfo.conflicts = self.find_conflicts(fileinfo.path)
+        return fileinfo
+
+
+
 class Collector(object):
 
     _enabled = True
@@ -2227,34 +2370,53 @@ class FilelistCollector(Collector):
         """
         @filelist  str  file to list files and dirs to collect or "-"
                         (read files and dirs list from stdin)
-        @pkgname     str  package name to build
+        @pkgname   str  package name to build
+        @options   optparse.Values
         """
         super(FilelistCollector, self).__init__(filelist, options)
 
         self.filelist = filelist
-        self.pkgname = pkgname
-        self.options = options  # Ugly.
 
-        self.destdir = options.destdir
-        self.force_set_uid_and_gid = options.ignore_owner
+        # TBD:
+        #self.trace = options.trace
+        self.trace = False
 
-        if self.options.format == "rpm":
+        self.filters = [FileInfoFilter()]
+        self.modifiers = []
+
+        if options.destdir:
+            self.modifiers.append(DestdirModifier(options.destdir))
+
+        if options.ignore_owner:
+            self.modifiers.append(OwnerModifier(0, 0))  # 0 == root's uid and gid
+
+        if options.format == "rpm":
             self.fi_factory = RpmFileInfoFactory()
-            self.database_fun = self.options.no_rpmdb and dict or Rpm.filelist
+
+            if not options.no_rpmdb:
+                self.modifiers.append(RpmConflictsModifier(pkgname))
         else:
             self.fi_factory = FileInfoFactory()
-            self.database_fun = dict
 
     @staticmethod
     def open(path):
         return path == "-" and sys.stdin or open(path)
 
     @staticmethod
-    def expand_list(alist):
-        return unique(concat((glob.glob(f) for f in alist if not f.startswith("#"))))
+    def parse_paths(alist):
+        return unique(concat((glob.glob(f) for f in alist)))
 
     @classmethod
-    def list_paths(cls, listfile):
+    def _parse(cls, line):
+        """Parse the line and returns path list.
+        """
+        if not line or line.startswith("#"): 
+            return []
+        else:
+            return glob.glob(line.rstrip())
+
+    @classmethod
+    def list_targets(cls, listfile):
         """Read paths from given file line by line and returns path list sorted by
         dir names. There some speical parsing rules for the file list:
 
@@ -2265,84 +2427,30 @@ class FilelistCollector(Collector):
 
         @listfile  str  Path list file name or "-" (read list from stdin)
         """
-        return cls.expand_list((l.rstrip() for l in cls.open(listfile).readlines() if l and not l.startswith('#')))
+        return (Target(p) for p in unique(concat((cls._parse(l) for l in cls.open(listfile).readlines()))))
 
-    @classmethod
-    def rewrite_with_destdir(cls, path, destdir):
-        """Rewrite target (install destination) path.
-
-        By default, target path will be same as $path. This method will change
-        it as needed.
-
-        >>> FilelistCollector.rewrite_with_destdir("/a/b/c", "/a/b")
-        '/c'
-        >>> FilelistCollector.rewrite_with_destdir("/a/b/c", "/a/b/")
-        '/c'
-        >>> try:
-        ...     FilelistCollector.rewrite_with_destdir("/a/b/c", "/x/y")
-        ... except RuntimeError, e:
-        ...     pass
-        """
-        if path.startswith(destdir):
-            new_path = path.split(destdir)[1]
-            if not new_path.startswith(os.path.sep):
-                new_path = os.path.sep + new_path
-
-            logging.debug("Rewrote target path from %s to %s" % (path, new_path))
-            return new_path
-        else:
-            logging.error(" The path '%s' does not start with '%s'" % (path, destdir))
-            raise RuntimeError("Destdir given in --destdir and the actual file path are inconsistent.")
-
-    def find_conflicts(self, path, pkgname):
-        """Find the package owns given path.
-
-        @path       str   Target path
-        @pkgname    str   Package name will own the above path
-        """
-        filelist_database = self.database_fun()
-        other_pkgname = filelist_database.get(path, False)
-
-        if other_pkgname and other_pkgname != pkgname:
-            m = "%(path)s is owned by %(other)s and this package will conflict with it" % \
-                {"path": path, "other": other_pkgname}
-            logging.warn(m)
-            return pkgname
-        else:
-            return ""
-
-    def _collect(self, listfile, trace=False):
+    def _collect(self, listfile):
         """Collect FileInfo objects from given path list.
 
         @listfile  str  File, dir and symlink paths list
         """
         fileinfos = []
 
-        for path in self.list_paths(listfile):
-            fi = self.fi_factory.create(path)
+        for target in self.list_targets(listfile):
+            fi = self.fi_factory.create(target.path)
+            fi.conflicts = ""
+            fi.target = fi.path
 
             # Too verbose but useful in some cases:
-            if trace:
+            if self.trace:
                 logging.debug(" fi=%s" % str(fi))
 
-            if fi.type() not in (TYPE_FILE, TYPE_SYMLINK, TYPE_DIR):
-                logging.warn(" '%s' is not supported type. Skip %s" % (fi.type(), path))
-                continue
+            for filter in self.filters:
+                if filter.pred(fi):  # filter out if pred -> True:
+                    continue
 
-            if self.force_set_uid_and_gid:
-                logging.debug(" force set uid and gid of %s" % fi.path)
-                fi.uid = fi.gid = 0
-
-            if self.destdir:
-                fi.target = self.rewrite_with_destdir(fi.path, self.destdir)
-            else:
-                # Too verbose but useful in some cases:
-                if trace:
-                    logging.debug(" Do not need to rewrite the path: " + fi.path)
-
-                fi.target = fi.path
-
-            fi.conflicts = self.find_conflicts(fi.target, self.pkgname)
+            for modifier in self.modifiers:
+                fi = modifier.update(fi, target, self.trace)
 
             fileinfos.append(fi)
 
@@ -2365,7 +2473,7 @@ class JsonFilelistCollector(FilelistCollector):
         _enabled = False
 
     @classmethod
-    def list_paths(cls, listfile):
+    def list_targets(cls, listfile):
         pass
 
 
@@ -2379,22 +2487,22 @@ class TestFilelistCollector(unittest.TestCase):
     def tearDown(self):
         rm_rf(self.workdir)
 
-    def test_expand_list(self):
-        ps0 = ["#/etc/resolv.conf"]
-        ps1 = ["/etc/resolv.conf"]
-        ps2 = ps1 + ps1
-        ps3 = ["/etc/resolv.conf", "/etc/rc.d/rc"]
-        ps4 = ["/etc/auto.*"]
-        ps5 = ps3 + ps4
+    def test__parse(self):
+        p0 = ""
+        p1 = "#xxxxx"
+        p2 = os.path.join(self.workdir, "a")
+        p3 = os.path.join(self.workdir, "aa")
+        p4 = os.path.join(self.workdir, "a*")
 
-        self.assertListEqual(FilelistCollector.expand_list(ps0), [])
-        self.assertListEqual(FilelistCollector.expand_list(ps1), ps1)
-        self.assertListEqual(FilelistCollector.expand_list(ps2), ps1)
-        self.assertListEqual(FilelistCollector.expand_list(ps3), sorted(ps3))
-        self.assertListEqual(FilelistCollector.expand_list(ps4), sorted(glob.glob(ps4[0])))
-        self.assertListEqual(FilelistCollector.expand_list(ps5), sorted(ps3 + glob.glob(ps4[0])))
+        for p in (p2, p3):
+            os.system("touch " + p)
 
-    def test_list_paths(self):
+        self.assertListEqual(FilelistCollector._parse(p0), [])
+        self.assertListEqual(FilelistCollector._parse(p1), [])
+        self.assertListEqual(FilelistCollector._parse(p2), [p2])
+        self.assertListEqual(sorted(FilelistCollector._parse(p4)), sorted([p2, p3]))
+
+    def test_list_targets(self):
         paths = [
             "/etc/auto.*",
             "#/etc/aliases.db",
@@ -2412,7 +2520,8 @@ class TestFilelistCollector(unittest.TestCase):
             f.write("%s\n" % p)
         f.close()
 
-        self.assertListEqual(FilelistCollector.list_paths(listfile), FilelistCollector.expand_list(paths))
+        paths = [target.path for target in FilelistCollector.list_targets(listfile)]
+        self.assertListEqual(paths, FilelistCollector.parse_paths(paths))
 
     def test_run(self):
         paths = [
