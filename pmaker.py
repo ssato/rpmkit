@@ -1086,7 +1086,7 @@ def concat(xss):
 
 
 @memoize
-def unique(xs, cmp_f=cmp, key=None):
+def unique(xs, cmp=cmp, key=None):
     """Returns new sorted list of no duplicated items.
 
     >>> unique([])
@@ -1097,7 +1097,7 @@ def unique(xs, cmp_f=cmp, key=None):
     if xs == []:
         return xs
 
-    ys = sorted(xs, cmp=cmp_f, key=key)
+    ys = sorted(xs, cmp=cmp, key=key)
 
     if ys == []:
         return ys
@@ -2206,6 +2206,9 @@ class Target(object):
         for attr, val in attrs:
             setattr(self, attr, val)
 
+    def __cmp__(self, other):
+        return cmp(self.path, other.path)
+
 
 
 class FileInfoFilter(object):
@@ -2420,10 +2423,6 @@ class FilelistCollector(Collector):
     def open(path):
         return path == "-" and sys.stdin or open(path)
 
-    @staticmethod
-    def parse_paths(alist):
-        return unique(concat((glob.glob(f) for f in alist)))
-
     @classmethod
     def _parse(cls, line):
         """Parse the line and returns path list.
@@ -2431,7 +2430,7 @@ class FilelistCollector(Collector):
         if not line or line.startswith("#"): 
             return []
         else:
-            return glob.glob(line.rstrip())
+            return [Target(p) for p in glob.glob(line.rstrip())]
 
     @classmethod
     def list_targets(cls, listfile):
@@ -2445,7 +2444,7 @@ class FilelistCollector(Collector):
 
         @listfile  str  Path list file name or "-" (read list from stdin)
         """
-        return (Target(p) for p in unique(concat((cls._parse(l) for l in cls.open(listfile).readlines()))))
+        return unique(concat((cls._parse(l) for l in cls.open(listfile).readlines())))
 
     def _collect(self, listfile):
         """Collect FileInfo objects from given path list.
@@ -2515,10 +2514,13 @@ class TestFilelistCollector(unittest.TestCase):
         for p in (p2, p3):
             os.system("touch " + p)
 
-        self.assertListEqual(FilelistCollector._parse(p0), [])
-        self.assertListEqual(FilelistCollector._parse(p1), [])
-        self.assertListEqual(FilelistCollector._parse(p2), [p2])
-        self.assertListEqual(sorted(FilelistCollector._parse(p4)), sorted([p2, p3]))
+        ps2 = [Target(p) for p in [p2]]
+        ps3 = [Target(p) for p in [p2, p3]]
+
+        self.assertListEqual(FilelistCollector._parse(p0 + "\n"), [])
+        self.assertListEqual(FilelistCollector._parse(p1 + "\n"), [])
+        self.assertListEqual(FilelistCollector._parse(p2 + "\n"), ps2)
+        self.assertListEqual(sorted(FilelistCollector._parse(p4 + "\n")), sorted(ps3))
 
     def test_list_targets(self):
         paths = [
@@ -2534,12 +2536,13 @@ class TestFilelistCollector(unittest.TestCase):
         listfile = os.path.join(self.workdir, "files.list")
 
         f = open(listfile, "w")
+        f.write("\n")
         for p in paths:
             f.write("%s\n" % p)
         f.close()
 
-        paths = [target.path for target in FilelistCollector.list_targets(listfile)]
-        self.assertListEqual(paths, FilelistCollector.parse_paths(paths))
+        ts = unique(concat((FilelistCollector._parse(p + "\n") for p in paths)))
+        self.assertListEqual(ts, FilelistCollector.list_targets(listfile))
 
     def test_run(self):
         paths = [
