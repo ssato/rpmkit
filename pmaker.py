@@ -2338,6 +2338,24 @@ class RpmConflictsModifier(FileInfoModifier):
 
 
 
+class TargetAttributeModifier(FileInfoModifier):
+
+    def __init__(self, overrides=()):
+        """
+        @overrides  attribute names to override.
+        """
+        self.overrides = overrides
+
+    def update(self, fileinfo, target, *args, **kwargs):
+        for attr in self.overrides:
+            val = getattr(target, attr, None)
+            if val is not None:
+                setattr(fileinfo, attr, val)
+
+        return fileinfo
+
+
+
 class Collector(object):
 
     _enabled = True
