@@ -2737,7 +2737,7 @@ class PackageMaker(object):
         """
         >>> class O(object):
         ...     pass
-        >>> o = O(); o.upto = "build"; o.force = False
+        >>> o = O(); o.upto = "build"; o.force = False; o.iformat = "filelist"
         >>> pm = PackageMaker({'name': 'foo', 'workdir': '/tmp/w', 'destdir': '',}, '/tmp/filelist', o)
         >>> pm.to_srcdir('/a/b/c')
         '/tmp/w/src/a/b/c'
