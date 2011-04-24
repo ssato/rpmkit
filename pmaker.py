@@ -2204,6 +2204,9 @@ class Target(object):
         self.path = path
 
         for attr, val in attrs:
+            if attr == "path":
+                continue
+
             setattr(self, attr, val)
 
     def __cmp__(self, other):
@@ -2350,7 +2353,7 @@ class TargetAttributeModifier(FileInfoModifier):
         self.overrides = overrides
 
     def update(self, fileinfo, target, *args, **kwargs):
-        for attr in self.overrides:
+        for attr in self.overrides or target.keys():
             val = getattr(target, attr, None)
             if val is not None:
                 setattr(fileinfo, attr, val)
@@ -2425,7 +2428,7 @@ class FilelistCollector(Collector):
 
     @classmethod
     def _parse(cls, line):
-        """Parse the line and returns path list.
+        """Parse the line and returns Target (path) list.
         """
         if not line or line.startswith("#"): 
             return []
@@ -2480,7 +2483,20 @@ class FilelistCollector(Collector):
 
 class JsonFilelistCollector(FilelistCollector):
     """
-    Collector to collect fileinfo list from files list in JSON format:
+    Collector for files list in JSON format such as:
+
+    [
+        {
+            "path": "/a/b/c",
+            "target": {
+                "path": "/a/c",
+                "uid": 100,
+                "gid": 0,
+                ...
+            }
+        },
+        ...
+    ]
     """
 
     try:
@@ -2489,9 +2505,22 @@ class JsonFilelistCollector(FilelistCollector):
     except:
         _enabled = False
 
+    def __init__(self, filelist, pkgname, options):
+        super(JsonFilelistCollector, self).__init__(filelist, pkgname, options)
+        self.modifiers.append(TargetAttributeModifier())
+
+    @classmethod
+    def _parse(cls, path_dict):
+        path = path_dict.get("path", False)
+
+        if not path or path.startswith("#"): 
+            return []
+        else:
+            return [Target(p, path_dict) for p in glob.glob(path)]
+
     @classmethod
     def list_targets(cls, listfile):
-        pass
+        return unique(concat((cls._parse(d) for d in json.load(cls.open(listfile)))))
 
 
 
@@ -2597,6 +2626,45 @@ class TestFilelistCollector(unittest.TestCase):
         fc = FilelistCollector(listfile, "foo", options)
         fs = fc.collect()
         option_values["no_rpmdb"] = False
+
+
+
+class TestJsonFilelistCollector(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+        logging.info("start")
+
+        self.json_data = """\
+[
+    {
+        "path": "/etc/resolv.conf",
+        "target": {
+            "path": "/var/lib/network/resolv.conf",
+            "uid": 0,
+            "gid": 0,
+            "conflicts": "NetworkManager"
+        }
+    },
+    {
+        "path": "/etc/hosts",
+        "target": {
+            "conflicts": "setup"
+        }
+    }
+]
+"""
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_list_targets(self):
+        f = open(listfile, "w")
+        f.write(json.dumps(json.loads(self.json_data)))
+        f.close()
+
+        ts = JsonFilelistCollector.list_targets(listfile)
+        #self.assertListEqual(ts, ts2)
 
 
 
