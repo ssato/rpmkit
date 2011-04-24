@@ -988,7 +988,7 @@ def dicts_comp(lhs, rhs, keys=False):
     elif rhs == {}:
         return False
     else:
-        return all(((lhs.get(key) == rhs.get(key)) for key in (keys and keys or lhs.keys())))
+        return all((lhs.get(key) == rhs.get(key)) for key in keys and keys or lhs.keys())
 
 
 def memoize(fn):
@@ -1038,7 +1038,7 @@ def is_foldable(xs):
     True
     >>> is_foldable(())
     True
-    >>> is_foldable((x for x in range(3)))
+    >>> is_foldable(x for x in range(3))
     True
     >>> is_foldable(None)
     False
@@ -1071,7 +1071,7 @@ def flatten(xss):
 
     generator:
 
-    >>> flatten(((i, i * 2) for i in range(0,5)))
+    >>> flatten((i, i * 2) for i in range(0,5))
     [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
     """
     if is_foldable(xss):
@@ -1094,7 +1094,7 @@ def concat(xss):
     [1, 2, 3, 4, 5, [6, 7]]
     >>> concat(((1,2,3),(4,5,[6,7])))
     [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat(((i, i*2) for i in range(3)))
+    >>> concat((i, i*2) for i in range(3))
     [0, 0, 1, 2, 2, 4]
     """
     assert is_foldable(xss)
@@ -1400,17 +1400,17 @@ class TestDecoratedFuncs(unittest.TestCase):
         self.assertEquals(flatten([[1, 2, 3], [4, 5]]),               [1, 2, 3, 4, 5])
         self.assertEquals(flatten([[1, 2, [3]], [4, [5, 6]]]),        [1, 2, 3, 4, 5, 6])
         self.assertEquals(flatten([(1, 2, 3), (4, 5)]),               [1, 2, 3, 4, 5])
-        self.assertEquals(flatten(((i, i * 2) for i in range(0, 5))), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
+        self.assertEquals(flatten((i, i * 2) for i in range(0, 5)),   [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
 
     def test_is_foldable(self):
         """if is_foldable() works as expected.
         """
-        self.assertTrue((is_foldable([])))
-        self.assertTrue((is_foldable(())))
-        self.assertTrue((is_foldable((x for x in range(3)))))
-        self.assertFalse((is_foldable(None)))
-        self.assertFalse((is_foldable(True)))
-        self.assertFalse((is_foldable(1)))
+        self.assertTrue(is_foldable([]))
+        self.assertTrue(is_foldable(()))
+        self.assertTrue(is_foldable(x for x in range(3)))
+        self.assertFalse(is_foldable(None))
+        self.assertFalse(is_foldable(True))
+        self.assertFalse(is_foldable(1))
 
     def test_unique(self):
         """if unique() works as expected.
@@ -1671,7 +1671,7 @@ class FileOperations(object):
         False
         """
         keys = ("mode", "uid", "gid", "checksum", "filetype")
-        res = all((getattr(lhs, k) == getattr(rhs, k) for k in keys))
+        res = all(getattr(lhs, k) == getattr(rhs, k) for k in keys)
 
         return res and dicts_comp(lhs.xattrs, rhs.xattrs) or False
 
@@ -2472,7 +2472,7 @@ class FilelistCollector(Collector):
 
         @listfile  str  Path list file name or "-" (read list from stdin)
         """
-        return unique(concat((cls._parse(l) for l in cls.open(listfile).readlines())))
+        return unique(concat(cls._parse(l) for l in cls.open(listfile).readlines()))
 
     def _collect(self, listfile):
         """Collect FileInfo objects from given path list.
@@ -2542,7 +2542,7 @@ class JsonFilelistCollector(FilelistCollector):
 
     @classmethod
     def list_targets(cls, listfile):
-        return unique(concat((cls._parse(d) for d in json.load(cls.open(listfile)))))
+        return unique(concat(cls._parse(d) for d in json.load(cls.open(listfile))))
 
 
 
@@ -2592,7 +2592,7 @@ class TestFilelistCollector(unittest.TestCase):
             f.write("%s\n" % p)
         f.close()
 
-        ts = unique(concat((FilelistCollector._parse(p + "\n") for p in paths)))
+        ts = unique(concat(FilelistCollector._parse(p + "\n") for p in paths))
         self.assertListEqual(ts, FilelistCollector.list_targets(listfile))
 
     def test_run(self):
@@ -2829,8 +2829,8 @@ class PackageMaker(object):
 
         if not self.package.get('conflicts', False):
             self.package['conflicts'] = {
-                'names': unique((fi.conflicts for fi in self.package['fileinfos'] if fi.conflicts)),
-                'files': unique((fi.target for fi in self.package['fileinfos'] if fi.conflicts)),
+                'names': unique(fi.conflicts for fi in self.package['fileinfos'] if fi.conflicts),
+                'files': unique(fi.target for fi in self.package['fileinfos'] if fi.conflicts),
             }
 
     def configure(self):
@@ -3374,7 +3374,7 @@ def parse_template_list_str(templates):
     >>> assert parse_template_list_str("a:b,c:d") == {'a': 'b', 'c': 'd'}
     """
     if templates:
-        return dict((kv.split(':') for kv in templates.split(',')))
+        return dict(kv.split(':') for kv in templates.split(','))
     else:
         return dict()
 
