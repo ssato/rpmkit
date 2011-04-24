@@ -173,6 +173,17 @@ except NameError:  # python < 2.5
                 return False
         return True
 
+try:
+    import json
+    JSON_ENABLED = True
+except:
+    JSON_ENABLED = False
+
+    class json:
+        @staticmethod
+        def load(*args):
+            return ()
+
 
 
 __title__   = "Xpack"
@@ -1747,7 +1758,7 @@ class FileOperations(object):
         assert fileinfo.path != dest, "Copying src and dst are same!"
 
         if not fileinfo.copyable():
-            logging.warn(" Not copyable: %s" % str(self))
+            logging.warn(" Not copyable: %s" % str(fileinfo))
             return False
 
         if os.path.exists(dest):
@@ -2202,16 +2213,20 @@ class Target(object):
 
     def __init__(self, path, attrs={}):
         self.path = path
+        self.attrs = []
 
-        for attr, val in attrs:
+        for attr, val in attrs.iteritems():
             if attr == "path":
                 continue
 
             setattr(self, attr, val)
+            self.attrs.append(attr)
 
     def __cmp__(self, other):
         return cmp(self.path, other.path)
 
+    def attrs(self):
+        return self.attrs
 
 
 class FileInfoFilter(object):
@@ -2353,9 +2368,13 @@ class TargetAttributeModifier(FileInfoModifier):
         self.overrides = overrides
 
     def update(self, fileinfo, target, *args, **kwargs):
-        for attr in self.overrides or target.keys():
+        for attr in self.overrides or target.attrs:
+            if attr == "path":  # Do not overrides fileinfo.path.
+                continue
+
             val = getattr(target, attr, None)
             if val is not None:
+                logging.info("Override attr %s=%s in fileinfo: path=%s" % (attr, val, fileinfo.path))
                 setattr(fileinfo, attr, val)
 
         return fileinfo
@@ -2489,7 +2508,7 @@ class JsonFilelistCollector(FilelistCollector):
         {
             "path": "/a/b/c",
             "target": {
-                "path": "/a/c",
+                "target": "/a/c",
                 "uid": 100,
                 "gid": 0,
                 ...
@@ -2498,12 +2517,9 @@ class JsonFilelistCollector(FilelistCollector):
         ...
     ]
     """
+    global JSON_ENABLED
 
-    try:
-        import json
-        _enabled = True
-    except:
-        _enabled = False
+    _enabled = JSON_ENABLED
 
     def __init__(self, filelist, pkgname, options):
         super(JsonFilelistCollector, self).__init__(filelist, pkgname, options)
@@ -2516,7 +2532,7 @@ class JsonFilelistCollector(FilelistCollector):
         if not path or path.startswith("#"): 
             return []
         else:
-            return [Target(p, path_dict) for p in glob.glob(path)]
+            return [Target(p, path_dict["target"]) for p in glob.glob(path)]
 
     @classmethod
     def list_targets(cls, listfile):
@@ -2640,7 +2656,7 @@ class TestJsonFilelistCollector(unittest.TestCase):
     {
         "path": "/etc/resolv.conf",
         "target": {
-            "path": "/var/lib/network/resolv.conf",
+            "target": "/var/lib/network/resolv.conf",
             "uid": 0,
             "gid": 0,
             "conflicts": "NetworkManager"
@@ -2660,7 +2676,7 @@ class TestJsonFilelistCollector(unittest.TestCase):
 
     def test_list_targets(self):
         f = open(listfile, "w")
-        f.write(json.dumps(json.loads(self.json_data)))
+        f.write(self.json_data)
         f.close()
 
         ts = JsonFilelistCollector.list_targets(listfile)
@@ -2714,9 +2730,9 @@ class PackageMaker(object):
 
         collectotr_maps = {
             "filelist": FilelistCollector,
-            "jsonfilelist": JsonFilelistCollector,
+            "filelist.json": JsonFilelistCollector,
         }
-        self._collector = collectotr_maps.get(options.iformat, FilelistCollector)
+        self._collector = collectotr_maps.get(options.itype, FilelistCollector)
 
         relmap = []
         if package.has_key("relations"):
@@ -2737,7 +2753,7 @@ class PackageMaker(object):
         """
         >>> class O(object):
         ...     pass
-        >>> o = O(); o.upto = "build"; o.force = False; o.iformat = "filelist"
+        >>> o = O(); o.upto = "build"; o.force = False; o.itype = "filelist"
         >>> pm = PackageMaker({'name': 'foo', 'workdir': '/tmp/w', 'destdir': '',}, '/tmp/filelist', o)
         >>> pm.to_srcdir('/a/b/c')
         '/tmp/w/src/a/b/c'
@@ -3205,6 +3221,41 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 
 
 
+class TestMainProgram01JsonFileCases(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
+        self.json_data = """\
+[
+    {
+        "path": "/etc/resolv.conf",
+        "target": {
+            "target": "/var/lib/network/resolv.conf",
+            "uid": 0,
+            "gid": 0
+        }
+    }
+]
+"""
+        self.listfile = os.path.join(self.workdir, "filelist.json")
+        self.cmd = "python %s -n resolvconf -w %s --itype filelist.json " % (sys.argv[0], self.workdir)
+
+        logging.info("start")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_packaging_with_rpmdb_wo_mock(self):
+        f = open(self.listfile, "w")
+        f.write(self.json_data)
+        f.close()
+
+        cmd = self.cmd + "--no-mock " + self.listfile
+        self.assertEquals(os.system(cmd), 0)
+        self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
+
+
 class TestMainProgram01MultipleFilesCases(unittest.TestCase):
 
     def setUp(self):
@@ -3251,8 +3302,9 @@ def run_unittests(verbose, test_choice):
     ]
 
     system_tests = [
-        TestMainProgram01MultipleFilesCases,
         TestMainProgram00SingleFileCases,
+        TestMainProgram01JsonFileCases,
+        TestMainProgram01MultipleFilesCases,
     ]
 
     suites = [tsuite(c) for c in basic_tests]
@@ -3375,14 +3427,14 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         "default": UPTO,
     }
 
-    ptypes = unique([tf[0] for tf in pmaps.keys()])
-    ptypes_help = "Target package type: " + ", ".join(ptypes) + " [%default]"
+    pdriver = unique([tf[0] for tf in pmaps.keys()])
+    pdriver_help = "Package driver type: " + ", ".join(pdriver) + " [%default]"
 
     pformats = unique([tf[1] for tf in pmaps.keys()])
-    pformats_help = "Target package format: " + ", ".join(pformats) + " [%default]"
+    pformats_help = "Package format: " + ", ".join(pformats) + " [%default]"
 
-    iformats = ("filelist", "jsonfilelist")
-    iformats_help = "Input file format: " + ", ".join(iformats) + " [%default]"
+    itypes = ("filelist", "filelist.json")
+    itypes_help = "Input type: " + ", ".join(itypes) + " [%default]"
 
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
 
@@ -3399,7 +3451,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'upto': cds.get("upto", upto_params["default"]),
         'type': cds.get("type", "filelist"),
         'format': cds.get("format", "rpm"),
-        'iformat': cds.get("iformat", "filelist"),
+        'itype': cds.get("itype", "filelist"),
         'compressor': cds.get("compressor", "bz2"),
         'verbose': cds.get("verbose", False),
         'quiet': cds.get("quiet", False),
@@ -3475,9 +3527,9 @@ Examples:
     bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
     bog.add_option('', '--upto', type="choice", choices=upto_params['choices'],
         help="Which packaging step you want to proceed to: " + upto_params['choices_str'] + " [Default: %default]")
-    bog.add_option('', '--type', type="choice", choices=ptypes, help=ptypes_help)
+    bog.add_option('', '--driver', type="choice", choices=pdriver, help=pdriver_help)
     bog.add_option('', '--format', type="choice", choices=pformats, help=pformats_help)
-    bog.add_option('', '--iformat', type="choice", choices=iformats, help=iformats_help)
+    bog.add_option('', '--itype', type="choice", choices=itypes, help=itypes_help)
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
