@@ -186,7 +186,7 @@ except:
 
 
 
-__title__   = "Xpack"
+__title__   = "packagemaker"
 __version__ = "0.2"
 __author__  = "Satoru SATOH"
 __email__   = "satoru.satoh@gmail.com"
