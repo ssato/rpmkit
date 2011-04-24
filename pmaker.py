@@ -1040,12 +1040,18 @@ def is_foldable(xs):
     True
     >>> is_foldable((x for x in range(3)))
     True
+    >>> is_foldable(None)
+    False
+    >>> is_foldable(True)
+    False
+    >>> is_foldable(1)
+    False
     """
     return isinstance(xs, (list, tuple)) or callable(getattr(xs, "next", None))
 
 
-def listplus(list_x, foldable_y):
-    return list_x + list(foldable_y)
+def listplus(list_lhs, foldable_rhs):
+    return list_lhs + list(foldable_rhs)
 
 
 @memoize
