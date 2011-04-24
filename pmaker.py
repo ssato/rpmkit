@@ -2695,9 +2695,8 @@ class PackageMaker(object):
     def format(cls):
         return cls._format
 
-    @classmethod
-    def collector(cls):
-        return cls._collector
+    def collector(self):
+        return self._collector
 
     def __init__(self, package, filelist, options, *args, **kwargs):
         self.package = package
@@ -2712,6 +2711,12 @@ class PackageMaker(object):
         self.upto = options.upto
 
         self.srcdir = os.path.join(self.workdir, 'src')
+
+        collectotr_maps = {
+            "filelist": FilelistCollector,
+            "jsonfilelist": JsonFilelistCollector,
+        }
+        self._collector = collectotr_maps.get(options.iformat, FilelistCollector)
 
         relmap = []
         if package.has_key("relations"):
@@ -2784,8 +2789,8 @@ class PackageMaker(object):
             sys.exit()
 
     def collect(self, *args, **kwargs):
-        clctr = self.collector()(self.filelist, self.package["name"], self.options)
-        return clctr.collect()
+        collector = self.collector()(self.filelist, self.package["name"], self.options)
+        return collector.collect()
 
     def setup(self):
         self.package['fileinfos'] = self.collect()
@@ -3376,6 +3381,9 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
     pformats = unique([tf[1] for tf in pmaps.keys()])
     pformats_help = "Target package format: " + ", ".join(pformats) + " [%default]"
 
+    iformats = ("filelist", "jsonfilelist")
+    iformats_help = "Input file format: " + ", ".join(iformats) + " [%default]"
+
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
 
     mail = get_email(use_git)
@@ -3391,6 +3399,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'upto': cds.get("upto", upto_params["default"]),
         'type': cds.get("type", "filelist"),
         'format': cds.get("format", "rpm"),
+        'iformat': cds.get("iformat", "filelist"),
         'compressor': cds.get("compressor", "bz2"),
         'verbose': cds.get("verbose", False),
         'quiet': cds.get("quiet", False),
@@ -3426,7 +3435,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'build_self': False,
 
         "release_build": False,
-        "include_plugins": ",".join(glob.glob("pmaker-plugin-libvirt.py")),
+        "include_plugins": ",".join(glob.glob("pmaker-plugin-*.py")),
     }
 
     p = optparse.OptionParser("""%prog [OPTION ...] FILE_LIST
@@ -3468,6 +3477,7 @@ Examples:
         help="Which packaging step you want to proceed to: " + upto_params['choices_str'] + " [Default: %default]")
     bog.add_option('', '--type', type="choice", choices=ptypes, help=ptypes_help)
     bog.add_option('', '--format', type="choice", choices=pformats, help=pformats_help)
+    bog.add_option('', '--iformat', type="choice", choices=iformats, help=iformats_help)
     bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
         "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
         "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
