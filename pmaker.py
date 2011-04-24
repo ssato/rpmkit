@@ -3024,10 +3024,10 @@ def do_packaging_self(options):
     if options.include_plugins:
         plugin_files = options.include_plugins.split(",")
 
-    name = "packagemaker"
+    name = __title__
     workdir = tempfile.mkdtemp(dir='/tmp', prefix='pm-')
     summary = "A python script to build packages from existing files on your system"
-    relations = ""
+    relations = "python"
     packager = __author__
     mail = __email__
     url = __website__
