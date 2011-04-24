@@ -1069,7 +1069,7 @@ def flatten(xss):
     >>> flatten([(1,2,3),(4,5)])
     [1, 2, 3, 4, 5]
 
-    generator:
+    generator expression:
 
     >>> flatten((i, i * 2) for i in range(0,5))
     [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
