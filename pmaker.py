@@ -3565,7 +3565,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
     pformats = unique([tf[1] for tf in pmaps.keys()])
     pformats_help = "Package format: " + ", ".join(pformats) + " [%default]"
 
-    itypes = ("filelist", "filelist.json")
+    itypes = ("filelist", "filelist.ext", "filelist.json")
     itypes_help = "Input type: " + ", ".join(itypes) + " [%default]"
 
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
