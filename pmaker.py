@@ -3153,7 +3153,7 @@ def do_packaging_self(options):
     name = __title__
     workdir = tempfile.mkdtemp(dir='/tmp', prefix='pm-')
     summary = "A python script to build packages from existing files on your system"
-    relations = "python"
+    relations = "requires:python"
     packager = __author__
     mail = __email__
     url = __website__
