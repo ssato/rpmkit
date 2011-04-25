@@ -92,7 +92,7 @@
 #
 
 from distutils.sysconfig import get_python_lib
-from functools import reduce as foldl
+from functools import partial as curry, reduce as foldl
 from itertools import count, groupby
 
 import ConfigParser as cp
@@ -1006,6 +1006,44 @@ def memoize(fn):
     return wrapped
 
 
+class memoized(object):
+    """Decorator that caches a function's return value each time it is called.
+    If called later with the same arguments, the cached value is returned, and
+    not re-evaluated.
+
+    Originally came from
+    http://wiki.python.org/moin/PythonDecoratorLibrary#Memoize.
+    """
+    def __init__(self, func):
+        self.func = func
+        self.cache = {}
+
+    def __call__(self, *args):
+        try:
+            return self.cache[args]
+
+        except KeyError:
+            value = self.func(*args)
+            self.cache[args] = value
+            return value
+
+        except TypeError:
+            # uncachable -- for instance, passing a list as an argument.
+            # Better to not cache than to blow up entirely.
+            return self.func(*args)
+
+    def __repr__(self):
+        """Return the function's docstring.
+        """
+        return self.func.__doc__
+
+    def __get__(self, obj, objtype):
+        """Support instance methods.
+        """
+        return curry(self.__call__, obj)
+
+
+
 @memoize
 def checksum(filepath='', algo=sha1, buffsize=8192):
     """compute and check md5 or sha1 message digest of given file path.
@@ -1565,19 +1603,19 @@ class Rpm(object):
         # Release them to avoid core dumped or getting wrong result next time.
         del mi
 
-    @classmethod
-    def filelist(cls, cache=True, expires=1, pkl_proto=pickle.HIGHEST_PROTOCOL, rpmdb_path=None):
+    @memoized
+    def filelist(self, cache=True, expires=1, pkl_proto=pickle.HIGHEST_PROTOCOL, rpmdb_path=None):
         """TODO: It should be a heavy and time-consuming task. How to shorten
         this time? - caching, utilize yum's file list database or whatever.
 
         >>> f = '/etc/fstab'
         >>> if os.path.exists('/var/lib/rpm/Basenames'):
-        ...     db = Rpm.filelist()
+        ...     db = Rpm().filelist()
         ...     assert db.get(f) == 'setup'
         """
         data = None
 
-        cache_file = cls.RPM_FILELIST_CACHE
+        cache_file = self.RPM_FILELIST_CACHE
         cachedir = os.path.dirname(cache_file)
 
         if not os.path.exists(cachedir):
@@ -2346,7 +2384,7 @@ class RpmConflictsModifier(FileInfoModifier):
 
     def __init__(self, package, rpmdb_path=None):
         self.package = package
-        self.database = Rpm.filelist(rpmdb_path)
+        self.database = Rpm().filelist(rpmdb_path)
 
     def find_conflicts(self, path):
         """Find the package owns given path.
