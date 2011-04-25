@@ -2544,6 +2544,57 @@ class FilelistCollector(Collector):
 
 
 
+class ExtFilelistCollector(FilelistCollector):
+    """
+    Collector to collect fileinfo list from files list in simple format:
+
+    Format: A file or dir path (absolute or relative) |
+            Comment line starts with '#' |
+            Glob pattern to list multiple files or dirs
+    """
+    _enabled = True
+
+    def __init__(self, filelist, pkgname, options):
+        super(ExtFilelistCollector, self).__init__(filelist, pkgname, options)
+        self.modifiers.append(TargetAttributeModifier())
+
+    @staticmethod
+    def parse_line(line):
+        """
+        >>> cls = ExtFilelistCollector
+        >>> cls.parse_line("/etc/resolv.conf,target=/var/lib/network/resolv.conf,uid=0,gid=0\\n")
+        ('/etc/resolv.conf', [['target', '/var/lib/network/resolv.conf'], ['uid', '0'], ['gid', '0']])
+        """
+        path_attrs = line.rstrip().split(",")
+        path = path_attrs[0]
+        attrs = [kv.split("=") for kv in path_attrs[1:]]
+        return (path, attrs)
+
+    @classmethod
+    def _parse(cls, line):
+        """Parse the line and returns Target (path) list.
+
+        TODO: support glob expression in path.
+
+        >>> cls = ExtFilelistCollector
+        >>> cls._parse("#\\n")
+        []
+        >>> cls._parse("")
+        []
+        >>> cls._parse(" ")
+        []
+        >>> t = Target("/etc/resolv.conf", {"target": "/var/lib/network/resolv.conf", "uid": 0, "gid": 0})
+        >>> ts = cls._parse("/etc/resolv.conf,target=/var/lib/network/resolv.conf,uid=0,gid=0\\n")
+        >>> assert [t] == ts, str(ts)
+        """
+        if not line or line.startswith("#") or " " in line: 
+            return []
+        else:
+            (path, attrs) = cls.parse_line(line)
+            return [Target(path, dict(attrs)) for path, attrs in zip(glob.glob(path), [attrs])]
+
+
+
 class JsonFilelistCollector(FilelistCollector):
     """
     Collector for files list in JSON format such as:
@@ -2689,6 +2740,42 @@ class TestFilelistCollector(unittest.TestCase):
 
 
 
+class TestExtFilelistCollector(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+        logging.info("start")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_run(self):
+        #>>> ts = cls._parse("/etc/resolv.conf,target=/var/lib/network/resolv.conf,uid=0,gid=0\\n")
+        paths = [
+            "/etc/auto.*,uid=0,gid=0",
+            "#/etc/aliases.db",
+            "/etc/rc.d/rc,target=/etc/init.d/rc,uid=0,gid=0",
+        ]
+        listfile = os.path.join(self.workdir, "files.list")
+
+        f = open(listfile, "w")
+        for p in paths:
+            f.write("%s\n" % p)
+        f.close()
+
+        option_values = {
+            "format": "rpm",
+            "destdir": "",
+            "ignore_owner": False,
+            "no_rpmdb": False,
+        }
+
+        options = optparse.Values(option_values)
+        fc = ExtFilelistCollector(listfile, "foo", options)
+        fs = fc.collect()
+
+
+
 class TestJsonFilelistCollector(unittest.TestCase):
 
     def setUp(self):
@@ -2774,6 +2861,7 @@ class PackageMaker(object):
 
         collectotr_maps = {
             "filelist": FilelistCollector,
+            "filelist.ext": ExtFilelistCollector,
             "filelist.json": JsonFilelistCollector,
         }
         self._collector = collectotr_maps.get(options.itype, FilelistCollector)
