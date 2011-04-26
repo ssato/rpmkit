@@ -2949,7 +2949,7 @@ class PackageMaker(object):
         self.copyfiles()
         self.save()
 
-    def pre_configure(self):
+    def preconfigure(self):
         if not self.package.get('fileinfos', False):
             self.load()
 
@@ -2958,9 +2958,6 @@ class PackageMaker(object):
                 'names': unique(fi.conflicts for fi in self.package['fileinfos'] if fi.conflicts),
                 'files': unique(fi.target for fi in self.package['fileinfos'] if fi.conflicts),
             }
-
-    def configure(self):
-        self.pre_configure()
 
         self.package['distdata'] = distdata_in_makefile_am(
             [fi.target for fi in self.package['fileinfos'] if fi.type() == TYPE_FILE]
@@ -2972,6 +2969,7 @@ class PackageMaker(object):
         self.genfile('MANIFEST')
         self.genfile('MANIFEST.overrides')
 
+    def configure(self):
         if on_debug_mode():
             self.shell('autoreconf -vfi')
         else:
@@ -2995,6 +2993,7 @@ class PackageMaker(object):
         """
         steps = (
             ("setup", "Setting up src tree in %s: %s" % (self.workdir, self.pname)),
+            ("preconfigure", "Arrange autotool-ized src directory: %s" % self.pname),
             ("configure", "Configuring src distribution: %s" % self.pname),
             ("sbuild", "Building src package: %s" % self.pname),
             ("build", "Building bin packages: %s" % self.pname),
@@ -3059,8 +3058,8 @@ class RpmPackageMaker(TgzPackageMaker):
             else:
                 return self.shell("make rpm V=0 > /dev/null")
 
-    def configure(self):
-        super(RpmPackageMaker, self).configure()
+    def preconfigure(self):
+        super(RpmPackageMaker, self).preconfigure()
 
         self.genfile('rpm.mk')
         self.genfile("package.spec", "%s.spec" % self.pname)
@@ -3080,8 +3079,8 @@ class RpmPackageMaker(TgzPackageMaker):
 class DebPackageMaker(TgzPackageMaker):
     _format = "deb"
 
-    def configure(self):
-        super(DebPackageMaker, self).configure()
+    def preconfigure(self):
+        super(DebPackageMaker, self).preconfigure()
 
         debiandir = os.path.join(self.workdir, 'debian')
 
@@ -3548,7 +3547,8 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
 
     steps = (
         ("setup", "setup the package dir and copy target files in it"),
-        ("configure", "arrange build files such like configure.ac, Makefile.am, rpm spec file, debian/*, etc. autotools and python-cheetah will be needed"),
+        ("preconfigure", "arrange build files such like configure.ac, Makefile.am, rpm spec file, debian/*, etc. python-cheetah will be needed"),
+        ("configure", "setup './configure' runnable src dir. autotools will be needed"),
         ("sbuild", "build src package[s]"),
         ("build", "build binary package[s]"),
     )
