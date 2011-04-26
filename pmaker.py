@@ -3617,6 +3617,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'tests': False,
         'tlevel': test_choices[0],
         'build_self': False,
+        "profile": False,
 
         "release_build": False,
         "include_plugins": ",".join(glob.glob("pmaker-plugin-*.py")),
@@ -3716,6 +3717,7 @@ Examples:
     tog.add_option('', '--tests', action='store_true', help="Run tests.")
     tog.add_option('', '--tlevel', type="choice", choices=test_choices,
         help="Select the level of tests to run. Choices are " + ", ".join(test_choices) + " [%default]")
+    tog.add_option("", "--profile", action="store_true", help="Enable profiling")
     p.add_option_group(tog)
 
     p.add_option('', '--force', action="store_true", help='Force going steps even if the steps looks done')
@@ -3775,7 +3777,13 @@ def main(argv=sys.argv):
         sys.exit()
 
     if options.tests:
-        run_alltests(verbose_test, options.tlevel)
+        if options.profile:
+            import cProfile as profile
+            # FIXME: how to do? -  python <self> -m cProfile ...
+            print >> sys.stderr, "Not implemented yet. run 'python %s -m cProfile --tests --tlevel=%s ...' instead" % (argv[0], options.tlevel)
+            sys.exit()
+        else:
+            run_alltests(verbose_test, options.tlevel)
         sys.exit()
 
     if len(args) < 1:
