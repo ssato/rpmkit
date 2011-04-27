@@ -2596,11 +2596,15 @@ class ExtFilelistCollector(FilelistCollector):
         """
         >>> cls = ExtFilelistCollector
         >>> cls.parse_line("/etc/resolv.conf,target=/var/lib/network/resolv.conf,uid=0,gid=0\\n")
-        ('/etc/resolv.conf', [['target', '/var/lib/network/resolv.conf'], ['uid', '0'], ['gid', '0']])
+        ('/etc/resolv.conf', [['target', '/var/lib/network/resolv.conf'], ['uid', 0], ['gid', 0]])
         """
         path_attrs = line.rstrip().split(",")
         path = path_attrs[0]
-        attrs = [kv.split("=") for kv in path_attrs[1:]]
+        attrs = []
+
+        for attr, val in (kv.split("=") for kv in path_attrs[1:]):
+            attrs.append((attr, parse_conf_value(val)))   # e.g. "uid=0" -> ("uid", 0), etc.
+
         return (path, attrs)
 
     @classmethod
@@ -2783,7 +2787,6 @@ class TestExtFilelistCollector(unittest.TestCase):
         rm_rf(self.workdir)
 
     def test_run(self):
-        #>>> ts = cls._parse("/etc/resolv.conf,target=/var/lib/network/resolv.conf,uid=0,gid=0\\n")
         paths = [
             "/etc/auto.*,uid=0,gid=0",
             "#/etc/aliases.db",
@@ -2898,6 +2901,7 @@ class PackageMaker(object):
             "filelist.json": JsonFilelistCollector,
         }
         self._collector = collectotr_maps.get(options.itype, FilelistCollector)
+        logging.info("Use Collector: %s (%s)" % (self._collector.__name__, options.itype))
 
         relmap = []
         if package.has_key("relations"):
@@ -3174,7 +3178,7 @@ def load_plugins(package_makers_map=PACKAGE_MAKERS):
 
 def do_packaging(pkg, filelist, options, pmaps=PACKAGE_MAKERS):
     cls = pmaps.get((options.type, options.format), TgzPackageMaker)
-    logging.info(" Use %s class: type=%s, format=%s" % (cls.__name__, cls.type(), cls.format()))
+    logging.info("Use PackageMaker: %s: type=%s, format=%s" % (cls.__name__, cls.type(), cls.format()))
     cls(pkg, filelist, options).run()
 
 
