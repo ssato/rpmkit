@@ -162,6 +162,7 @@ except NameError:  # python < 2.5
                 return False
         return True
 
+
 try:
     import json
     JSON_ENABLED = True
@@ -1073,6 +1074,9 @@ def is_foldable(xs):
 
 
 def listplus(list_lhs, foldable_rhs):
+    """
+    (++) in python.
+    """
     return list_lhs + list(foldable_rhs)
 
 
@@ -1415,15 +1419,6 @@ class TestDecoratedFuncs(unittest.TestCase):
         """
         self.assertEquals(checksum(), '0' * len(sha1('').hexdigest()))
 
-    def test_flatten(self):
-        """if flatten() works as expected.
-        """
-        self.assertEquals(flatten([]),                                [])
-        self.assertEquals(flatten([[1, 2, 3], [4, 5]]),               [1, 2, 3, 4, 5])
-        self.assertEquals(flatten([[1, 2, [3]], [4, [5, 6]]]),        [1, 2, 3, 4, 5, 6])
-        self.assertEquals(flatten([(1, 2, 3), (4, 5)]),               [1, 2, 3, 4, 5])
-        self.assertEquals(flatten((i, i * 2) for i in range(0, 5)),   [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
-
     def test_is_foldable(self):
         """if is_foldable() works as expected.
         """
@@ -1434,11 +1429,30 @@ class TestDecoratedFuncs(unittest.TestCase):
         self.assertFalse(is_foldable(True))
         self.assertFalse(is_foldable(1))
 
+    def test_flatten(self):
+        """if flatten() works as expected.
+        """
+        self.assertListEqual(flatten([]), [])
+        self.assertListEqual(flatten([[1, 2, 3], [4, 5]]), [1, 2, 3, 4, 5])
+        self.assertListEqual(flatten([[1, 2, [3]], [4, [5, 6]]]), [1, 2, 3, 4, 5, 6])
+        self.assertListEqual(flatten([(1, 2, 3), (4, 5)]), [1, 2, 3, 4, 5])
+        self.assertListEqual(flatten((i, i * 2) for i in range(5)), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
+
+    def test_concat(self):
+        """if concat() works as expected.
+        """
+        self.assertListEqual(concat([[]]), [])
+        self.assertListEqual(concat((())), [])
+        self.assertListEqual(concat([[1, 2, 3], [4, 5]]), [1, 2, 3, 4, 5])
+        self.assertListEqual(concat([[1, 2, [3]], [4, [5, 6]]]), [1, 2, [3], 4, [5, 6]])
+        self.assertListEqual(concat([(1, 2, [3]), (4, [5, 6])]), [1, 2, [3], 4, [5, 6]])
+        self.assertListEqual(concat((i, i * 2) for i in range(5)), [0, 0, 1, 2, 2, 4, 3, 6, 4, 8])
+
     def test_unique(self):
         """if unique() works as expected.
         """
-        self.assertEquals(unique([]),                       [])
-        self.assertEquals(unique([0, 3, 1, 2, 1, 0, 4, 5]), [0, 1, 2, 3, 4, 5])
+        self.assertListEqual(unique([]), [])
+        self.assertListEqual(unique([0, 3, 1, 2, 1, 0, 4, 5]), [0, 1, 2, 3, 4, 5])
 
 
 
@@ -1527,19 +1541,6 @@ class Rpm(object):
 
         @path    Path of the file or directory (relative or absolute)
         @return  A dict; keys are fi_keys (see below)
-
-        >>> f1 = '/etc/fstab'
-        >>> pm = '/proc/mounts'
-        >>>  
-        >>> if os.path.exists('/var/lib/rpm/Basenames'):
-        ...     if os.path.exists(f1):
-        ...         pi = Rpm.pathinfo(f1)
-        ...         assert pi.get('path') == f1
-        ...         assert sorted(pi.keys()) == sorted(Rpm.fi_keys)
-        ...     #
-        ...     if os.path.exists(pm):
-        ...         pi = Rpm.pathinfo(pm)
-        ...         assert pi == {}, "result was '%s'" % str(pi)
         """
         _path = os.path.abspath(path)
 
@@ -1591,11 +1592,6 @@ class Rpm(object):
     def filelist(self, cache=True, expires=1, pkl_proto=pickle.HIGHEST_PROTOCOL, rpmdb_path=None):
         """TODO: It should be a heavy and time-consuming task. How to shorten
         this time? - caching, utilize yum's file list database or whatever.
-
-        >>> f = '/etc/fstab'
-        >>> if os.path.exists('/var/lib/rpm/Basenames'):
-        ...     db = Rpm().filelist()
-        ...     assert db.get(f) == 'setup'
         """
         data = None
 
@@ -1624,6 +1620,39 @@ class Rpm(object):
                 logging.warn(" Could not save the cache: %s" % cache_file)
 
         return data
+
+
+
+class TestRpm(unittest.TestCase):
+
+    def setUp(self):
+        logging.info("start")
+        self.do_test = os.path.exists("/var/lib/rpm/Basenames")
+
+    def test_pathinfo(self):
+        if not self.do_test:
+            return
+
+        f1 = "/etc/fstab"
+        pm = "/proc/mounts"
+
+        if os.path.exists(f1):
+            pi = Rpm.pathinfo(f1)
+            assert pi.get('path') == f1
+            assert sorted(pi.keys()) == sorted(Rpm.fi_keys)
+
+        if os.path.exists(pm):
+            pi = Rpm.pathinfo(pm)
+            assert pi == {}, "result was '%s'" % str(pi)
+
+    def test_filelist(self):
+        if not self.do_test:
+            return
+
+        f = "/etc/fstab"
+        db = Rpm().filelist()
+        assert db.get(f)
+        assert db.get(f) == "setup"
 
 
 
@@ -2668,7 +2697,7 @@ class TestFilelistCollector(unittest.TestCase):
         ts = unique(concat(FilelistCollector._parse(p + "\n") for p in paths))
         self.assertListEqual(ts, FilelistCollector.list_targets(listfile))
 
-    def test_run(self):
+    def test_collect(self):
         paths = [
             "/etc/auto.*",
             "#/etc/aliases.db",
@@ -3422,6 +3451,7 @@ def run_unittests(verbose, test_choice):
     ]
 
     system_tests = [
+        TestRpm,
         TestMainProgram00SingleFileCases,
         TestMainProgram01JsonFileCases,
         TestMainProgram01MultipleFilesCases,
