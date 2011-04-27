@@ -47,23 +47,12 @@
 # TODO:
 # * correct wrong English expressions
 # * more complete tests
-# * refactor the process to collect FileInfo objects
-# * detect parameters automatically as much as possible:
-#   * username, mail, fullname: almost done
-#   * url: "git config --get remote.origin.url", etc.
-# * sort out command line options
-# * plugin system: started working on it
-# * --tag option or something like that to support injection of other relationships
-#   among packages such as "Obsoletes: xpack" and "Provides: xpack", etc.
-# * refactor collect() and around methods and classes
-# * find causes of warnings during deb build and fix them all
+# * stabilize the API of the plugin system
+# * sort out command line options: Work in progress
 # * eliminate the strong dependency to rpm and make it runnable on debian based
 #   systems (w/o rpm-python)
+# * find causes of warnings during deb build and fix them all
 # * keep permissions of targets in tar archives
-# * configuration file support: almost done
-# * make it runnable on rhel 5 w/o python-cheetah: almost done
-# * test --format=deb = .deb output: almost done
-# * handle symlinks and dirs correctly: partially done
 #
 #
 # References (in random order):
@@ -325,9 +314,6 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 #if $noarch
 BuildArch:      noarch
 #end if
-#for $req in $requires
-Requires:       $req
-#end for
 #for $fi in $fileinfos
 #if $fi.type() == 'symlink'
 #set $linkto = $fi.linkto
@@ -420,11 +406,12 @@ Architecture: all
 #else
 Architecture: any
 #end if
-#if $requires
-#set $requires_list = ', ' + ', '.join($requires)
-#else
-#set $requires_list = ''
+#set $requires_list = ""
+#for $rel in $relations
+#if $rel.type == "Depends"
+#set $requires_list += $rel.targets
 #end if
+#end for
 Depends: \${shlibs:Depends}, \${misc:Depends}$requires_list
 Description: $summary
   $summary
@@ -930,9 +917,6 @@ summary =
 
 # Does the package depend on architecture?:
 arch    = False
-
-# a list of other package names separated with comma, required for the output package:
-requires        =
 
 # Full name of the packager, ex. John Doe
 packager =
@@ -3079,6 +3063,11 @@ class RpmPackageMaker(TgzPackageMaker):
 class DebPackageMaker(TgzPackageMaker):
     _format = "deb"
 
+    # TODO: Add almost relation tag set:
+    _relations = {
+        "requires": "Depends",
+    }
+
     def preconfigure(self):
         super(DebPackageMaker, self).preconfigure()
 
@@ -3600,7 +3589,6 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
         'summary': cds.get("summary", ""),
         'arch': cds.get("arch", False),
         'relations': cds.get("relations", ""),
-        'requires': cds.get("requires", ""),
         'packager': cds.get("packager", packager),
         'mail': cds.get("mail", mail),
 
@@ -3694,7 +3682,6 @@ Examples:
         "e.g. 'requires:curl,sed;obsoletes:foo-old'. "
         "Expressions of relation types and targets are varied depends on "
         "package format to use")
-    pog.add_option('', '--requires', help='Specify the package requirements as comma separated list')
     pog.add_option('', '--packager', help="Specify packager's name [%default]")
     pog.add_option('', '--mail', help="Specify packager's mail address [%default]")
     pog.add_option('', '--pversion', help="Specify the package version [%default]")
@@ -3797,9 +3784,6 @@ def main(argv=sys.argv):
     else:
         pkg['noarch'] = True
 
-    if options.relations:  # e.g. 'requires:curl,sed;obsoletes:foo-old'
-        pkg['relations'] = [rel.split(":") for rel in options.relations.split(";")]
-
     if options.templates:
         for tgt, tmpl in parse_template_list_str(options.templates).iteritems():
             if TEMPLATES.has_key(tgt):
@@ -3862,11 +3846,6 @@ def main(argv=sys.argv):
         pkg['summary'] = options.summary
     else:
         pkg['summary'] = 'Custom package of ' + options.name
-
-    if options.requires:
-        pkg['requires'] = options.requires.split(',')
-    else:
-        pkg['requires'] = []
 
     do_packaging(pkg, filelist, options)
 
