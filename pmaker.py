@@ -175,6 +175,12 @@ except:
             return ()
 
 
+try:
+    from yum import rpmsack
+    YUM_LOADED = True
+except:
+    YUM_LOADED = False
+
 
 __title__   = "packagemaker"
 __version__ = "0.2"
@@ -1623,6 +1629,21 @@ class Rpm(object):
 
 
 
+if YUM_LOADED:
+    rpmdb = rpmsack.RPMDBPackageSack()
+
+    @memoize
+    def rpm_search_provides_by_path(path):
+        rs = rpmdb.searchProvides(path)
+        return rs and rs[0].name or False
+else:
+    @memoize
+    def rpm_search_provides_by_path(path):
+        database = Rpm().filelist(rpmdb_path)
+        return database.get(path, False)
+
+
+
 class TestRpm(unittest.TestCase):
 
     def setUp(self):
@@ -2397,12 +2418,11 @@ class RpmConflictsModifier(FileInfoModifier):
 
     def __init__(self, package, rpmdb_path=None):
         self.package = package
-        self.database = Rpm().filelist(rpmdb_path)
 
     def find_conflicts(self, path):
         """Find the package owns given path.
         """
-        owner_package = self.database.get(path, False)
+        owner_package = rpm_search_provides_by_path(path)
 
         if owner_package and owner_package != self.package:
             logging.warn("%s is owned by %s (will be conflict with it)" % (path, owner_package))
