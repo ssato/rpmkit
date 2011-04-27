@@ -2596,7 +2596,7 @@ class ExtFilelistCollector(FilelistCollector):
         """
         >>> cls = ExtFilelistCollector
         >>> cls.parse_line("/etc/resolv.conf,target=/var/lib/network/resolv.conf,uid=0,gid=0\\n")
-        ('/etc/resolv.conf', [['target', '/var/lib/network/resolv.conf'], ['uid', 0], ['gid', 0]])
+        ('/etc/resolv.conf', [('target', '/var/lib/network/resolv.conf'), ('uid', 0), ('gid', 0)])
         """
         path_attrs = line.rstrip().split(",")
         path = path_attrs[0]
@@ -3284,6 +3284,8 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         target = "/etc/resolv.conf"
         self.cmd = "echo %s | python %s -n resolvconf -w %s " % (target, sys.argv[0], self.workdir)
 
+        self.network_avail = os.system("ping -c 1 -w 1 www.google.com") == 0
+
         logging.info("start") # dummy log
 
     def tearDown(self):
@@ -3358,6 +3360,10 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
     def test_packaging_with_rpmdb_with_mock(self):
+        if not self.network_avail:
+            logging.warn("Network does not look available right now. Skip this test.")
+            return
+
         cmd = self.cmd + "-"
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
