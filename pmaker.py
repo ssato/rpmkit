@@ -1973,6 +1973,8 @@ class FileInfo(object):
 
         self.perm_default = "0644"
 
+        self.rpmattr = None
+
         for k, v in kwargs.iteritems():
             self[k] = v
 
@@ -2003,10 +2005,13 @@ class FileInfo(object):
         return self.operations.copy(self, dest, force)
 
     def rpm_attr(self):
-        if self.need_to_chmod() or self.need_to_chown():
-            return rpm_attr(self) + " "
+        if self.rpmattr is None:
+            if self.need_to_chmod() or self.need_to_chown():
+                return rpm_attr(self) + " "
+            else:
+                return ""
         else:
-            return ""
+            return self.rpmattr + " "
 
 
 
@@ -2702,6 +2707,7 @@ class JsonFilelistCollector(FilelistCollector):
                 "target": "/a/c",
                 "uid": 100,
                 "gid": 0,
+                "rpmattr": "%config(noreplace)",
                 ...
             }
         },
@@ -2852,11 +2858,12 @@ class TestExtFilelistCollector(unittest.TestCase):
     def tearDown(self):
         rm_rf(self.workdir)
 
-    def test_run(self):
+    def test_collect(self):
         paths = [
             "/etc/auto.*,uid=0,gid=0",
             "#/etc/aliases.db",
             "/etc/rc.d/rc,target=/etc/init.d/rc,uid=0,gid=0",
+            "/etc/rc.d/rc.local,rpmattr=%config(noreplace)",
         ]
         listfile = os.path.join(self.workdir, "files.list")
 
@@ -2898,7 +2905,8 @@ class TestJsonFilelistCollector(unittest.TestCase):
     {
         "path": "/etc/hosts",
         "target": {
-            "conflicts": "setup"
+            "conflicts": "setup",
+            "rpmattr": "%config(noreplace)"
         }
     }
 ]
