@@ -190,6 +190,7 @@ __website__ = "https://github.com/ssato/rpmkit"
 
 
 PACKAGE_MAKERS = {}
+COLLECTORS = {}
 
 
 PKG_COMPRESSORS = {
@@ -2501,11 +2502,22 @@ class TargetAttributeModifier(FileInfoModifier):
 
 
 class Collector(object):
+    """Abstract class for collector classes
+    """
 
     _enabled = True
+    _type = None
 
     def __init__(self, *args, **kwargs):
         pass
+
+    @classmethod
+    def type(cls):
+        return cls._type
+
+    @classmethod
+    def register(cls, cmaps=COLLECTORS):
+        cmaps[cls.type()] = cls
 
     def enabled(self):
         return self._enabled
@@ -2527,6 +2539,8 @@ class FilelistCollector(Collector):
             Comment line starts with '#' |
             Glob pattern to list multiple files or dirs
     """
+
+    _type = "filelist"
 
     def __init__(self, filelist, pkgname, options):
         """
@@ -2628,6 +2642,7 @@ class ExtFilelistCollector(FilelistCollector):
             Glob pattern to list multiple files or dirs
     """
     _enabled = True
+    _type = "filelist.ext"
 
     def __init__(self, filelist, pkgname, options):
         super(ExtFilelistCollector, self).__init__(filelist, pkgname, options)
@@ -2694,6 +2709,7 @@ class JsonFilelistCollector(FilelistCollector):
     global JSON_ENABLED
 
     _enabled = JSON_ENABLED
+    _type = "filelist.json"
 
     def __init__(self, filelist, pkgname, options):
         super(JsonFilelistCollector, self).__init__(filelist, pkgname, options)
@@ -2711,6 +2727,12 @@ class JsonFilelistCollector(FilelistCollector):
     @classmethod
     def list_targets(cls, listfile):
         return unique(concat(cls._parse(d) for d in json.load(cls.open(listfile))))
+
+
+
+FilelistCollector.register()
+ExtFilelistCollector.register()
+JsonFilelistCollector.register()
 
 
 
@@ -2896,13 +2918,15 @@ class TestJsonFilelistCollector(unittest.TestCase):
 class PackageMaker(object):
     """Abstract class for classes to implement various packaging processes.
     """
-    global TEMPLATES
+    global TEMPLATES, COLLECTORS
 
     _templates = TEMPLATES
     _type = "filelist"
     _format = None
     _collector = FilelistCollector
     _relations = {}
+
+    _collector_maps = COLLECTORS
 
     @classmethod
     def register(cls, pmmaps=PACKAGE_MAKERS):
@@ -2937,12 +2961,7 @@ class PackageMaker(object):
 
         self.srcdir = os.path.join(self.workdir, 'src')
 
-        collectotr_maps = {
-            "filelist": FilelistCollector,
-            "filelist.ext": ExtFilelistCollector,
-            "filelist.json": JsonFilelistCollector,
-        }
-        self._collector = collectotr_maps.get(options.itype, FilelistCollector)
+        self._collector = self._collector_maps.get(options.itype, FilelistCollector)
         logging.info("Use Collector: %s (%s)" % (self._collector.__name__, options.itype))
 
         relmap = []
@@ -3326,8 +3345,6 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         target = "/etc/resolv.conf"
         self.cmd = "echo %s | python %s -n resolvconf -w %s " % (target, sys.argv[0], self.workdir)
 
-        self.network_avail = os.system("ping -c 1 -w 1 www.google.com") == 0
-
         logging.info("start") # dummy log
 
     def tearDown(self):
@@ -3402,7 +3419,9 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
     def test_packaging_with_rpmdb_with_mock(self):
-        if not self.network_avail:
+        network_avail = os.system("ping -c 1 -w 1 github.com") == 0
+
+        if not network_avail:
             logging.warn("Network does not look available right now. Skip this test.")
             return
 
@@ -3632,7 +3651,7 @@ def init_defaults_by_conffile(config=None, profile=None, prog="pmaker"):
     return defaults
 
 
-def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES):
+def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS, test_choices=TEST_CHOICES):
     global PKG_COMPRESSORS, UPTO
 
     ver_s = "%prog " + V
@@ -3657,7 +3676,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, test_choices=TEST_CHOICES
     pformats = unique([tf[1] for tf in pmaps.keys()])
     pformats_help = "Package format: " + ", ".join(pformats) + " [%default]"
 
-    itypes = ("filelist", "filelist.ext", "filelist.json")
+    itypes = itypes.keys()
     itypes_help = "Input type: " + ", ".join(itypes) + " [%default]"
 
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
