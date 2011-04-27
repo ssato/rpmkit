@@ -1779,16 +1779,16 @@ class FileOperations(object):
         >>> file0 = "/etc/resolv.conf"
         >>> if os.path.exists(file0):
         ...     mode = os.lstat(file0).st_mode
-        ...     expected = oct(stat.S_IMODE(mode & 0777))[1:]
+        ...     expected = oct(stat.S_IMODE(mode & 0777))
         ...     assert expected == FileOperations.permission(mode)
         >>> 
         >>> gshadow = "/etc/gshadow-"
         >>> if os.path.exists(gshadow):
         ...     mode = os.lstat(gshadow).st_mode
-        ...     assert "000" == FileOperations.permission(mode)
+        ...     assert "0000" == FileOperations.permission(mode)
         """
         m = stat.S_IMODE(mode & 0777)
-        return m == 0 and "000" or oct(m)[1:]
+        return m == 0 and "0000" or oct(m)
 
     @classmethod
     def copy_main(cls, fileinfo, dest, use_pyxattr=USE_PYXATTR):
@@ -1970,7 +1970,7 @@ class FileInfo(object):
         self.checksum = checksum
         self.xattrs = xattrs or {}
 
-        self.perm_default = '644'
+        self.perm_default = "0644"
 
         for k, v in kwargs.iteritems():
             self[k] = v
@@ -2016,7 +2016,7 @@ class DirInfo(FileInfo):
 
     def __init__(self, path, mode, uid, gid, checksum, xattrs):
         super(DirInfo, self).__init__(path, mode, uid, gid, checksum, xattrs)
-        self.perm_default = '755'
+        self.perm_default = "0755"
 
     def rpm_attr(self):
         return super(DirInfo, self).rpm_attr() + "%dir "
@@ -2246,12 +2246,12 @@ def rpm_attr(fileinfo):
 
     >>> fi = FileInfo('/dummy/path', 33204, 0, 0, checksum(),{})
     >>> rpm_attr(fi)
-    '%attr(664, -, -)'
+    '%attr(0664, -, -)'
     >>> fi = FileInfo('/bin/foo', 33261, 1, 1, checksum(),{})
     >>> rpm_attr(fi)
-    '%attr(755, bin, bin)'
+    '%attr(0755, bin, bin)'
     """
-    m = fileinfo.permission() # ex. '755'
+    m = fileinfo.permission() # ex. "0755"
     u = (fileinfo.uid == 0 and '-' or pwd.getpwuid(fileinfo.uid).pw_name)
     g = (fileinfo.gid == 0 and '-' or grp.getgrgid(fileinfo.gid).gr_name)
 
@@ -2284,6 +2284,48 @@ def do_nothing(*args, **kwargs):
 
 def on_debug_mode():
     return logging.getLogger().level < logging.INFO
+
+
+
+class TestMiscFunctions(unittest.TestCase):
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+        logging.info("start")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_rpm_attr(self):
+        """
+        TODO: tests for dirs and symlinks.
+        """
+        f0 = os.path.join(self.workdir, "afile")
+        f1 = os.path.join(self.workdir, "adir")
+        f2 = os.path.join(self.workdir, "asymlink")
+        gshadow = "/etc/gshadow-"
+
+        def run_or_die(cmd, errmsg=None):
+            if 0 != os.system(cmd):
+                em = errmsg is None and "Could not run: " + cmd or errmsg
+                raise RuntimeError(em)
+
+        run_or_die("touch " + f0)
+        run_or_die("mkdir -p " + f1)
+        run_or_die("cd %s && ln -s %s %s" % (self.workdir, f0, f2))
+
+        ff = FileInfoFactory()
+
+        user = pwd.getpwuid(os.getuid()).pw_name
+        group = grp.getgrgid(os.getgid()).gr_name
+
+        fi = ff.create(f0)
+        run_or_die("chmod %s %s" % (fi.perm_default, f0))
+        self.assertEquals(rpm_attr(fi), "%%attr(%s, %s, %s)" % (fi.perm_default, user, group))
+
+        for m in ("0755", "0664"):  # TODO: "chmod 1755 ..." does not look worked.
+            run_or_die("chmod %s %s" % (m, f0))
+            self.assertEquals(rpm_attr(ff.create(f0)), "%%attr(%s, %s, %s)" % (m, user, group))
 
 
 
@@ -3464,7 +3506,7 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
 
 
 def run_doctests(verbose):
-    doctest.testmod(verbose=verbose)
+    doctest.testmod(verbose=verbose, raise_on_error=True)
 
 
 def run_unittests(verbose, test_choice):
@@ -3477,6 +3519,7 @@ def run_unittests(verbose, test_choice):
         TestDecoratedFuncs,
         TestFuncsWithSideEffects,
         TestFileOperations,
+        TestMiscFunctions,
         TestFilelistCollector,
     ]
 
