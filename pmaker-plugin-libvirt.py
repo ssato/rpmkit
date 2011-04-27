@@ -1,5 +1,5 @@
 #
-# xpack plugin for libvirt objects:
+# packagemaker plugin for libvirt objects:
 # 
 # Copyright (C) 2011 Satoru SATOH <satoru.satoh @ gmail.com>
 #

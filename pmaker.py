@@ -2241,7 +2241,7 @@ def distdata_in_makefile_am(paths, srcdir='src'):
 
 
 def rpm_attr(fileinfo):
-    """Returns '%attr(...)' to specify the file attribute of $fileinfo.path in
+    """Returns '%attr(...)' to specify the file/dir attribute, will be used in
     the %files section in rpm spec.
 
     >>> fi = FileInfo('/dummy/path', 33204, 0, 0, checksum(),{})
@@ -2309,8 +2309,8 @@ class Target(object):
 
 class FileInfoFilter(object):
     """
-    Base class to filter specific FileInfo objects not to collect unnecessary
-    ones during Collector.collect().
+    Base class to filter out specific FileInfo objects and make them not
+    collected when Collector.collect() runs.
     """
 
     def __init__(self, *args, **kwargs):
@@ -2318,8 +2318,8 @@ class FileInfoFilter(object):
 
     def pred(self, fileinfo):
         """
-        Pred. to filter fileinfos of which type is not file, symlink or dir.
-        (filter out rule).
+        Predicate to filter out fileinfos of which type is not file, symlink or
+        dir.  (filter out rule).
 
         @fileinfo  FileInfo object
 
@@ -2419,19 +2419,19 @@ class RpmConflictsModifier(FileInfoModifier):
     def __init__(self, package, rpmdb_path=None):
         self.package = package
 
-    def find_conflicts(self, path):
+    def find_owner(self, path):
         """Find the package owns given path.
         """
         owner_package = rpm_search_provides_by_path(path)
 
         if owner_package and owner_package != self.package:
-            logging.warn("%s is owned by %s (will be conflict with it)" % (path, owner_package))
+            logging.warn("%s is owned by %s" % (path, owner_package))
             return owner_package
         else:
             return ""
 
     def update(self, fileinfo, *args, **kwargs):
-        fileinfo.conflicts = self.find_conflicts(fileinfo.path)
+        fileinfo.conflicts = self.find_owner(fileinfo.path)
         return fileinfo
 
 
@@ -2446,7 +2446,7 @@ class TargetAttributeModifier(FileInfoModifier):
 
     def update(self, fileinfo, target, *args, **kwargs):
         for attr in self.overrides or target.attrs:
-            if attr == "path":  # Do not overrides fileinfo.path.
+            if attr == "path":  # fileinfo.path must not be override.
                 continue
 
             val = getattr(target, attr, None)
