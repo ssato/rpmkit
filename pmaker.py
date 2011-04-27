@@ -2517,10 +2517,12 @@ class Collector(object):
 
     @classmethod
     def register(cls, cmaps=COLLECTORS):
-        cmaps[cls.type()] = cls
+        if cls.enabled():
+            cmaps[cls.type()] = cls
 
-    def enabled(self):
-        return self._enabled
+    @classmethod
+    def enabled(cls):
+        return cls._enabled
 
     def make_enabled(self):
         self._enabled = True
@@ -3676,7 +3678,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS, test_c
     pformats = unique([tf[1] for tf in pmaps.keys()])
     pformats_help = "Package format: " + ", ".join(pformats) + " [%default]"
 
-    itypes = itypes.keys()
+    itypes = sorted(itypes.keys())
     itypes_help = "Input type: " + ", ".join(itypes) + " [%default]"
 
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
