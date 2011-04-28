@@ -810,7 +810,8 @@ def test(verbose):
 
 
 def opt_parser():
-    defaults = init_defaults_by_conffile()
+    defaults = init_defaults()
+    defaults.update(init_defaults_by_conffile())
 
     p = optparse.OptionParser("""%prog COMMAND [OPTION ...] [ARGS]
 
