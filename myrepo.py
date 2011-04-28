@@ -27,7 +27,6 @@
 #
 
 from Cheetah.Template import Template
-from itertools import chain
 
 import ConfigParser as cp
 import copy
@@ -105,7 +104,7 @@ def list_archs():
         return default
 
 
-def shell(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
+def shell(cmd, workdir=None, log=True, dryrun=False, stop_on_error=True):
     """
     @cmd      str   command string, e.g. "ls -l ~".
     @workdir  str   in which dir to run given command?
@@ -124,7 +123,7 @@ def shell(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
     ...    pass
     >>> assert 0 == shell("ls /root", '.', False, True)
     """
-    if not workdir:
+    if workdir is None:
         workdir = os.path.abspath(os.curdir)
 
     logging.info(" Run: %s [%s]" % (cmd, workdir))
