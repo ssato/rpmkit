@@ -40,6 +40,7 @@ import platform
 import pprint
 import re
 import rpm
+import socket
 import subprocess
 import sys
 import tempfile
@@ -79,17 +80,6 @@ def compile_template(template, params, is_file=False):
 
 
 @memoize
-def list_dists():
-    """List available dist names, e.g. ["fedora-14", "rhel-6"]
-    """
-    mockdir = "/etc/mock"
-    arch = list_archs()[0]
-    reg = re.compile("%s/(?P<dist>[^-]+-[^-]+)-%s.cfg" % (mockdir, arch))
-
-    return [reg.match(c).groups()[0] for c in sorted(glob.glob("%s/*-*-%s.cfg" % (mockdir, arch)))]
-
-
-@memoize
 def list_archs():
     """List 'normalized' architecutres this host (mock) can support.
     """
@@ -102,6 +92,17 @@ def list_archs():
         return ["i386"]
     else:
         return default
+
+
+@memoize
+def list_dists():
+    """List available dist names, e.g. ["fedora-14", "rhel-6"]
+    """
+    mockdir = "/etc/mock"
+    arch = list_archs()[0]
+    reg = re.compile("%s/(?P<dist>[^-]+-[^-]+)-%s.cfg" % (mockdir, arch))
+
+    return [reg.match(c).groups()[0] for c in sorted(glob.glob("%s/*-*-%s.cfg" % (mockdir, arch)))]
 
 
 def shell(cmd, workdir=None, log=True, dryrun=False, stop_on_error=True):
@@ -243,12 +244,19 @@ def rm_rf(dir):
         os.removedirs(dir)
 
 
+@memoize
+def hostname():
+    return socket.gethostname() or os.uname()[1]
+
+
+@memoize
 def get_username():
     """Get username.
     """
     return os.environ.get("USER", False) or os.getlogin()
 
 
+@memoize
 def get_email(use_git):
     if use_git:
         try:
@@ -258,9 +266,10 @@ def get_email(use_git):
             logging.warn("get_email: " + str(e))
             pass
 
-    return os.environ.get("MAIL_ADDRESS", False) or "%s@localhost.localdomain" % get_username()
+    return "%s@localhost.localdomain" % get_username()
 
 
+@memoize
 def get_fullname(use_git):
     """Get full name of the user.
     """
@@ -273,6 +282,28 @@ def get_fullname(use_git):
             pass
 
     return os.environ.get("FULLNAME", False) or get_username()
+
+
+def get_distribution():
+    """Get name and version of the distribution of the system based on
+    heuristics.
+    """
+    fedora_f = "/etc/fedora-release"
+    rhel_f = "/etc/redhat-release"
+
+    if os.path.exists(fedora_f):
+        name = "fedora"
+        m = re.match(r"^Fedora .+ ([0-9]+) .+$", open(fedora_f).read())
+        version = m is None and "14" or m.groups()[0]
+
+    elif os.path.exists(rhel_f):
+        name = "rhel"
+        m = re.match(r"^Red Hat.* ([0-9]+) .*$", open(fedora_f).read())
+        version = m is None and "6" or m.groups()[0]
+    else:
+        raise RuntimeError("Not supported distribution!")
+
+    return (name, version)
 
 
 def rpm_header_from_rpmfile(rpmfile):
@@ -669,10 +700,25 @@ def init_defaults_by_conffile(config=None, profile=None):
     if not loaded:
         return {}
 
-    if profile:
-        defaults = dict((k, parse_conf_value(v)) for k,v in cparser.items(profile))
-    else:
-        defaults = cparser.defaults()
+    d = profile and cparser.items(profile) or cparser.defaults().iteritems()
+
+    return dict((k, parse_conf_value(v)) for k, v in d)
+
+
+def init_defaults():
+    use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
+
+    defaults = {
+        "server": hostname(),
+        "username": get_username(),
+        "email":  get_email(use_git),
+        "fullname": get_fullname(use_git),
+        "dists": ["%s-%s" % get_distribution()],
+        "archs": list_archs(),
+        "repo_subdir": "yum",
+        "repo_location": "%(server)s@%(username)s:~%(username)s/public_html/%(subdir)s",
+        "repo_baseurl": "http://%(server)s/%(username)s/%(subdir)s/%(distdir)s",
+    }
 
     return defaults
 
