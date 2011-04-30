@@ -27,6 +27,7 @@
 #
 
 from Cheetah.Template import Template
+from itertools import product
 
 import ConfigParser as cp
 import copy
@@ -708,15 +709,20 @@ def init_defaults_by_conffile(config=None, profile=None):
 def init_defaults():
     use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
 
+    dists = ["%s-%s" % get_distribution()]
+    archs = list_archs()
+    distributions = ["%s-%s" % da for da in product(dists, archs)]
+
     defaults = {
         "server": hostname(),
         "username": get_username(),
         "email":  get_email(use_git),
         "fullname": get_fullname(use_git),
-        "dists": ["%s-%s" % get_distribution()],
-        "archs": list_archs(),
+        "dists": dists,
+        "archs": archs,
+        "distributions": distributions,
         "repo_subdir": "yum",
-        "repo_location": "%(server)s@%(username)s:~%(username)s/public_html/%(subdir)s",
+        "repo_location": "%(server)s@%(username)s:~/public_html/%(subdir)s",
         "repo_baseurl": "http://%(server)s/%(username)s/%(subdir)s/%(distdir)s",
     }
 
