@@ -1049,6 +1049,19 @@ Examples:
     return p
 
 
+def job(args):
+    meth = args[0]
+    repo = args[1]
+
+    f = getattr(RepoOperations, meth)
+
+    if len(args) >= 3:
+        for srpm in args[2:]:
+            f(repo, srpm)
+    else:
+        f(repo)
+
+
 def main():
     (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = ("init", "update", "build", "deploy")
 
@@ -1125,34 +1138,26 @@ def main():
 
         repos.append(repo)
  
-    def f(args):
-        meth = args[0]
-        repo = args[1]
+    if not experimental:
+        for repo in repos:
+            job([cmd, repo] + args[1:])
 
-        if len(args) >= 3:
-            for srpm in args[2:]:
-                meth(repo, srpm)
-        else:
-            meth(repo)
-
-    for repo in repos:
-        f([getattr(RepoOperations, cmd)] + [repo] + args[1:])
-
-    sys.exit()
-
-    # experimental code:
-    nrepos = len(repos)
-
-    if nrepos == 1:
-        f([getattr(RepoOperations, cmd)] + [repos[0]] + args[1:])
         sys.exit()
 
-    ncpus = mp.cpu_count()
-    num = nrepos > ncpus and ncpus or nrepos
+    else:
+        # experimental code:
+        nrepos = len(repos)
 
-    pool = multiprocessing.Pool(num)
-    result = pool.apply_async(f, [[getattr(RepoOperations, cmd)] + [repo] + args[1:] for repo in repos])
-    result.get(timeout=60*20)
+        #if nrepos == 1:
+        #    job([cmd, repos[0]] + args[1:])
+        #    sys.exit()
+
+        ncpus = multiprocessing.cpu_count()
+        num = nrepos > ncpus and ncpus or nrepos
+
+        pool = multiprocessing.Pool(num)
+        result = pool.map_async(job, [[cmd, repo] + args[1:] for repo in repos])
+        result.get(timeout=60*30)
 
 
 if __name__ == '__main__':
