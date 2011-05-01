@@ -328,6 +328,8 @@ def is_noarch(srpm):
 
 class TestMemoizedFuncs(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def test_memoize(self):
         fun_0 = lambda a: a * 2
         memoized_fun_0 = memoize(fun_0)
@@ -379,6 +381,8 @@ class TestMemoizedFuncs(unittest.TestCase):
 
 
 class TestMiscFuncs(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="myrepo-tests")
@@ -443,6 +447,8 @@ class Distribution(object):
 
 
 class TestDistribution(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="myrepo-tests")
@@ -724,6 +730,8 @@ pmaker -n ${repo.name}-release --license MIT \\
 
 class TestRepo(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.workdir = tempfile.mkdtemp(prefix="myrepo-repo-tests")
         self.config = init_defaults()
@@ -880,6 +888,8 @@ def init_defaults():
 
 class TestFuncsWithSideEffects(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="myrepo-tests")
 
@@ -916,10 +926,10 @@ b: bbb
 
 class TestAppLocal(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.prog = "python %s" % sys.argv[0]
-
-
         self.workdir = tempfile.mkdtemp(prefix="myrepo-test-tal-")
 
     def tearDown(self):
