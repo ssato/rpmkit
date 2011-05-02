@@ -864,8 +864,12 @@ def init_defaults_by_conffile(config=None, profile=None):
     return dict((k, parse_conf_value(v)) for k, v in d)
 
 
-def init_defaults():
-    dists = ["%s-%s" % get_distribution()]
+def init_defaults(limit_running_dist=False):
+    if limit_running_dist:
+        dists = ["%s-%s" % get_distribution()]
+    else:
+        dists = list_dists()
+
     archs = list_archs()
     distributions = ["%s-%s" % da for da in product(dists, archs)]
 
@@ -998,6 +1002,8 @@ def test(verbose):
 
 def opt_parser():
     defaults = init_defaults()
+    distribution_choices = defaults["dists"]  # save it.
+
     defaults.update(init_defaults_by_conffile())
 
     p = optparse.OptionParser("""%prog COMMAND [OPTION ...] [ARGS]
@@ -1031,7 +1037,7 @@ Examples:
     p.add_option("-F", "--fullname", help="Your full name [%default]")
 
     p.add_option("", "--dists", help="Comma separated distribution labels including arch. "
-        "Options are some of default [%default]")
+        "Options are some of " + distribution_choices + " [%default]")
 
     p.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Quiet mode")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -1138,6 +1144,8 @@ def main():
 
         repos.append(repo)
  
+    experimental = False
+
     if not experimental:
         for repo in repos:
             job([cmd, repo] + args[1:])
