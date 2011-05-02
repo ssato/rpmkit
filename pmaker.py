@@ -469,48 +469,61 @@ $name ($version) unstable; urgency=low
 EXAMPLE_LOGS = [
     """## A. Packaing files in given files list, "files.list":
 
-$ ls
-files.list  pmaker.py
-$ cat files.list
-/etc/auto.*
-/etc/modprobe.d/*
-/etc/resolv.conf
-/etc/yum.repos.d/fedora.repo
-#/etc/aliases.db
-/etc/system-release
-/etc/httpd/conf.d
+$ cat << EOF > files.list
+> /etc/auto.*
+> /etc/modprobe.d/*
+> /etc/resolv.conf
+> /etc/yum.repos.d/fedora.repo
+> #/etc/aliases.db
+> /etc/system-release
+> /etc/httpd/conf.d
+> EOF
 $ python pmaker.py -n sysdata -w ./0 -q files.list
-03:52:50 [WARNING]  /etc/auto.master is owned by autofs and it (sysdata) will conflict with autofs
-03:52:50 [WARNING]  /etc/auto.misc is owned by autofs and it (sysdata) will conflict with autofs
-03:52:51 [WARNING]  /etc/auto.net is owned by autofs and it (sysdata) will conflict with autofs
-03:52:51 [WARNING]  /etc/auto.smb is owned by autofs and it (sysdata) will conflict with autofs
-03:52:51 [WARNING]  /etc/httpd/conf.d is owned by httpd and it (sysdata) will conflict with httpd
-03:52:51 [WARNING]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link and it (sysdata) will conflict with pilot-link
-03:52:51 [WARNING]  /etc/modprobe.d/blacklist.conf is owned by hwdata and it (sysdata) will conflict with hwdata
-03:52:51 [WARNING]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
-03:52:52 [WARNING]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
-03:52:52 [WARNING]  /etc/modprobe.d/dist.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
-03:52:52 [WARNING]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4 and it (sysdata) will conflict with libmlx4
-03:52:52 [WARNING]  /etc/modprobe.d/poulsbo.conf is owned by xorg-x11-drv-psb and it (sysdata) will conflict with xorg-x11-drv-psb
-03:52:52 [WARNING]  /etc/system-release is owned by fedora-release and it (sysdata) will conflict with fedora-release
-03:52:53 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release and it (sysdata) will conflict with fedora-release
-03:52:53 [WARNING] [Errno 1] Operation not permitted: '/tmp/t/0/sysdata-0.1/src/etc/httpd/conf.d'
-$ ls
-0  files.list  pmaker.py
+21:34:57 [WARNING] /etc/auto.iso is owned by miniascape
+21:34:58 [WARNING] /etc/auto.master is owned by autofs
+21:34:58 [WARNING] /etc/auto.misc is owned by autofs
+21:34:58 [WARNING] /etc/auto.net is owned by autofs
+21:34:58 [WARNING] /etc/auto.smb is owned by autofs
+21:34:58 [WARNING] /etc/httpd/conf.d is owned by httpd
+21:34:58 [WARNING] /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link
+21:34:58 [WARNING] /etc/modprobe.d/blacklist.conf is owned by hwdata
+21:34:58 [WARNING] /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools
+21:34:58 [WARNING] /etc/modprobe.d/dist-oss.conf is owned by module-init-tools
+21:34:58 [WARNING] /etc/modprobe.d/dist.conf is owned by module-init-tools
+21:34:58 [WARNING] /etc/modprobe.d/libmlx4.conf is owned by libmlx4
+21:34:58 [WARNING] /etc/system-release is owned by fedora-release
+21:34:58 [WARNING] /etc/yum.repos.d/fedora.repo is owned by fedora-release
+21:34:58 [WARNING] [Errno 1] Operation not permitted: '/tmp/w/0/sysdata-0.1/src/etc/httpd/conf.d'
+configure.ac:2: installing `./install-sh'
+    ... snip ...
+  GEN    srpm
 $ ls 0
 sysdata-0.1
-$ ls 0/sysdata-0.1/
-MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       pmaker-package-filelist.pkl
-MANIFEST.overrides  aclocal.m4      configure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  pmaker-sbuild.stamp
-Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             pmaker-setup.stamp
-Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     pmaker-build.stamp
-Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            pmaker-configure.stamp
+$ ls -w 80 0/sysdata-0.1/
+MANIFEST            pmaker-build.stamp
+MANIFEST.overrides  pmaker-configure.stamp
+Makefile            pmaker-package-filelist.pkl
+Makefile.am         pmaker-preconfigure.stamp
+Makefile.in         pmaker-sbuild.stamp
+README              pmaker-setup.stamp
+aclocal.m4          rpm
+autom4te.cache      rpm.mk
+config.log          src
+config.status       sysdata-0.1-1.fc14.noarch.rpm
+configure           sysdata-0.1-1.fc14.src.rpm
+configure.ac        sysdata-0.1.tar.bz2
+install-sh          sysdata-overrides-0.1-1.fc14.noarch.rpm
+missing             sysdata.spec
 $ rpm -qlp 0/sysdata-0.1/sysdata-0.1-1.fc14.noarch.rpm
+/etc/auto.iso.rpmsave
+/etc/auto.iso.save
+/etc/auto.master.save
 /etc/resolv.conf
 /usr/share/doc/sysdata-0.1
 /usr/share/doc/sysdata-0.1/MANIFEST
 /usr/share/doc/sysdata-0.1/README
 $ rpm -qlp 0/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
+/etc/auto.iso
 /etc/auto.master
 /etc/auto.misc
 /etc/auto.net
@@ -522,46 +535,62 @@ $ rpm -qlp 0/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
 /etc/modprobe.d/dist-oss.conf
 /etc/modprobe.d/dist.conf
 /etc/modprobe.d/libmlx4.conf
-/etc/modprobe.d/poulsbo.conf
 /etc/system-release
 /etc/yum.repos.d/fedora.repo
 /usr/share/doc/sysdata-overrides-0.1
 /usr/share/doc/sysdata-overrides-0.1/MANIFEST.overrides
 $
 """,
-    """## B. Same as above except that files list is read from stdin and mock
+    """\
+## B. Same as above except that files list is read from stdin and mock
 ## is not used for building rpms:
 
-$ ls
-files.list  pmaker.py
-$ cat files.list | python pmaker.py -n sysdata -w ./0 -q --no-mock -
-04:03:35 [WARNING]  /etc/auto.master is owned by autofs and it (sysdata) will conflict with autofs
-04:03:35 [WARNING]  /etc/auto.misc is owned by autofs and it (sysdata) will conflict with autofs
-04:03:35 [WARNING]  /etc/auto.net is owned by autofs and it (sysdata) will conflict with autofs
-04:03:36 [WARNING]  /etc/auto.smb is owned by autofs and it (sysdata) will conflict with autofs
-04:03:36 [WARNING]  /etc/httpd/conf.d is owned by httpd and it (sysdata) will conflict with httpd
-04:03:36 [WARNING]  /etc/modprobe.d/blacklist-visor.conf is owned by pilot-link and it (sysdata) will conflict with pilot-link
-04:03:36 [WARNING]  /etc/modprobe.d/blacklist.conf is owned by hwdata and it (sysdata) will conflict with hwdata
-04:03:36 [WARNING]  /etc/modprobe.d/dist-alsa.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
-04:03:37 [WARNING]  /etc/modprobe.d/dist-oss.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
-04:03:37 [WARNING]  /etc/modprobe.d/dist.conf is owned by module-init-tools and it (sysdata) will conflict with module-init-tools
-04:03:37 [WARNING]  /etc/modprobe.d/libmlx4.conf is owned by libmlx4 and it (sysdata) will conflict with libmlx4
-04:03:37 [WARNING]  /etc/modprobe.d/poulsbo.conf is owned by xorg-x11-drv-psb and it (sysdata) will conflict with xorg-x11-drv-psb
-04:03:37 [WARNING]  /etc/system-release is owned by fedora-release and it (sysdata) will conflict with fedora-release
-04:03:38 [WARNING]  /etc/yum.repos.d/fedora.repo is owned by fedora-release and it (sysdata) will conflict with fedora-release
-04:03:38 [WARNING] [Errno 1] Operation not permitted: '/tmp/t/0/sysdata-0.1/src/etc/httpd/conf.d'
-$ ls 0/sysdata-0.1/
-MANIFEST            README          configure     rpm.mk                         sysdata-0.1.tar.gz                       pmaker-package-filelist.pkl
-MANIFEST.overrides  aclocal.m4      c --silentonfigure.ac  src                            sysdata-overrides-0.1-1.fc14.noarch.rpm  pmaker-sbuild.stamp
-Makefile            autom4te.cache  install-sh    sysdata-0.1-1.fc14.noarch.rpm  sysdata.spec                             pmaker-setup.stamp
-Makefile.am         config.log      missing       sysdata-0.1-1.fc14.src.rpm     pmaker-build.stamp
-Makefile.in         config.status   rpm           sysdata-0.1.tar.bz2            pmaker-configure.stamp
-$ rpm -qlp 0/sysdata-0.1/sysdata-0.1-1.fc14.noarch.rpm
+$ cat files.list | python pmaker.py -n sysdata -w ./1 -q --no-mock -
+21:47:34 [WARNING] /etc/auto.iso is owned by miniascape
+21:47:34 [WARNING] /etc/auto.master is owned by autofs
+21:47:34 [WARNING] /etc/auto.misc is owned by autofs
+21:47:34 [WARNING] /etc/auto.net is owned by autofs
+    ... snip ...
+  GEN    srpm
+{ test ! -d "sysdata-0.1" || { find "sysdata-0.1" -type d ! -perm -200 -exec chmod u+w {} ';' && rm -fr "sysdata-0.1"; }; }
+test -d "sysdata-0.1" || mkdir "sysdata-0.1"
+test -n "" \
+|| find "sysdata-0.1" -type d ! -perm -755 \
+        -exec chmod u+rwx,go+rx {} \; -o \
+  ! -type d ! -perm -444 -links 1 -exec chmod a+r {} \; -o \
+  ! -type d ! -perm -400 -exec chmod a+r {} \; -o \
+  ! -type d ! -perm -444 -exec /bin/sh /tmp/w/1/sysdata-0.1/install-sh -c -m a+r {} {} \; \
+|| chmod -R a+r "sysdata-0.1"
+tardir=sysdata-0.1 && /bin/sh /tmp/w/1/sysdata-0.1/missing --run tar chof - "$tardir" | bzip2 -9 -c >sysdata-0.1.tar.bz2
+{ test ! -d "sysdata-0.1" || { find "sysdata-0.1" -type d ! -perm -200 -exec chmod u+w {} ';' && rm -fr "sysdata-0.1"; }; }
+  GEN    rpm
+configure: WARNING: unrecognized options: --disable-dependency-tracking
+configure: WARNING: unrecognized options: --disable-dependency-tracking
+$ ls -w 80 1/sysdata-0.1/
+MANIFEST            pmaker-build.stamp
+MANIFEST.overrides  pmaker-configure.stamp
+Makefile            pmaker-package-filelist.pkl
+Makefile.am         pmaker-preconfigure.stamp
+Makefile.in         pmaker-sbuild.stamp
+README              pmaker-setup.stamp
+aclocal.m4          rpm
+autom4te.cache      rpm.mk
+config.log          src
+config.status       sysdata-0.1-1.fc14.noarch.rpm
+configure           sysdata-0.1-1.fc14.src.rpm
+configure.ac        sysdata-0.1.tar.bz2
+install-sh          sysdata-overrides-0.1-1.fc14.noarch.rpm
+missing             sysdata.spec
+$ rpm -qlp 1/sysdata-0.1/sysdata-0.1-1.fc14.noarch.rpm
+/etc/auto.iso.rpmsave
+/etc/auto.iso.save
+/etc/auto.master.save
 /etc/resolv.conf
 /usr/share/doc/sysdata-0.1
 /usr/share/doc/sysdata-0.1/MANIFEST
 /usr/share/doc/sysdata-0.1/README
-$ rpm -qlp 0/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
+$ rpm -qlp 1/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
+/etc/auto.iso
 /etc/auto.master
 /etc/auto.misc
 /etc/auto.net
@@ -573,7 +602,6 @@ $ rpm -qlp 0/sysdata-0.1/sysdata-overrides-0.1-1.fc14.noarch.rpm
 /etc/modprobe.d/dist-oss.conf
 /etc/modprobe.d/dist.conf
 /etc/modprobe.d/libmlx4.conf
-/etc/modprobe.d/poulsbo.conf
 /etc/system-release
 /etc/yum.repos.d/fedora.repo
 /usr/share/doc/sysdata-overrides-0.1
@@ -583,56 +611,85 @@ $
     """## C. Packaing single file, /etc/resolve.conf:
 
 $ echo /etc/resolv.conf | python pmaker.py -n resolvconf -w 2 --debug -
-04:06:53 [INFO] Setting up src tree in /tmp/t/2/resolvconf-0.1: resolvconf
-04:06:55 [DEBUG]  Could load the cache: /home/ssato/.cache/pmaker.rpm.filelist.pkl
-04:06:55 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1
-04:06:55 [DEBUG]  Creating a directory: /tmp/t/2/resolvconf-0.1/src
-04:06:55 [DEBUG]  Copying from '/etc/resolv.conf' to '/tmp/t/2/resolvconf-0.1/src/etc/resolv.conf'
-04:06:55 [DEBUG]  Run: cp -a /etc/resolv.conf /tmp/t/2/resolvconf-0.1/src/etc/resolv.conf [/tmp/t]
-04:06:55 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/pmaker-setup.stamp [/tmp/t/2/resolvconf-0.1]
-04:06:55 [INFO] Configuring src distribution: resolvconf
-04:06:56 [DEBUG]  Run: autoreconf -fi [/tmp/t/2/resolvconf-0.1]
-04:07:15 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/pmaker-configure.stamp [/tmp/t/2/resolvconf-0.1]
-04:07:15 [INFO] Building src package: resolvconf
-04:07:15 [DEBUG]  Run: ./configure [/tmp/t/2/resolvconf-0.1]
-04:07:19 [DEBUG]  Run: make dist [/tmp/t/2/resolvconf-0.1]
-04:07:20 [DEBUG]  Run: make srpm [/tmp/t/2/resolvconf-0.1]
-04:07:21 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/pmaker-sbuild.stamp [/tmp/t/2/resolvconf-0.1]
-04:07:21 [INFO] Building bin packages: resolvconf
-04:07:21 [DEBUG]  Run: mock --version > /dev/null [/tmp/t/2/resolvconf-0.1]
-04:07:24 [DEBUG]  Run: mock -r fedora-14-i386 resolvconf-0.1-1.*.src.rpm [/tmp/t/2/resolvconf-0.1]
-04:09:18 [DEBUG]  Run: mv /var/lib/mock/fedora-14-i386/result/*.rpm /tmp/t/2/resolvconf-0.1 [/tmp/t/2/resolvconf-0.1]
-04:09:18 [DEBUG]  Run: touch /tmp/t/2/resolvconf-0.1/pmaker-build.stamp [/tmp/t/2/resolvconf-0.1]
-04:09:18 [INFO] Successfully created packages in /tmp/t/2/resolvconf-0.1: resolvconf
-$ ls 2/resolvconf-0.1/
-MANIFEST            Makefile.in     config.log     install-sh                        resolvconf-0.1.tar.bz2  rpm.mk                 pmaker-package-filelist.pkl
-MANIFEST.overrides  README          config.status  missing                           resolvconf-0.1.tar.gz   src                    pmaker-sbuild.stamp
-Makefile            aclocal.m4      configure      resolvconf-0.1-1.fc14.noarch.rpm  resolvconf.spec         pmaker-build.stamp      pmaker-setup.stamp
-Makefile.am         autom4te.cache  configure.ac   resolvconf-0.1-1.fc14.src.rpm     rpm                     pmaker-configure.stamp
+21:51:43 [INFO] Use PackageMaker: RpmPackageMaker: type=filelist, format=rpm
+21:51:43 [INFO] Use Collector: FilelistCollector (filelist)
+21:51:43 [INFO] Setting up src tree in /tmp/w/2/resolvconf-0.1: resolvconf
+21:51:43 [DEBUG]  Creating a directory: /tmp/w/2/resolvconf-0.1
+21:51:43 [DEBUG]  Creating a directory: /tmp/w/2/resolvconf-0.1/src
+21:51:43 [DEBUG]  Copying from '/etc/resolv.conf' to '/tmp/w/2/resolvconf-0.1/src/etc/resolv.conf'
+21:51:43 [INFO]  Run: touch /tmp/w/2/resolvconf-0.1/pmaker-setup.stamp [/tmp/w/2/resolvconf-0.1]
+21:51:43 [INFO] Arrange autotool-ized src directory: resolvconf
+21:51:43 [INFO]  Run: touch /tmp/w/2/resolvconf-0.1/pmaker-preconfigure.stamp [/tmp/w/2/resolvconf-0.1]
+21:51:43 [INFO] Configuring src distribution: resolvconf
+21:51:43 [INFO]  Run: autoreconf -vfi [/tmp/w/2/resolvconf-0.1]
+autoreconf: Entering directory `.'
+autoreconf: configure.ac: not using Gettext
+autoreconf: running: aclocal --force
+autoreconf: configure.ac: tracing
+autoreconf: configure.ac: not using Libtool
+autoreconf: running: /usr/bin/autoconf --force
+autoreconf: configure.ac: not using Autoheader
+autoreconf: running: automake --add-missing --copy --force-missing
+configure.ac:2: installing `./install-sh'
+configure.ac:2: installing `./missing'
+autoreconf: Leaving directory `.'
+21:51:46 [INFO]  Run: touch /tmp/w/2/resolvconf-0.1/pmaker-configure.stamp [/tmp/w/2/resolvconf-0.1]
+21:51:46 [INFO] Building src package: resolvconf
+21:51:46 [INFO]  Run: ./configure --quiet [/tmp/w/2/resolvconf-0.1]
+21:51:48 [INFO]  Run: make [/tmp/w/2/resolvconf-0.1]
+21:51:48 [INFO]  Run: make dist [/tmp/w/2/resolvconf-0.1]
+21:51:48 [INFO]  Run: make srpm [/tmp/w/2/resolvconf-0.1]
+21:51:48 [INFO]  Run: touch /tmp/w/2/resolvconf-0.1/pmaker-sbuild.stamp [/tmp/w/2/resolvconf-0.1]
+21:51:48 [INFO] Building bin packages: resolvconf
+21:51:48 [INFO]  Run: mock --version > /dev/null [/tmp/w/2/resolvconf-0.1]
+21:51:49 [DEBUG]  Run: rpm -q --specfile --qf "%{n}-%{v}-%{r}.src.rpm
+" /tmp/w/2/resolvconf-0.1/resolvconf.spec [.]
+21:51:49 [INFO]  Run: mock -r fedora-14-x86_64 resolvconf-0.1-1.fc14.src.rpm --quiet [/tmp/w/2/resolvconf-0.1]
+21:52:17 [INFO]  Run: mv /var/lib/mock/fedora-14-x86_64/result/*.rpm /tmp/w/2/resolvconf-0.1 [/tmp/w/2/resolvconf-0.1]
+21:52:17 [INFO]  Run: touch /tmp/w/2/resolvconf-0.1/pmaker-build.stamp [/tmp/w/2/resolvconf-0.1]
+21:52:17 [INFO] Successfully created packages in /tmp/w/2/resolvconf-0.1: resolvconf
 $ rpm -qlp 2/resolvconf-0.1/resolvconf-0.1-1.fc14.noarch.rpm
 /etc/resolv.conf
 /usr/share/doc/resolvconf-0.1
 /usr/share/doc/resolvconf-0.1/MANIFEST
 /usr/share/doc/resolvconf-0.1/README
-$ cat 2/resolvconf-0.1/MANIFEST
-/etc/resolv.conf
-$ cat 2/resolvconf-0.1/MANIFEST.overrides
 $
 """,
-    """## D. Packaing single file, /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso,
-## will be installed as srv/isos/rhel-server-5.6-i386-dvd.iso:
+    """\
+## D. Packaing single file, 3/rhel-server-5.6-i386-dvd.iso,
+## will be installed into /srv/isos/:
 
-$ ls
-pmaker.py  srv
-$ ls srv/isos/
-rhel-server-5.6-i386-dvd.iso
-$ echo /tmp/t/srv/isos/rhel-server-5.6-i386-dvd.iso | \\
-> python pmaker.py -n rhel-server-5-6-i386-dvd-iso -w ./w \\
-> --destdir /tmp/t/ --upto build --no-mock -
-...(snip)...
-$ ls
-pmaker.py  srv  w
-$ rpm -qlp w/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm
+$ isoname=rhel-server-5.6-i386-dvd.iso
+$ echo "3/$isoname,target=/srv/isos/$isoname,uid=0,gid=0" | \
+> python pmaker.py --itype filelist.ext -n rhel-server-5-6-i386-dvd-iso \
+> -w 3 --upto build --no-rpmdb --no-mock -v -
+21:56:29 [INFO] Use PackageMaker: RpmPackageMaker: type=filelist, format=rpm
+21:56:29 [INFO] Use Collector: ExtFilelistCollector (filelist.ext)
+21:56:29 [INFO] Setting up src tree in /tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1: rhel-server-5-6-i386-dvd-iso
+21:56:29 [INFO] Override attr gid=0 in fileinfo: path=3/rhel-server-5.6-i386-dvd.iso
+21:56:29 [INFO] Override attr target=/srv/isos/rhel-server-5.6-i386-dvd.iso in fileinfo: path=3/rhel-server-5.6-i386-dvd.iso
+21:56:29 [INFO] Override attr uid=0 in fileinfo: path=3/rhel-server-5.6-i386-dvd.iso
+21:56:29 [INFO]  Run: touch /tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1/pmaker-setup.stamp [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:29 [INFO] Arrange autotool-ized src directory: rhel-server-5-6-i386-dvd-iso
+21:56:29 [INFO]  Run: touch /tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1/pmaker-preconfigure.stamp [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:29 [INFO] Configuring src distribution: rhel-server-5-6-i386-dvd-iso
+21:56:29 [INFO]  Run: autoreconf -fi [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+configure.ac:2: installing `./install-sh'
+configure.ac:2: installing `./missing'
+21:56:32 [INFO]  Run: touch /tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1/pmaker-configure.stamp [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:32 [INFO] Building src package: rhel-server-5-6-i386-dvd-iso
+21:56:32 [INFO]  Run: ./configure --quiet --enable-silent-rules [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:34 [INFO]  Run: make V=0 > /dev/null [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:34 [INFO]  Run: make dist V=0 > /dev/null [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:34 [INFO]  Run: make srpm [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:34 [INFO]  Run: touch /tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1/pmaker-sbuild.stamp [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:34 [INFO] Building bin packages: rhel-server-5-6-i386-dvd-iso
+21:56:34 [INFO]  Run: make rpm [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+configure: WARNING: unrecognized options: --disable-dependency-tracking
+configure: WARNING: unrecognized options: --disable-dependency-tracking
+21:56:37 [INFO]  Run: touch /tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1/pmaker-build.stamp [/tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1]
+21:56:37 [INFO] Successfully created packages in /tmp/w/3/rhel-server-5-6-i386-dvd-iso-0.1: rhel-server-5-6-i386-dvd-iso
+$ rpm -qlp 3/rhel-server-5-6-i386-dvd-iso-0.1/rhel-server-5-6-i386-dvd-iso-0.1-1.fc14.noarch.rpm
 /srv/isos/rhel-server-5.6-i386-dvd.iso
 /usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1
 /usr/share/doc/rhel-server-5-6-i386-dvd-iso-0.1/MANIFEST
@@ -642,38 +699,54 @@ $
     """## E. Packaging itself:
 
 $ python pmaker.py --build-self
-04:20:47 [INFO]  executing: echo /tmp/pmaker-build-YaDaOn/usr/bin/pmaker | python pmaker.py -n pmaker --pversion 0.0.99 -w /tmp/pmaker-build-YaDaOn --debug --upto build --no-rpmdb --no-mock --destdir=/tmp/pmaker-build-YaDaOn --ignore-owner -
-04:20:49 [INFO] Setting up src tree in /tmp/pmaker-build-YaDaOn/pmaker-0.0.99: pmaker
-04:20:49 [DEBUG]  force set uid and gid of /tmp/pmaker-build-YaDaOn/usr/bin/pmaker
-04:20:49 [DEBUG]  Rewrote target path of fi from /tmp/pmaker-build-YaDaOn/usr/bin/pmaker to /usr/bin/pmaker
-04:20:49 [DEBUG]  Creating a directory: /tmp/pmaker-build-YaDaOn/pmaker-0.0.99
-04:20:49 [DEBUG]  Creating a directory: /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/src
-04:20:49 [DEBUG]  Copying from '/tmp/pmaker-build-YaDaOn/usr/bin/pmaker' to '/tmp/pmaker-build-YaDaOn/pmaker-0.0.99/src/usr/bin/pmaker'
-04:20:49 [DEBUG]  Run: cp -a /tmp/pmaker-build-YaDaOn/usr/bin/pmaker /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/src/usr/bin/pmaker [/tmp/t]
-04:20:49 [DEBUG]  Run: touch /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-setup.stamp [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:20:49 [INFO] Configuring src distribution: pmaker
-04:20:50 [DEBUG]  Run: autoreconf -fi [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:21:10 [DEBUG]  Run: touch /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-configure.stamp [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:21:10 [INFO] Building src package: pmaker
-04:21:10 [DEBUG]  Run: ./configure [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:21:13 [DEBUG]  Run: make dist [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:21:14 [DEBUG]  Run: make srpm [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:21:16 [DEBUG]  Run: touch /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-sbuild.stamp [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:21:16 [INFO] Building bin packages: pmaker
-04:21:16 [DEBUG]  Run: make rpm [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:21:22 [DEBUG]  Run: touch /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-build.stamp [/tmp/pmaker-build-YaDaOn/pmaker-0.0.99]
-04:21:22 [INFO] Successfully created packages in /tmp/pmaker-build-YaDaOn/pmaker-0.0.99: pmaker
-$ rpm -qlp /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker-0.0.99-1.fc14.noarch.rpm
+Listing . ...
+Compiling ./__init__.py ...
+configure.ac:2: installing `./install-sh'
+configure.ac:2: installing `./missing'
+{ test ! -d "packagemaker-0.2.20110502" || { find "packagemaker-0.2.20110502" -type d ! -perm -200 -exec chmod u+w {} ';' && rm -fr "packagemaker-0.2.20110502"; }; }
+test -d "packagemaker-0.2.20110502" || mkdir "packagemaker-0.2.20110502"
+test -n "" \
+|| find "packagemaker-0.2.20110502" -type d ! -perm -755 \
+        -exec chmod u+rwx,go+rx {} \; -o \
+  ! -type d ! -perm -444 -links 1 -exec chmod a+r {} \; -o \
+  ! -type d ! -perm -400 -exec chmod a+r {} \; -o \
+  ! -type d ! -perm -444 -exec /bin/sh /tmp/pm-IzL80r/packagemaker-0.2.20110502/install-sh -c -m a+r {} {} \; \
+|| chmod -R a+r "packagemaker-0.2.20110502"
+tardir=packagemaker-0.2.20110502 && /bin/sh /tmp/pm-IzL80r/packagemaker-0.2.20110502/missing --run tar chof - "$tardir" | bzip2 -9 -c >packagemaker-0.2.20110502.tar.bz2
+{ test ! -d "packagemaker-0.2.20110502" || { find "packagemaker-0.2.20110502" -type d ! -perm -200 -exec chmod u+w {} ';' && rm -fr "packagemaker-0.2.20110502"; }; }
+  GEN    srpm
+$ ls -w 80 /tmp/pm-IzL80r/packagemaker-0.2.20110502/
+MANIFEST            packagemaker-0.2.20110502-1.fc14.noarch.rpm
+MANIFEST.overrides  packagemaker-0.2.20110502-1.fc14.src.rpm
+Makefile            packagemaker-0.2.20110502.tar.bz2
+Makefile.am         packagemaker.spec
+Makefile.in         pmaker-build.stamp
+README              pmaker-configure.stamp
+aclocal.m4          pmaker-package-filelist.pkl
+autom4te.cache      pmaker-preconfigure.stamp
+config.log          pmaker-sbuild.stamp
+config.status       pmaker-setup.stamp
+configure           rpm
+configure.ac        rpm.mk
+install-sh          src
+missing
+$ rpm -qlp /tmp/pm-IzL80r/packagemaker-0.2.20110502/packagemaker-0.2.20110502-1.fc14.noarch.rpm
 /usr/bin/pmaker
-/usr/share/doc/pmaker-0.0.99
-/usr/share/doc/pmaker-0.0.99/MANIFEST
-/usr/share/doc/pmaker-0.0.99/README
-$ sed -n "/^%files/,/^$/p" /tmp/pmaker-build-YaDaOn/pmaker-0.0.99/pmaker.spec
+/usr/lib/python2.7/site-packages/pmaker/__init__.py
+/usr/lib/python2.7/site-packages/pmaker/__init__.pyc
+/usr/lib/python2.7/site-packages/pmaker/__init__.pyo
+/usr/share/doc/packagemaker-0.2.20110502
+/usr/share/doc/packagemaker-0.2.20110502/MANIFEST
+/usr/share/doc/packagemaker-0.2.20110502/README
+$ sed -n "/^%files/,/^$/p" /tmp/pm-IzL80r/packagemaker-0.2.20110502/packagemaker.spec 
 %files
 %defattr(-,root,root,-)
 %doc README
 %doc MANIFEST
-%attr(755, -, -) /usr/bin/pmaker
+%attr(0755, -, -) /usr/bin/pmaker
+/usr/lib/python2.7/site-packages/pmaker/__init__.py
+/usr/lib/python2.7/site-packages/pmaker/__init__.pyc
+/usr/lib/python2.7/site-packages/pmaker/__init__.pyo
 
 $
 """,
