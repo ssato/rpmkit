@@ -1489,11 +1489,7 @@ class TestDecoratedFuncs(unittest.TestCase):
     is a workaround for this issue.
     """
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
+    _multiprocess_can_split_ = True
 
     def test_checksum_null(self):
         """if checksum() returns null
@@ -1538,6 +1534,8 @@ class TestDecoratedFuncs(unittest.TestCase):
 
 
 class TestFuncsWithSideEffects(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
 
     def setUp(self):
         logging.info("start") # dummy log
@@ -1720,6 +1718,8 @@ else:
 
 
 class TestRpm(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
 
     def setUp(self):
         logging.info("start")
@@ -1980,6 +1980,8 @@ class SymlinkOperations(FileOperations):
 
 
 class TestFileOperations(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
@@ -2368,6 +2370,8 @@ def on_debug_mode():
 
 
 class TestMiscFunctions(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
@@ -2820,6 +2824,8 @@ JsonFilelistCollector.register()
 
 class TestFilelistCollector(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
         logging.info("start")
@@ -2925,6 +2931,8 @@ class TestFilelistCollector(unittest.TestCase):
 
 class TestExtFilelistCollector(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
         logging.info("start")
@@ -2960,6 +2968,8 @@ class TestExtFilelistCollector(unittest.TestCase):
 
 
 class TestJsonFilelistCollector(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
@@ -3423,6 +3433,8 @@ def dump_rc(rc=EXAMPLE_RC):
 
 class TestMainProgram00SingleFileCases(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
 
@@ -3547,6 +3559,8 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 
 class TestMainProgram01JsonFileCases(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
         self.json_data = """\
@@ -3581,6 +3595,8 @@ class TestMainProgram01JsonFileCases(unittest.TestCase):
 
 
 class TestMainProgram01MultipleFilesCases(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
