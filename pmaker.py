@@ -113,7 +113,8 @@ import rpm
 
 try:
     from Cheetah.Template import Template
-    UPTO = 'build'
+    UPTO = "build"
+    #UPTO = "sbuild"  # TODO: change default ?
 except ImportError:
     logging.warn("python-cheetah is not found so that packaging process will go up to only 'setup' step.")
 
