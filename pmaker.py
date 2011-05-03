@@ -85,6 +85,7 @@ from functools import partial as curry, reduce as foldl
 from itertools import count, groupby
 
 import ConfigParser as cp
+import cPickle as pickle
 import copy
 import datetime
 import doctest
@@ -97,9 +98,9 @@ import operator
 import optparse
 import os
 import os.path
-import cPickle as pickle
 import platform
 import pwd
+import random
 import re
 import shutil
 import socket
@@ -190,6 +191,7 @@ __email__   = "satoru.satoh@gmail.com"
 __website__ = "https://github.com/ssato/rpmkit"
 
 
+FILEINFOS = {}
 PACKAGE_MAKERS = {}
 COLLECTORS = {}
 
@@ -1318,10 +1320,8 @@ def dirname(path):
     return os.path.dirname(path)
 
 
+@memoize
 def hostname():
-    """
-    Is there any cases exist that socket.gethostname() fails?
-    """
     return socket.gethostname() or os.uname()[1]
 
 
@@ -1369,15 +1369,18 @@ def get_arch():
 
 
 @memoize
+def is_git_available():
+    return os.system("git --version > /dev/null 2> /dev/null") == 0
+
+
+@memoize
 def get_username():
-    """Get username.
-    """
     return os.environ.get("USER", False) or os.getlogin()
 
 
 @memoize
-def get_email(use_git=True):
-    if use_git:
+def get_email():
+    if is_git_available():
         try:
             email = subprocess.check_output("git config --get user.email 2>/dev/null", shell=True)
             return email.rstrip()
@@ -1389,10 +1392,10 @@ def get_email(use_git=True):
 
 
 @memoize
-def get_fullname(use_git=True):
+def get_fullname():
     """Get full name of the user.
     """
-    if use_git:
+    if is_git_available():
         try:
             fullname = subprocess.check_output("git config --get user.name 2>/dev/null", shell=True)
             return fullname.rstrip()
@@ -1433,9 +1436,6 @@ def shell2(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
     @log      bool  whether to print log messages or not.
     @dryrun   bool  if True, just print command string to run and returns.
     @stop_on_error bool  if True, RuntimeError will not be raised.
-
-    TODO: Popen.communicate might be blocked. How about using Popen.wait
-    instead?
 
     >>> assert 0 == shell2("echo ok > /dev/null", '.', False)
     >>> assert 0 == shell2("ls null", "/dev", False)
@@ -1556,6 +1556,13 @@ class TestDecoratedFuncs(unittest.TestCase):
 
     _multiprocess_can_split_ = True
 
+    def test_memoize(self):
+        fun_0 = lambda a: a * 2
+        memoized_fun_0 = memoize(fun_0)
+
+        self.assertEquals(fun_0(2), memoized_fun_0(2))
+        self.assertEquals(memoized_fun_0(3), memoized_fun_0(3))
+
     def test_checksum_null(self):
         """if checksum() returns null
         """
@@ -1595,6 +1602,12 @@ class TestDecoratedFuncs(unittest.TestCase):
         """
         self.assertListEqual(unique([]), [])
         self.assertListEqual(unique([0, 3, 1, 2, 1, 0, 4, 5]), [0, 1, 2, 3, 4, 5])
+
+    def test_hostname(self):
+        self.assertEquals(hostname(), subprocess.check_output("hostname").rstrip())
+
+    def test_get_username(self):
+        self.assertEquals(get_username(), subprocess.check_output("id -un", shell=True).rstrip())
 
 
 
@@ -1655,7 +1668,7 @@ b: bbb
 a: aaa
 b: bbb
 """
-        path = os.path.join(self.workdir, "config")
+        path = os.path.join(self.workdir, "config_p0")
         open(path, "w").write(conf)
 
         params = init_defaults_by_conffile(path, "profile0")
@@ -2048,25 +2061,27 @@ class TestFileOperations(unittest.TestCase):
 
     _multiprocess_can_split_ = True
 
+    paths_g = [f for f in glob.glob(os.path.join(os.path.expanduser("~"), ".*"))]
+    fo = FileOperations
+
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
-        logging.info("start")
-        self.fo = FileOperations
-        self.path = [f for f in glob.glob(os.path.join(os.path.expanduser("~"), ".*")) if os.path.isfile(f)][0]
 
     def tearDown(self):
         rm_rf(self.workdir)
 
     def test_copy_main_and_remove(self):
-        dest = os.path.join(self.workdir, os.path.basename(self.path))
+        path = random.choice([p for p in self.paths_g if os.path.isfile(p)])
+
+        dest = os.path.join(self.workdir, os.path.basename(path))
         dest2 = dest + ".xattrs"
 
-        fileinfo = FileInfoFactory().create(self.path)
+        fileinfo = FileInfoFactory().create(path)
 
         self.fo.copy_main(fileinfo, dest)
         self.fo.copy_main(fileinfo, dest2, True)
 
-        src_attrs = xattr.get_all(self.path)
+        src_attrs = xattr.get_all(path)
         if src_attrs:
             assert src_attrs == xattr.get_all(dest)
             assert src_attrs == xattr.get_all(dest2)
@@ -2081,8 +2096,38 @@ class TestFileOperations(unittest.TestCase):
         assert not os.path.exists(dest2)
 
     def test_copy(self):
-        dest = os.path.join(self.workdir, os.path.basename(self.path))
-        fileinfo = FileInfoFactory().create(self.path)
+        path = random.choice([p for p in self.paths_g if os.path.isfile(p)])
+
+        dest = os.path.join(self.workdir, os.path.basename(path))
+        fileinfo = FileInfoFactory().create(path)
+
+        self.fo.copy(fileinfo, dest)
+        self.fo.copy(fileinfo, dest, True)
+
+        assert os.path.exists(dest)
+        self.fo.remove(dest)
+        assert not os.path.exists(dest)
+
+
+
+class TestDirOperations(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
+
+    paths_g = [f for f in glob.glob(os.path.join(os.path.expanduser("~"), ".*"))]
+    fo = DirOperations
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_copy_dir(self):
+        path = random.choice([p for p in self.paths_g if os.path.isdir(p)])
+
+        dest = os.path.join(self.workdir, os.path.basename(path))
+        fileinfo = FileInfoFactory().create(path)
 
         self.fo.copy(fileinfo, dest)
         self.fo.copy(fileinfo, dest, True)
@@ -2126,6 +2171,10 @@ class FileInfo(object):
     @classmethod
     def copyable(cls):
         return cls.is_copyable
+
+    @classmethod
+    def register(cls, fmaps=FILEINFOS):
+        fmaps[cls.type()] = cls
 
     def __eq__(self, other):
         return self.operations(self, other)
@@ -2206,55 +2255,31 @@ class UnknownInfo(FileInfo):
 
 
 
+FileInfo.register()
+DirInfo.register()
+SymlinkInfo.register()
+OtherInfo.register()
+UnknownInfo.register()
+
+
 class FileInfoFactory(object):
-    """Factory class for *Info.
-    """
 
     def _stat(self, path):
         """
         @path    str     Object's path (relative or absolute)
-        @return  A tuple of (mode, uid, gid) or None if OSError was raised.
-
-        >>> ff = FileInfoFactory()
-        >>> f0 = "/etc/hosts"
-        >>> if os.path.exists(f0):
-        ...     (_mode, uid, gid) = ff._stat(f0)
-        ...     assert uid == 0
-        ...     assert gid == 0
-        ... else:
-        ...     print "Test target file does not exist. Skip it"
-        >>> 
-        >>> if os.getuid() != 0:
-        ...    assert ff._stat('/root/.bashrc') is None
+        @return  A tuple of (mode, uid, gid) or (None, None, None) if OSError was raised.
         """
         try:
             _stat = os.lstat(path)
         except OSError, e:
             logging.warn(e)
-            return None
+            return (None, None, None)
 
         return (_stat.st_mode, _stat.st_uid, _stat.st_gid)
 
     def _guess_ftype(self, st_mode):
         """
         @st_mode    st_mode
-
-        TODO: More appropriate doctest cases.
-
-        >>> ff = FileInfoFactory()
-        >>> st_mode = lambda f: os.lstat(f)[0]
-        >>> 
-        >>> if os.path.exists('/etc/grub.conf'):
-        ...     assert TYPE_SYMLINK == ff._guess_ftype(st_mode('/etc/grub.conf'))
-        >>> 
-        >>> if os.path.exists('/etc/hosts'):
-        ...     assert TYPE_FILE == ff._guess_ftype(st_mode('/etc/hosts'))
-        >>> 
-        >>> if os.path.isdir('/etc'):
-        ...     assert TYPE_DIR == ff._guess_ftype(st_mode('/etc'))
-        >>> 
-        >>> if os.path.exists('/dev/null'):
-        ...     assert TYPE_OTHER == ff._guess_ftype(st_mode('/dev/null'))
         """
         if stat.S_ISLNK(st_mode):
             ft = TYPE_SYMLINK
@@ -2273,7 +2298,7 @@ class FileInfoFactory(object):
 
         return ft
 
-    def create(self, path, attrs=None):
+    def create(self, path, attrs=None, fileinfo_maps=FILEINFOS):
         """Factory method. Create and return the *Info instance.
 
         @path   str   Object path (relative or absolute)
@@ -2283,8 +2308,8 @@ class FileInfoFactory(object):
 
         if st is None:
             return UnknownInfo(path)
-        else:
-            (_mode, _uid, _gid) = st
+
+        (_mode, _uid, _gid) = st
 
         xs = xattr.get_all(path)
         _xattrs = (xs and dict(xs) or {})
@@ -2299,8 +2324,8 @@ class FileInfoFactory(object):
         else:
             _checksum = checksum()
 
-        _cls = globals().get("%sInfo" % _filetype.title(), False)
-        assert _cls, "Should not reached here! _filetype.title() was '%s'" % _filetype.title()
+        _cls = fileinfo_maps.get(_filetype, False)
+        assert _cls, "Should not reached here! filetype=%s" % _filetype
 
         fi = _cls(path, _mode, _uid, _gid, _checksum, _xattrs)
 
@@ -2312,29 +2337,99 @@ class FileInfoFactory(object):
 
 
 
-class RpmFileInfoFactory(FileInfoFactory):
+class TestFileInfoFactory(unittest.TestCase):
 
-    def __init__(self):
-        super(RpmFileInfoFactory, self).__init__()
+    _multiprocess_can_split_ = True
+
+    def helper_path_check(self, filepath):
+        if os.path.exists(filepath):
+            return True
+        else:
+            logging.info("File %s does not look exists. skip this test." % filepath)
+            return False
+
+    def helper_guess_ftype(self, filepath, expected_type):
+        def st_mode(f):
+            return os.lstat(f)[0]
+
+        if os.path.exists(filepath):
+            self.assertEquals(expected_type, FileInfoFactory()._guess_ftype(st_mode(filepath)))
+        else:
+            logging.info("File %s does not look exists. skip this test." % filepath)
+            return False
+
+    def test__stat(self):
+        f = "/etc/hosts"
+
+        if not self.helper_path_check(f):
+            return
+
+        (_mode, uid, gid) = FileInfoFactory()._stat(f)
+
+        self.assertEquals(uid, 0)
+        self.assertEquals(gid, 0)
+
+    def test__stat_user_file(self):
+        for f in (os.path.expanduser("~/" + p) for p in (".bashrc", ".zshrc", ".tcshrc")):
+            if os.path.exists(f):
+                break
+
+        if not self.helper_path_check(f):
+            return
+
+        (_mode, uid, gid) = FileInfoFactory()._stat(f)
+
+        self.assertEquals(uid, os.getuid())
+        self.assertEquals(gid, os.getgid())
+
+    def test__stat_might_fail(self):
+        if os.getuid() == 0:
+            logging.info("The testing user is root. skip this test.")
+            return
+
+        f = "/root/.bashrc"
+
+        (mode, uid, gid) = FileInfoFactory()._stat(f)
+
+        self.assertEquals(mode, None)
+        self.assertEquals(uid, None)
+        self.assertEquals(gid, None)
+
+    def test__guess_ftype(self):
+        data = (
+            ("/etc/grub.conf", TYPE_SYMLINK),
+            ("/etc/hosts", TYPE_FILE),
+            ("/etc", TYPE_DIR),
+            ("/dev/null", TYPE_OTHER)
+        )
+
+        for f, et in data:
+            self.helper_guess_ftype(f, et)
+
+    def test_create(self):
+        global FILEINFOS
+
+        data = (
+            ("/etc/grub.conf", TYPE_SYMLINK),
+            ("/etc/hosts", TYPE_FILE),
+            ("/etc", TYPE_DIR),
+            ("/dev/null", TYPE_OTHER)
+        )
+
+        ff = FileInfoFactory()
+
+        for f, et in data:
+            self.assertTrue(isinstance(ff.create(f), FILEINFOS.get(et)))
+
+
+
+class RpmFileInfoFactory(FileInfoFactory):
 
     def _stat(self, path):
         """Stat with using RPM database instead of lstat().
 
         There are cases to get no results if the target objects not owned by
         any packages.
-
-        >>> if os.path.exists('/var/lib/rpm/Basenames'):
-        ...     ff = RpmFileInfoFactory()
-        ... 
-        ...     if os.path.exists('/etc/hosts'):
-        ...         (_mode, uid, gid) = ff._stat('/etc/hosts')
-        ...         assert uid == 0
-        ...         assert gid == 0
-        ... 
-        ...     if os.path.exists('/etc/resolv.conf'):  # not in the rpm database.
-        ...         (_mode, uid, gid) = ff._stat('/etc/resolv.conf')
-        ...         assert uid == 0
-        ...         assert gid == 0
         """
         try:
             fi = Rpm.pathinfo(path)
@@ -2348,12 +2443,46 @@ class RpmFileInfoFactory(FileInfoFactory):
 
         return super(RpmFileInfoFactory, self)._stat(path)
 
-    def create(self, path, attrs=None):
-        """TODO: what should be done for objects of *infos other than fileinfo?
-        """
-        fi = super(RpmFileInfoFactory, self).create(path, attrs)
 
-        return fi
+
+class TestRpmFileInfoFactory(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
+
+    def helper_00(self, filepath):
+        if not os.path.exists("/var/lib/rpm/Basenames"):
+            logging.info("rpmdb does not look exists. skip this test.")
+            return False
+
+        if not os.path.exists(filepath):
+            logging.info("File %s does not look exists. skip this test." % filepath)
+            return False
+
+        return True
+
+    def test__stat(self):
+        f = "/etc/hosts"
+
+        if not self.helper_00(f):
+            return
+
+        (_mode, uid, gid) = RpmFileInfoFactory()._stat(f)
+
+        self.assertEquals(uid, 0)
+        self.assertEquals(gid, 0)
+
+    def test__stat_call_parent_method(self):
+        for f in (os.path.expanduser("~/" + p) for p in (".bashrc", ".zshrc", ".tcshrc")):
+            if os.path.exists(f):
+                break
+
+        if not self.helper_00(f):
+            return
+
+        (_mode, uid, gid) = RpmFileInfoFactory()._stat(f)
+
+        self.assertEquals(uid, os.getuid())
+        self.assertEquals(gid, os.getgid())
 
 
 
@@ -3702,7 +3831,10 @@ def run_unittests(verbose, test_choice):
     basic_tests = [
         TestDecoratedFuncs,
         TestFuncsWithSideEffects,
+        TestFileInfoFactory,
+        TestRpmFileInfoFactory,
         TestFileOperations,
+        TestDirOperations,
         TestMiscFunctions,
         TestFilelistCollector,
     ]
@@ -3844,10 +3976,8 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS, test_c
     itypes = sorted(itypes.keys())
     itypes_help = "Input type: " + ", ".join(itypes) + " [%default]"
 
-    use_git = os.system("git --version > /dev/null 2> /dev/null") == 0
-
-    mail = get_email(use_git)
-    packager = get_fullname(use_git)
+    mail = get_email()
+    packager = get_fullname()
     dist = "fedora-14-%s" % get_arch()
 
     workdir = os.path.join(os.path.abspath(os.curdir), 'workdir')
