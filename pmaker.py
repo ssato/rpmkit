@@ -127,7 +127,7 @@ except ImportError:
 
 try:
     import xattr   # pyxattr
-    USE_PYXATTR = True
+    PYXATTR_ENABLED = True
 
 except ImportError:
     # Make up a 'Null-Object' like class mimics xattr module.
@@ -145,7 +145,7 @@ except ImportError:
         #get_all = classmethod(get_all)
         #set = classmethod(set)
     
-    USE_PYXATTR = False
+    PYXATTR_ENABLED = False
 
 
 try:
@@ -179,9 +179,9 @@ except:
 
 try:
     from yum import rpmsack
-    YUM_LOADED = True
+    YUM_ENABLED = True
 except:
-    YUM_LOADED = False
+    YUM_ENABLED = False
 
 
 __title__   = "packagemaker"
@@ -1780,7 +1780,7 @@ class Rpm(object):
 
 
 
-if YUM_LOADED:
+if YUM_ENABLED:
     rpmdb = rpmsack.RPMDBPackageSack()
 
     @memoize
@@ -1944,7 +1944,7 @@ class FileOperations(object):
         return m == 0 and "0000" or oct(m)
 
     @classmethod
-    def copy_main(cls, fileinfo, dest, use_pyxattr=USE_PYXATTR):
+    def copy_main(cls, fileinfo, dest, use_pyxattr=PYXATTR_ENABLED):
         """Two steps needed to keep the content and metadata of the original file:
 
         1. Copy itself and its some metadata (owner, mode, etc.)
@@ -4137,7 +4137,7 @@ Examples:
 
 
 def main(argv=sys.argv):
-    global PKG_COMPRESSORS, TEMPLATES, USE_PYXATTR
+    global PKG_COMPRESSORS, TEMPLATES, PYXATTR_ENABLED
 
     verbose_test = False
 
@@ -4252,10 +4252,10 @@ def main(argv=sys.argv):
     pkg['format'] = options.format
 
     if options.with_pyxattr:
-        if not USE_PYXATTR:
+        if not PYXATTR_ENABLED:
             logging.warn(" pyxattr module is not found so that it will not be used.")
     else:
-        USE_PYXATTR = False
+        PYXATTR_ENABLED = False
 
     pkg['destdir'] = options.destdir.rstrip(os.path.sep)
 
