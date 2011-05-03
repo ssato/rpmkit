@@ -1616,7 +1616,6 @@ class TestFuncsWithSideEffects(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        logging.info("start") # dummy log
         self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
 
     def tearDown(self):
@@ -1800,7 +1799,6 @@ class TestRpm(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        logging.info("start")
         self.do_test = os.path.exists("/var/lib/rpm/Basenames")
 
     def test_pathinfo(self):
@@ -2083,17 +2081,17 @@ class TestFileOperations(unittest.TestCase):
 
         src_attrs = xattr.get_all(path)
         if src_attrs:
-            assert src_attrs == xattr.get_all(dest)
-            assert src_attrs == xattr.get_all(dest2)
+            self.assertEquals(src_attrs, xattr.get_all(dest))
+            self.assertEquals(src_attrs, xattr.get_all(dest2))
 
-        assert os.path.exists(dest)
-        assert os.path.exists(dest2)
+        self.assertTrue(os.path.exists(dest))
+        self.assertTrue(os.path.exists(dest2))
 
         self.fo.remove(dest)
-        assert not os.path.exists(dest)
+        self.assertFalse(os.path.exists(dest))
 
         self.fo.remove(dest2)
-        assert not os.path.exists(dest2)
+        self.assertFalse(os.path.exists(dest2))
 
     def test_copy(self):
         path = random.choice([p for p in self.paths_g if os.path.isfile(p)])
@@ -2104,9 +2102,9 @@ class TestFileOperations(unittest.TestCase):
         self.fo.copy(fileinfo, dest)
         self.fo.copy(fileinfo, dest, True)
 
-        assert os.path.exists(dest)
+        self.assertTrue(os.path.exists(dest))
         self.fo.remove(dest)
-        assert not os.path.exists(dest)
+        self.assertFalse(os.path.exists(dest))
 
 
 
@@ -2123,7 +2121,7 @@ class TestDirOperations(unittest.TestCase):
     def tearDown(self):
         rm_rf(self.workdir)
 
-    def test_copy_dir(self):
+    def test_copy(self):
         path = random.choice([p for p in self.paths_g if os.path.isdir(p)])
 
         dest = os.path.join(self.workdir, os.path.basename(path))
@@ -2132,9 +2130,37 @@ class TestDirOperations(unittest.TestCase):
         self.fo.copy(fileinfo, dest)
         self.fo.copy(fileinfo, dest, True)
 
-        assert os.path.exists(dest)
+        self.assertTrue(os.path.exists(dest))
         self.fo.remove(dest)
-        assert not os.path.exists(dest)
+        self.assertFalse(os.path.exists(dest))
+
+
+
+class TestSymlinkOperations(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
+
+    fo = SymlinkOperations
+
+    def setUp(self):
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_copy(self):
+        shell2("ln -s /etc/resolv.conf ./resolv.conf", self.workdir)
+        path = os.path.join(self.workdir, "resolv.conf")
+        dest = path + ".symlnk"
+
+        fileinfo = FileInfoFactory().create(path)
+
+        self.fo.copy(fileinfo, dest)
+        self.fo.copy(fileinfo, dest, True)
+
+        self.assertTrue(os.path.exists(dest))
+        self.fo.remove(dest)
+        self.assertFalse(os.path.exists(dest))
 
 
 
@@ -2569,7 +2595,6 @@ class TestMiscFunctions(unittest.TestCase):
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
-        logging.info("start")
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -3022,7 +3047,6 @@ class TestFilelistCollector(unittest.TestCase):
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
-        logging.info("start")
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -3129,7 +3153,6 @@ class TestExtFilelistCollector(unittest.TestCase):
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
-        logging.info("start")
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -3167,7 +3190,6 @@ class TestJsonFilelistCollector(unittest.TestCase):
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
-        logging.info("start")
 
         self.json_data = """\
 [
@@ -3437,6 +3459,7 @@ class RpmPackageMaker(TgzPackageMaker):
             self.shell("mock -r %s %s %s" % \
                 (self.package['dist'], srcrpm_name_by_rpmspec(self.rpmspec()), silent)
             )
+            print "  GEN    rpm"  # mimics the message of 'make rpm'
             return self.shell("mv /var/lib/mock/%(dist)s/result/*.rpm %(workdir)s" % self.package)
         else:
             if on_debug_mode:
@@ -3635,8 +3658,6 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         target = "/etc/resolv.conf"
         self.cmd = "echo %s | python %s -n resolvconf -w %s " % (target, sys.argv[0], self.workdir)
 
-        logging.info("start") # dummy log
-
     def tearDown(self):
         rm_rf(self.workdir)
 
@@ -3772,8 +3793,6 @@ class TestMainProgram01JsonFileCases(unittest.TestCase):
         self.listfile = os.path.join(self.workdir, "filelist.json")
         self.cmd = "python %s -n resolvconf -w %s --itype filelist.json " % (sys.argv[0], self.workdir)
 
-        logging.info("start")
-
     def tearDown(self):
         rm_rf(self.workdir)
 
@@ -3794,7 +3813,6 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
-        logging.info("start")
 
         self.filelist = os.path.join(self.workdir, 'file.list')
 
@@ -3835,6 +3853,7 @@ def run_unittests(verbose, test_choice):
         TestRpmFileInfoFactory,
         TestFileOperations,
         TestDirOperations,
+        TestSymlinkOperations,
         TestMiscFunctions,
         TestFilelistCollector,
     ]
