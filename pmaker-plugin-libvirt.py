@@ -376,14 +376,10 @@ exit 0
 # PackageMaker Inherited classes:
 class LibvirtDomainCollector(pmaker.FilelistCollector):
 
-    global LIBVIRT_DOMAIN_TEMPLATES
-
-    _templates = LIBVIRT_DOMAIN_TEMPLATES
     _type = "libvirt.domain"
 
     def __init__(self, domname, pkgname, options):
         super(LibvirtDomainCollector, self).__init__(domname, pkgname, options)
-        self.domname = domname
 
     @classmethod
     def list_targets(cls, domname):
@@ -403,6 +399,27 @@ class LibvirtDomainCollector(pmaker.FilelistCollector):
         filelist += self.domain.delta_images
 
         return unique(filelist)
+
+
+
+class RpmLibvirtDomainPackageMaker(pmaker.RpmPackageMaker):
+
+    global LIBVIRT_DOMAIN_TEMPLATES
+
+    _templates = LIBVIRT_DOMAIN_TEMPLATES
+    _type = "libvirt.domain"
+    _collector = LibvirtDomainCollector
+
+
+
+class DebLibvirtDomainPackageMaker(pmaker.DebPackageMaker):
+
+    global LIBVIRT_DOMAIN_TEMPLATES
+
+    _templates = LIBVIRT_DOMAIN_TEMPLATES
+    _type = "libvirt.domain"
+    _collector = LibvirtDomainCollector
+
 
 
 # vim:sw=4:ts=4:et:
