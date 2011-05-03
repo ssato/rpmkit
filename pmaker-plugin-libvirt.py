@@ -52,7 +52,7 @@ import logging
 import re
 import subprocess
 import unittest
-import xpack
+import pmaker
 
 
 
@@ -177,7 +177,7 @@ __email__   = "satoru.satoh@gmail.com"
 __website__ = "https://github.com/ssato/rpmkit"
 
 
-LIBVIRT_DOMAIN_TEMPLATES = copy.copy(xpack.TEMPLATES)
+LIBVIRT_DOMAIN_TEMPLATES = copy.copy(pmaker.TEMPLATES)
 LIBVIRT_DOMAIN_TEMPLATES.update(
 {
     "package.spec": """\
@@ -256,7 +256,7 @@ fi
 
 %post
 if [ \$1 = 1 ]; then    # install
-    /usr/bin/virsh define %{domainxml_savedir}/${domain.name.
+    /usr/bin/virsh define %{domainxml_savedir}/${domain.name}
 elif [ \$1 = 2 ]; then  # update
     if `/usr/bin/virsh list | grep -q ${domain.name} 2>/dev/null`; then
         echo "${domain.name} is running. Run the following later when it's stopped to update its profile:"
@@ -374,19 +374,27 @@ exit 0
 
 
 # PackageMaker Inherited classes:
-class RpmLibvirtDomainPackageMaker(xpack.RpmPackageMaker):
+class LibvirtDomainCollector(pmaker.FilelistCollector):
 
     global LIBVIRT_DOMAIN_TEMPLATES
 
     _templates = LIBVIRT_DOMAIN_TEMPLATES
     _type = "libvirt.domain"
-    _format = "rpm"
 
-    def __init__(self, package, vmname, options, *args, **kwargs):
-        self.domain = LibvirtDomain(vmname)
+    def __init__(self, domname, pkgname, options):
+        super(LibvirtDomainCollector, self).__init__(domname, pkgname, options)
+        self.domname = domname
+
+    @classmethod
+    def list_targets(cls, domname):
+        """Gather files of which the domain $domname owns.
+        
+        @domname  str  Domain's name
+        """
+        self.domain = LibvirtDomain(domname)
         self.domain.parse()
 
-        self.domain.xmlpath_savedir = "/var/lib/xpack/libvirt.domain"
+        self.domain.xmlpath_savedir = "/var/lib/pmaker/libvirt.domain"
         self.domain.xmlpath_saved = os.path.join(self.domain.xmlpath_savedir, "%s.xml" % self.domain.name)
 
         #filelist = [self.domain.xmlpath]
@@ -394,20 +402,7 @@ class RpmLibvirtDomainPackageMaker(xpack.RpmPackageMaker):
         filelist += self.domain.base_images
         filelist += self.domain.delta_images
 
-        super(RpmLibvirtDomainPackageMaker, self).__init__(package, filelist, options)
-
-        self.package["domain"] = self.domain
-
-
-
-class DebLibvirtDomainPackageMaker(xpack.DebPackageMaker):
-
-    global LIBVIRT_DOMAIN_TEMPLATES
-
-    _templates = LIBVIRT_DOMAIN_TEMPLATES
-    _type = "libvirt.domain"
-    _format = "deb"
-
+        return unique(filelist)
 
 
 # vim:sw=4:ts=4:et:
