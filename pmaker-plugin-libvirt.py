@@ -596,10 +596,7 @@ class LibvirtDomainCollector(pmaker.FilelistCollector):
     def __init__(self, domname, pkgname, options):
         super(LibvirtDomainCollector, self).__init__(domname, pkgname, options)
 
-        domain = LibvirtDomain(domname)
-        domain.parse()
-        self.domain = domain
-
+        self.domain = LibvirtDomain(domname)
         self.modifiers.append(LibvirtDomainXMLModifier(self.domain))
 
     @classmethod
@@ -609,7 +606,6 @@ class LibvirtDomainCollector(pmaker.FilelistCollector):
         @domname  str  Domain's name
         """
         domain = LibvirtDomain(domname)
-        domain.parse()
 
         filelist = [domain.xmlpath] + domain.base_images + domain.delta_images
 
@@ -625,6 +621,10 @@ class RpmLibvirtDomainPackageMaker(pmaker.RpmPackageMaker):
     _type = "libvirt.domain"
     _collector = LibvirtDomainCollector
 
+    def __init__(self, package, domname, options, *args, **kwargs):
+        super(LibvirtDomainCollector, self).__init__(package, domname, options)
+
+        self.package["domain"] = LibvirtDomain(domname)
 
 
 class DebLibvirtDomainPackageMaker(pmaker.DebPackageMaker):
@@ -634,6 +634,11 @@ class DebLibvirtDomainPackageMaker(pmaker.DebPackageMaker):
     _templates = LIBVIRT_DOMAIN_TEMPLATES
     _type = "libvirt.domain"
     _collector = LibvirtDomainCollector
+
+    def __init__(self, package, domname, options, *args, **kwargs):
+        super(LibvirtDomainCollector, self).__init__(package, domname, options)
+
+        self.package["domain"] = LibvirtDomain(domname)
 
 
 
