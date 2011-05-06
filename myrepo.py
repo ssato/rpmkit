@@ -614,12 +614,14 @@ class Repo(object):
 [${repo.name}]
 name=Custom yum repository on ${repo.server} by ${repo.user} (\$basearch)
 baseurl=${repo.baseurl}\$basearch/
+metadata_expire=2h
 enabled=1
 gpgcheck=${repo.gpgcheck}
 
 [${repo.name}-source]
 name=Custom yum repository on ${repo.server} by ${repo.user} (source)
 baseurl=${repo.baseurl}sources/
+metadata_expire=2h
 enabled=0
 gpgcheck=0
 """
