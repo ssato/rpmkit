@@ -1307,19 +1307,6 @@ def true(x):
     return True
 
 
-def dirname(path):
-    """dirname.
-
-    >>> dirname('/a/b/c')
-    '/a/b'
-    >>> dirname('/a/b/')
-    '/a/b'
-    >>> dirname('')
-    ''
-    """
-    return os.path.dirname(path)
-
-
 @memoize
 def hostname():
     return socket.gethostname() or os.uname()[1]
@@ -2538,7 +2525,7 @@ def distdata_in_makefile_am(paths, srcdir='src'):
             'dir':d,
             'files': [os.path.join('src', p.strip(os.path.sep)) for p in ps]
         } \
-        for d,ps in groupby(paths, dirname)
+        for d,ps in groupby(paths, os.path.dirname)
     ]
 
 
