@@ -599,15 +599,12 @@ class LibvirtDomainCollector(pmaker.FilelistCollector):
         self.domain = LibvirtDomain(domname)
         self.modifiers.append(LibvirtDomainXMLModifier(self.domain))
 
-    @classmethod
-    def list_targets(cls, domname):
+    def list_targets(self, domname):
         """Gather files of which the domain $domname owns.
         
         @domname  str  Domain's name
         """
-        domain = LibvirtDomain(domname)
-
-        filelist = [domain.xmlpath] + domain.base_images + domain.delta_images
+        filelist = [self.domain.xmlpath] + self.domain.base_images + self.domain.delta_images
 
         return unique(filelist)
 

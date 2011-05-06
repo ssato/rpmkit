@@ -2891,8 +2891,7 @@ class FilelistCollector(Collector):
         else:
             return [Target(p) for p in glob.glob(line.rstrip())]
 
-    @classmethod
-    def list_targets(cls, listfile):
+    def list_targets(self, listfile):
         """Read paths from given file line by line and returns path list sorted by
         dir names. There some speical parsing rules for the file list:
 
@@ -2903,7 +2902,7 @@ class FilelistCollector(Collector):
 
         @listfile  str  Path list file name or "-" (read list from stdin)
         """
-        return unique(concat(cls._parse(l) for l in cls.open(listfile).readlines()))
+        return unique(concat(self._parse(l) for l in self.open(listfile).readlines()))
 
     def _collect(self, listfile):
         """Collect FileInfo objects from given path list.
@@ -3029,9 +3028,8 @@ class JsonFilelistCollector(FilelistCollector):
         else:
             return [Target(p, path_dict["target"]) for p in glob.glob(path)]
 
-    @classmethod
-    def list_targets(cls, listfile):
-        return unique(concat(cls._parse(d) for d in json.load(cls.open(listfile))))
+    def list_targets(self, listfile):
+        return unique(concat(self._parse(d) for d in json.load(self.open(listfile))))
 
 
 
@@ -3088,8 +3086,18 @@ class TestFilelistCollector(unittest.TestCase):
             f.write("%s\n" % p)
         f.close()
 
+        option_values = {
+            "format": "rpm",
+            "destdir": "",
+            "ignore_owner": False,
+            "no_rpmdb": False,
+        }
+
+        options = optparse.Values(option_values)
+        fc = FilelistCollector(listfile, "foo", options)
+
         ts = unique(concat(FilelistCollector._parse(p + "\n") for p in paths))
-        self.assertListEqual(ts, FilelistCollector.list_targets(listfile))
+        self.assertListEqual(ts, fc.list_targets(listfile))
 
     def test_collect(self):
         paths = [
@@ -3216,11 +3224,23 @@ class TestJsonFilelistCollector(unittest.TestCase):
         rm_rf(self.workdir)
 
     def test_list_targets(self):
+        listfile = os.path.join(self.workdir, "files.json")
+
         f = open(listfile, "w")
         f.write(self.json_data)
         f.close()
 
-        ts = JsonFilelistCollector.list_targets(listfile)
+        option_values = {
+            "format": "rpm",
+            "destdir": "",
+            "ignore_owner": False,
+            "no_rpmdb": False,
+        }
+
+        options = optparse.Values(option_values)
+        fc = ExtFilelistCollector(listfile, "foo", options)
+
+        ts = fc.list_targets(listfile)
         #self.assertListEqual(ts, ts2)
 
 
@@ -3856,6 +3876,8 @@ def run_unittests(verbose, test_choice):
         TestSymlinkOperations,
         TestMiscFunctions,
         TestFilelistCollector,
+        TestExtFilelistCollector,
+        TestJsonFilelistCollector,
     ]
 
     system_tests = [
