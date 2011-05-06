@@ -27,6 +27,7 @@
 #
 
 from Cheetah.Template import Template
+from functools import reduce as foldl
 from itertools import groupby, product
 
 import ConfigParser as cp
@@ -62,6 +63,55 @@ def memoize(fn):
         return cache[key]
 
     return wrapped
+
+
+@memoize
+def is_foldable(xs):
+    """@see http://www.haskell.org/haskellwiki/Foldable_and_Traversable
+
+    >>> is_foldable([])
+    True
+    >>> is_foldable(())
+    True
+    >>> is_foldable(x for x in range(3))
+    True
+    >>> is_foldable(None)
+    False
+    >>> is_foldable(True)
+    False
+    >>> is_foldable(1)
+    False
+    """
+    return isinstance(xs, (list, tuple)) or callable(getattr(xs, "next", None))
+
+
+def listplus(list_lhs, foldable_rhs):
+    """
+    (++) in python.
+    """
+    return list_lhs + list(foldable_rhs)
+
+
+def concat(xss):
+    """
+    >>> concat([[]])
+    []
+    >>> concat((()))
+    []
+    >>> concat([[1,2,3],[4,5]])
+    [1, 2, 3, 4, 5]
+    >>> concat([[1,2,3],[4,5,[6,7]]])
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat(((1,2,3),(4,5,[6,7])))
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat(((1,2,3),(4,5,[6,7])))
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat((i, i*2) for i in range(3))
+    [0, 0, 1, 2, 2, 4]
+    """
+    assert is_foldable(xss)
+
+    return foldl(listplus, (xs for xs in xss), [])
 
 
 def compile_template(template, params, is_file=False):
@@ -174,8 +224,9 @@ def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True)
     @user     str  (remote) user to run given command.
     @host     str  on which host to run given command?
 
+    >>> test_remote = False
     >>> rc = shell("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
-    >>> if rc == 0:
+    >>> if rc == 0 and test_remote:
     ...     rc = rshell("ls /dev/null", get_username(), "127.0.0.1", os.curdir, log=False)
     ...     assert rc == 0, rc
     """
@@ -510,6 +561,25 @@ class RepoOperations(object):
         return os.path.join(repo.topdir, repo.distdir)
 
     @classmethod
+    def sign_rpms(cls, keyid, rpms):
+        """
+        TODO: It might ask user about the gpg passphrase everytime this method
+        is called.  How to store the passphrase or streamline with gpg-agent
+        via rpm?
+
+        @keyid   GPG Key ID to sign with
+        @rpms    RPM file path list
+        """
+        rpms = " ".join(rpms)
+        sign_cmd = "rpm --resign --define \"_signature %s\" --define \"_gpg_name %s\" %s" % ("gpg", keyid, rpms)
+        verify_cmd = "rpm --checksig -v " + rpms
+
+        # TODO: "rpm --checksig ..." looks returning 1 even if it suceeds.
+        cs = [Command(sign_cmd), Command(verify_cmd, stop_on_error=False)]
+
+        return cls.sequence_(cs)
+
+    @classmethod
     def build(cls, repo, srpm):
         cs = [repo.build_cmd(srpm, d) for d in repo.dists_by_srpm(srpm)]
 
@@ -517,12 +587,17 @@ class RepoOperations(object):
 
     @classmethod
     def deploy(cls, repo, srpm, build=True):
+        """
+        FIXME: ugly code around signkey check.
+        """
         if build:
             rcs = cls.build(repo, srpm)
             assert all((r == 0 for r in rcs))
 
         destdir = cls.destdir(repo)
         cs = [repo.copy_cmd(srpm, os.path.join(destdir, "sources"))]
+
+        rpms_to_sign = []
 
         for d in repo.dists_by_srpm(srpm):
             if is_noarch(srpm):
@@ -532,6 +607,12 @@ class RepoOperations(object):
 
             for p in rpms:
                 cs.append(repo.copy_cmd(p, os.path.join(destdir, d.arch)))
+
+            if repo.signkey:
+                rpms_to_sign += rpms
+
+        if repo.signkey:
+            cls.sign_rpms(repo.signkey, rpms_to_sign)
 
         cls.sequence_(cs)
         cls.update(repo)
@@ -552,6 +633,18 @@ class RepoOperations(object):
 
         os.makedirs(reldir)
         open(release_file_path, 'w').write(c)
+
+        if repo.signkey:
+            keydir = workdir + repo.keydir
+            os.makedirs(keydir)
+
+            c = Command("gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile), workdir=workdir)
+            c.run()
+
+            release_file_list = os.path.join(workdir, "files.list")
+            open(release_file_list, "w").write(
+                release_file_path + ",rpmattr=%config\n" + workdir + repo.keyfile + "\n"
+            )
 
         cmd = Command(repo.release_rpm_build_cmd(workdir, release_file_path), repo.user)
         cmd.run()
@@ -608,7 +701,10 @@ class Repo(object):
     subdir = "yum"
     topdir = "~%(user)s/public_html/%(subdir)s"
     baseurl = "http://%(server)s/%(user)s/%(subdir)s/%(distdir)s"
-    gpgcheck = False
+
+    signkey = ""
+    keydir = "/etc/pki/rpm-gpg"
+    keyurl = "file://%(keydir)s/RPM-GPG-KEY-%(name)s-%(distversion)s"
 
     release_file_tmpl = """\
 [${repo.name}]
@@ -616,7 +712,12 @@ name=Custom yum repository on ${repo.server} by ${repo.user} (\$basearch)
 baseurl=${repo.baseurl}\$basearch/
 metadata_expire=2h
 enabled=1
-gpgcheck=${repo.gpgcheck}
+#if $repo.signkey
+gpgcheck=1
+gpgkey=${repo.keyurl}
+#else
+gpgcheck=0
+#end if
 
 [${repo.name}-source]
 name=Custom yum repository on ${repo.server} by ${repo.user} (source)
@@ -626,7 +727,9 @@ enabled=0
 gpgcheck=0
 """
     release_file_build_tmpl = """\
-echo "${repo.release_file},uid=0,gid=0,rpmattr=%config" | \\
+#if not $repo.signkey
+echo "${repo.release_file},rpmattr=%config" | \\
+#end if
 pmaker -n ${repo.name}-release --license MIT \\
     -w ${repo.workdir} \\
     --itype filelist.ext \\
@@ -638,12 +741,18 @@ pmaker -n ${repo.name}-release --license MIT \\
     --mail "${repo.email}" \\
     --pversion ${repo.distversion}  \\
     --no-rpmdb --no-mock \\
+    --ignore-owner \\
     ${repo.logopt} \\
-    --destdir ${repo.workdir} - 
+    --destdir ${repo.workdir} \\
+#if $repo.signkey
+$repo.release_file_list
+#else
+-
+#end if
 """
 
     def __init__(self, server, user, email, fullname, dist, archs,
-            name=None, subdir=None, topdir=None, baseurl=None, gpgcheck=False,
+            name=None, subdir=None, topdir=None, baseurl=None, signkey=None,
             *args, **kwargs):
         """
         @server    server's hostname to provide this yum repo
@@ -656,6 +765,7 @@ pmaker -n ${repo.name}-release --license MIT \\
         @subdir    repo's subdir
         @topdir    repo's topdir or its format string, e.g. "/var/www/html/%(subdir)s".
         @baseurl   base url or its format string, e.g. "file://%(topdir)s".
+        @signkey   GPG key ID for signing or None indicates will never sign rpms
         """
         self.server = server
         self.user = user
@@ -671,7 +781,6 @@ pmaker -n ${repo.name}-release --license MIT \\
         self.distdir = os.path.join(self.distname, self.distversion)
 
         self.subdir = subdir is None and self.subdir or subdir
-        self.gpgcheck = gpgcheck and "1" or "0"
 
         self.email = self._format(email)
 
@@ -688,6 +797,15 @@ pmaker -n ${repo.name}-release --license MIT \\
         self.name = self._format(name)
         self.topdir = self._format(topdir)
         self.baseurl = self._format(baseurl)
+
+        self.keydir = Repo.keydir
+
+        if signkey is None:
+            self.signkey = self.keyurl = self.keyfile = ""
+        else:
+            self.signkey = signkey
+            self.keyurl = self._format(Repo.keyurl)
+            self.keyfile = os.path.join(self.keydir, os.path.basename(self.keyurl))
 
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
@@ -723,6 +841,7 @@ pmaker -n ${repo.name}-release --license MIT \\
             "release_file": release_file_path,
             "workdir": workdir,
             "logopt": logopt,
+            "release_file_list": os.path.join(workdir, "files.list"),
         })
         params = {"repo": repo}
 
@@ -866,13 +985,13 @@ def init_defaults_by_conffile(config=None, profile=None):
     return dict((k, parse_conf_value(v)) for k, v in d)
 
 
-def init_defaults(limit_running_dist=False):
-    if limit_running_dist:
-        dists = ["%s-%s" % get_distribution()]
-    else:
-        dists = list_dists()
-
+def init_defaults():
+    dists_full = list_dists()
     archs = list_archs()
+
+    dists = ["%s-%s" % get_distribution()]
+
+    distributions_full = ["%s-%s" % da for da in product(dists_full, archs)]
     distributions = ["%s-%s" % da for da in product(dists, archs)]
 
     defaults = {
@@ -880,12 +999,13 @@ def init_defaults(limit_running_dist=False):
         "user": get_username(),
         "email":  get_email(),
         "fullname": get_fullname(),
+        "dists_full": ",".join(distributions_full),
         "dists": ",".join(distributions),
         "name": Repo.name,
         "subdir": Repo.subdir,
         "topdir": Repo.topdir,
         "baseurl": Repo.baseurl,
-        "gpgcheck": Repo.gpgcheck,
+        "signkey": Repo.signkey,
     }
 
     return defaults
@@ -953,7 +1073,7 @@ class TestAppLocal(unittest.TestCase):
 
         cmd = "%(prog)s --server %(server)s --user %(user)s --email %(email)s --fullname \"%(fullname)s\" "
         cmd += " --dists %(dists)s --name \"%(name)s\" --subdir %(subdir)s --topdir \"%(topdir)s\" "
-        cmd += " --baseurl \"%(baseurl)s\" --gpgcheck "
+        cmd += " --baseurl \"%(baseurl)s\" "
         cmd += " init "
         cmd = cmd % config
 
@@ -969,12 +1089,21 @@ class TestAppLocal(unittest.TestCase):
         config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
 
         config["dists"] = "rhel-6-i386,fedora-14-i386"
-
         config["prog"] = self.prog
+
+        try:
+            key_list = subprocess.check_output("gpg --list-keys %s 2>/dev/null" % get_username(), shell=True)
+            keyid = key_list.split()[1].split("/")[1]
+            keyopt = " --signkey %s " % keyid
+
+        except Exception, e:
+            logging.warn("Cannot get the default gpg key list. Test w/o --signkey: err=%s" % str(e))
+            keyopt = ""
 
         cmd = "%(prog)s --server %(server)s --user %(user)s --email %(email)s --fullname \"%(fullname)s\" "
         cmd += " --dists %(dists)s --name \"%(name)s\" --subdir %(subdir)s --topdir \"%(topdir)s\" "
-        cmd += " --baseurl \"%(baseurl)s\" --gpgcheck "
+        cmd += " --baseurl \"%(baseurl)s\" "
+        cmd += keyopt
         cmd += " init "
         cmd = cmd % config
 
@@ -1004,7 +1133,7 @@ def test(verbose):
 
 def opt_parser():
     defaults = init_defaults()
-    distribution_choices = defaults["dists"]  # save it.
+    distribution_choices = defaults["dists_full"]  # save it.
 
     defaults.update(init_defaults_by_conffile())
 
@@ -1051,7 +1180,7 @@ Examples:
     iog.add_option("", "--subdir", help="Repository sub dir name [%default]")
     iog.add_option("", "--topdir", help="Repository top dir or its format string [%default]")
     iog.add_option('', "--baseurl", help="Repository base URL or its format string [%default]")
-    iog.add_option('', "--gpgcheck", action="store_true", help="Whether to check GPG key")
+    iog.add_option('', "--signkey", help="GPG key ID if signing RPMs to deploy")
     p.add_option_group(iog)
 
     return p
@@ -1141,7 +1270,7 @@ def main():
             config["subdir"],
             config["topdir"],
             config["baseurl"],
-            config["gpgcheck"],
+            config["signkey"],
         )
 
         repos.append(repo)
