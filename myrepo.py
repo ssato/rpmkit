@@ -709,7 +709,7 @@ class Repo(object):
     release_file_tmpl = """\
 [${repo.name}]
 name=Custom yum repository on ${repo.server} by ${repo.user} (\$basearch)
-baseurl=${repo.baseurl}\$basearch/
+baseurl=${repo.baseurl}/\$basearch/
 metadata_expire=2h
 enabled=1
 #if $repo.signkey
@@ -721,7 +721,7 @@ gpgcheck=0
 
 [${repo.name}-source]
 name=Custom yum repository on ${repo.server} by ${repo.user} (source)
-baseurl=${repo.baseurl}sources/
+baseurl=${repo.baseurl}/sources/
 metadata_expire=2h
 enabled=0
 gpgcheck=0
