@@ -3277,7 +3277,7 @@ class PackageMaker(object):
     def collector(self):
         return self._collector
 
-    def __init__(self, package, filelist, options, template_params={}, *args, **kwargs):
+    def __init__(self, package, filelist, options, *args, **kwargs):
         self.package = package
         self.filelist = filelist
         self.options = options
@@ -3302,9 +3302,6 @@ class PackageMaker(object):
                     relmap.append({"type": rel, "targets": reltargets})
 
         self.package["relations"] = relmap
-
-        for k, v in template_params:
-            self.package[k] = v
 
         for k, v in kwargs.iteritems():
             setattr(self, k, v)

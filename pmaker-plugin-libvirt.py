@@ -619,9 +619,15 @@ class RpmLibvirtDomainPackageMaker(pmaker.RpmPackageMaker):
     _collector = LibvirtDomainCollector
 
     def __init__(self, package, domname, options, *args, **kwargs):
+        """
+        $filelist (FILELIST) parameter is interpreted as a domain name.
+        """
         super(LibvirtDomainCollector, self).__init__(package, domname, options)
 
-        self.package["domain"] = LibvirtDomain(domname)
+        self.domain = LibvirtDomain(self.filelist)  # filelist == domain name
+        self.package["domain"] = self.domain
+
+
 
 
 class DebLibvirtDomainPackageMaker(pmaker.DebPackageMaker):
@@ -635,6 +641,7 @@ class DebLibvirtDomainPackageMaker(pmaker.DebPackageMaker):
     def __init__(self, package, domname, options, *args, **kwargs):
         super(LibvirtDomainCollector, self).__init__(package, domname, options)
 
+        self.domain = LibvirtDomain(self.filelist)
         self.package["domain"] = LibvirtDomain(domname)
 
 
