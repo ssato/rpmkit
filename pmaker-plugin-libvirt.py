@@ -573,17 +573,17 @@ exit 0
 
 
 # PackageMaker Inherited classes:
-class LibvirtDomainXMLModifier(pmaker.FileInfoModifier):
+class LibvirtObjectXMLModifier(pmaker.FileInfoModifier):
 
-    def __init__(self, domain):
-        self.domain = domain
+    def __init__(self, obj):
+        self.obj = obj
 
     def update(self, fileinfo, *args, **kwargs):
-        if fileinfo.path.endswith(".xml"):  # it should be domain xml
+        if fileinfo.path.endswith(".xml"):  # it should be obj xml
             if getattr(fileinfo, "target", False):
-                fileinfo.target = fileinfo.target.replace(os.path.dirname(fileinfo.path), self.domain.xmlsavedir)
+                fileinfo.target = fileinfo.target.replace(os.path.dirname(fileinfo.path), self.obj.xmlsavedir)
             else:
-                fileinfo.target = os.path.join(self.domain.xmlsavedir, "%s.xml" % self.domain.name)
+                fileinfo.target = os.path.join(self.obj.xmlsavedir, "%s.xml" % self.obj.name)
 
         return fileinfo
 
@@ -597,7 +597,7 @@ class LibvirtDomainCollector(pmaker.FilelistCollector):
         super(LibvirtDomainCollector, self).__init__(domname, pkgname, options)
 
         self.domain = LibvirtDomain(domname)
-        self.modifiers.append(LibvirtDomainXMLModifier(self.domain))
+        self.modifiers.append(LibvirtObjectXMLModifier(self.domain))
 
     def list_targets(self, domname):
         """Gather files of which the domain $domname owns.
