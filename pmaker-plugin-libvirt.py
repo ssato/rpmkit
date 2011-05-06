@@ -606,7 +606,7 @@ class LibvirtDomainCollector(pmaker.FilelistCollector):
         """
         filelist = [self.domain.xmlpath] + self.domain.base_images + self.domain.delta_images
 
-        return unique(filelist)
+        return pmaker.unique(filelist)
 
 
 
