@@ -3277,7 +3277,7 @@ class PackageMaker(object):
     def collector(self):
         return self._collector
 
-    def __init__(self, package, filelist, options, *args, **kwargs):
+    def __init__(self, package, filelist, options, template_params={}, *args, **kwargs):
         self.package = package
         self.filelist = filelist
         self.options = options
@@ -3302,6 +3302,9 @@ class PackageMaker(object):
                     relmap.append({"type": rel, "targets": reltargets})
 
         self.package["relations"] = relmap
+
+        for k, v in template_params:
+            self.package[k] = v
 
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
@@ -3453,9 +3456,8 @@ class RpmPackageMaker(TgzPackageMaker):
         "obsoletes": "Obsoletes",
     }
 
-    def __init__(self, package, filelist, options, *args, **kwargs):
-        super(RpmPackageMaker, self).__init__(package, filelist, options)
-        self.use_mock = (not options.no_mock)
+    def __init__(self, package, filelist, options, template_params={}, *args, **kwargs):
+        super(RpmPackageMaker, self).__init__(package, filelist, options, template_params)
 
     def rpmspec(self):
         return os.path.join(self.workdir, "%s.spec" % self.pname)
@@ -3467,14 +3469,16 @@ class RpmPackageMaker(TgzPackageMaker):
             return self.shell("make srpm V=0 > /dev/null")
 
     def build_rpm(self):
-        if self.use_mock:
+        use_mock = not self.options.no_mock
+
+        if use_mock:
             try:
                 self.shell("mock --version > /dev/null")
             except RuntimeError, e:
                 logging.warn(" It seems mock is not found on your system. Fallback to plain rpmbuild...")
-                self.use_mock = False
+                use_mock = False
 
-        if self.use_mock:
+        if use_mock:
             silent = (on_debug_mode() and "" or "--quiet")
             self.shell("mock -r %s %s %s" % \
                 (self.package['dist'], srcrpm_name_by_rpmspec(self.rpmspec()), silent)
