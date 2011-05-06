@@ -3456,9 +3456,6 @@ class RpmPackageMaker(TgzPackageMaker):
         "obsoletes": "Obsoletes",
     }
 
-    def __init__(self, package, filelist, options, template_params={}, *args, **kwargs):
-        super(RpmPackageMaker, self).__init__(package, filelist, options, template_params)
-
     def rpmspec(self):
         return os.path.join(self.workdir, "%s.spec" % self.pname)
 
