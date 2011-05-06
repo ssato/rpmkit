@@ -115,9 +115,9 @@ import rpm
 try:
     from Cheetah.Template import Template
     UPTO = "build"
-    #UPTO = "sbuild"  # TODO: change default ?
+
 except ImportError:
-    logging.warn("python-cheetah is not found so that packaging process will go up to only 'setup' step.")
+    logging.warn("python-cheetah is not found. Packaging process can go up to \"setup\" step.")
 
     UPTO = 'setup'
 
@@ -150,6 +150,7 @@ except ImportError:
 
 try:
     from hashlib import md5, sha1 #, sha256, sha512
+
 except ImportError:  # python < 2.5
     from md5 import md5
     from sha import sha as sha1
@@ -157,6 +158,7 @@ except ImportError:  # python < 2.5
 
 try:
     all
+
 except NameError:  # python < 2.5
     def all(xs):
         for x in xs:
@@ -168,6 +170,7 @@ except NameError:  # python < 2.5
 try:
     import json
     JSON_ENABLED = True
+
 except:
     JSON_ENABLED = False
 
@@ -180,6 +183,7 @@ except:
 try:
     from yum import rpmsack
     YUM_ENABLED = True
+
 except:
     YUM_ENABLED = False
 
