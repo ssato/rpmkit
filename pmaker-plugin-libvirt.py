@@ -602,7 +602,7 @@ class LibvirtDomainCollector(pmaker.FilelistCollector):
     def list_targets(self, domname):
         """Gather files of which the domain $domname owns.
         
-        @domname  str  Domain's name
+        @domname  str  Domain's name [dummy arg]
         """
         filelist = [self.domain.xmlpath] + self.domain.base_images + self.domain.delta_images
 
