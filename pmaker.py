@@ -2082,13 +2082,23 @@ class DirOperations(FileOperations):
     @classmethod
     def copy_main(cls, fileinfo, dest, use_pyxattr=False):
         try:
-            os.makedirs(dest, mode=fileinfo.mode)
-            os.chown(dest, fileinfo.uid, fileinfo.gid)
+            mode = int(fileinfo.permission(), 8)  # in octal, e.g. 0755
+            os.makedirs(dest, mode)
 
         except OSError, e:   # It may be OK, ex. non-root user cannot set perms.
+            logging.debug("Failed: os.makedirs, dest=%s, mode=%o" % (dest, mode))
             logging.warn(e)
 
-            os.makedirs(dest)
+            if not os.path.exists(dest):
+                os.makedirs(dest, 0755)
+
+        uid = os.getuid()
+        gid = os.getgid()
+
+        if uid == 0 or (uid == fileinfo.uid and gid == fileinfo.gid):
+            os.chown(dest, fileinfo.uid, fileinfo.gid)
+        else:
+            logging.debug("Chown is not permitted so do not")
 
         shutil.copystat(fileinfo.path, dest)
         cls.copy_xattrs(fileinfo.xattrs, dest)
@@ -2180,7 +2190,8 @@ class TestDirOperations(unittest.TestCase):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
         self.factory = FileInfoFactory()
 
-        paths = glob.glob(os.path.join(os.path.expanduser("~"), ".*"))
+        paths = glob.glob(os.path.join(os.path.expanduser("~"), ".*")) + \
+            glob.glob(os.path.join("/etc/skel/", ".*"))
         self.paths = random.sample(
             [p for p in paths if os.path.isdir(p) and not os.path.islink(p)],
             self.nsamples
