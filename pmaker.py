@@ -3826,7 +3826,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
     def test_packaging_with_rpmdb_with_mock(self):
-        network_avail = os.system("ping -c 1 -w 1 github.com") == 0
+        network_avail = os.system("ping -q -c 1 -w 1 github.com") == 0
 
         if not network_avail:
             logging.warn("Network does not look available right now. Skip this test.")
