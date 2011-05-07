@@ -119,7 +119,7 @@ try:
 except ImportError:
     logging.warn("python-cheetah is not found. Packaging process can go up to \"setup\" step.")
 
-    UPTO = 'setup'
+    UPTO = "setup"
 
     def Template(*args, **kwargs):
         raise RuntimeError("python-cheetah is missing and cannot proceed any more.")
@@ -130,7 +130,7 @@ try:
     PYXATTR_ENABLED = True
 
 except ImportError:
-    # Make up a 'Null-Object' like class mimics xattr module.
+    # Make up a "Null-Object" like class mimics xattr module.
     class xattr:
         @staticmethod
         def get_all(*args):
@@ -202,14 +202,15 @@ COLLECTORS = {}
 
 PKG_COMPRESSORS = {
     # extension: am_option,
-    'xz'    : 'no-dist-gzip dist-xz',
-    'bz2'   : 'no-dist-gzip dist-bzip2',
-    'gz'    : '',
+    "xz"    : "no-dist-gzip dist-xz",
+    "bz2"   : "no-dist-gzip dist-bzip2",
+    "gz"    : "",
 }
 
 
 TEMPLATES = {
-    "configure.ac": """\
+    "configure.ac":
+"""\
 AC_INIT([$name],[$version])
 AM_INIT_AUTOMAKE([${compressor.am_opt} foreign subdir-objects])
 
@@ -228,10 +229,11 @@ Makefile
 
 AC_OUTPUT
 """,
-    "Makefile.am": """\
+    "Makefile.am":
+"""\
 #import os.path
 EXTRA_DIST = MANIFEST MANIFEST.overrides
-#if $format == 'rpm'
+#if $format == "rpm"
 EXTRA_DIST += ${name}.spec rpm.mk
 
 abs_srcdir  ?= .
@@ -249,7 +251,7 @@ $f \\
 #end for
 
 #for $fi in $fileinfos
-#if $fi.type() == 'symlink'
+#if $fi.type() == "symlink"
 #set $dir = os.path.dirname($fi.target)
 #set $bn = os.path.basename($fi.target)
 install-data-hook::
@@ -257,7 +259,7 @@ install-data-hook::
 \t\$(AM_V_at)cd \$(DESTDIR)$dir && \$(LN_S) $fi.linkto $bn
 
 #else
-#if $fi.type() == 'dir'
+#if $fi.type() == "dir"
 install-data-hook::
 \t\$(AM_V_at)test -d \$(DESTDIR)$fi.target || \$(MKDIR_P) \$(DESTDIR)$fi.target
 
@@ -268,25 +270,29 @@ install-data-hook::
 MKDIR_P ?= mkdir -p
 SED ?= sed
 """,
-    "README": """\
+    "README":
+"""\
 This package provides some backup data collected on
 $host by $packager at $date.date.
 """,
-    "MANIFEST": """\
+    "MANIFEST":
+"""\
 #for $fi in $fileinfos
 #if not $fi.conflicts
 $fi.target
 #end if
 #end for
 """,
-    "MANIFEST.overrides": """\
+    "MANIFEST.overrides":
+"""\
 #for $fi in $fileinfos
 #if $fi.conflicts
 $fi.target
 #end if
 #end for
 """,
-    "rpm.mk": """\
+    "rpm.mk":
+"""\
 #raw
 abs_builddir    ?= $(shell pwd)
 
@@ -316,7 +322,8 @@ srpm:
 .PHONY: rpm srpm
 #end raw
 """,
-    "package.spec": """\
+    "package.spec":
+"""\
 Name:           $name
 Version:        $version
 Release:        1%{?dist}
@@ -330,7 +337,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 #end if
 #for $fi in $fileinfos
-#if $fi.type() == 'symlink'
+#if $fi.type() == "symlink"
 #set $linkto = $fi.linkto
 #BuildRequires:  $linkto
 #end if
@@ -377,7 +384,7 @@ make install DESTDIR=\$RPM_BUILD_ROOT
 %clean
 rm -rf \$RPM_BUILD_ROOT
 
-$getVar('scriptlets', '')
+$getVar("scriptlets", "")
 
 %files
 %defattr(-,root,root,-)
@@ -388,7 +395,6 @@ $getVar('scriptlets', '')
 $fi.rpm_attr()$fi.target
 #end if
 #end for
-
 
 #if $conflicts.names
 %files          overrides
@@ -401,12 +407,16 @@ $fi.rpm_attr()$fi.target
 #end for
 #end if
 
-
 %changelog
+#if $changelog
+$changelog
+#else
 * $date.timestamp ${packager} <${mail}> - ${version}-${release}
 - Initial packaging.
+#end if
 """,
-    "debian/control": """\
+    "debian/control":
+"""\
 Source: $name
 Priority: optional
 Maintainer: $packager <$mail>
@@ -431,43 +441,58 @@ Depends: \${shlibs:Depends}, \${misc:Depends}$requires_list
 Description: $summary
   $summary
 """,
-    "debian/rules": """\
+    "debian/rules":
+"""\
+#raw
 #!/usr/bin/make -f
 %:
-\tdh \$@
+\tdh $@
 
 override_dh_builddeb:
 \tdh_builddeb -- -Zbzip2
+#end raw
 """,
-    "debian/dirs": """\
+    "debian/dirs":
+"""\
 #for $fi in $fileinfos
-#if $fi.type == 'dir'
+#if $fi.type == "dir"
 #set $dir = $fi.target[1:]
 $dir
 #end if
 #end for
 """,
-    "debian/compat": """7
+    "debian/compat":
+"""\
+7
 """,
-    "debian/source/format": """3.0 (native)
+    "debian/source/format":
+"""\
+3.0 (native)
 """,
-    "debian/source/options": """\
+    "debian/source/options":
+"""\
 # Use bzip2 instead of gzip
 compression = "bzip2"
 compression-level = 9
 """,
-    "debian/copyright": """\
-This package was debianized by $packager <$mail> on
-$date.date.
+    "debian/copyright":
+"""\
+This package was debianized by $packager <$mail>
+on $date.date.
 
 This package is distributed under $license.
 """,
-    "debian/changelog": """\
+    "debian/changelog":
+"""\
+#if $changelog
+$changelog
+#else
 $name ($version) unstable; urgency=low
 
   * New upstream release
 
  -- $packager <$mail>  $date.date
+#end if
 """,
 }
 
@@ -1090,10 +1115,38 @@ no_mock    = False
 """
 
 
-(TYPE_FILE, TYPE_DIR, TYPE_SYMLINK, TYPE_OTHER, TYPE_UNKNOWN) = \
-    ('file', 'dir', 'symlink', 'other', 'unknown')
+TYPE_FILE    = "file"
+TYPE_DIR     = "dir"
+TYPE_SYMLINK = "symlink"
+TYPE_OTHER   = "other"
+TYPE_UNKNOWN = "unknown"
+
 
 TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
+
+
+STEP_SETUP = "setup"
+STEP_PRECONFIGURE = "preconfigure"
+STEP_CONFIGURE = "configure"
+STEP_SBUILD = "sbuild"
+STEP_BUILD = "build"
+
+BUILD_STEPS = (
+    # step_name, log_msg_fmt, help_txt
+    (STEP_SETUP, "Setting up src tree in %(workdir)s: %(pname)s",
+        "setup the package' src dir and copy target files in it"),
+
+    (STEP_PRECONFIGURE, "Making up autotool-ized src directory: %(pname)s",
+        "arrange build aux files such like configure.ac, Makefile.am, rpm spec" + \
+        "file, debian/* and so on. python-cheetah will be needed."),
+
+    (STEP_CONFIGURE, "Configuring src distribution: %(pname)s",
+        "setup src dir to run './configure'. autotools will be needed"),
+
+    (STEP_SBUILD, "Building src package: %(pname)s", "build src package[s]"),
+
+    (STEP_BUILD, "Building bin packages: %(pname)s", "build binary package[s]"),
+)
 
 
 
@@ -1102,22 +1155,22 @@ def dicts_comp(lhs, rhs, keys=False):
 
     >>> dicts_comp({},{})
     True
-    >>> dicts_comp({'a':1},{})
+    >>> dicts_comp({"a":1},{})
     False
-    >>> d0 = {'a': 0, 'b': 1, 'c': 2}
+    >>> d0 = {"a": 0, "b": 1, "c": 2}
     >>> d1 = copy.copy(d0)
     >>> dicts_comp(d0, d1)
     True
-    >>> d1['d'] = 3
+    >>> d1["d"] = 3
     >>> dicts_comp(d0, d1)
     True
-    >>> dicts_comp(d0, d1, ('d'))
+    >>> dicts_comp(d0, d1, ("d"))
     False
     >>> d2 = copy.copy(d0)
-    >>> d2['c'] = 3
+    >>> d2["c"] = 3
     >>> dicts_comp(d0, d2)
     False
-    >>> dicts_comp(d0, d2, ('a', 'b'))
+    >>> dicts_comp(d0, d2, ("a", "b"))
     True
     """
     if lhs == {}:
@@ -1182,16 +1235,16 @@ class memoized(object):
 
 
 @memoize
-def checksum(filepath='', algo=sha1, buffsize=8192):
+def checksum(filepath="", algo=sha1, buffsize=8192):
     """compute and check md5 or sha1 message digest of given file path.
 
     TODO: What should be done when any exceptions such like IOError (e.g. could
     not open $filepath) occur?
     """
     if not filepath:
-        return '0' * len(algo('').hexdigest())
+        return "0" * len(algo("").hexdigest())
 
-    f = open(filepath, 'r')
+    f = open(filepath, "r")
     m = algo()
 
     while True:
@@ -1318,7 +1371,7 @@ def hostname():
 
 def date(rfc2822=False, simple=False):
     """TODO: how to output in rfc2822 format w/o email.Utils.formatdate?
-    ('%z' for strftime does not look working.)
+    ("%z" for strftime does not look working.)
     """
     if rfc2822:
         fmt = "%a, %d %b %Y %T +0000"
@@ -1333,7 +1386,7 @@ def compile_template(template, params, is_file=False):
     TODO: Add test case that $template is a filename.
 
     >>> tmpl_s = "a=$a b=$b"
-    >>> params = {'a':1, 'b':'b'}
+    >>> params = {"a": 1, "b": "b"}
     >>> 
     >>> assert "a=1 b=b" == compile_template(tmpl_s, params)
     """
@@ -1347,7 +1400,7 @@ def compile_template(template, params, is_file=False):
 
 @memoize
 def get_arch():
-    """Returns 'normalized' architecutre this host can support.
+    """Returns "normalized" architecutre this host can support.
     """
     ia32_re = re.compile(r"i.86") # i386, i686, etc.
 
@@ -1428,13 +1481,13 @@ def shell2(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
     @dryrun   bool  if True, just print command string to run and returns.
     @stop_on_error bool  if True, RuntimeError will not be raised.
 
-    >>> assert 0 == shell2("echo ok > /dev/null", '.', False)
+    >>> assert 0 == shell2("echo ok > /dev/null", ".", False)
     >>> assert 0 == shell2("ls null", "/dev", False)
     >>> try:
-    ...    rc = shell2("ls /root", '.', False)
+    ...    rc = shell2("ls /root", ".", False)
     ... except RuntimeError:
     ...    pass
-    >>> assert 0 == shell2("ls /root", '.', False, True)
+    >>> assert 0 == shell2("ls /root", ".", False, True)
     """
     if not workdir:
         workdir = os.path.abspath(os.curdir)
@@ -1487,19 +1540,19 @@ def createdir(targetdir, mode=0700):
 
 
 def rm_rf(targetdir):
-    """'rm -rf' in python.
+    """ "rm -rf" in python.
 
-    >>> d = tempfile.mkdtemp(dir='/tmp')
+    >>> d = tempfile.mkdtemp(dir="/tmp")
     >>> rm_rf(d)
     >>> rm_rf(d)
     >>> 
-    >>> d = tempfile.mkdtemp(dir='/tmp')
+    >>> d = tempfile.mkdtemp(dir="/tmp")
     >>> for c in "abc":
     ...     os.makedirs(os.path.join(d, c))
     >>> os.makedirs(os.path.join(d, "c", "d"))
-    >>> open(os.path.join(d, 'x'), "w").write("test")
-    >>> open(os.path.join(d, 'a', 'y'), "w").write("test")
-    >>> open(os.path.join(d, 'c', 'd', 'z'), "w").write("test")
+    >>> open(os.path.join(d, "x"), "w").write("test")
+    >>> open(os.path.join(d, "a", "y"), "w").write("test")
+    >>> open(os.path.join(d, "c", "d", "z"), "w").write("test")
     >>> 
     >>> rm_rf(d)
     """
@@ -1510,10 +1563,11 @@ def rm_rf(targetdir):
         os.remove(targetdir)
         return 
 
-    assert targetdir != '/'                    # avoid 'rm -rf /'
-    assert os.path.realpath(targetdir) != '/'  # likewise
+    warnmsg = "You're trying to rm -rf / !"
+    assert targetdir != "/", warnmsg
+    assert os.path.realpath(targetdir) != "/", warnmsg
 
-    for x in glob.glob(os.path.join(targetdir, '*')):
+    for x in glob.glob(os.path.join(targetdir, "*")):
         if os.path.isdir(x):
             rm_rf(x)
         else:
@@ -1557,7 +1611,7 @@ class TestDecoratedFuncs(unittest.TestCase):
     def test_checksum_null(self):
         """if checksum() returns null
         """
-        self.assertEquals(checksum(), '0' * len(sha1('').hexdigest()))
+        self.assertEquals(checksum(), "0" * len(sha1("").hexdigest()))
 
     def test_is_foldable(self):
         """if is_foldable() works as expected.
@@ -1607,7 +1661,7 @@ class TestFuncsWithSideEffects(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -1625,19 +1679,19 @@ class TestFuncsWithSideEffects(unittest.TestCase):
         #self.assertIsNone(createdir(self.workdir))
         self.assertEquals(createdir(self.workdir), None)  # try creating dir already exists.
 
-        f = os.path.join(self.workdir, 'a')
+        f = os.path.join(self.workdir, "a")
         open(f, "w").write("test")
         self.assertRaises(RuntimeError, createdir, f)
 
     def test_shell(self):
-        (o, e) = shell('echo "" > /dev/null', '.')
+        (o, e) = shell("echo \"\" > /dev/null", os.curdir)
         self.assertEquals(e, "")
         self.assertEquals(o, "")
 
         self.assertRaises(RuntimeError, shell, "grep xyz /dev/null")
 
         if os.getuid() != 0:
-            self.assertRaises(RuntimeError, shell, 'ls', '/root')
+            self.assertRaises(RuntimeError, shell, "ls", "/root")
 
     def test_init_defaults_by_conffile_config(self):
         conf = """\
@@ -1669,11 +1723,11 @@ b: bbb
 
 class Rpm(object):
 
-    RPM_FILELIST_CACHE = os.path.join(os.environ['HOME'], '.cache', 'pmaker.rpm.filelist.pkl')
+    RPM_FILELIST_CACHE = os.path.join(os.environ["HOME"], ".cache", "pmaker.rpm.filelist.pkl")
 
     # RpmFi (FileInfo) keys:
-    fi_keys = ('path', 'size', 'mode', 'mtime', 'flags', 'rdev', 'inode',
-        'nlink', 'state', 'vflags', 'uid', 'gid', 'checksum')
+    fi_keys = ("path", "size", "mode", "mtime", "flags", "rdev", "inode",
+        "nlink", "state", "vflags", "uid", "gid", "checksum")
 
     @staticmethod
     def ts(rpmdb_path=None):
@@ -1692,7 +1746,7 @@ class Rpm(object):
         _path = os.path.abspath(path)
 
         try:
-            fis = [h.fiFromHeader() for h in Rpm.ts().dbMatch('basenames', _path)]
+            fis = [h.fiFromHeader() for h in Rpm.ts().dbMatch("basenames", _path)]
             if fis:
                 xs = [x for x in fis[0] if x and x[0] == _path]
                 if xs:
@@ -1703,26 +1757,26 @@ class Rpm(object):
         return dict()
 
     @staticmethod
-    def each_fileinfo_by_package(pname='', pred=true):
+    def each_fileinfo_by_package(pname="", pred=true):
         """RpmFi (File Info) of installed package, matched packages or all
         packages generator.
 
-        @pname  str       A package name or name pattern (ex. 'kernel*') or ''
+        @pname  str       A package name or name pattern (ex. "kernel*") or ""
                           which means all packages.
         @pred   function  A predicate to sort out only necessary results.
                           $pred :: RpmFi -> bool.
 
-        @return  A dict which has keys (Rpm.fi_keys and 'package' = package name)
+        @return  A dict which has keys (Rpm.fi_keys and "package" = package name)
                  and corresponding values.
 
         @see rpm/python/rpmfi-py.c
         """
-        if '*' in pname:
+        if "*" in pname:
             mi = Rpm.ts().dbMatch()
-            mi.pattern('name', rpm.RPMMIRE_GLOB, pname)
+            mi.pattern("name", rpm.RPMMIRE_GLOB, pname)
 
         elif pname:
-            mi = Rpm.ts().dbMatch('name', pname)
+            mi = Rpm.ts().dbMatch("name", pname)
 
         else:
             mi = Rpm.ts().dbMatch()
@@ -1730,7 +1784,7 @@ class Rpm(object):
         for h in mi:
             for fi in h.fiFromHeader():
                 if pred(fi):
-                    yield dict(zip(Rpm.fi_keys + ['package',], list(fi) + [h['name'],]))
+                    yield dict(zip(Rpm.fi_keys + ["package",], list(fi) + [h["name"],]))
 
         # Release them to avoid core dumped or getting wrong result next time.
         del mi
@@ -1750,18 +1804,18 @@ class Rpm(object):
 
         if cache and not cache_needs_updates_p(cache_file, expires):
             try:
-                data = pickle.load(open(cache_file, 'rb'))
+                data = pickle.load(open(cache_file, "rb"))
                 logging.debug(" Could load the cache: %s" % cache_file)
             except:
                 logging.warn(" Could not load the cache: %s" % cache_file)
                 date = None
 
         if data is None:
-            data = dict(concat((((f, h['name']) for f in h['filenames']) for h in Rpm.ts(rpmdb_path).dbMatch())))
+            data = dict(concat((((f, h["name"]) for f in h["filenames"]) for h in Rpm.ts(rpmdb_path).dbMatch())))
 
             try:
                 # TODO: How to detect errors during/after pickle.dump.
-                pickle.dump(data, open(cache_file, 'wb'), pkl_proto)
+                pickle.dump(data, open(cache_file, "wb"), pkl_proto)
                 logging.debug(" Could save the cache: %s" % cache_file)
             except:
                 logging.warn(" Could not save the cache: %s" % cache_file)
@@ -1801,7 +1855,7 @@ class TestRpm(unittest.TestCase):
 
         if os.path.exists(f1):
             pi = Rpm.pathinfo(f1)
-            assert pi.get('path') == f1
+            assert pi.get("path") == f1
             assert sorted(pi.keys()) == sorted(Rpm.fi_keys)
 
         if os.path.exists(pm):
@@ -1824,19 +1878,19 @@ class ObjDict(dict):
     Dict class works like object.
 
     >>> o = ObjDict()
-    >>> o['a'] = 'aaa'
-    >>> assert o.a == o['a']
-    >>> assert o.a == 'aaa'
-    >>> o.a = 'bbb'
-    >>> assert o.a == 'bbb'
-    >>> assert o['a'] == o.a
+    >>> o["a"] = "aaa"
+    >>> assert o.a == o["a"]
+    >>> assert o.a == "aaa"
+    >>> o.a = "bbb"
+    >>> assert o.a == "bbb"
+    >>> assert o["a"] == o.a
     >>> 
 
     TODO: pickle support. (The following does not work):
 
-    #>>> workdir = tempfile.mkdtemp(dir='/tmp', prefix='objdict-doctest-')
-    #>>> pkl_f = os.path.join(workdir, 'objdict.pkl')
-    #>>> pickle.dump(o, open(pkl_f, 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
+    #>>> workdir = tempfile.mkdtemp(dir="/tmp", prefix="objdict-doctest-")
+    #>>> pkl_f = os.path.join(workdir, "objdict.pkl")
+    #>>> pickle.dump(o, open(pkl_f, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
     #>>> assert o == pickle.load(open(pkl_f))
     """
 
@@ -1872,7 +1926,7 @@ class FileOperations(object):
         (except for path) are exactly same.
 
         TODO: Compare the part of the path?
-          ex. lhs.path: '/path/to/xyz', rhs.path: '/var/lib/sp2/updates/path/to/xyz'
+          ex. lhs.path: "/path/to/xyz", rhs.path: "/var/lib/sp2/updates/path/to/xyz"
 
         >>> lhs = FileInfoFactory().create("/etc/resolv.conf")
         >>> rhs = copy.copy(lhs)
@@ -1911,7 +1965,7 @@ class FileOperations(object):
 
     @classmethod
     def permission(cls, mode):
-        """permission (mode) can be passed to 'chmod'.
+        """permission (mode) can be passed to "chmod".
 
         NOTE: There are some special cases, e.g. /etc/gshadow- and
         /etc/shadow-, such that mode == 0.
@@ -1939,7 +1993,7 @@ class FileOperations(object):
         1. Copy itself and its some metadata (owner, mode, etc.)
         2. Copy extra metadata not copyable with the above.
 
-        'cp -a' (cp in GNU coreutils) does the above operations at once and
+        "cp -a" (cp in GNU coreutils) does the above operations at once and
         might be suited for most cases, I think.
 
         @fileinfo   FileInfo object
@@ -1967,7 +2021,7 @@ class FileOperations(object):
 
     @classmethod
     def copy(cls, fileinfo, dest, force=False):
-        """Copy to $dest.  'Copy' action varys depends on actual filetype so
+        """Copy to $dest.  "Copy" action varys depends on actual filetype so
         that inherited class must overrride this and related methods (_remove
         and _copy).
 
@@ -2451,10 +2505,10 @@ class RpmFileInfoFactory(FileInfoFactory):
         try:
             fi = Rpm.pathinfo(path)
             if fi:
-                uid = pwd.getpwnam(fi['uid']).pw_uid   # uid: name -> id
-                gid = grp.getgrnam(fi['gid']).gr_gid   # gid: name -> id
+                uid = pwd.getpwnam(fi["uid"]).pw_uid   # uid: name -> id
+                gid = grp.getgrnam(fi["gid"]).gr_gid   # gid: name -> id
 
-                return (fi['mode'], uid, gid)
+                return (fi["mode"], uid, gid)
         except:
             pass
 
@@ -2503,15 +2557,15 @@ class TestRpmFileInfoFactory(unittest.TestCase):
 
 
 
-def distdata_in_makefile_am(paths, srcdir='src'):
+def distdata_in_makefile_am(paths, srcdir="src"):
     """
     @paths  file path list
 
-    >>> ps0 = ['/etc/resolv.conf', '/etc/sysconfig/iptables']
-    >>> rs0 = [{'dir': '/etc', 'files': ['src/etc/resolv.conf'], 'id': '0'}, {'dir': '/etc/sysconfig', 'files': ['src/etc/sysconfig/iptables'], 'id': '1'}]
+    >>> ps0 = ["/etc/resolv.conf", "/etc/sysconfig/iptables"]
+    >>> rs0 = [{"dir": "/etc", "files": ["src/etc/resolv.conf"], "id": "0"}, {"dir": "/etc/sysconfig", "files": ["src/etc/sysconfig/iptables"], "id": "1"}]
     >>> 
-    >>> ps1 = ps0 + ['/etc/sysconfig/ip6tables', '/etc/modprobe.d/dist.conf']
-    >>> rs1 = [{'dir': '/etc', 'files': ['src/etc/resolv.conf'], 'id': '0'}, {'dir': '/etc/sysconfig', 'files': ['src/etc/sysconfig/iptables', 'src/etc/sysconfig/ip6tables'], 'id': '1'}, {'dir': '/etc/modprobe.d', 'files': ['src/etc/modprobe.d/dist.conf'], 'id': '2'}]
+    >>> ps1 = ps0 + ["/etc/sysconfig/ip6tables", "/etc/modprobe.d/dist.conf"]
+    >>> rs1 = [{"dir": "/etc", "files": ["src/etc/resolv.conf"], "id": "0"}, {"dir": "/etc/sysconfig", "files": ["src/etc/sysconfig/iptables", "src/etc/sysconfig/ip6tables"], "id": "1"}, {"dir": "/etc/modprobe.d", "files": ["src/etc/modprobe.d/dist.conf"], "id": "2"}]
     >>> 
     >>> _cmp = lambda ds1, ds2: all([dicts_comp(*dt) for dt in zip(ds1, ds2)])
     >>> 
@@ -2525,36 +2579,34 @@ def distdata_in_makefile_am(paths, srcdir='src'):
 
     return [
         {
-            'id': str(cntr.next()),
-            'dir':d,
-            'files': [os.path.join('src', p.strip(os.path.sep)) for p in ps]
+            "id": str(cntr.next()),
+            "dir":d,
+            "files": [os.path.join("src", p.strip(os.path.sep)) for p in ps]
         } \
         for d,ps in groupby(paths, os.path.dirname)
     ]
 
 
 def rpm_attr(fileinfo):
-    """Returns '%attr(...)' to specify the file/dir attribute, will be used in
+    """Returns "%attr(...)" to specify the file/dir attribute, will be used in
     the %files section in rpm spec.
 
-    >>> fi = FileInfo('/dummy/path', 33204, 0, 0, checksum(),{})
-    >>> rpm_attr(fi)
-    '%attr(0664, -, -)'
-    >>> fi = FileInfo('/bin/foo', 33261, 1, 1, checksum(),{})
-    >>> rpm_attr(fi)
-    '%attr(0755, bin, bin)'
+    >>> fi = FileInfo("/dummy/path", 33204, 0, 0, checksum(),{})
+    >>> assert rpm_attr(fi) == "%attr(0664, -, -)"
+    >>> fi = FileInfo("/bin/foo", 33261, 1, 1, checksum(),{})
+    >>> assert rpm_attr(fi) == "%attr(0755, bin, bin)"
     """
     m = fileinfo.permission() # ex. "0755"
-    u = (fileinfo.uid == 0 and '-' or pwd.getpwuid(fileinfo.uid).pw_name)
-    g = (fileinfo.gid == 0 and '-' or grp.getgrgid(fileinfo.gid).gr_name)
+    u = (fileinfo.uid == 0 and "-" or pwd.getpwuid(fileinfo.uid).pw_name)
+    g = (fileinfo.gid == 0 and "-" or grp.getgrgid(fileinfo.gid).gr_name)
 
-    return "%%attr(%(m)s, %(u)s, %(g)s)" % {'m':m, 'u':u, 'g':g,}
+    return "%%attr(%(m)s, %(u)s, %(g)s)" % {"m":m, "u":u, "g":g,}
 
 
 def srcrpm_name_by_rpmspec(rpmspec):
     """Returns the name of src.rpm gotten from given RPM spec file.
     """
-    cmd = 'rpm -q --specfile --qf "%{n}-%{v}-%{r}.src.rpm\n" ' + rpmspec
+    cmd = "rpm -q --specfile --qf \"%{n}-%{v}-%{r}.src.rpm\n\" " + rpmspec
     (o, e) = shell(cmd)
     return o.split("\n")[0]
 
@@ -2562,7 +2614,7 @@ def srcrpm_name_by_rpmspec(rpmspec):
 def srcrpm_name_by_rpmspec_2(rpmspec):
     """Returns the name of src.rpm gotten from given RPM spec file.
 
-    Utilize rpm python binding instead of calling 'rpm' command.
+    Utilize rpm python binding instead of calling "rpm" command.
 
     FIXME: rpm-python does not look stable and dumps core often.
     """
@@ -2711,10 +2763,8 @@ class DestdirModifier(FileInfoModifier):
     def rewrite_with_destdir(self, path):
         """Rewrite target (install destination) path as DESTDIR in autotools.
 
-        >>> DestdirModifier("/a/b").rewrite_with_destdir("/a/b/c")
-        '/c'
-        >>> DestdirModifier("/a/b/").rewrite_with_destdir("/a/b/c")
-        '/c'
+        >>> assert DestdirModifier("/a/b").rewrite_with_destdir("/a/b/c") == "/c"
+        >>> assert DestdirModifier("/a/b/").rewrite_with_destdir("/a/b/c") == "/c"
         >>> try:
         ...     DestdirModifier("/x/y").rewrite_with_destdir("/a/b/c")
         ... except RuntimeError, e:
@@ -2831,7 +2881,7 @@ class FilelistCollector(Collector):
     Collector to collect fileinfo list from files list in simple format:
 
     Format: A file or dir path (absolute or relative) |
-            Comment line starts with '#' |
+            Comment line starts with "#" |
             Glob pattern to list multiple files or dirs
     """
 
@@ -2877,7 +2927,7 @@ class FilelistCollector(Collector):
     def _parse(cls, line):
         """Parse the line and returns Target (path) list.
         """
-        if not line or line.startswith("#"): 
+        if not line or line.startswith("#"):
             return []
         else:
             return [Target(p) for p in glob.glob(line.rstrip())]
@@ -2886,10 +2936,10 @@ class FilelistCollector(Collector):
         """Read paths from given file line by line and returns path list sorted by
         dir names. There some speical parsing rules for the file list:
 
-        * Empty lines or lines start with '#' are ignored.
-        * The lines contain '*' (glob match) will be expanded to real dir or file
-          names: ex. '/etc/httpd/conf/*' will be
-          ['/etc/httpd/conf/httpd.conf', '/etc/httpd/conf/magic', ...] .
+        * Empty lines or lines start with "#" are ignored.
+        * The lines contain "*" (glob match) will be expanded to real dir or file
+          names: ex. "/etc/httpd/conf/*" will be
+          ["/etc/httpd/conf/httpd.conf", "/etc/httpd/conf/magic", ...] .
 
         @listfile  str  Path list file name or "-" (read list from stdin)
         """
@@ -2932,7 +2982,7 @@ class ExtFilelistCollector(FilelistCollector):
     Collector to collect fileinfo list from files list in simple format:
 
     Format: A file or dir path (absolute or relative) |
-            Comment line starts with '#' |
+            Comment line starts with "#" |
             Glob pattern to list multiple files or dirs
     """
     _enabled = True
@@ -2975,7 +3025,7 @@ class ExtFilelistCollector(FilelistCollector):
         >>> ts = cls._parse("/etc/resolv.conf,target=/var/lib/network/resolv.conf,uid=0,gid=0\\n")
         >>> assert [t] == ts, str(ts)
         """
-        if not line or line.startswith("#") or " " in line: 
+        if not line or line.startswith("#") or " " in line:
             return []
         else:
             (path, attrs) = cls.parse_line(line)
@@ -3014,7 +3064,7 @@ class JsonFilelistCollector(FilelistCollector):
     def _parse(cls, path_dict):
         path = path_dict.get("path", False)
 
-        if not path or path.startswith("#"): 
+        if not path or path.startswith("#"):
             return []
         else:
             return [Target(p, path_dict["target"]) for p in glob.glob(path)]
@@ -3236,10 +3286,23 @@ class TestJsonFilelistCollector(unittest.TestCase):
 
 
 
+def to_srcdir(srcdir, path):
+    """
+    >>> srcdir = "/tmp/w/src"
+    >>> assert to_srcdir(srcdir, "/a/b/c") == "/tmp/w/src/a/b/c"
+    >>> assert to_srcdir(srcdir, "a/b") == "/tmp/w/src/a/b"
+    >>> assert to_srcdir(srcdir, "/") == "/tmp/w/src/"
+    """
+    assert path != "", "Empty path was given"
+
+    return os.path.join(srcdir, path.strip(os.path.sep))
+
+
+
 class PackageMaker(object):
     """Abstract class for classes to implement various packaging processes.
     """
-    global TEMPLATES, COLLECTORS
+    global BUILD_STEPS, TEMPLATES, COLLECTORS
 
     _templates = TEMPLATES
     _type = "filelist"
@@ -3248,6 +3311,8 @@ class PackageMaker(object):
     _relations = {}
 
     _collector_maps = COLLECTORS
+
+    _steps = BUILD_STEPS
 
     @classmethod
     def register(cls, pmmaps=PACKAGE_MAKERS):
@@ -3273,14 +3338,14 @@ class PackageMaker(object):
         self.filelist = filelist
         self.options = options
 
-        self.workdir = package['workdir']
-        self.destdir = package['destdir']
-        self.pname = package['name']
+        self.workdir = package["workdir"]
+        self.destdir = package["destdir"]
+        self.pname = package["name"]
 
         self.force = options.force
         self.upto = options.upto
 
-        self.srcdir = os.path.join(self.workdir, 'src')
+        self.srcdir = os.path.join(self.workdir, "src")
 
         self._collector = self._collector_maps.get(options.itype, FilelistCollector)
         logging.info("Use Collector: %s (%s)" % (self._collector.__name__, options.itype))
@@ -3301,38 +3366,24 @@ class PackageMaker(object):
         return shell2(cmd_s, workdir=self.workdir)
 
     def to_srcdir(self, path):
-        """
-        >>> class O(object):
-        ...     pass
-        >>> o = O(); o.upto = "build"; o.force = False; o.itype = "filelist"
-        >>> pm = PackageMaker({'name': 'foo', 'workdir': '/tmp/w', 'destdir': '',}, '/tmp/filelist', o)
-        >>> pm.to_srcdir('/a/b/c')
-        '/tmp/w/src/a/b/c'
-        >>> pm.to_srcdir('a/b')
-        '/tmp/w/src/a/b'
-        >>> pm.to_srcdir('/')
-        '/tmp/w/src/'
-        """
-        assert path != '', "Empty path was given"
-
-        return os.path.join(self.srcdir, path.strip(os.path.sep))
+        return to_srcdir(self.srcdir, path)
 
     def genfile(self, path, output=False):
         outfile = os.path.join(self.workdir, (output or path))
-        open(outfile, 'w').write(compile_template(self.templates()[path], self.package))
+        open(outfile, "w").write(compile_template(self.templates()[path], self.package))
 
     def copyfiles(self):
-        for fi in self.package['fileinfos']:
+        for fi in self.package["fileinfos"]:
             fi.copy(os.path.join(self.workdir, self.to_srcdir(fi.target)), self.force)
 
     def dumpfile_path(self):
         return os.path.join(self.workdir, "pmaker-package-filelist.pkl")
 
     def save(self, pkl_proto=pickle.HIGHEST_PROTOCOL):
-        pickle.dump(self.package['fileinfos'], open(self.dumpfile_path(), 'wb'), pkl_proto)
+        pickle.dump(self.package["fileinfos"], open(self.dumpfile_path(), "wb"), pkl_proto)
 
     def load(self):
-        self.package['fileinfos'] = pickle.load(open(self.dumpfile_path()))
+        self.package["fileinfos"] = pickle.load(open(self.dumpfile_path()))
 
     def touch_file(self, step):
         return os.path.join(self.workdir, "pmaker-%s.stamp" % step)
@@ -3351,7 +3402,7 @@ class PackageMaker(object):
         self.shell("touch %s" % self.touch_file(step))
 
         if step == self.upto:
-            if step == 'build':
+            if step == STEP_BUILD:
                 logging.info("Successfully created packages in %s: %s" % (self.workdir, self.pname))
             sys.exit()
 
@@ -3360,39 +3411,39 @@ class PackageMaker(object):
         return collector.collect()
 
     def setup(self):
-        self.package['fileinfos'] = self.collect()
+        self.package["fileinfos"] = self.collect()
 
-        for d in ('workdir', 'srcdir'):
+        for d in ("workdir", "srcdir"):
             createdir(self.package[d])
 
         self.copyfiles()
         self.save()
 
     def preconfigure(self):
-        if not self.package.get('fileinfos', False):
+        if not self.package.get("fileinfos", False):
             self.load()
 
-        if not self.package.get('conflicts', False):
-            self.package['conflicts'] = {
-                'names': unique(fi.conflicts for fi in self.package['fileinfos'] if fi.conflicts),
-                'files': unique(fi.target for fi in self.package['fileinfos'] if fi.conflicts),
+        if not self.package.get("conflicts", False):
+            self.package["conflicts"] = {
+                "names": unique(fi.conflicts for fi in self.package["fileinfos"] if fi.conflicts),
+                "files": unique(fi.target for fi in self.package["fileinfos"] if fi.conflicts),
             }
 
-        self.package['distdata'] = distdata_in_makefile_am(
-            [fi.target for fi in self.package['fileinfos'] if fi.type() == TYPE_FILE]
+        self.package["distdata"] = distdata_in_makefile_am(
+            [fi.target for fi in self.package["fileinfos"] if fi.type() == TYPE_FILE]
         )
 
-        self.genfile('configure.ac')
-        self.genfile('Makefile.am')
-        self.genfile('README')
-        self.genfile('MANIFEST')
-        self.genfile('MANIFEST.overrides')
+        self.genfile("configure.ac")
+        self.genfile("Makefile.am")
+        self.genfile("README")
+        self.genfile("MANIFEST")
+        self.genfile("MANIFEST.overrides")
 
     def configure(self):
         if on_debug_mode():
-            self.shell('autoreconf -vfi')
+            self.shell("autoreconf -vfi")
         else:
-            self.shell('autoreconf -fi')
+            self.shell("autoreconf -fi")
 
     def sbuild(self):
         if on_debug_mode():
@@ -3466,9 +3517,9 @@ class RpmPackageMaker(TgzPackageMaker):
         if use_mock:
             silent = (on_debug_mode() and "" or "--quiet")
             self.shell("mock -r %s %s %s" % \
-                (self.package['dist'], srcrpm_name_by_rpmspec(self.rpmspec()), silent)
+                (self.package["dist"], srcrpm_name_by_rpmspec(self.rpmspec()), silent)
             )
-            print "  GEN    rpm"  # mimics the message of 'make rpm'
+            print "  GEN    rpm"  # mimics the message of "make rpm"
             return self.shell("mv /var/lib/mock/%(dist)s/result/*.rpm %(workdir)s" % self.package)
         else:
             if on_debug_mode:
@@ -3479,7 +3530,7 @@ class RpmPackageMaker(TgzPackageMaker):
     def preconfigure(self):
         super(RpmPackageMaker, self).preconfigure()
 
-        self.genfile('rpm.mk')
+        self.genfile("rpm.mk")
         self.genfile("package.spec", "%s.spec" % self.pname)
 
     def sbuild(self):
@@ -3505,23 +3556,23 @@ class DebPackageMaker(TgzPackageMaker):
     def preconfigure(self):
         super(DebPackageMaker, self).preconfigure()
 
-        debiandir = os.path.join(self.workdir, 'debian')
+        debiandir = os.path.join(self.workdir, "debian")
 
         if not os.path.exists(debiandir):
             os.makedirs(debiandir, 0755)
 
-        os.makedirs(os.path.join(debiandir, 'source'), 0755)
+        os.makedirs(os.path.join(debiandir, "source"), 0755)
 
-        self.genfile('debian/rules')
-        self.genfile('debian/control')
-        self.genfile('debian/copyright')
-        self.genfile('debian/changelog')
-        self.genfile('debian/dirs')
-        self.genfile('debian/compat')
-        self.genfile('debian/source/format')
-        self.genfile('debian/source/options')
+        self.genfile("debian/rules")
+        self.genfile("debian/control")
+        self.genfile("debian/copyright")
+        self.genfile("debian/changelog")
+        self.genfile("debian/dirs")
+        self.genfile("debian/compat")
+        self.genfile("debian/source/format")
+        self.genfile("debian/source/options")
 
-        os.chmod(os.path.join(self.workdir, 'debian/rules'), 0755)
+        os.chmod(os.path.join(self.workdir, "debian/rules"), 0755)
 
     def sbuild(self):
         """FIXME: What should be done for building source packages?
@@ -3536,7 +3587,7 @@ class DebPackageMaker(TgzPackageMaker):
         * fakeroot debian/rules binary
         """
         super(DebPackageMaker, self).build()
-        self.shell('fakeroot debian/rules binary')
+        self.shell("fakeroot debian/rules binary")
 
 
 
@@ -3573,7 +3624,7 @@ def do_packaging_self(options):
         plugin_files = options.include_plugins.split(",")
 
     name = __title__
-    workdir = tempfile.mkdtemp(dir='/tmp', prefix='pm-')
+    workdir = tempfile.mkdtemp(dir="/tmp", prefix="pm-")
     summary = "A python script to build packages from existing files on your system"
     relations = "requires:python"
     packager = __author__
@@ -3581,8 +3632,8 @@ def do_packaging_self(options):
     url = __website__
 
     pkglibdir = os.path.join(workdir, get_python_lib()[1:], "pmaker")
-    bindir = os.path.join(workdir, 'usr', 'bin')
-    bin = os.path.join(bindir, 'pmaker')
+    bindir = os.path.join(workdir, "usr", "bin")
+    bin = os.path.join(bindir, "pmaker")
 
     filelist = os.path.join(workdir, "files.list")
 
@@ -3590,10 +3641,10 @@ def do_packaging_self(options):
 
     cmd_opts = "-n %s --pversion %s -w %s --license GPLv3+ --ignore-owner " % (name, version, workdir)
     cmd_opts += " --destdir %s --no-rpmdb --url %s --upto %s" % (workdir, url, options.upto)
-    cmd_opts += " --summary '%s' --packager '%s' --mail %s" % (summary, packager, mail)
+    cmd_opts += " --summary \"%s\" --packager \"%s\" --mail %s" % (summary, packager, mail)
 
     if relations:
-        cmd_opts += " --relations '%s' " % relations
+        cmd_opts += " --relations \"%s\" " % relations
 
     if options.debug:
         cmd_opts += " --debug"
@@ -3635,8 +3686,8 @@ pmaker.main(sys.argv)
 
     # @see /usr/lib/rpm/brp-python-bytecompile:
     pycompile = "import compileall, os; compileall.compile_dir(os.curdir, force=1)"
-    compile_pyc = "python -c '%s'" % pycompile
-    compile_pyo = "python -O -c '%s' > /dev/null" % pycompile
+    compile_pyc = "python -c \"%s\"" % pycompile
+    compile_pyo = "python -O -c \"%s\" > /dev/null" % pycompile
 
     shell2(compile_pyc, pkglibdir)
     shell2(compile_pyo, pkglibdir)
@@ -3662,7 +3713,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
 
         target = "/etc/resolv.conf"
         self.cmd = "echo %s | python %s -n resolvconf -w %s " % (target, sys.argv[0], self.workdir)
@@ -3724,7 +3775,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 
     def test_packaging_wo_rpmdb_wo_mock_with_destdir(self):
         destdir = os.path.join(self.workdir, "destdir")
-        createdir(os.path.join(destdir, 'etc'))
+        createdir(os.path.join(destdir, "etc"))
         shell("cp /etc/resolv.conf %s/etc" % destdir)
 
         cmd = "echo %s/etc/resolv.conf | python %s -n resolvconf -w %s --no-rpmdb --no-mock --destdir=%s -" % \
@@ -3751,7 +3802,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
 
     def test_packaging_deb(self):
         """'dh' may not be found on this system so that it will only go up to
-        'configure' step.
+        "configure" step.
         """
         cmd = self.cmd + "--upto configure --format deb --no-rpmdb -"
         self.assertEquals(os.system(cmd), 0)
@@ -3773,7 +3824,7 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         prog = sys.argv[0]
         tmpl0 = os.path.join(self.workdir, "package.spec")
 
-        open(tmpl0, 'w').write(TEMPLATES['package.spec'])
+        open(tmpl0, "w").write(TEMPLATES["package.spec"])
 
         cmd = self.cmd + "--no-rpmdb --no-mock --templates=\"package.spec:%s\" -" % tmpl0
         self.assertEquals(os.system(cmd), 0)
@@ -3786,7 +3837,7 @@ class TestMainProgram01JsonFileCases(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
         self.json_data = """\
 [
     {
@@ -3821,14 +3872,14 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir='/tmp', prefix='pmaker-tests')
+        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
 
-        self.filelist = os.path.join(self.workdir, 'file.list')
+        self.filelist = os.path.join(self.workdir, "file.list")
 
         targets = [
-            '/etc/auto.*', '/etc/modprobe.d/*', '/etc/resolv.conf',
-            '/etc/security/limits.conf', '/etc/security/access.conf',
-            '/etc/grub.conf', '/etc/system-release', '/etc/skel',
+            "/etc/auto.*", "/etc/modprobe.d/*", "/etc/resolv.conf",
+            "/etc/security/limits.conf", "/etc/security/access.conf",
+            "/etc/grub.conf", "/etc/system-release", "/etc/skel",
         ]
         self.files = [f for f in targets if os.path.exists(f)]
 
@@ -3836,7 +3887,7 @@ class TestMainProgram01MultipleFilesCases(unittest.TestCase):
         rm_rf(self.workdir)
 
     def test_packaging_build_rpm_wo_mock(self):
-        open(self.filelist, 'w').write("\n".join(self.files))
+        open(self.filelist, "w").write("\n".join(self.files))
 
         cmd = "python %s -n etcdata -w %s --upto build --no-mock %s" % (sys.argv[0], self.workdir, self.filelist)
         self.assertEquals(os.system(cmd), 0)
@@ -3933,11 +3984,11 @@ def parse_template_list_str(templates):
     simple parser for options.templates.
 
     >>> assert parse_template_list_str("") == {}
-    >>> assert parse_template_list_str("a:b") == {'a': 'b'}
-    >>> assert parse_template_list_str("a:b,c:d") == {'a': 'b', 'c': 'd'}
+    >>> assert parse_template_list_str("a:b") == {"a": "b"}
+    >>> assert parse_template_list_str("a:b,c:d") == {"a": "b", "c": "d"}
     """
     if templates:
-        return dict(kv.split(':') for kv in templates.split(','))
+        return dict(kv.split(":") for kv in templates.split(","))
     else:
         return dict()
 
@@ -4010,48 +4061,51 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS, test_c
     packager = get_fullname()
     dist = "fedora-14-%s" % get_arch()
 
-    workdir = os.path.join(os.path.abspath(os.curdir), 'workdir')
+    workdir = os.path.join(os.path.abspath(os.curdir), "workdir")
 
     cds = init_defaults_by_conffile()
 
     defaults = {
-        'workdir': cds.get("workdir", workdir),
-        'upto': cds.get("upto", upto_params["default"]),
-        'type': cds.get("type", "filelist"),
-        'format': cds.get("format", "rpm"),
-        'itype': cds.get("itype", "filelist"),
-        'compressor': cds.get("compressor", "bz2"),
-        'verbose': cds.get("verbose", False),
-        'quiet': cds.get("quiet", False),
-        'debug': cds.get("debug", False),
-        'ignore_owner': cds.get("ignore_owner", False),
-        'destdir': cds.get("destdir", ''),
-        'with_pyxattr': cds.get("with_pyxattr", False),
+        "workdir": cds.get("workdir", workdir),
+        "upto": cds.get("upto", upto_params["default"]),
+        "type": cds.get("type", "filelist"),
+        "format": cds.get("format", "rpm"),
+        "itype": cds.get("itype", "filelist"),
+        "compressor": cds.get("compressor", "bz2"),
+        "verbose": cds.get("verbose", False),
+        "quiet": cds.get("quiet", False),
+        "debug": cds.get("debug", False),
+        "ignore_owner": cds.get("ignore_owner", False),
+        "destdir": cds.get("destdir", ""),
+        "with_pyxattr": cds.get("with_pyxattr", False),
 
-        'name': cds.get("name", ""),
-        'pversion': cds.get("pversion", "0.1"),
-        'group': cds.get("group", "System Environment/Base"),
-        'license': cds.get("license", "GPLv2+"),
-        'url': cds.get("url", "http://localhost.localdomain"),
-        'summary': cds.get("summary", ""),
-        'arch': cds.get("arch", False),
-        'relations': cds.get("relations", ""),
-        'packager': cds.get("packager", packager),
-        'mail': cds.get("mail", mail),
+        "name": cds.get("name", ""),
+        "pversion": cds.get("pversion", "0.1"),
+        "group": cds.get("group", "System Environment/Base"),
+        "license": cds.get("license", "GPLv2+"),
+        "url": cds.get("url", "http://localhost.localdomain"),
+        "summary": cds.get("summary", ""),
+        "arch": cds.get("arch", False),
+        "relations": cds.get("relations", ""),
+        "packager": cds.get("packager", packager),
+        "mail": cds.get("mail", mail),
+
+        "scriptlets": cds.get("scriptlets", ""),
+        "changelog": cds.get("changelog", ""),
 
          # TODO: Detect appropriate distribution (for mock) automatically.
-        'dist': cds.get("dist", dist),
-        'no_rpmdb': cds.get("no_rpmdb", False),
-        'no_mock': cds.get("no_mock", False),
+        "dist": cds.get("dist", dist),
+        "no_rpmdb": cds.get("no_rpmdb", False),
+        "no_mock": cds.get("no_mock", False),
 
-        'force': False,
+        "force": False,
 
         # these are not in conf file:
-        'show_examples': False,
-        'dump_rc': False,
-        'tests': False,
-        'tlevel': test_choices[0],
-        'build_self': False,
+        "show_examples": False,
+        "dump_rc": False,
+        "tests": False,
+        "tlevel": test_choices[0],
+        "build_self": False,
         "profile": False,
 
         "release_build": False,
@@ -4062,12 +4116,12 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS, test_c
 
 Arguments:
 
-  FILE_LIST  a file contains absolute file paths list or '-' (read paths list
+  FILE_LIST  a file contains absolute file paths list or "-" (read paths list
              from stdin).
 
-             The lines starting with '#' in the list file are ignored.
+             The lines starting with "#" in the list file are ignored.
 
-             The '*' character in lines will be treated as glob pattern and
+             The "*" character in lines will be treated as glob pattern and
              expanded to the real file names list.
 
 Environment Variables:
@@ -4092,76 +4146,77 @@ Examples:
     p.set_defaults(**defaults)
 
     bog = optparse.OptionGroup(p, "Build options")
-    bog.add_option('-w', '--workdir', help='Working dir to dump outputs [%default]')
-    bog.add_option('', '--upto', type="choice", choices=upto_params['choices'],
-        help="Which packaging step you want to proceed to: " + upto_params['choices_str'] + " [Default: %default]")
-    bog.add_option('', '--driver', type="choice", choices=pdriver, help=pdriver_help)
-    bog.add_option('', '--format', type="choice", choices=pformats, help=pformats_help)
-    bog.add_option('', '--itype', type="choice", choices=itypes, help=itypes_help)
-    bog.add_option('', '--destdir', help="Destdir (prefix) you want to strip from installed path [%default]. "
-        "For example, if the target path is '/builddir/dest/usr/share/data/foo/a.dat', "
-        "and you want to strip '/builddir/dest' from the path when packaging 'a.dat' and "
-        "make it installed as '/usr/share/foo/a.dat' with the package , you can accomplish "
-        "that by this option: '--destdir=/builddir/destdir'")
-    bog.add_option('', '--templates', help="Use custom template files. "
+    bog.add_option("-w", "--workdir", help="Working dir to dump outputs [%default]")
+    bog.add_option("", "--upto", type="choice", choices=upto_params["choices"],
+        help="Which packaging step you want to proceed to: " + upto_params["choices_str"] + " [Default: %default]")
+    bog.add_option("", "--driver", type="choice", choices=pdriver, help=pdriver_help)
+    bog.add_option("", "--format", type="choice", choices=pformats, help=pformats_help)
+    bog.add_option("", "--itype", type="choice", choices=itypes, help=itypes_help)
+    bog.add_option("", "--destdir", help="Destdir (prefix) you want to strip from installed path [%default]. "
+        "For example, if the target path is \"/builddir/dest/usr/share/data/foo/a.dat\", "
+        "and you want to strip \"/builddir/dest\" from the path when packaging \"a.dat\" and "
+        "make it installed as \"/usr/share/foo/a.dat\" with the package , you can accomplish "
+        "that by this option: \"--destdir=/builddir/destdir\"")
+    bog.add_option("", "--templates", help="Use custom template files. "
         "TEMPLATES is a comma separated list of template output and file after the form of "
-        "RELATIVE_OUTPUT_PATH_IN_SRCDIR:TEMPLATE_FILE such like 'package.spec:/tmp/foo.spec.tmpl', "
-        "and 'debian/rules:mydebrules.tmpl, Makefile.am:/etc/foo/mymakefileam.tmpl'. "
+        "RELATIVE_OUTPUT_PATH_IN_SRCDIR:TEMPLATE_FILE such like \"package.spec:/tmp/foo.spec.tmpl\", "
+        "and \"debian/rules:mydebrules.tmpl, Makefile.am:/etc/foo/mymakefileam.tmpl\". "
         "Supported template syntax is Python Cheetah: http://www.cheetahtemplate.org .")
-    bog.add_option('', '--rewrite-linkto', action='store_true',
-        help="Whether to rewrite symlink\'s linkto (path of the objects "
+    bog.add_option("", "--rewrite-linkto", action="store_true",
+        help="Whether to rewrite symlink's linkto (path of the objects "
             "that symlink point to) if --destdir is specified")
-    bog.add_option('', '--with-pyxattr', action='store_true', help='Get/set xattributes of files with pure python code.')
+    bog.add_option("", "--with-pyxattr", action="store_true", help="Get/set xattributes of files with pure python code.")
     p.add_option_group(bog)
 
     pog = optparse.OptionGroup(p, "Package metadata options")
-    pog.add_option('-n', '--name', help='Package name [%default]')
-    pog.add_option('', '--group', help='The group of the package [%default]')
-    pog.add_option('', '--license', help='The license of the package [%default]')
-    pog.add_option('', '--url', help='The url of the package [%default]')
-    pog.add_option('', '--summary', help='The summary of the package')
-    pog.add_option('-z', '--compressor', type="choice", choices=PKG_COMPRESSORS.keys(),
+    pog.add_option("-n", "--name", help="Package name [%default]")
+    pog.add_option("", "--group", help="The group of the package [%default]")
+    pog.add_option("", "--license", help="The license of the package [%default]")
+    pog.add_option("", "--url", help="The url of the package [%default]")
+    pog.add_option("", "--summary", help="The summary of the package")
+    pog.add_option("-z", "--compressor", type="choice", choices=PKG_COMPRESSORS.keys(),
         help="Tool to compress src archives [%default]")
-    pog.add_option('', '--arch', action='store_true', help='Make package arch-dependent [false - noarch]')
+    pog.add_option("", "--arch", action="store_true", help="Make package arch-dependent [false - noarch]")
     pog.add_option("", "--relations",
         help="Semicolon (;) separated list of a pair of relation type and targets "
         "separated with comma, separated with colon (:), "
-        "e.g. 'requires:curl,sed;obsoletes:foo-old'. "
+        "e.g. \"requires:curl,sed;obsoletes:foo-old\". "
         "Expressions of relation types and targets are varied depends on "
         "package format to use")
-    pog.add_option('', '--packager', help="Specify packager's name [%default]")
-    pog.add_option('', '--mail', help="Specify packager's mail address [%default]")
-    pog.add_option('', '--pversion', help="Specify the package version [%default]")
-    pog.add_option('', '--ignore-owner', action='store_true', help="Ignore owner and group of files and then treat as root's")
+    pog.add_option("", "--packager", help="Specify packager's name [%default]")
+    pog.add_option("", "--mail", help="Specify packager's mail address [%default]")
+    pog.add_option("", "--pversion", help="Specify the package version [%default]")
+    pog.add_option("", "--ignore-owner", action="store_true", help="Ignore owner and group of files and then treat as root's")
+    pog.add_option("", "--changelog", help="Specify text file contains changelog")
     p.add_option_group(pog)
 
     rog = optparse.OptionGroup(p, "Options for rpm")
-    rog.add_option('', '--dist', help='Target distribution (for mock) [%default]')
-    rog.add_option('', '--no-rpmdb', action='store_true', help='Do not refer rpm db to get extra information of target files')
-    rog.add_option('', '--no-mock', action="store_true", help='Build RPM with only using rpmbuild (not recommended)')
-    rog.add_option('', '--scriptlets', help='Specify the file contains rpm scriptlets')
+    rog.add_option("", "--dist", help="Target distribution (for mock) [%default]")
+    rog.add_option("", "--no-rpmdb", action="store_true", help="Do not refer rpm db to get extra information of target files")
+    rog.add_option("", "--no-mock", action="store_true", help="Build RPM with only using rpmbuild (not recommended)")
+    rog.add_option("", "--scriptlets", help="Specify the file contains rpm scriptlets")
     p.add_option_group(rog)
 
     sog = optparse.OptionGroup(p, "Self-build options")
-    sog.add_option('', '--release-build', action='store_true', help="Make a release build")
-    sog.add_option('', '--include-plugins', help="Comma separated list of plugin files to be included in dist.")
+    sog.add_option("", "--release-build", action="store_true", help="Make a release build")
+    sog.add_option("", "--include-plugins", help="Comma separated list of plugin files to be included in dist.")
     p.add_option_group(sog)
 
     tog = optparse.OptionGroup(p, "Test options")
-    tog.add_option('', '--tests', action='store_true', help="Run tests.")
-    tog.add_option('', '--tlevel', type="choice", choices=test_choices,
+    tog.add_option("", "--tests", action="store_true", help="Run tests.")
+    tog.add_option("", "--tlevel", type="choice", choices=test_choices,
         help="Select the level of tests to run. Choices are " + ", ".join(test_choices) + " [%default]")
     tog.add_option("", "--profile", action="store_true", help="Enable profiling")
     p.add_option_group(tog)
 
-    p.add_option('', '--force', action="store_true", help='Force going steps even if the steps looks done')
-    p.add_option('-v', '--verbose', action="store_true", help='Verbose mode')
-    p.add_option('-q', '--quiet', action="store_true", help='Quiet mode')
-    p.add_option('-D', '--debug', action="store_true", help='Debug mode')
+    p.add_option("", "--force", action="store_true", help="Force going steps even if the steps looks done")
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+    p.add_option("-q", "--quiet", action="store_true", help="Quiet mode")
+    p.add_option("-D", "--debug", action="store_true", help="Debug mode")
 
-    p.add_option('', '--build-self', action="store_true", help='Package itself (self-build)')
-    p.add_option('', '--show-examples', action="store_true", help='Show examples')
-    p.add_option('', '--dump-rc', action="store_true", help='Show conf file example')
+    p.add_option("", "--build-self", action="store_true", help="Package itself (self-build)")
+    p.add_option("", "--show-examples", action="store_true", help="Show examples")
+    p.add_option("", "--dump-rc", action="store_true", help="Show conf file example")
 
     return p
 
@@ -4172,8 +4227,8 @@ def main(argv=sys.argv):
     verbose_test = False
 
     loglevel = logging.INFO
-    logdatefmt = '%H:%M:%S' # too much? '%a, %d %b %Y %H:%M:%S'
-    logformat = '%(asctime)s [%(levelname)-4s] %(message)s'
+    logdatefmt = "%H:%M:%S" # too much? "%a, %d %b %Y %H:%M:%S"
+    logformat = "%(asctime)s [%(levelname)-4s] %(message)s"
 
     logging.basicConfig(level=loglevel, format=logformat, datefmt=logdatefmt)
 
@@ -4214,7 +4269,9 @@ def main(argv=sys.argv):
         if options.profile:
             import cProfile as profile
             # FIXME: how to do? -  python <self> -m cProfile ...
-            print >> sys.stderr, "Not implemented yet. run 'python %s -m cProfile --tests --tlevel=%s ...' instead" % (argv[0], options.tlevel)
+            print >> sys.stderr, \
+                "Not implemented yet. run \"python %s -m cProfile --tests ...\" instead" % \
+                        (argv[0], options.tlevel)
             sys.exit()
         else:
             run_alltests(verbose_test, options.tlevel)
@@ -4227,9 +4284,9 @@ def main(argv=sys.argv):
     filelist = args[0]
 
     if options.arch:
-        pkg['noarch'] = False
+        pkg["noarch"] = False
     else:
-        pkg['noarch'] = True
+        pkg["noarch"] = True
 
     if options.templates:
         for tgt, tmpl in parse_template_list_str(options.templates).iteritems():
@@ -4245,41 +4302,41 @@ def main(argv=sys.argv):
             logging.warn(" Could not open %s to read scriptlets" % options.scriptlets)
             scriptlets = ""
 
-        pkg['scriptlets'] = scriptlets
+        pkg["scriptlets"] = scriptlets
 
     if not options.name:
-        print >> sys.stderr, "You must specify the package name with '--name' option"
+        print >> sys.stderr, "You must specify the package name with \"--name\" option"
         sys.exit(-1)
 
-    pkg['name'] = options.name
-    pkg['release'] = '1'
-    pkg['group'] = options.group
-    pkg['license'] = options.license
-    pkg['url'] = options.url
+    pkg["name"] = options.name
+    pkg["release"] = "1"
+    pkg["group"] = options.group
+    pkg["license"] = options.license
+    pkg["url"] = options.url
 
-    pkg['version'] = options.pversion
-    pkg['packager'] = options.packager
-    pkg['mail'] = options.mail
+    pkg["version"] = options.pversion
+    pkg["packager"] = options.packager
+    pkg["mail"] = options.mail
 
-    pkg['workdir'] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
-    pkg['srcdir'] = os.path.join(pkg['workdir'], 'src')
+    pkg["workdir"] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
+    pkg["srcdir"] = os.path.join(pkg["workdir"], "src")
 
-    pkg['compressor'] = {
-        'ext': options.compressor,
-        'am_opt': PKG_COMPRESSORS.get(options.compressor),
+    pkg["compressor"] = {
+        "ext": options.compressor,
+        "am_opt": PKG_COMPRESSORS.get(options.compressor),
     }
 
-    pkg['dist'] = options.dist
+    pkg["dist"] = options.dist
 
     # TODO: Revert locale setting change just after timestamp was gotten.
     locale.setlocale(locale.LC_ALL, "C")
-    pkg['date'] = {
-        'date': date(rfc2822=True),
-        'timestamp': date(),
+    pkg["date"] = {
+        "date": date(rfc2822=True),
+        "timestamp": date(),
     }
-    pkg['host'] = hostname()
+    pkg["host"] = hostname()
 
-    pkg['format'] = options.format
+    pkg["format"] = options.format
 
     if options.with_pyxattr:
         if not PYXATTR_ENABLED:
@@ -4287,12 +4344,17 @@ def main(argv=sys.argv):
     else:
         PYXATTR_ENABLED = False
 
-    pkg['destdir'] = options.destdir.rstrip(os.path.sep)
+    pkg["destdir"] = options.destdir.rstrip(os.path.sep)
 
     if options.summary:
-        pkg['summary'] = options.summary
+        pkg["summary"] = options.summary
     else:
-        pkg['summary'] = 'Custom package of ' + options.name
+        pkg["summary"] = "Custom package of " + options.name
+
+    if options.changelog:
+        pkg["changelog"] = open(options.changelog).read()
+    else:
+        pkg["changelog"] = ""
 
     do_packaging(pkg, filelist, options)
 
