@@ -1559,7 +1559,7 @@ def rm_rf(targetdir):
     if not os.path.exists(targetdir):
         return
 
-    if os.path.isfile(targetdir):
+    if os.path.isfile(targetdir) or os.path.islink(targetdir):
         os.remove(targetdir)
         return 
 
@@ -1567,7 +1567,9 @@ def rm_rf(targetdir):
     assert targetdir != "/", warnmsg
     assert os.path.realpath(targetdir) != "/", warnmsg
 
-    for x in glob.glob(os.path.join(targetdir, "*")):
+    xs = glob.glob(os.path.join(targetdir, "*")) + glob.glob(os.path.join(targetdir, ".*"))
+
+    for x in xs:
         if os.path.isdir(x):
             rm_rf(x)
         else:
@@ -2079,12 +2081,14 @@ class DirOperations(FileOperations):
 
     @classmethod
     def copy_main(cls, fileinfo, dest, use_pyxattr=False):
-        os.makedirs(dest, mode=fileinfo.mode)
-
         try:
+            os.makedirs(dest, mode=fileinfo.mode)
             os.chown(dest, fileinfo.uid, fileinfo.gid)
-        except OSError, e:
+
+        except OSError, e:   # It may be OK, ex. non-root user cannot set perms.
             logging.warn(e)
+
+            os.makedirs(dest)
 
         shutil.copystat(fileinfo.path, dest)
         cls.copy_xattrs(fileinfo.xattrs, dest)
@@ -2104,52 +2108,64 @@ class TestFileOperations(unittest.TestCase):
 
     _multiprocess_can_split_ = True
 
-    paths_g = [f for f in glob.glob(os.path.join(os.path.expanduser("~"), ".*"))]
     fo = FileOperations
+    nsamples = 10
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+        self.factory = FileInfoFactory()
+
+        paths = glob.glob(os.path.join(os.path.expanduser("~"), ".*"))
+        self.paths = random.sample(
+            [p for p in paths if os.path.isfile(p)],
+            self.nsamples
+        )
 
     def tearDown(self):
         rm_rf(self.workdir)
 
     def test_copy_main_and_remove(self):
-        path = random.choice([p for p in self.paths_g if os.path.isfile(p)])
+        for path in self.paths:
+            fileinfo = self.factory.create(path)
 
-        dest = os.path.join(self.workdir, os.path.basename(path))
-        dest2 = dest + ".xattrs"
+            if fileinfo.type() != TYPE_FILE:
+                continue
 
-        fileinfo = FileInfoFactory().create(path)
+            dest = os.path.join(self.workdir, os.path.basename(path))
+            dest2 = dest + ".xattrs"
 
-        self.fo.copy_main(fileinfo, dest)
-        self.fo.copy_main(fileinfo, dest2, True)
+            self.fo.copy_main(fileinfo, dest)
+            self.fo.copy_main(fileinfo, dest2, True)
 
-        src_attrs = xattr.get_all(path)
-        if src_attrs:
-            self.assertEquals(src_attrs, xattr.get_all(dest))
-            self.assertEquals(src_attrs, xattr.get_all(dest2))
+            src_attrs = xattr.get_all(path)
+            if src_attrs:
+                self.assertEquals(src_attrs, xattr.get_all(dest))
+                self.assertEquals(src_attrs, xattr.get_all(dest2))
 
-        self.assertTrue(os.path.exists(dest))
-        self.assertTrue(os.path.exists(dest2))
+            self.assertTrue(os.path.exists(dest))
+            self.assertTrue(os.path.exists(dest2))
 
-        self.fo.remove(dest)
-        self.assertFalse(os.path.exists(dest))
+            self.fo.remove(dest)
+            self.assertFalse(os.path.exists(dest))
 
-        self.fo.remove(dest2)
-        self.assertFalse(os.path.exists(dest2))
+            self.fo.remove(dest2)
+            self.assertFalse(os.path.exists(dest2))
 
     def test_copy(self):
-        path = random.choice([p for p in self.paths_g if os.path.isfile(p)])
+        for path in self.paths:
+            fileinfo = self.factory.create(path)
 
-        dest = os.path.join(self.workdir, os.path.basename(path))
-        fileinfo = FileInfoFactory().create(path)
+            if fileinfo.type() != TYPE_FILE:
+                continue
 
-        self.fo.copy(fileinfo, dest)
-        self.fo.copy(fileinfo, dest, True)
+            dest = os.path.join(self.workdir, os.path.basename(path))
 
-        self.assertTrue(os.path.exists(dest))
-        self.fo.remove(dest)
-        self.assertFalse(os.path.exists(dest))
+            self.fo.copy(fileinfo, dest)
+            self.fo.copy(fileinfo, dest, True)
+
+            self.assertTrue(os.path.exists(dest))
+            self.fo.remove(dest)
+            self.assertFalse(os.path.exists(dest))
 
 
 
@@ -2157,27 +2173,38 @@ class TestDirOperations(unittest.TestCase):
 
     _multiprocess_can_split_ = True
 
-    paths_g = [f for f in glob.glob(os.path.join(os.path.expanduser("~"), ".*"))]
     fo = DirOperations
+    nsamples = 10
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+        self.factory = FileInfoFactory()
+
+        paths = glob.glob(os.path.join(os.path.expanduser("~"), ".*"))
+        self.paths = random.sample(
+            [p for p in paths if os.path.isdir(p) and not os.path.islink(p)],
+            self.nsamples
+        )
+
 
     def tearDown(self):
         rm_rf(self.workdir)
 
     def test_copy(self):
-        path = random.choice([p for p in self.paths_g if os.path.isdir(p)])
+        for path in self.paths:
+            fileinfo = self.factory.create(path)
 
-        dest = os.path.join(self.workdir, os.path.basename(path))
-        fileinfo = FileInfoFactory().create(path)
+            if fileinfo.type() != TYPE_DIR:
+                continue
 
-        self.fo.copy(fileinfo, dest)
-        self.fo.copy(fileinfo, dest, True)
+            dest = os.path.join(self.workdir, os.path.basename(path))
 
-        self.assertTrue(os.path.exists(dest))
-        self.fo.remove(dest)
-        self.assertFalse(os.path.exists(dest))
+            self.fo.copy(fileinfo, dest)
+            self.fo.copy(fileinfo, dest, True)
+
+            self.assertTrue(os.path.exists(dest))
+            self.fo.remove(dest)
+            self.assertFalse(os.path.exists(dest))
 
 
 
@@ -2186,26 +2213,35 @@ class TestSymlinkOperations(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     fo = SymlinkOperations
+    nsamples = 3
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="pmaker-tests")
+        self.factory = FileInfoFactory()
+
+        paths = glob.glob(os.path.join(os.path.expanduser("~"), ".*"))
+        self.paths = random.sample(paths, self.nsamples)
 
     def tearDown(self):
         rm_rf(self.workdir)
 
     def test_copy(self):
-        shell2("ln -s /etc/resolv.conf ./resolv.conf", self.workdir)
-        path = os.path.join(self.workdir, "resolv.conf")
-        dest = path + ".symlnk"
+        for path in self.paths:
+            shell2("ln -s %s ./" % path, self.workdir)
+            path = os.path.join(self.workdir, os.path.basename(path))
+            dest = path + ".symlnk"
 
-        fileinfo = FileInfoFactory().create(path)
+            fileinfo = self.factory.create(path)
 
-        self.fo.copy(fileinfo, dest)
-        self.fo.copy(fileinfo, dest, True)
+            if fileinfo.type() != TYPE_SYMLINK:
+                continue
 
-        self.assertTrue(os.path.exists(dest))
-        self.fo.remove(dest)
-        self.assertFalse(os.path.exists(dest))
+            self.fo.copy(fileinfo, dest)
+            self.fo.copy(fileinfo, dest, True)
+
+            self.assertTrue(os.path.exists(dest))
+            self.fo.remove(dest)
+            self.assertFalse(os.path.exists(dest))
 
 
 
