@@ -3512,16 +3512,10 @@ class PackageMaker(object):
     def run(self):
         """run all of the packaging processes: setup, configure, build, ...
         """
-        steps = (
-            ("setup", "Setting up src tree in %s: %s" % (self.workdir, self.pname)),
-            ("preconfigure", "Arrange autotool-ized src directory: %s" % self.pname),
-            ("configure", "Configuring src distribution: %s" % self.pname),
-            ("sbuild", "Building src package: %s" % self.pname),
-            ("build", "Building bin packages: %s" % self.pname),
-        )
+        d = {"workdir": self.workdir, "pname": self.pname}
 
-        for step, msg in steps:
-            logging.info(msg)
+        for step, msgfmt, _helptxt in self._steps:
+            logging.info(msgfmt % d)
             self.try_the_step(step)
 
 
@@ -4093,22 +4087,16 @@ def init_defaults_by_conffile(config=None, profile=None, prog="pmaker"):
     return defaults
 
 
-def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS, test_choices=TEST_CHOICES):
+def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS,
+        test_choices=TEST_CHOICES, steps=BUILD_STEPS):
+
     global PKG_COMPRESSORS, UPTO
 
     ver_s = "%prog " + V
 
-    steps = (
-        ("setup", "setup the package dir and copy target files in it"),
-        ("preconfigure", "arrange build files such like configure.ac, Makefile.am, rpm spec file, debian/*, etc. python-cheetah will be needed"),
-        ("configure", "setup './configure' runnable src dir. autotools will be needed"),
-        ("sbuild", "build src package[s]"),
-        ("build", "build binary package[s]"),
-    )
-
     upto_params = {
-        "choices": [fst for fst, snd in steps],
-        "choices_str": ", ".join(("%s (%s)" % (fst, snd) for fst, snd in steps)),
+        "choices": [name for name, _logmsg, helptxt in steps],
+        "choices_str": ", ".join(("%s (%s)" % (name, helptxt) for name, _logmsg, helptxt in steps)),
         "default": UPTO,
     }
 
