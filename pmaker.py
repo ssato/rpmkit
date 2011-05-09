@@ -1539,7 +1539,7 @@ def createdir(targetdir, mode=0700):
         os.makedirs(targetdir, mode)
 
 
-def rm_rf(targetdir):
+def rm_rf(target):
     """ "rm -rf" in python.
 
     >>> d = tempfile.mkdtemp(dir="/tmp")
@@ -1556,18 +1556,18 @@ def rm_rf(targetdir):
     >>> 
     >>> rm_rf(d)
     """
-    if not os.path.exists(targetdir):
+    if not os.path.exists(target):
         return
 
-    if os.path.isfile(targetdir) or os.path.islink(targetdir):
-        os.remove(targetdir)
+    if os.path.isfile(target) or os.path.islink(target):
+        os.remove(target)
         return 
 
     warnmsg = "You're trying to rm -rf / !"
-    assert targetdir != "/", warnmsg
-    assert os.path.realpath(targetdir) != "/", warnmsg
+    assert target != "/", warnmsg
+    assert os.path.realpath(target) != "/", warnmsg
 
-    xs = glob.glob(os.path.join(targetdir, "*")) + glob.glob(os.path.join(targetdir, ".*"))
+    xs = glob.glob(os.path.join(target, "*")) + glob.glob(os.path.join(target, ".*"))
 
     for x in xs:
         if os.path.isdir(x):
@@ -1575,8 +1575,8 @@ def rm_rf(targetdir):
         else:
             os.remove(x)
 
-    if os.path.exists(targetdir):
-        os.removedirs(targetdir)
+    if os.path.exists(target):
+        os.removedirs(target)
 
 
 def cache_needs_updates_p(cache_file, expires=0):
