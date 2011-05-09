@@ -3813,10 +3813,20 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         """Build package with some additional relations without rpm database
         without mock (no --upto option).
         """
-        cmd = self.cmd + "--relations \"requires:bash,zsh;obsoletes:sysdata;conflicts:sysdata\" "
+        cmd = self.cmd + "--relations \"requires:bash,zsh;obsoletes:sysdata;conflicts:sysdata-old\" "
         cmd += "--no-rpmdb --no-mock -"
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
+
+        rpmspec = glob.glob("%s/*/*.spec" % self.workdir)[0]
+        cmds = (
+            "grep -q -e '^Requires:.*bash, zsh' %s" % rpmspec,
+            "grep -q -e '^Obsoletes:.*sysdata' %s" % rpmspec,
+            "grep -q -e '^Conflicts:.*sysdata-old' %s" % rpmspec,
+        )
+
+        for cmd in cmds:
+            self.assertEquals(os.system(cmd), 0)
 
     def test_packaging_symlink_wo_rpmdb_wo_mock(self):
         idir = os.path.join(self.workdir, "var", "lib", "net")
