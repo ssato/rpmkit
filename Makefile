@@ -4,6 +4,7 @@
 
 REVISION ?= 1
 VERSION	?= 0.1.$(shell date +%Y%m%d).$(REVISION)
+PMVERSION ?= 0.2.$(shell date +%Y%m%d).$(REVISION)
 
 DEBUG	?= 0
 
@@ -46,7 +47,7 @@ $(bindir)/%: %.sh
 	install -m 755 $< $@
 
 build: $(py_SCRIPTS) $(sh_SCRIPTS)
-	python pmaker.py --build-self $(logopt) --upto sbuild --workdir $(WORKDIR)
+	python pmaker.py --build-self $(logopt) --pversion $(PMVERSION) --upto sbuild --workdir $(WORKDIR)
 	find $(bindir) -type f | python pmaker.py -n rpmkit --license GPLv3+ \
 		--group "System Environment/Base" --pversion $(VERSION) \
 		--url https://github.com/ssato/rpmkit/ \

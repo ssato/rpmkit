@@ -3666,9 +3666,13 @@ def do_packaging(pkg, filelist, options, pmaps=PACKAGE_MAKERS):
 
 
 def do_packaging_self(options):
-    version = __version__
-    if not options.release_build:
-        version += ".%s" % date(simple=True)
+    if options.pversion:
+        version = options.pversion
+    else:
+        version = __version__
+
+        if not options.release_build:
+            version += ".%s" % date(simple=True)
 
     plugin_files = []
     if options.include_plugins:
