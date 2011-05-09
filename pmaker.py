@@ -343,7 +343,8 @@ BuildArch:      noarch
 #end if
 #end for
 #for $rel in $relations
-$rel.type:\t$rel.targets
+#set $rel_targets = ", ".join($rel.targets)
+$rel.type:\t$rel_targets
 #end for
 
 
@@ -433,8 +434,11 @@ Architecture: any
 #end if
 #set $requires_list = ""
 #for $rel in $relations
+#if $rel.targets
+#set $rel_targets = ", ".join($rel.targets)
+#end if
 #if $rel.type == "Depends"
-#set $requires_list += $rel.targets
+#set $requires_list += $rel_targets
 #end if
 #end for
 Depends: \${shlibs:Depends}, \${misc:Depends}$requires_list
@@ -4268,6 +4272,18 @@ Examples:
     return p
 
 
+def relations_parser(relations_str):
+    """
+    >>> relations_parser("requires:bash,zsh;obsoletes:sysdata;conflicts:sysdata-old")
+    [('requires', ['bash', 'zsh']), ('obsoletes', ['sysdata']), ('conflicts', ['sysdata-old'])]
+    """
+    if not relations_str:
+        return []
+
+    rels = [rel.split(":") for rel in relations_str.split(";")]
+    return [(reltype, reltargets.split(",")) for reltype, reltargets in rels]
+
+
 def main(argv=sys.argv):
     global PKG_COMPRESSORS, TEMPLATES, PYXATTR_ENABLED
 
@@ -4372,6 +4388,9 @@ def main(argv=sys.argv):
         "ext": options.compressor,
         "am_opt": PKG_COMPRESSORS.get(options.compressor),
     }
+
+    if options.relations:
+        pkg["relations"] = relations_parser(options.relations)
 
     pkg["dist"] = options.dist
 
