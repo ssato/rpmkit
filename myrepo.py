@@ -1141,7 +1141,7 @@ def test(verbose, test_choice=TEST_BASIC):
         TestRepo,
     )
 
-    sysmte_tests = (
+    system_tests = (
         TestAppLocal,
     )
 
@@ -1245,7 +1245,7 @@ def main():
 
     if options.test:
         verbose_test = (options.verbose or options.debug)
-        test(verbose_test)
+        test(verbose_test, options.tlevel)
         sys.exit()
 
     if not args:
