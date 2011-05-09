@@ -273,27 +273,30 @@ class Command(object):
 
 
 
-def rm_rf(dir):
+def rm_rf(target):
     """'rm -rf' in python.
     """
-    if not os.path.exists(dir):
+    if not os.path.exists(target):
         return
 
-    if os.path.isfile(dir):
-        os.remove(dir)
+    if os.path.isfile(target):
+        os.remove(target)
         return
 
-    assert dir != '/'                    # avoid "rm -rf /"
-    assert os.path.realpath(dir) != '/'  # likewise
+    warnmsg = "You're trying to rm -rf / !"
+    assert target != "/", warnmsg
+    assert os.path.realpath(target) != "/", warnmsg
 
-    for x in glob.glob(os.path.join(dir, '*')):
+    xs = glob.glob(os.path.join(target, "*")) + glob.glob(os.path.join(target, ".*"))
+
+    for x in xs:
         if os.path.isdir(x):
             rm_rf(x)
         else:
             os.remove(x)
 
-    if os.path.exists(dir):
-        os.removedirs(dir)
+    if os.path.exists(target):
+        os.removedirs(target)
 
 
 @memoize
