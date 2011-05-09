@@ -3966,8 +3966,6 @@ def run_doctests(verbose):
 
 
 def run_unittests(verbose, test_choice):
-    minor = sys.version_info[1]
-
     def tsuite(testcase):
         return unittest.TestLoader().loadTestsFromTestCase(testcase)
 
@@ -3992,6 +3990,8 @@ def run_unittests(verbose, test_choice):
         TestMainProgram01MultipleFilesCases,
     ]
 
+    (major, minor) = sys.version_info[:2]
+
     suites = [tsuite(c) for c in basic_tests]
 
     if test_choice == TEST_FULL:
@@ -3999,11 +3999,10 @@ def run_unittests(verbose, test_choice):
 
     tests = unittest.TestSuite(suites)
 
-    if minor >= 5:
-        unittest.TextTestRunner(verbosity=(verbose and 2 or 0)).run(tests)
-        #unittest.main(argv=sys.argv[:1], verbosity=)
-    else:
+    if major == 2 and minor < 5:
         unittest.TextTestRunner().run(tests)
+    else:
+        unittest.TextTestRunner(verbosity=(verbose and 2 or 0)).run(tests)
 
 
 def run_alltests(verbose, test_choice):
