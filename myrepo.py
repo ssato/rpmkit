@@ -51,6 +51,10 @@ import unittest
 
 
 
+TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
+
+
+
 def memoize(fn):
     """memoization decorator.
     """
@@ -988,7 +992,7 @@ def init_defaults_by_conffile(config=None, profile=None):
     return dict((k, parse_conf_value(v)) for k, v in d)
 
 
-def init_defaults():
+def init_defaults(test_choices=TEST_CHOICES):
     dists_full = list_dists()
     archs = list_archs()
 
@@ -1009,6 +1013,7 @@ def init_defaults():
         "topdir": Repo.topdir,
         "baseurl": Repo.baseurl,
         "signkey": Repo.signkey,
+        "tlevel": test_choices[0],
     }
 
     return defaults
@@ -1124,17 +1129,40 @@ class TestAppLocal(unittest.TestCase):
 
 
 
-def test(verbose):
-    doctest.testmod(verbose=verbose)
+def test(verbose, test_choice=TEST_BASIC):
+    def tsuite(testcase):
+        return unittest.TestLoader().loadTestsFromTestCase(testcase)
+
+    basic_tests = (
+        TestMemoizedFuncs,
+        TestMiscFuncs,
+        TestDistribution,
+        TestFuncsWithSideEffects,
+        TestRepo,
+    )
+
+    sysmte_tests = (
+        TestAppLocal,
+    )
 
     (major, minor) = sys.version_info[:2]
+
+    suites = [tsuite(c) for c in basic_tests]
+
+    if test_choice == TEST_FULL:
+        suites += [tsuite(c) for c in system_tests]
+
+    tests = unittest.TestSuite(suites)
+
+    doctest.testmod(verbose=verbose)
+
     if major == 2 and minor < 5:
-        unittest.main(argv=sys.argv[:1])
+        unittest.TextTestRunner().run(tests)
     else:
-        unittest.main(argv=sys.argv[:1], verbosity=(verbose and 2 or 0))
+        unittest.TextTestRunner(verbosity=(verbose and 2 or 0)).run(tests)
 
 
-def opt_parser():
+def opt_parser(test_choices=TEST_CHOICES):
     defaults = init_defaults()
     distribution_choices = defaults["dists_full"]  # save it.
 
@@ -1177,6 +1205,8 @@ Examples:
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     p.add_option("-T", "--test", action="store_true", help="Run test suite")
+    p.add_option("", "--tlevel", type="choice", choices=test_choices,
+        help="Select the level of tests to run. Choices are " + ", ".join(test_choices) + " [%default]")
 
     iog = optparse.OptionGroup(p, "Options for 'init' command")
     iog.add_option('', "--name", help="Name of your yum repo or its format string [%default].")
