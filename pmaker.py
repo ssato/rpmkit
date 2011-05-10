@@ -4139,16 +4139,14 @@ def init_defaults_by_conffile(config=None, profile=None, prog="pmaker"):
 
 def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS,
         test_choices=TEST_CHOICES, steps=BUILD_STEPS,
-        compressors=COMPRESSORS):
-
-    global UPTO
+        compressors=COMPRESSORS, upto=UPTO):
 
     ver_s = "%prog " + V
 
     upto_params = {
         "choices": [name for name, _logmsg, helptxt in steps],
         "choices_str": ", ".join(("%s (%s)" % (name, helptxt) for name, _logmsg, helptxt in steps)),
-        "default": UPTO,
+        "default": upto,
     }
 
     pdriver = unique([tf[0] for tf in pmaps.keys()])
