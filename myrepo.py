@@ -223,12 +223,6 @@ def rshell(cmd, user, host, workdir, dryrun=False, stop_on_error=True):
     """
     @user     str  (remote) user to run given command.
     @host     str  on which host to run given command?
-
-    >>> test_remote = False
-    >>> rc = shell("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
-    >>> if rc == 0 and test_remote:
-    ...     rc = rshell("ls /dev/null", get_username(), "127.0.0.1", os.curdir)
-    ...     assert rc == 0, rc
     """
     if not is_local(host):
         if workdir is None:
@@ -468,6 +462,31 @@ class TestMiscFuncs(unittest.TestCase):
         open(os.path.join(d, 'c', 'd', 'z'), "w").write("test")
 
         rm_rf(d)
+
+    def test_rshell(self):
+        rc = shell("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
+
+        if rc != 0:
+            logging.info("sshd is not working on this host. Skip this test: test_rshell")
+            return
+
+        rhosts = ("192.168.122.1", "127.0.0.1")
+        rhost = False
+
+        for rh in rhosts:
+            if shell("ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rh) == 0:
+                rhost = rh
+                break
+
+        if not rhost:
+            logging.info("target host is not accessible via ssh. Skip this test: test_rshell")
+            return
+
+        rc = rshell("ls /dev/null", get_username(), rhost, os.curdir)
+        assert rc == 0, rc
+
+        rc = rshell("ls null", get_username(), rhost, "/dev")
+        assert rc == 0, rc
 
 
 
@@ -1080,9 +1099,9 @@ class TestAppLocal(unittest.TestCase):
 
         config["prog"] = self.prog
 
-        cmd = "%(prog)s --server %(server)s --user %(user)s --email %(email)s --fullname \"%(fullname)s\" "
-        cmd += " --dists %(dists)s --name \"%(name)s\" --subdir %(subdir)s --topdir \"%(topdir)s\" "
-        cmd += " --baseurl \"%(baseurl)s\" "
+        cmd = "%(prog)s --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
+        cmd += " --baseurl '%(baseurl)s' "
         cmd += " init "
         cmd = cmd % config
 
@@ -1109,9 +1128,9 @@ class TestAppLocal(unittest.TestCase):
             logging.warn("Cannot get the default gpg key list. Test w/o --signkey: err=%s" % str(e))
             keyopt = ""
 
-        cmd = "%(prog)s --server %(server)s --user %(user)s --email %(email)s --fullname \"%(fullname)s\" "
-        cmd += " --dists %(dists)s --name \"%(name)s\" --subdir %(subdir)s --topdir \"%(topdir)s\" "
-        cmd += " --baseurl \"%(baseurl)s\" "
+        cmd = "%(prog)s --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
+        cmd += " --baseurl '%(baseurl)s' "
         cmd += keyopt
         cmd += " init "
         cmd = cmd % config
