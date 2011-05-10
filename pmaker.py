@@ -200,12 +200,12 @@ PACKAGE_MAKERS = {}
 COLLECTORS = {}
 
 
-PKG_COMPRESSORS = {
-    # extension: am_option,
-    "xz"    : "no-dist-gzip dist-xz",
-    "bz2"   : "no-dist-gzip dist-bzip2",
-    "gz"    : "",
-}
+COMPRESSORS = (
+    # cmd, extension, am_option,
+    ("xz",    "xz",  "no-dist-gzip dist-xz"),
+    ("bzip2", "bz2", "no-dist-gzip dist-bzip2"),
+    ("gzip",  "gz",  ""),
+)
 
 
 TEMPLATES = {
@@ -1452,6 +1452,32 @@ def get_fullname():
             pass
 
     return os.environ.get("FULLNAME", False) or get_username()
+
+
+def get_compressor(compressors=COMPRESSORS):
+    global UPTO
+
+    found = False
+
+    for cmd, ext, am_opt in compressors:
+        cmd_c = "%s --version > /dev/null 2> /dev/null" % cmd
+
+        if os.system(cmd_c) == 0:
+            am_support_c = "grep -q -e '^dist-%s:' /usr/share/automake-*/am/*.am 2> /dev/null" % cmd
+
+            if os.system(am_support_c) == 0:
+                found = True
+                break
+
+    if not found:
+        #logging.warn("any compressor cmd not found. Packaging process can go up to \"setup\" step.")
+        #UPTO = STEP_SETUP
+        #return False
+
+        # gzip must exist at least and not reached here:
+        raise RuntimeError("No compressor found! Aborting...")
+
+    return (cmd, ext, am_opt)
 
 
 def shell(cmd_s, workdir=os.curdir):
@@ -3843,13 +3869,37 @@ class TestMainProgram00SingleFileCases(unittest.TestCase):
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
+    def test_packaging_wo_rpmdb_wo_mock_with_compressor(self):
+        (zcmd, _zext, _z_am_opt) = get_compressor()
+
+        if zcmd == "xz":
+            zchoices = ["bz2", "gz"]
+
+        elif zcmd == "bzip2":
+            zchoices = ["gz"]
+
+        else:
+            return  # only "gz" is available and cannot test others.
+
+        for z in zchoices:
+            cmd = self.cmd + "--no-rpmdb --no-mock --upto sbuild --compressor %s -" % z
+
+            self.assertEquals(os.system(cmd), 0)
+
+            archives = glob.glob("%s/*/*.tar.%s" % (self.workdir, z))
+            self.assertFalse(archives == [], "failed with --compressor " + z)
+
+            if z != zchoices[-1]:
+                for x in glob.glob("%s/*" % self.workdir):
+                    rm_rf(x)
+
     def test_packaging_with_rpmdb_wo_mock(self):
         cmd = self.cmd + "--no-mock -"
         self.assertEquals(os.system(cmd), 0)
         self.assertTrue(len(glob.glob("%s/*/*.noarch.rpm" % self.workdir)) > 0)
 
     def test_packaging_with_rpmdb_with_mock(self):
-        network_avail = os.system("ping -q -c 1 -w 1 github.com") == 0
+        network_avail = os.system("ping -q -c 1 -w 1 github.com > /dev/null 2> /dev/null") == 0
 
         if not network_avail:
             logging.warn("Network does not look available right now. Skip this test.")
@@ -4088,9 +4138,10 @@ def init_defaults_by_conffile(config=None, profile=None, prog="pmaker"):
 
 
 def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS,
-        test_choices=TEST_CHOICES, steps=BUILD_STEPS):
+        test_choices=TEST_CHOICES, steps=BUILD_STEPS,
+        compressors=COMPRESSORS):
 
-    global PKG_COMPRESSORS, UPTO
+    global UPTO
 
     ver_s = "%prog " + V
 
@@ -4113,6 +4164,9 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS,
     packager = get_fullname()
     dist = "fedora-14-%s" % get_arch()
 
+    compressor = get_compressor(compressors)  # cmd, extension, am_option,
+    compressor_choices = [ext for _c, ext, _a in compressors]
+
     workdir = os.path.join(os.path.abspath(os.curdir), "workdir")
 
     cds = init_defaults_by_conffile()
@@ -4123,7 +4177,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS,
         "type": cds.get("type", "filelist"),
         "format": cds.get("format", "rpm"),
         "itype": cds.get("itype", "filelist"),
-        "compressor": cds.get("compressor", "bz2"),
+        "compressor": cds.get("compressor", compressor[1]),
         "verbose": cds.get("verbose", False),
         "quiet": cds.get("quiet", False),
         "debug": cds.get("debug", False),
@@ -4226,7 +4280,7 @@ Examples:
     pog.add_option("", "--license", help="The license of the package [%default]")
     pog.add_option("", "--url", help="The url of the package [%default]")
     pog.add_option("", "--summary", help="The summary of the package")
-    pog.add_option("-z", "--compressor", type="choice", choices=PKG_COMPRESSORS.keys(),
+    pog.add_option("-z", "--compressor", type="choice", choices=compressor_choices,
         help="Tool to compress src archives [%default]")
     pog.add_option("", "--arch", action="store_true", help="Make package arch-dependent [false - noarch]")
     pog.add_option("", "--relations",
@@ -4285,8 +4339,8 @@ def relations_parser(relations_str):
     return [(reltype, reltargets.split(",")) for reltype, reltargets in rels]
 
 
-def main(argv=sys.argv):
-    global PKG_COMPRESSORS, TEMPLATES, PYXATTR_ENABLED
+def main(argv=sys.argv, compressors=COMPRESSORS):
+    global TEMPLATES, PYXATTR_ENABLED
 
     verbose_test = False
 
@@ -4385,9 +4439,11 @@ def main(argv=sys.argv):
     pkg["workdir"] = os.path.abspath(os.path.join(options.workdir, "%(name)s-%(version)s" % pkg))
     pkg["srcdir"] = os.path.join(pkg["workdir"], "src")
 
+    compressor_am_opt = [am_opt for _c, _ext, am_opt in compressors if _ext == options.compressor][0]
+
     pkg["compressor"] = {
         "ext": options.compressor,
-        "am_opt": PKG_COMPRESSORS.get(options.compressor),
+        "am_opt": compressor_am_opt,
     }
 
     if options.relations:
