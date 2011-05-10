@@ -1480,48 +1480,22 @@ def get_compressor(compressors=COMPRESSORS):
     return (cmd, ext, am_opt)
 
 
-def shell(cmd_s, workdir=os.curdir):
-    """NOTE: This function (subprocess.Popen.communicate()) may block.
-    """
-    if not workdir:
-        workdir = os.path.abspath(os.curdir)
-
-    logging.debug(" Run: %s [%s]" % (cmd_s, workdir))
-
-    try:
-        pipe = subprocess.Popen([cmd_s], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=workdir)
-        (output, errors) = pipe.communicate()
-    except Exception, e:
-        # e.message looks not available in python < 2.5:
-        #raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
-        raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), str(e)))
-
-    if pipe.returncode == 0:
-        return (output, errors)
-    else:
-        raise RuntimeError(" Failed: %s,\n err:\n'''%s'''" % (cmd_s, errors))
-
-
-
-def shell2(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
+def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
     """
     @cmd      str   command string, e.g. "ls -l ~".
     @workdir  str   in which dir to run given command?
-    @log      bool  whether to print log messages or not.
     @dryrun   bool  if True, just print command string to run and returns.
     @stop_on_error bool  if True, RuntimeError will not be raised.
 
-    >>> assert 0 == shell2("echo ok > /dev/null", ".", False)
-    >>> assert 0 == shell2("ls null", "/dev", False)
+    >>> assert 0 == shell("echo ok > /dev/null")
+    >>> assert 0 == shell("ls null", "/dev")
+    >>> assert 0 == shell("ls null", "/dev", dryrun=True)
     >>> try:
-    ...    rc = shell2("ls /root", ".", False)
+    ...    rc = shell("ls", "/root")
     ... except RuntimeError:
     ...    pass
-    >>> assert 0 == shell2("ls /root", ".", False, True)
+    >>> rc = shell("echo OK | grep -q NG 2>/dev/null", stop_on_error=False)
     """
-    if not workdir:
-        workdir = os.path.abspath(os.curdir)
-
     logging.info(" Run: %s [%s]" % (cmd, workdir))
 
     if dryrun:
@@ -1537,13 +1511,12 @@ def shell2(cmd, workdir=os.curdir, log=True, dryrun=False, stop_on_error=True):
         pass
 
     try:
-        proc = subprocess.Popen([cmd], shell=True, cwd=workdir)
+        proc = subprocess.Popen(cmd, shell=True, cwd=workdir)
         proc.wait()
         rc = proc.returncode
+
     except Exception, e:
-        # NOTE: e.message looks not available in python < 2.5:
-        #raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
-        raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), str(e)))
+        raise RuntimeError("Error (%s) when running: %s" % (repr(e.__class__), str(e)))
 
     if rc == 0:
         return rc
@@ -1716,9 +1689,8 @@ class TestFuncsWithSideEffects(unittest.TestCase):
         self.assertRaises(RuntimeError, createdir, f)
 
     def test_shell(self):
-        (o, e) = shell("echo \"\" > /dev/null", os.curdir)
-        self.assertEquals(e, "")
-        self.assertEquals(o, "")
+        rc = shell("echo \"\" > /dev/null", os.curdir)
+        self.assertEquals(rc, 0)
 
         self.assertRaises(RuntimeError, shell, "grep xyz /dev/null")
 
@@ -2036,7 +2008,7 @@ class FileOperations(object):
             shutil.copy2(fileinfo.path, dest)  # correponding to "cp -p ..."
             cls.copy_xattrs(fileinfo.xattrs, dest)
         else:
-            shell2("cp -a %s %s" % (fileinfo.path, dest))
+            shell("cp -a %s %s" % (fileinfo.path, dest))
 
     @classmethod
     def copy_xattrs(cls, src_xattrs, dest):
@@ -2140,7 +2112,7 @@ class SymlinkOperations(FileOperations):
     @classmethod
     def copy_main(cls, fileinfo, dest, use_pyxattr=False):
         os.symlink(fileinfo.linkto, dest)
-        #shell2("cp -a %s %s" % (fileinfo.path, dest))
+        #shell("cp -a %s %s" % (fileinfo.path, dest))
 
 
 
@@ -2268,7 +2240,7 @@ class TestSymlinkOperations(unittest.TestCase):
 
     def test_copy(self):
         for path in self.paths:
-            shell2("ln -s %s ./" % path, self.workdir)
+            shell("ln -s %s ./" % path, self.workdir)
             path = os.path.join(self.workdir, os.path.basename(path))
             dest = path + ".symlnk"
 
@@ -3440,7 +3412,7 @@ class PackageMaker(object):
             setattr(self, k, v)
 
     def shell(self, cmd_s):
-        return shell2(cmd_s, workdir=self.workdir)
+        return shell(cmd_s, workdir=self.workdir)
 
     def to_srcdir(self, path):
         return to_srcdir(self.srcdir, path)
@@ -3734,7 +3706,7 @@ def do_packaging_self(options):
         cmd_opts += " --format %s" % options.format
 
     createdir(pkglibdir, mode=0755)
-    shell2("install -m 644 %s %s/__init__.py" % (prog, pkglibdir))
+    shell("install -m 644 %s %s/__init__.py" % (prog, pkglibdir))
 
     for f in plugin_files:
         if not os.path.exists(f):
@@ -3742,7 +3714,7 @@ def do_packaging_self(options):
             continue
 
         nf = f.replace("pmaker-", "")
-        shell2("install -m 644 %s %s" % (f, os.path.join(pkglibdir, nf)))
+        shell("install -m 644 %s %s" % (f, os.path.join(pkglibdir, nf)))
 
     createdir(bindir)
 
@@ -3764,8 +3736,8 @@ pmaker.main(sys.argv)
     compile_pyc = "python -c \"%s\"" % pycompile
     compile_pyo = "python -O -c \"%s\" > /dev/null" % pycompile
 
-    shell2(compile_pyc, pkglibdir)
-    shell2(compile_pyo, pkglibdir)
+    shell(compile_pyc, pkglibdir)
+    shell(compile_pyo, pkglibdir)
 
     cmd = "python %s %s %s" % (prog, cmd_opts, filelist)
 
