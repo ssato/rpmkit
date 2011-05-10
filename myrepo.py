@@ -1078,13 +1078,13 @@ b: bbb
 
 
 
-class TestAppLocal(unittest.TestCase):
+class TestProgramLocal(unittest.TestCase):
 
     _multiprocess_can_split_ = True
 
     def setUp(self):
         self.prog = "python %s" % sys.argv[0]
-        self.workdir = tempfile.mkdtemp(prefix="myrepo-test-tal-")
+        self.workdir = tempfile.mkdtemp(prefix="myrepo-test-tpl-")
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -1149,6 +1149,56 @@ class TestAppLocal(unittest.TestCase):
 
 
 
+class TestProgramRemote(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
+
+    def setUp(self):
+        self.prog = "python %s" % sys.argv[0]
+        self.workdir = tempfile.mkdtemp(prefix="myrepo-test-tpr-")
+
+    def tearDown(self):
+        rm_rf(self.workdir)
+
+    def test_init_with_all_options_set_explicitly(self):
+        rc = shell("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
+
+        if rc != 0:
+            logging.info("sshd is not working on this host. Skip this test: TestProgramRemote.test_init_with_all_options_set_explicitly")
+            return
+
+        rhosts = ("192.168.122.1", "127.0.0.1")
+        rhost = False
+
+        for rh in rhosts:
+            if shell("ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rh) == 0:
+                rhost = rh
+                break
+
+        if not rhost:
+            logging.info("target host is not accessible via ssh. Skip this test: test_rshell")
+            return
+
+        config = copy.copy(init_defaults())
+
+        # force set some parameters:
+        config["server"] = rhost
+        config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
+        #config["baseurl"] = "http://%(server)s/%(topdir)s/%(subdir)s/%(distdir)s"
+
+        config["prog"] = self.prog
+
+        cmd = "%(prog)s --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
+        cmd += " --baseurl '%(baseurl)s' "
+        cmd += " init "
+        cmd = cmd % config
+
+        logging.info("cmd: " + cmd)
+        self.assertEquals(os.system(cmd), 0)
+
+
+
 def test(verbose, test_choice=TEST_BASIC):
     def tsuite(testcase):
         return unittest.TestLoader().loadTestsFromTestCase(testcase)
@@ -1162,7 +1212,8 @@ def test(verbose, test_choice=TEST_BASIC):
     )
 
     system_tests = (
-        TestAppLocal,
+        TestProgramLocal,
+        TestProgramRemote,
     )
 
     (major, minor) = sys.version_info[:2]
