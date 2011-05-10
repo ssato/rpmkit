@@ -179,7 +179,7 @@ def is_local(fqdn_or_hostname):
 def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
     """
     @cmd      str   command string, e.g. "ls -l ~".
-    @workdir  str   in which dir to run given command?
+    @workdir  str or None  In which dir to run given command?
     @dryrun   bool  if True, just print command string to run and returns.
     @stop_on_error bool  if True, RuntimeError will not be raised.
 
@@ -202,7 +202,7 @@ def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
         return 0
 
     try:
-        proc = subprocess.Popen([cmd], shell=True, cwd=workdir)
+        proc = subprocess.Popen(cmd, shell=True, cwd=workdir)
         proc.wait()
         rc = proc.returncode
 
@@ -231,8 +231,11 @@ def rshell(cmd, user, host, workdir, dryrun=False, stop_on_error=True):
     ...     assert rc == 0, rc
     """
     if not is_local(host):
+        if workdir is None:
+            workdir = os.curdir
+
         cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
-        workdir = os.curdir
+        workdir = os.curdir  # redefine it as $cmd will be run from local.
 
     return shell(cmd, workdir, dryrun, stop_on_error)
 
@@ -245,10 +248,14 @@ class Command(object):
     def __init__(self, cmd, user=None, host="localhost", workdir=None,
             dryrun=False, stop_on_error=True):
         self.cmd = cmd
-        self.user = get_username()
         self.host = host
         self.dryrun = dryrun
         self.stop_on_error = stop_on_error
+
+        if user is None:
+            self.user = get_username()
+        else:
+            self.user = user
 
         if is_local(host) and workdir is not None and "~" in workdir:
             self.workdir = os.path.expanduser(workdir)
@@ -374,7 +381,7 @@ def rpm_header_from_rpmfile(rpmfile):
 def is_noarch(srpm):
     """Determine if given srpm is noarch (arch-independent).
     """
-    return rpm_header_from_rpmfile(srpm)[rpm.RPMTAG_ARCH] == "noarch"
+    return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
 
 
 
@@ -636,7 +643,7 @@ class RepoOperations(object):
         open(release_file_path, 'w').write(c)
 
         if repo.signkey:
-            keydir = workdir + repo.keydir
+            keydir = os.path.join(workdir, repo.keydir[1:])
             os.makedirs(keydir)
 
             c = Command("gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile), workdir=workdir)
