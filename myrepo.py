@@ -176,29 +176,26 @@ def is_local(fqdn_or_hostname):
     return fqdn_or_hostname.startswith("localhost")
 
 
-def shell(cmd, workdir=None, log=True, dryrun=False, stop_on_error=True):
+def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
     """
     @cmd      str   command string, e.g. "ls -l ~".
     @workdir  str   in which dir to run given command?
-    @log      bool  whether to print log messages or not.
     @dryrun   bool  if True, just print command string to run and returns.
     @stop_on_error bool  if True, RuntimeError will not be raised.
-    
+
     TODO: Popen.communicate might be blocked. How about using Popen.wait
     instead?
 
-    >>> assert 0 == shell("echo ok > /dev/null", os.curdir, False)
-    >>> assert 0 == shell("ls null", "/dev", False)
+    >>> assert 0 == shell("echo ok > /dev/null")
+    >>> assert 0 == shell("ls null", "/dev")
+    >>> assert 0 == shell("ls null", "/dev", dryrun=True)
     >>> try:
-    ...    rc = shell("ls /root", os.curdir, False)
+    ...    rc = shell("ls", "/root")
     ... except RuntimeError:
     ...    pass
-    >>> assert 0 == shell("ls /root", os.curdir, False, True)
+    >>> rc = shell("echo OK | grep -q NG 2>/dev/null", stop_on_error=False)
     """
-    if workdir is None:
-        workdir = os.path.abspath(os.curdir)
-
-    logging.info("Run: %s [%s]" % (cmd, workdir))
+    logging.info("Run: %s [%s]" % (cmd, workdir is None and os.curdir or workdir))
 
     if dryrun:
         logging.info("Exit as requested (dry run mode).")
@@ -208,9 +205,8 @@ def shell(cmd, workdir=None, log=True, dryrun=False, stop_on_error=True):
         proc = subprocess.Popen([cmd], shell=True, cwd=workdir)
         proc.wait()
         rc = proc.returncode
+
     except Exception, e:
-        # NOTE: e.message looks not available in python < 2.5:
-        #raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), e.message))
         raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), str(e)))
 
     if rc == 0:
@@ -223,7 +219,7 @@ def shell(cmd, workdir=None, log=True, dryrun=False, stop_on_error=True):
             return rc
 
 
-def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True):
+def rshell(cmd, user, host, workdir, dryrun=False, stop_on_error=True):
     """
     @user     str  (remote) user to run given command.
     @host     str  on which host to run given command?
@@ -231,14 +227,14 @@ def rshell(cmd, user, host, workdir, log=True, dryrun=False, stop_on_error=True)
     >>> test_remote = False
     >>> rc = shell("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
     >>> if rc == 0 and test_remote:
-    ...     rc = rshell("ls /dev/null", get_username(), "127.0.0.1", os.curdir, log=False)
+    ...     rc = rshell("ls /dev/null", get_username(), "127.0.0.1", os.curdir)
     ...     assert rc == 0, rc
     """
     if not is_local(host):
         cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
         workdir = os.curdir
 
-    return shell(cmd, workdir, log, dryrun, stop_on_error)
+    return shell(cmd, workdir, dryrun, stop_on_error)
 
 
 
@@ -246,16 +242,15 @@ class Command(object):
     """Object to wrap command to run.
     """
 
-    def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
-            log=True, dryrun=False, stop_on_error=True):
+    def __init__(self, cmd, user=None, host="localhost", workdir=None,
+            dryrun=False, stop_on_error=True):
         self.cmd = cmd
         self.user = get_username()
         self.host = host
-        self.log = log
         self.dryrun = dryrun
         self.stop_on_error = stop_on_error
 
-        if is_local(host) and "~" in workdir:
+        if is_local(host) and workdir is not None and "~" in workdir:
             self.workdir = os.path.expanduser(workdir)
         else:
             self.workdir = workdir
@@ -268,12 +263,11 @@ class Command(object):
             self.user == other.user and \
             self.host == other.host and \
             self.workdir == other.workdir and \
-            self.log == other.log and \
             self.dryrun == other.dryrun and \
             self.stop_on_error == other.stop_on_error
 
     def run(self):
-        return rshell(self.cmd, self.user, self.host, self.workdir, self.log, self.dryrun, self.stop_on_error)
+        return rshell(self.cmd, self.user, self.host, self.workdir, self.dryrun, self.stop_on_error)
 
 
 
@@ -1096,7 +1090,7 @@ class TestAppLocal(unittest.TestCase):
         config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
         config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
 
-        config["dists"] = "rhel-6-i386,fedora-14-i386"
+        config["dists"] = "rhel-6-i386"
         config["prog"] = self.prog
 
         try:
