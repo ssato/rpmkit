@@ -53,6 +53,23 @@ import unittest
 
 TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
 
+TEMPLATES = {
+    "mock.cfg":
+"""\
+#for k, v in $cfg.iteritems()
+#set $k = k
+#set $v = v
+#if "\n" in $v
+config_opts['$k'] = \"\"\"
+$v
+\"\"\"
+#else
+config_opts['$k'] = '$v'
+#end if
+#end for
+""",
+}
+
 
 
 def memoize(fn):
@@ -376,6 +393,26 @@ def is_noarch(srpm):
     """Determine if given srpm is noarch (arch-independent).
     """
     return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
+
+
+def mock_cfg_add_repos(mock_cfg_path, repos_content, templates=TEMPLATES):
+    """
+    Updated mock.cfg with addingg repository definitions in
+    given content and returns it.
+
+    @mock_cfg_path  str  Path to the original mock.cfg file
+    @repos_content  str  Repository definitions to add into mock.cfg
+    """
+    cfg = {}
+    cfg["config_opts"] = {}
+
+    execfile(mock_cfg_path, cfg)
+
+    cfg["config_opts"]["yum.conf"] += repos_content
+
+    tmpl = templates["mock.cfg"]
+
+    return compile_template(tmpl, {"cfg": cfg["config_opts"]})
 
 
 
@@ -854,6 +891,13 @@ $repo.release_file_list
         return (is_noarch(srpm) and self.dists[:1] or self.dists)
 
     def release_file_content(self):
+        # this package will be noarch (arch-independent).
+        dist = self.dists[0]
+        params = {"repo": self, "dist": dist}
+
+        return compile_template(self.release_file_tmpl, params)
+
+    def mock_file_content(self):
         # this package will be noarch (arch-independent).
         dist = self.dists[0]
         params = {"repo": self, "dist": dist}
