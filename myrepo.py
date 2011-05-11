@@ -5,7 +5,8 @@
 #  * Setup your own yum repos
 #  * build SRPMs and deploy SRPMs and RPMs into your repos.
 #
-# Copyright (C) 2011 Satoru SATOH <satoru.satoh@gmail.com>
+# Copyright (C) 2011 Red Hat, Inc. 
+# Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
