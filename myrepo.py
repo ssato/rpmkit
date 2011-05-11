@@ -48,25 +48,33 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
+
+
+try:
+    from collections import OrderedDict as dict
+
+except ImportError:
+    pass
 
 
 
 TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
+TEST_RHOSTS = ("192.168.122.1", "127.0.0.1")
 
 TEMPLATES = {
     "mock.cfg":
 """\
-#for k, v in $cfg.iteritems()
-#set $k = k
-#set $v = v
-#if "\n" in $v
+#for $k, $v in $cfg.iteritems()
+#if "\\n" in $v
 config_opts['$k'] = \"\"\"
 $v
 \"\"\"
 #else
 config_opts['$k'] = '$v'
 #end if
+
 #end for
 """,
 }
@@ -290,6 +298,66 @@ class Command(object):
 
 
 
+class ThreadedCommand(object):
+    """
+    @see http://stackoverflow.com/questions/1191374/subprocess-with-timeout
+    """
+
+    def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
+            timeout=None, stop_on_error=True):
+        self.process = None
+        self.rc = None
+
+        self.host = host
+        self.user = user is None and get_username() or user
+        self.timeout = timeout
+        self.stop_on_error = stop_on_error
+
+        if is_local(host):
+            self.cmd = cmd
+
+            if "~" in workdir:
+                self.workdir = os.path.expanduser(workdir)
+            else:
+                self.workdir = workdir
+        else:
+            self.cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
+            self.workdir = workdir
+
+        self.cmd_str = "%s [%s]" % (self.cmd, self.workdir)
+
+    def run(self):
+
+        def func():
+            logging.info("Start running: %s" % self.cmd_str)
+
+            self.process = subprocess.Popen(self.cmd, shell=True, cwd=self.workdir)
+            self.process.communicate()
+
+            logging.info("Finished: %s" % self.cmd_str)
+
+        thread = threading.Thread(target=func)
+        thread.start()
+        thread.join(self.timeout)
+
+        if thread.is_alive():
+            logging.info("Terminating: %s")
+
+            self.process.terminate()
+            thread.join()
+
+        self.rc = self.process.returncode
+
+        if self.rc != 0:
+            emsg = "Failed: %s,\n rc=%d" % (self.cmd, self.rc)
+
+            if self.stop_on_error:
+                raise RuntimeError(emsg)
+            else:
+                logging.warn(emsg)
+
+
+
 def rm_rf(target):
     """'rm -rf' in python.
     """
@@ -404,16 +472,35 @@ def mock_cfg_add_repos(mock_cfg_path, repos_content, templates=TEMPLATES):
     @mock_cfg_path  str  Path to the original mock.cfg file
     @repos_content  str  Repository definitions to add into mock.cfg
     """
-    cfg = {}
-    cfg["config_opts"] = {}
+    cfg = dict()
+    cfg["config_opts"] = dict()
 
     execfile(mock_cfg_path, cfg)
 
-    cfg["config_opts"]["yum.conf"] += repos_content
+    cfg["config_opts"]["yum.conf"] += "\n\n" + repos_content
 
-    tmpl = templates["mock.cfg"]
+    tmpl = templates.get("mock.cfg", "")
 
     return compile_template(tmpl, {"cfg": cfg["config_opts"]})
+
+
+@memoize
+def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
+    if user is None:
+        user = get_username()
+
+    for rhost in rhosts:
+        rc = os.system("ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost)
+
+        if rc == 0:
+            cmd = "ssh %s@%s true > /dev/null 2> /dev/null" % (user, rhost)
+            check = ThreadedCommand(cmd, user, rhost, timeout=3, stop_on_error=False)
+            check.run()
+
+            if check.rc == 0:
+                return rhost
+
+    return False
 
 
 
@@ -475,6 +562,8 @@ class TestMiscFuncs(unittest.TestCase):
 
     _multiprocess_can_split_ = True
 
+    is_ssh_host_available = False
+
     def setUp(self):
         self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="myrepo-tests")
 
@@ -508,13 +597,7 @@ class TestMiscFuncs(unittest.TestCase):
             logging.info("sshd is not working on this host. Skip this test: test_rshell")
             return
 
-        rhosts = ("192.168.122.1", "127.0.0.1")
-        rhost = False
-
-        for rh in rhosts:
-            if shell("ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rh) == 0:
-                rhost = rh
-                break
+        rhost = find_accessible_remote_host()
 
         if not rhost:
             logging.info("target host is not accessible via ssh. Skip this test: test_rshell")
@@ -579,6 +662,7 @@ class TestDistribution(unittest.TestCase):
         self.assertEquals(d.name, "fedora")
         self.assertEquals(d.version, "14")
         self.assertEquals(d.arch, "x86_64")
+        self.assertEquals(d.label, "fedora-14-x86_64")
 
     def test_mockdir(self):
         d = Distribution("fedora-14", "x86_64")
@@ -683,6 +767,44 @@ class RepoOperations(object):
         cls.update(repo)
 
     @classmethod
+    def deploy_mock_cfg_rpm(cls, repo, workdir, release_file_content):
+        """Generate mock.cfg files and corresponding RPMs.
+        """
+        mockcfgdir = os.path.join(workdir, "etc", "mock")
+        os.makedirs(mockcfgdir)
+
+        mock_cfg_files = []
+
+        for dist in repo.dists:
+            mc = repo.mock_file_content(dist, release_file_content)
+            mock_cfg_path = os.path.join(mockcfgdir, "%s-%s.cfg" % (repo.name, dist.label))
+
+            open(mock_cfg_path, "w").write(mc)
+
+            mock_cfg_files.append(mock_cfg_path)
+
+        listfile_path = os.path.join(workdir, "mockcfg.files.list")
+        open(listfile_path, "w").write(
+            "\n".join("%s,rpmattr=%%config(noreplace)" % mcfg for mcfg in mock_cfg_files) + "\n"
+        )
+
+        cmd = Command(repo.mock_cfg_rpm_build_cmd(workdir, listfile_path), repo.user)
+        cmd.run()
+
+        srpms = glob.glob(
+            "%(workdir)s/mock-data-%(reponame)s-%(distversion)s/mock-data-*.src.rpm" % \
+                {"workdir": workdir, "reponame": repo.name, "distversion": repo.distversion}
+        )
+        if not srpms:
+            logging.error("Failed to build src.rpm")
+            sys.exit(1)
+
+        srpm = srpms[0]
+
+        cls.deploy(repo, srpm)
+        cls.update(repo)
+
+    @classmethod
     def deploy_release_rpm(cls, repo, workdir=None):
         """Generate (yum repo) release package.
 
@@ -691,13 +813,15 @@ class RepoOperations(object):
         if workdir is None:
             workdir = tempfile.mkdtemp(dir="/tmp", prefix="%s-release-" % repo.name)
 
-        c = repo.release_file_content()
+        rfc = repo.release_file_content()
+
+        cls.deploy_mock_cfg_rpm(repo, workdir, rfc)
 
         reldir = os.path.join(workdir, "etc", "yum.repos.d")
-        release_file_path = os.path.join(reldir, "%s.repo" % repo.name)
-
         os.makedirs(reldir)
-        open(release_file_path, 'w').write(c)
+
+        release_file_path = os.path.join(reldir, "%s.repo" % repo.name)
+        open(release_file_path, 'w').write(rfc)
 
         if repo.signkey:
             keydir = os.path.join(workdir, repo.keydir[1:])
@@ -816,6 +940,24 @@ $repo.release_file_list
 #end if
 """
 
+    mock_cfg_rpm_build_tmpl = """\
+pmaker -n mock-data-${repo.name} \\
+    --license MIT \\
+    -w ${repo.workdir} \\
+    --itype filelist.ext \\
+    --upto sbuild \\
+    --group "Development/Tools" \\
+    --url ${repo.baseurl} \\
+    --summary "Mock cfg files of yum repo ${repo.name}" \\
+    --packager "${repo.fullname}" \\
+    --mail "${repo.email}" \\
+    --pversion ${repo.distversion}  \\
+    --no-rpmdb --no-mock \\
+    --ignore-owner \\
+    --destdir ${repo.workdir} \\
+    $repo.mock_cfg_file_list
+"""
+
     def __init__(self, server, user, email, fullname, dist, archs,
             name=None, subdir=None, topdir=None, baseurl=None, signkey=None,
             *args, **kwargs):
@@ -898,12 +1040,17 @@ $repo.release_file_list
 
         return compile_template(self.release_file_tmpl, params)
 
-    def mock_file_content(self):
-        # this package will be noarch (arch-independent).
-        dist = self.dists[0]
-        params = {"repo": self, "dist": dist}
+    def mock_file_content(self, dist, release_file_content=None):
+        """
+        Returns the content of mock.cfg for given dist.
 
-        return compile_template(self.release_file_tmpl, params)
+        @dist  Distribution  Distribution object
+        @release_file_content  str  The content of this repo's release file
+        """
+        if release_file_content is None:
+            release_file_content = self.release_file_content()
+
+        return mock_cfg_add_repos("/etc/mock/%s.cfg" % dist.label, release_file_content)
 
     def release_rpm_build_cmd(self, workdir, release_file_path):
         logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
@@ -919,6 +1066,16 @@ $repo.release_file_list
 
         return compile_template(self.release_file_build_tmpl, params)
 
+    def mock_cfg_rpm_build_cmd(self, workdir, mock_cfg_file_list_path):
+        repo = copy.copy(self.__dict__)
+        repo.update({
+            "workdir": workdir,
+            "mock_cfg_file_list": mock_cfg_file_list_path
+        })
+        params = {"repo": repo}
+
+        return compile_template(self.mock_cfg_rpm_build_tmpl, params)
+
 
 
 class TestRepo(unittest.TestCase):
@@ -930,12 +1087,10 @@ class TestRepo(unittest.TestCase):
         self.config = init_defaults()
 
         # overrides some parameters:
-        self.config["dist"] = self.config["dists"][0]
         self.config["topdir"] = os.path.join(self.workdir, "repos", "%(subdir)s")
         self.config["baseurl"] = "file://%(topdir)s/%(distdir)s"
-
-        self.config["dist"] = ["%s-%s" % get_distribution()][0]
-        self.config["archs"] = ",".join(list_archs())
+        self.config["dist"] = "%s-%s" % get_distribution()
+        self.config["archs"] = list_archs()[:1]
 
     def tearDown(self):
         rm_rf(self.workdir)
@@ -991,6 +1146,23 @@ class TestRepo(unittest.TestCase):
 
         repo.release_file_content()
         #compile_template(self.release_file_tmpl, params)
+
+    def test_mock_file_content(self):
+        repo = Repo("localhost",
+                    self.config["user"],
+                    self.config["email"],
+                    self.config["fullname"],
+                    self.config["dist"],
+                    self.config["archs"],
+                    topdir=self.config["topdir"],
+                    baseurl=self.config["baseurl"]
+        )
+
+        rfc = repo.release_file_content()
+
+        for dist in repo.dists:
+            repo.mock_file_content(dist, rfc)
+            repo.mock_file_content(dist)
 
 
 
@@ -1212,13 +1384,7 @@ class TestProgramRemote(unittest.TestCase):
             logging.info("sshd is not working on this host. Skip this test: TestProgramRemote.test_init_with_all_options_set_explicitly")
             return
 
-        rhosts = ("192.168.122.1", "127.0.0.1")
-        rhost = False
-
-        for rh in rhosts:
-            if shell("ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rh) == 0:
-                rhost = rh
-                break
+        rhost = find_accessible_remote_host()
 
         if not rhost:
             logging.info("target host is not accessible via ssh. Skip this test: test_rshell")
