@@ -37,6 +37,7 @@
 #
 #
 # Requirements:
+# * rpmbuild in rpm-build package
 # * python-cheetah: EPEL should be needed for RHEL (option: it's not needed if
 #   you just want to setup src tree)
 # * autotools: both autoconf and automake (option: see the above comment)
