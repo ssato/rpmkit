@@ -1460,7 +1460,9 @@ def get_compressor(compressors=COMPRESSORS):
     found = False
 
     for cmd, ext, am_opt in compressors:
-        cmd_c = "%s --version > /dev/null 2> /dev/null" % cmd
+        # bzip2 tries compressing input from stdin even it
+        # is invoked with --version option. So give null input to it.
+        cmd_c = "%s --version > /dev/null 2> /dev/null < /dev/null" % cmd
 
         if os.system(cmd_c) == 0:
             am_support_c = "grep -q -e '^dist-%s:' /usr/share/automake-*/am/*.am 2> /dev/null" % cmd
@@ -1470,7 +1472,7 @@ def get_compressor(compressors=COMPRESSORS):
                 break
 
     if not found:
-        #logging.warn("any compressor cmd not found. Packaging process can go up to \"setup\" step.")
+        #logging.warn("any compressors not found. Packaging process can go up to \"setup\" step.")
         #UPTO = STEP_SETUP
         #return False
 
@@ -1687,6 +1689,9 @@ class TestFuncsWithSideEffects(unittest.TestCase):
         f = os.path.join(self.workdir, "a")
         open(f, "w").write("test")
         self.assertRaises(RuntimeError, createdir, f)
+
+    def test_get_compressor(self):
+        _ = (_cmd, _ext, _am_opt) = get_compressor()
 
     def test_shell(self):
         rc = shell("echo \"\" > /dev/null", os.curdir)
