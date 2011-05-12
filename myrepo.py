@@ -501,6 +501,10 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
 
 
 class TestMemoizedFuncs(unittest.TestCase):
+    """Doctests in memoized functions and methods are not run as these are
+    rewritten by memoize decorator. So tests of these must be re-defined as
+    this.
+    """
 
     _multiprocess_can_split_ = True
 
