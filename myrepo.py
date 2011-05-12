@@ -300,7 +300,8 @@ class Command(object):
 
 class ThreadedCommand(object):
     """
-    @see http://stackoverflow.com/questions/1191374/subprocess-with-timeout
+    Based on the idea found at
+    http://stackoverflow.com/questions/1191374/subprocess-with-timeout
     """
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
@@ -313,21 +314,16 @@ class ThreadedCommand(object):
         self.timeout = timeout
         self.stop_on_error = stop_on_error
 
-        if is_local(host):
-            self.cmd = cmd
-
-            if "~" in workdir:
-                self.workdir = os.path.expanduser(workdir)
-            else:
-                self.workdir = workdir
+        if is_local(host) and "~" in workdir:
+            workdir = os.path.expanduser(workdir)
         else:
-            self.cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
-            self.workdir = workdir
+            cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
 
+        self.cmd = cmd
+        self.workdir = workdir
         self.cmd_str = "%s [%s]" % (self.cmd, self.workdir)
 
     def run(self):
-
         def func():
             logging.info("Start running: %s" % self.cmd_str)
 
