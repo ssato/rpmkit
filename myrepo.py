@@ -1652,6 +1652,11 @@ def main():
     p = opt_parser()
     (options, args) = p.parse_args()
 
+    logformat = "%(asctime)s [%(levelname)-4s] %(message)s"
+    logdatefmt = "%H:%M:%S" # too much? "%a, %d %b %Y %H:%M:%S"
+
+    logging.basicConfig(format=logformat, datefmt=logdatefmt)
+
     if options.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     else:
