@@ -1584,7 +1584,7 @@ Examples:
   """
     )
 
-    for k in ("tests", "verbose", "debug"):
+    for k in ("tests", "verbose", "quiet", "debug"):
         if not defaults.get(k, False):
             defaults[k] = False
 
@@ -1600,7 +1600,7 @@ Examples:
     p.add_option("", "--dists", help="Comma separated distribution labels including arch. "
         "Options are some of " + distribution_choices + " [%default]")
 
-    p.add_option("-q", "--quiet", dest="verbose", action="store_false", help="Quiet mode")
+    p.add_option("-q", "--quiet", action="store_true", help="Quiet mode")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     p.add_option("-T", "--test", action="store_true", help="Run test suite")
@@ -1649,16 +1649,18 @@ def do_command(cmd, repos, srpm=None, wait=WAIT_FOREVER):
 def main():
     (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = ("init", "update", "build", "deploy")
 
-    p = opt_parser()
-    (options, args) = p.parse_args()
-
-    logformat = "%(asctime)s [%(levelname)-4s] %(message)s"
+    logformat = "%(asctime)s [%(levelname)-4s] myrepo: %(message)s"
     logdatefmt = "%H:%M:%S" # too much? "%a, %d %b %Y %H:%M:%S"
 
     logging.basicConfig(format=logformat, datefmt=logdatefmt)
 
+    p = opt_parser()
+    (options, args) = p.parse_args()
+
     if options.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+    elif options.quiet:
+        logging.getLogger().setLevel(logging.WARN)
     else:
         logging.getLogger().setLevel(logging.INFO)
 
