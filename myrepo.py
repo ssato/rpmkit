@@ -61,6 +61,11 @@ except ImportError:
 
 
 
+WAIT_TYPE = (WAIT_FOREVER, WAIT_MIN, WAIT_MAX) = (None, "min", "max")
+
+TIMEOUT_DEFAULT = 60 * 5  # 5 [min]
+
+
 TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
 TEST_RHOSTS = ("192.168.122.1", "127.0.0.1")
 
@@ -240,7 +245,7 @@ def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
         return 0
 
     try:
-        proc = subprocess.Popen(cmd, shell=True, cwd=workdir)
+        proc = subprocess.Popen(cmd, shell=True, cwd=workdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         proc.wait()
         rc = proc.returncode
 
@@ -317,7 +322,7 @@ class ThreadedCommand(object):
     """
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
-            timeout=None, stop_on_error=True):
+            timeout=None, stop_on_error=True, communicate=False):
         self.process = None
         self.thread = None
 
@@ -325,6 +330,7 @@ class ThreadedCommand(object):
         self.user = user is None and get_username() or user
         self.timeout = timeout
         self.stop_on_error = stop_on_error
+        self.communicate = communicate
 
         if is_local(host):
             if "~" in workdir:
@@ -336,16 +342,24 @@ class ThreadedCommand(object):
         self.workdir = workdir
         self.cmd_str = "%s [%s]" % (self.cmd, self.workdir)
 
-    def run_async(self, callback=None):
-        def func():
+    def run_async(self):
+        def func(communicate):
             logging.info("Start running: %s" % self.cmd_str)
 
-            self.process = subprocess.Popen(self.cmd, shell=True, cwd=self.workdir)
-            self.process.communicate()
+            if communicate:
+                self.process = subprocess.Popen(self.cmd, shell=True,
+                                                cwd=self.workdir,
+                                                stdin=subprocess.PIPE,
+                                                stdout=subprocess.PIPE
+                )
+                (_out, _err) = self.process.communicate()
+            else:
+                self.process = subprocess.Popen(self.cmd, shell=True, cwd=self.workdir)
+                self.process.wait()
 
             logging.info("Finished: %s" % self.cmd_str)
 
-        self.thread = threading.Thread(target=func)
+        self.thread = threading.Thread(target=func, args=(self.communicate,))
         self.thread.start()
 
     def get_result(self):
@@ -412,9 +426,25 @@ def par(cmds):
         c.run_async()
 
 
-def get_results(cmds):
-    #min_timeout = min(c.timeout for c in cmds)
-    #time.sleep(min_timeout)
+def get_results(cmds, wait=WAIT_FOREVER):
+    def is_valid_timeout(timeout):
+        return isinstance(timeout, int) and timeout > 0
+
+    if wait != WAIT_FOREVER:
+        ts = [c.timeout for c in cmds if is_valid_timeout(c.timeout)]
+
+        if ts:
+            if wait == WAIT_MAX:
+                timeout = max(ts)
+            elif wait == WAIT_MIN:
+                timeout = min(ts)
+            else:
+                if not is_valid_timeout(wait):
+                    RuntimeError("Invalid 'wait' value was passed to get_results: " + str(wait))
+                else:
+                    timeout = wait
+
+            time.sleep(timeout)
 
     return [c.get_result() for c in cmds]
 
@@ -759,30 +789,15 @@ class TestDistribution(unittest.TestCase):
 
 
 
-class RepoOperations(object):
-    """Yum repository operations.
+class RpmOperations(object):
+    """RPM related operations.
     """
 
     @classmethod
-    def sequence_(cls, cmds):
-        rcs = []
-
-        for c in cmds:
-            rc = c.run()
-            rcs.append(rc)
-
-        return rcs
-
-    @classmethod
-    def destdir(cls, repo):
-        return os.path.join(repo.topdir, repo.distdir)
-
-    @classmethod
     def sign_rpms(cls, keyid, rpms):
-        """
-        TODO: It might ask user about the gpg passphrase everytime this method
-        is called.  How to store the passphrase or streamline with gpg-agent
-        via rpm?
+        """TODO: It might ask user about the gpg passphrase everytime this
+        method is called.  How to store the passphrase or streamline with
+        gpg-agent via rpm?
 
         @keyid   GPG Key ID to sign with
         @rpms    RPM file path list
@@ -794,22 +809,52 @@ class RepoOperations(object):
         # TODO: "rpm --checksig ..." looks returning 1 even if it suceeds.
         cs = [Command(sign_cmd), Command(verify_cmd, stop_on_error=False)]
 
-        return cls.sequence_(cs)
+        return sequence(cs, stop_on_failure=True)
 
     @classmethod
-    def build(cls, repo, srpm):
-        cs = [repo.build_cmd(srpm, d) for d in repo.dists_by_srpm(srpm)]
-
-        return cls.sequence_(cs)
+    def build_cmds(cls, repo, srpm):
+        return [repo.build_cmd(srpm, d) for d in repo.dists_by_srpm(srpm)]
 
     @classmethod
-    def deploy(cls, repo, srpm, build=True):
+    def build(cls, repo, srpm, wait=WAIT_FOREVER):
+        cs = cls.build_cmds(repo, srpm)
+        par(cs)
+        rcs = get_results(cs, wait)
+
+        return rcs
+
+
+
+class RepoOperations(object):
+    """Yum repository operations.
+    """
+    rpmops = RpmOperations
+
+    @classmethod
+    def destdir(cls, repo):
+        return os.path.join(repo.topdir, repo.distdir)
+
+    @classmethod
+    def sign_rpms(cls, keyid, rpms):
+        return cls.rpmops.sign_rpms(keyid, rpms)
+
+    @classmethod
+    def build(cls, repo, srpm, wait=WAIT_FOREVER):
+        return cls.rpmops.build(repo, srpm, wait)
+
+    @classmethod
+    def sequence(cls, cmds, *args, **kwargs):
+        return sequence(cmds, *args, **kwargs)
+
+    @classmethod
+    def deploy(cls, repo, srpm, build=True, build_wait=WAIT_FOREVER,
+            deploy_wait=WAIT_FOREVER):
         """
         FIXME: ugly code around signkey check.
         """
         if build:
             rcs = cls.build(repo, srpm)
-            assert all((r == 0 for r in rcs))
+            assert all(r == 0 for r in rcs)
 
         destdir = cls.destdir(repo)
         cs = [repo.copy_cmd(srpm, os.path.join(destdir, "sources"))]
@@ -831,7 +876,7 @@ class RepoOperations(object):
         if repo.signkey:
             cls.sign_rpms(repo.signkey, rpms_to_sign)
 
-        cls.sequence_(cs)
+        sequence(cs, stop_on_failure=True)
         cls.update(repo)
 
     @classmethod
@@ -925,7 +970,7 @@ class RepoOperations(object):
         xs = ["mkdir -p %s" % os.path.join(destdir, d) for d in ["sources"] + repo.archs] 
         cs = [Command(c, repo.user, repo.server) for c in xs]
 
-        cls.sequence_(cs)
+        cls.sequence(cs)
 
         cls.deploy_release_rpm(repo)
 
@@ -947,7 +992,7 @@ class RepoOperations(object):
 
         cs += [Command(c, repo.user, repo.server, d) for d in dirs]
 
-        return cls.sequence_(cs)
+        return cls.sequence(cs)
 
 
 
@@ -1096,7 +1141,7 @@ pmaker -n mock-data-${repo.name} \\
     def build_cmd(self, srpm, dist):
         """Returns Command object to build src.rpm
         """
-        return Command(dist.build_cmd(srpm), self.user, "localhost", os.curdir)
+        return ThreadedCommand(dist.build_cmd(srpm), self.user, "localhost", os.curdir)
 
     def dists_by_srpm(self, srpm):
         return (is_noarch(srpm) and self.dists[:1] or self.dists)
@@ -1407,7 +1452,8 @@ class TestProgramLocal(unittest.TestCase):
         try:
             key_list = subprocess.check_output("gpg --list-keys %s 2>/dev/null" % get_username(), shell=True)
             keyid = key_list.split()[1].split("/")[1]
-            keyopt = " --signkey %s " % keyid
+            #keyopt = " --signkey %s " % keyid
+            keyopt = " "  ## Disabled for a while.
 
         except Exception, e:
             logging.warn("Cannot get the default gpg key list. Test w/o --signkey: err=%s" % str(e))
