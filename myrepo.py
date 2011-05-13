@@ -207,12 +207,12 @@ def is_local(fqdn_or_hostname):
     return fqdn_or_hostname.startswith("localhost")
 
 
-def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
+def shell(cmd, workdir=None, dryrun=False, stop_on_failure=True):
     """
     @cmd      str   command string, e.g. "ls -l ~".
     @workdir  str or None  In which dir to run given command?
     @dryrun   bool  if True, just print command string to run and returns.
-    @stop_on_error bool  if True, RuntimeError will not be raised.
+    @stop_on_failure bool  if True, RuntimeError will not be raised.
 
     TODO: Popen.communicate might be blocked. How about using Popen.wait
     instead?
@@ -224,7 +224,7 @@ def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
     ...    rc = shell("ls", "/root")
     ... except RuntimeError:
     ...    pass
-    >>> rc = shell("echo OK | grep -q NG 2>/dev/null", stop_on_error=False)
+    >>> rc = shell("echo OK | grep -q NG 2>/dev/null", stop_on_failure=False)
     """
     logging.info("Run: %s [%s]" % (cmd, workdir is None and os.curdir or workdir))
 
@@ -243,14 +243,14 @@ def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
     if rc == 0:
         return rc
     else:
-        if stop_on_error:
+        if stop_on_failure:
             raise RuntimeError(" Failed: %s,\n rc=%d" % (cmd, rc))
         else:
             logging.error("cmd=%s, rc=%d" % (cmd, rc))
             return rc
 
 
-def rshell(cmd, user, host, workdir, dryrun=False, stop_on_error=True):
+def rshell(cmd, user, host, workdir, dryrun=False, stop_on_failure=True):
     """
     @user     str  (remote) user to run given command.
     @host     str  on which host to run given command?
@@ -262,7 +262,7 @@ def rshell(cmd, user, host, workdir, dryrun=False, stop_on_error=True):
         cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
         workdir = os.curdir  # redefine it as $cmd will be run from local.
 
-    return shell(cmd, workdir, dryrun, stop_on_error)
+    return shell(cmd, workdir, dryrun, stop_on_failure)
 
 
 
@@ -271,11 +271,11 @@ class Command(object):
     """
 
     def __init__(self, cmd, user=None, host="localhost", workdir=None,
-            dryrun=False, stop_on_error=True):
+            dryrun=False, stop_on_failure=True):
         self.cmd = cmd
         self.host = host
         self.dryrun = dryrun
-        self.stop_on_error = stop_on_error
+        self.stop_on_failure = stop_on_failure
 
         if user is None:
             self.user = get_username()
@@ -296,10 +296,10 @@ class Command(object):
             self.host == other.host and \
             self.workdir == other.workdir and \
             self.dryrun == other.dryrun and \
-            self.stop_on_error == other.stop_on_error
+            self.stop_on_failure == other.stop_on_failure
 
     def run(self):
-        return rshell(self.cmd, self.user, self.host, self.workdir, self.dryrun, self.stop_on_error)
+        return rshell(self.cmd, self.user, self.host, self.workdir, self.dryrun, self.stop_on_failure)
 
 
 
@@ -310,14 +310,14 @@ class ThreadedCommand(object):
     """
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
-            timeout=None, stop_on_error=True, communicate=False):
+            timeout=None, stop_on_failure=True, communicate=False):
         self.process = None
         self.thread = None
 
         self.host = host
         self.user = user is None and get_username() or user
         self.timeout = timeout
-        self.stop_on_error = stop_on_error
+        self.stop_on_failure = stop_on_failure
         self.communicate = communicate
 
         if is_local(host):
@@ -370,7 +370,7 @@ class ThreadedCommand(object):
         if rc != 0:
             emsg = "Failed: %s,\n rc=%d" % (self.cmd, rc)
 
-            if self.stop_on_error:
+            if self.stop_on_failure:
                 raise RuntimeError(emsg)
             else:
                 logging.warn(emsg)
@@ -582,7 +582,7 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
         c = "ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost
         c += " && ssh %s@%s true > /dev/null 2> /dev/null" % (user, rhost)
 
-        return ThreadedCommand(c, user, timeout=5, stop_on_error=False)
+        return ThreadedCommand(c, user, timeout=5, stop_on_failure=False)
 
     checks = [check_cmd(user, rhost) for rhost in rhosts]
     rcs = sequence(checks, stop_on_success=True)
@@ -803,7 +803,7 @@ class RpmOperations(object):
         verify_cmd = "rpm --checksig -v " + rpms
 
         # TODO: "rpm --checksig ..." looks returning 1 even if it suceeds.
-        cs = [Command(sign_cmd), Command(verify_cmd, stop_on_error=False)]
+        cs = [Command(sign_cmd), Command(verify_cmd, stop_on_failure=False)]
 
         return sequence(cs, stop_on_failure=True)
 
