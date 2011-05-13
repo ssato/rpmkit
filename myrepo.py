@@ -36,7 +36,6 @@ import copy
 import doctest
 import glob
 import logging
-import multiprocessing
 import optparse
 import os
 import os.path
@@ -1617,19 +1616,6 @@ Examples:
     return p
 
 
-def job(args):
-    meth = args[0]
-    repo = args[1]
-
-    f = getattr(RepoOperations, meth)
-
-    if len(args) >= 3:
-        for srpm in args[2:]:
-            f(repo, srpm)
-    else:
-        f(repo)
-
-
 def do_command(cmd, repos, srpm=None, wait=WAIT_FOREVER):
     f = getattr(RepoOperations, cmd)
     threads = []
@@ -1731,37 +1717,15 @@ def main():
 
         repos.append(repo)
  
-    experimental = False
+    srpms = args[1:]
 
-    if not experimental:
-        srpms = args[1:]
-
-        if srpms:
-            for srpm in srpms:
-                do_command(cmd, repos, srpm)
-        else:
-            do_command(cmd, repos)
-
-        ## Alternative. The version use 'job' method:
-        #for repo in repos:
-        #    job([cmd, repo] + args[1:])
-
-        sys.exit()
-
+    if srpms:
+        for srpm in srpms:
+            do_command(cmd, repos, srpm)
     else:
-        # experimental code:
-        nrepos = len(repos)
+        do_command(cmd, repos)
 
-        #if nrepos == 1:
-        #    job([cmd, repos[0]] + args[1:])
-        #    sys.exit()
-
-        ncpus = multiprocessing.cpu_count()
-        num = nrepos > ncpus and ncpus or nrepos
-
-        pool = multiprocessing.Pool(num)
-        result = pool.map_async(job, [[cmd, repo] + args[1:] for repo in repos])
-        result.get(timeout=60*30)
+    sys.exit()
 
 
 if __name__ == '__main__':
