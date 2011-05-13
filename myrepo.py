@@ -325,6 +325,7 @@ class ThreadedCommand(object):
                 workdir = os.path.expanduser(workdir)
         else:
             cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
+            workdir = os.curdir
 
         self.cmd = cmd
         self.workdir = workdir
