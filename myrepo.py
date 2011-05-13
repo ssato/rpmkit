@@ -546,6 +546,7 @@ def rpm_header_from_rpmfile(rpmfile):
     return rpm.TransactionSet().hdrFromFdno(open(rpmfile, "rb"))
 
 
+@memoize
 def is_noarch(srpm):
     """Determine if given srpm is noarch (arch-independent).
     """
@@ -1620,6 +1621,9 @@ Examples:
 def do_command(cmd, repos, srpm=None, wait=WAIT_FOREVER):
     f = getattr(RepoOperations, cmd)
     threads = []
+
+    if srpm is not None:
+        is_noarch(srpm)  # make a result cache
 
     for repo in repos:
         args = srpm is None and (repo, ) or (repo, srpm)
