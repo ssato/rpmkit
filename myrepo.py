@@ -208,17 +208,6 @@ def is_local(fqdn_or_hostname):
     return fqdn_or_hostname.startswith("localhost")
 
 
-def cmd_join(cs):
-    """Join command strings.
-
-    @cs  [str]  A list of command strings
-
-    >>> cmd_join(["ls /dev/null", "echo OK", "cwd"])
-    'ls /dev/null && echo OK && cwd'
-    """
-    return " && ".join(cs)
-
-
 def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
     """
     @cmd      str   command string, e.g. "ls -l ~".
@@ -426,6 +415,14 @@ def par(cmds):
         c.run_async()
 
 
+def snd(x, y):
+    """
+    >>> snd(1, 2)
+    2
+    """
+    return y
+
+
 def get_results(cmds, wait=WAIT_FOREVER):
     def is_valid_timeout(timeout):
         return isinstance(timeout, int) and timeout > 0
@@ -581,12 +578,10 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
         user = get_username()
 
     def check_cmd(uesr, rhost):
-        cs = (
-            "ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost,
-            "ssh %s@%s true > /dev/null 2> /dev/null" % (user, rhost),
-        )
+        c = "ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost
+        c += " && ssh %s@%s true > /dev/null 2> /dev/null" % (user, rhost)
 
-        return ThreadedCommand(cmd_join(cs), user, "localhost", timeout=2, stop_on_error=False)
+        return ThreadedCommand(c, user, timeout=5, stop_on_error=False)
 
     checks = [check_cmd(user, rhost) for rhost in rhosts]
     rcs = sequence(checks, stop_on_success=True)
@@ -813,7 +808,7 @@ class RpmOperations(object):
 
     @classmethod
     def build_cmds(cls, repo, srpm):
-        return [repo.build_cmd(srpm, d) for d in repo.dists_by_srpm(srpm)]
+        return [ThreadedCommand(repo.build_cmd(srpm, d)) for d in repo.dists_by_srpm(srpm)]
 
     @classmethod
     def build(cls, repo, srpm, wait=WAIT_FOREVER):
@@ -853,13 +848,13 @@ class RepoOperations(object):
         FIXME: ugly code around signkey check.
         """
         if build:
-            rcs = cls.build(repo, srpm)
+            rcs = cls.build(repo, srpm, build_wait)
             assert all(r == 0 for r in rcs)
 
         destdir = cls.destdir(repo)
-        cs = [repo.copy_cmd(srpm, os.path.join(destdir, "sources"))]
+        rpms_to_deploy = []   # :: [(rpm_path, destdir)]
 
-        rpms_to_sign = []
+        rpms_to_deploy.append((srpm, os.path.join(destdir, "sources")))
 
         for d in repo.dists_by_srpm(srpm):
             if is_noarch(srpm):
@@ -868,15 +863,17 @@ class RepoOperations(object):
                 rpms = glob.glob("%s/*.%s.rpm" % (d.mockdir(), d.arch_pattern))
 
             for p in rpms:
-                cs.append(repo.copy_cmd(p, os.path.join(destdir, d.arch)))
-
-            if repo.signkey:
-                rpms_to_sign += rpms
+                rpms_to_deploy.append((p, os.path.join(destdir, d.arch)))
 
         if repo.signkey:
+            # We don't need to sign SRPM:
+            rpms_to_sign = [rpm for rpm, _dest in rpms_to_deploy if not rpm.endswith("src.rpm")]
+
             cls.sign_rpms(repo.signkey, rpms_to_sign)
 
-        sequence(cs, stop_on_failure=True)
+        cs = [ThreadedCommand(repo.copy_cmd(rpm, dest), repo.user, repo.server) for rpm, dest in rpms_to_deploy]
+        par(cs); rcs = get_results(cs, deploy_wait)
+
         cls.update(repo)
 
     @classmethod
@@ -948,7 +945,7 @@ class RepoOperations(object):
                 release_file_path + ",rpmattr=%config\n" + workdir + repo.keyfile + "\n"
             )
 
-        cmd = Command(repo.release_rpm_build_cmd(workdir, release_file_path), repo.user)
+        cmd = ThreadedCommand(repo.release_rpm_build_cmd(workdir, release_file_path), repo.user)
         cmd.run()
 
         srpms = glob.glob("%s/%s-release-%s/%s-release*.src.rpm" % (workdir, repo.name, repo.distversion, repo.name))
@@ -967,10 +964,8 @@ class RepoOperations(object):
         """
         destdir = cls.destdir(repo)
 
-        xs = ["mkdir -p %s" % os.path.join(destdir, d) for d in ["sources"] + repo.archs] 
-        cs = [Command(c, repo.user, repo.server) for c in xs]
-
-        cls.sequence(cs)
+        cmd = Command("mkdir -p " + " ".join(repo.rpmdirs(destdir)), repo.user, repo.server)
+        cmd.run()
 
         cls.deploy_release_rpm(repo)
 
@@ -979,20 +974,22 @@ class RepoOperations(object):
         """'createrepo --update ...', etc.
         """
         destdir = cls.destdir(repo)
-        cs = []
 
-        # hack:
+        # hack: degenerate noarch rpms
         if len(repo.archs) > 1:
             c = "for d in %s; do (cd $d && ln -sf ../%s/*.noarch.rpm ./); done" % \
                 (" ".join(repo.archs[1:]), repo.dists[0].arch)
-            cs.append(Command(c, repo.user, repo.server, destdir, stop_on_error=False))
+            cmd = ThreadedCommand(c, repo.user, repo.server, destdir)
+            cmd.run()
 
-        dirs = [os.path.join(destdir, d) for d in ["sources"] + repo.archs]
-        c = "test -d repodata && createrepo --update --deltas --oldpackagedirs . --database . || createrepo --deltas --oldpackagedirs . --database ."
+        c = "test -d repodata"
+        c += " && createrepo --update --deltas --oldpackagedirs . --database ."
+        c += " || createrepo --deltas --oldpackagedirs . --database ."
 
-        cs += [Command(c, repo.user, repo.server, d) for d in dirs]
+        cs = [ThreadedCommand(c, repo.user, repo.server, d) for d in repo.rpmdirs(destdir)]
 
-        return cls.sequence(cs)
+        par(cs)
+        return get_results(cs)
 
 
 
@@ -1130,18 +1127,23 @@ pmaker -n mock-data-${repo.name} \\
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
 
+    def rpmdirs(self, destdir=None):
+        f = destdir is None and snd or os.path.join
+
+        return [f(destdir, d) for d in ["sources"] + self.archs]
+
     def copy_cmd(self, src, dst):
         if is_local(self.server):
             cmd = "cp -a %s %s" % (src, ("~" in dst and os.path.expanduser(dst) or dst))
         else:
             cmd = "scp -p %s %s@%s:%s" % (src, self.user, self.server, dst)
 
-        return Command(cmd, self.user)
+        return cmd
 
     def build_cmd(self, srpm, dist):
         """Returns Command object to build src.rpm
         """
-        return ThreadedCommand(dist.build_cmd(srpm), self.user, "localhost", os.curdir)
+        return dist.build_cmd(srpm)
 
     def dists_by_srpm(self, srpm):
         return (is_noarch(srpm) and self.dists[:1] or self.dists)
@@ -1222,13 +1224,13 @@ class TestRepo(unittest.TestCase):
         (src, dst) = ("foo.txt", "bar.txt")
 
         c0 = repo.copy_cmd(src, dst)
-        c1 = Command("cp -a %s %s" % (src, dst), self.config["user"])
+        c1 = "cp -a %s %s" % (src, dst)
         self.assertEquals(c0, c1)
 
         (src, dst) = ("foo.txt", "~/bar.txt")
 
         c2 = repo.copy_cmd(src, dst)
-        c3 = Command("cp -a %s %s" % (src, ("~" in dst and os.path.expanduser(dst) or dst)), self.config["user"])
+        c3 = "cp -a %s %s" % (src, ("~" in dst and os.path.expanduser(dst) or dst))
         self.assertEquals(c2, c3)
 
         server = "repo-server.example.com"
@@ -1243,7 +1245,7 @@ class TestRepo(unittest.TestCase):
         )
 
         c4 = repo.copy_cmd(src, dst)
-        c5 = Command("scp -p %s %s@%s:%s" % (src, self.config["user"], server, dst), self.config["user"])
+        c5 = "scp -p %s %s@%s:%s" % (src, self.config["user"], server, dst)
         self.assertEquals(c4, c5)
 
     def test_release_file_content(self):
@@ -1628,6 +1630,31 @@ def job(args):
         f(repo)
 
 
+def do_command(cmd, repos, srpm=None, wait=WAIT_FOREVER):
+    f = getattr(RepoOperations, cmd)
+    threads = []
+
+    for repo in repos:
+        args = srpm is None and (repo, ) or (repo, srpm)
+
+        thread = threading.Thread(target=f, args=args)
+        thread.start()
+
+        threads.append(thread)
+
+    time.sleep(5)
+
+    for thread in threads:
+        # it will block.
+        thread.join(wait)
+
+        # Is there any possibility thread still live?
+        if thread.is_alive():
+            logging.info("Terminating the thread")
+
+            thread.join()
+
+
 def main():
     (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = ("init", "update", "build", "deploy")
 
@@ -1707,8 +1734,17 @@ def main():
     experimental = False
 
     if not experimental:
-        for repo in repos:
-            job([cmd, repo] + args[1:])
+        srpms = args[1:]
+
+        if srpms:
+            for srpm in srpms:
+                do_command(cmd, repos, srpm)
+        else:
+            do_command(cmd, repos)
+
+        ## Alternative. The version use 'job' method:
+        #for repo in repos:
+        #    job([cmd, repo] + args[1:])
 
         sys.exit()
 
