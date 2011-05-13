@@ -49,6 +49,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 
@@ -202,6 +203,17 @@ def is_local(fqdn_or_hostname):
     return fqdn_or_hostname.startswith("localhost")
 
 
+def cmd_join(cs):
+    """Join command strings.
+
+    @cs  [str]  A list of command strings
+
+    >>> cmd_join(["ls /dev/null", "echo OK", "cwd"])
+    'ls /dev/null && echo OK && cwd'
+    """
+    return " && ".join(cs)
+
+
 def shell(cmd, workdir=None, dryrun=False, stop_on_error=True):
     """
     @cmd      str   command string, e.g. "ls -l ~".
@@ -307,15 +319,16 @@ class ThreadedCommand(object):
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
             timeout=None, stop_on_error=True):
         self.process = None
-        self.rc = None
+        self.thread = None
 
         self.host = host
         self.user = user is None and get_username() or user
         self.timeout = timeout
         self.stop_on_error = stop_on_error
 
-        if is_local(host) and "~" in workdir:
-            workdir = os.path.expanduser(workdir)
+        if is_local(host):
+            if "~" in workdir:
+                workdir = os.path.expanduser(workdir)
         else:
             cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
 
@@ -323,7 +336,7 @@ class ThreadedCommand(object):
         self.workdir = workdir
         self.cmd_str = "%s [%s]" % (self.cmd, self.workdir)
 
-    def run(self):
+    def run_async(self, callback=None):
         def func():
             logging.info("Start running: %s" % self.cmd_str)
 
@@ -332,26 +345,78 @@ class ThreadedCommand(object):
 
             logging.info("Finished: %s" % self.cmd_str)
 
-        thread = threading.Thread(target=func)
-        thread.start()
-        thread.join(self.timeout)
+        self.thread = threading.Thread(target=func)
+        self.thread.start()
 
-        if thread.is_alive():
-            logging.info("Terminating: %s")
+    def get_result(self):
+        if self.thread is None:
+            logging.warn("Thread does not exist. Did you call %s.run_async() ?" % self.__class__.__name__)
+            return None
+
+        # it will block.
+        self.thread.join(self.timeout)
+
+        if self.thread.is_alive():
+            logging.info("Terminating: %s" % self.cmd_str)
 
             self.process.terminate()
-            thread.join()
+            self.thread.join()
 
-        self.rc = self.process.returncode
+        rc = self.process.returncode
 
-        if self.rc != 0:
-            emsg = "Failed: %s,\n rc=%d" % (self.cmd, self.rc)
+        if rc != 0:
+            emsg = "Failed: %s,\n rc=%d" % (self.cmd, rc)
 
             if self.stop_on_error:
                 raise RuntimeError(emsg)
             else:
                 logging.warn(emsg)
 
+        return rc
+
+    def run(self):
+        self.run_async()
+        return self.get_result()
+
+
+
+def sequence(cmds, stop_on_failure=False, stop_on_success=False):
+    """Run commands sequentially and returns return codes of each.
+
+    The name of this function came from "sequence" function in Haskell's
+    "Control.Monad" module, does Monad sequencing.
+
+    @cmds  [Command]  A list of [Threaded]Command objects
+    """
+    rcs = []
+
+    for c in cmds:
+        rc = c.run()
+        rcs.append(rc)
+
+        if stop_on_failure and rc != 0:
+            break
+
+        if stop_on_success and rc == 0:
+            break
+
+    return rcs
+
+
+def par(cmds):
+    """Run commands in parallel and returns return codes of each.
+
+    @cmds  [Command]  A list of [Threaded]Command objects
+    """
+    for c in cmds:
+        c.run_async()
+
+
+def get_results(cmds):
+    #min_timeout = min(c.timeout for c in cmds)
+    #time.sleep(min_timeout)
+
+    return [c.get_result() for c in cmds]
 
 
 def rm_rf(target):
@@ -485,18 +550,21 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
     if user is None:
         user = get_username()
 
-    for rhost in rhosts:
-        rc = os.system("ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost)
+    def check_cmd(uesr, rhost):
+        cs = (
+            "ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost,
+            "ssh %s@%s true > /dev/null 2> /dev/null" % (user, rhost),
+        )
 
-        if rc == 0:
-            cmd = "ssh %s@%s true > /dev/null 2> /dev/null" % (user, rhost)
-            check = ThreadedCommand(cmd, user, rhost, timeout=3, stop_on_error=False)
-            check.run()
+        return ThreadedCommand(cmd_join(cs), user, "localhost", timeout=2, stop_on_error=False)
 
-            if check.rc == 0:
-                return rhost
+    checks = [check_cmd(user, rhost) for rhost in rhosts]
+    rcs = sequence(checks, stop_on_success=True)
 
-    return False
+    if rcs[-1] != 0:
+        return False
+
+    return rhosts[len(rcs)-1]
 
 
 
