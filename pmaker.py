@@ -4377,10 +4377,7 @@ def main(argv=sys.argv, compressors=COMPRESSORS, templates=TEMPLATES):
 
     filelist = args[0]
 
-    if options.arch:
-        pkg["noarch"] = False
-    else:
-        pkg["noarch"] = True
+    pkg["noarch"] = not options.arch
 
     if options.templates:
         for tgt, tmpl in parse_template_list_str(options.templates).iteritems():
