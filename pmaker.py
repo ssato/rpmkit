@@ -4451,7 +4451,13 @@ def main(argv=sys.argv, compressors=COMPRESSORS):
         pkg["summary"] = "Custom package of " + options.name
 
     if options.changelog:
-        pkg["changelog"] = open(options.changelog).read()
+        try:
+            changelog = open(options.changelog).read()
+        except IOError:
+            logging.warn(" Could not open %s to read changelog" % options.changelog)
+            changelog = ""
+
+        pkg["changelog"] = changelog
     else:
         pkg["changelog"] = ""
 
