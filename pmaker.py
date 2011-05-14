@@ -4315,7 +4315,7 @@ def relations_parser(relations_str):
     return [(reltype, reltargets.split(",")) for reltype, reltargets in rels]
 
 
-def main(argv=sys.argv, compressors=COMPRESSORS):
+def main(argv=sys.argv, compressors=COMPRESSORS, templates=TEMPLATES):
     global TEMPLATES, PYXATTR_ENABLED
 
     verbose_test = False
@@ -4384,8 +4384,14 @@ def main(argv=sys.argv, compressors=COMPRESSORS):
 
     if options.templates:
         for tgt, tmpl in parse_template_list_str(options.templates).iteritems():
-            if TEMPLATES.has_key(tgt):
-                TEMPLATES[tgt] = open(tmpl).read()
+            if templates.has_key(tgt):
+                try:
+                    tmpl_content = open(tmpl).read()
+                except:
+                    logging.warn(" Could not open the template: " + tmpl)
+                    tmpl_content = templates[tgt]
+
+                templates[tgt] = tmpl_content
             else:
                 logging.warn(" target output %s is not defined in template list" % tgt)
 
