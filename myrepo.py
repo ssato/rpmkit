@@ -188,9 +188,9 @@ def list_dists():
     """
     mockdir = "/etc/mock"
     arch = list_archs()[0]
-    reg = re.compile("%s/(?P<dist>[^-]+-[^-]+)-%s.cfg" % (mockdir, arch))
+    reg = re.compile("%s/(?P<dist>.+)-%s.cfg" % (mockdir, arch))
 
-    return [reg.match(c).groups()[0] for c in sorted(glob.glob("%s/*-*-%s.cfg" % (mockdir, arch)))]
+    return [reg.match(c).groups()[0] for c in sorted(glob.glob("%s/*-%s.cfg" % (mockdir, arch)))]
 
 
 def is_local(fqdn_or_hostname):
