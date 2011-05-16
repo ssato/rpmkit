@@ -4215,7 +4215,7 @@ Examples:
   cat files.list | %prog -n foo -  # same as above.
 
   %prog -n foo --pversion 0.2 -l MIT files.list
-  %prog -n foo --requires httpd,/sbin/service files.list
+  %prog -n foo --relations "requires:httpd,/sbin/service;obsoletes:foo-old" files.list
 
   %prog --tests --debug  # run test suites
 
