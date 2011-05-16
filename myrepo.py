@@ -1489,7 +1489,7 @@ server: localhost
 baseurl: file://%%(topdir)s/%%(distdir)s
 topdir: %s/var/lib/myrepo
 name: foo-bar
-dists: fedora-14-x86_64
+dists: fedora-14-i386
 
 fullname: John DOe
 email: jdoe@example.com
