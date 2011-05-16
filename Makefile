@@ -21,6 +21,8 @@ EMAIL	= satoru.satoh@gmail.com
 # Do not edit:
 WORKDIR	= /tmp/rpmkit-$(VERSION)-build
 bindir	= $(WORKDIR)/usr/bin
+etcdir	= $(WORKDIR)/etc
+etcdirs	= $(etcdir)/myrepo.d
 
 py_SCRIPTS = $(patsubst %.py,$(bindir)/%,$(py_SOURCES))
 sh_SCRIPTS = $(patsubst %.sh,$(bindir)/%,$(sh_SOURCES))
@@ -46,9 +48,25 @@ $(bindir)/%: %.sh
 	@test -d $(bindir) || mkdir -p $(bindir)
 	install -m 755 $< $@
 
-build: $(py_SCRIPTS) $(sh_SCRIPTS)
+$(etcdir):
+	@test -d $(etcdir) || mkdir -p $(etcdir)
+
+$(etcdirs): $(etcdir)
+	mkdir -p $@
+
+$(WORKDIR)/files.list: $(py_SCRIPTS) $(sh_SCRIPTS) $(etcdirs)
+	find $(WORKDIR) -type f > $@.tmp
+	for d in $(etcdirs); do echo $$d >> $@.tmp; done
+	mv $@.tmp $@
+
+
+build: build-pmaker build-rpmkit
+
+build-pmaker: pmaker.py
 	python pmaker.py --build-self $(logopt) --pversion $(PMVERSION) --upto sbuild --workdir $(WORKDIR)
-	find $(bindir) -type f | python pmaker.py -n rpmkit --license GPLv3+ \
+
+build-rpmkit: $(WORKDIR)/files.list
+	python pmaker.py -n rpmkit --license GPLv3+ \
 		--group "System Environment/Base" --pversion $(VERSION) \
 		--url https://github.com/ssato/rpmkit/ \
 		--summary "RPM toolKit" \
@@ -56,7 +74,8 @@ build: $(py_SCRIPTS) $(sh_SCRIPTS)
 		--packager "$(FULLNAME)" --mail $(EMAIL) \
 		--upto sbuild \
 		-w $(WORKDIR) --destdir $(WORKDIR) \
-		--ignore-owner $(logopt) -
+		--ignore-owner $(logopt) \
+		$(WORKDIR)/files.list
 
 clean:
 	-test "x$(WORKDIR)" != "x/" && rm -rf $(WORKDIR)
