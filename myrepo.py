@@ -1472,6 +1472,38 @@ class TestProgramLocal(unittest.TestCase):
         logging.info("cmd: " + cmd)
         self.assertEquals(os.system(cmd), 0)
 
+    def test_init_with_config(self):
+        config = copy.copy(init_defaults())
+
+        (dist_name, dist_version) = get_distribution()
+        archs = list_archs()
+
+        config["prog"] = self.prog
+        config["dists"] = "%s-%s-%s" % (dist_name, dist_version, archs[0])
+
+        config["tmp_workdir"] = os.path.join(self.workdir, "repos")
+
+        config_content = """
+[DEFAULT]
+server: localhost
+baseurl: file://%%(topdir)s/%%(distdir)s
+topdir: %s/var/lib/myrepo
+name: foo-bar
+dists: fedora-14-x86_64
+
+fullname: John DOe
+email: jdoe@example.com
+"""
+
+        conf = os.path.join(self.workdir, "myrepo.conf")
+        open(conf, "w").write(config_content % self.workdir)
+
+        cmd = "%(prog)s -C " + conf + " init"
+        cmd = cmd % config
+
+        logging.info("cmd: " + cmd)
+        self.assertEquals(os.system(cmd), 0)
+
     def test_build(self):
         pass
 
