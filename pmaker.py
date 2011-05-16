@@ -2662,8 +2662,8 @@ def srcrpm_name_by_rpmspec(rpmspec):
     """Returns the name of src.rpm gotten from given RPM spec file.
     """
     cmd = "rpm -q --specfile --qf \"%{n}-%{v}-%{r}.src.rpm\n\" " + rpmspec
-    (o, e) = shell(cmd)
-    return o.split("\n")[0]
+    out = subprocess.check_output(cmd, shell=True)
+    return out.split("\n")[0]
 
 
 def srcrpm_name_by_rpmspec_2(rpmspec):
