@@ -872,7 +872,7 @@ class RepoOperations(object):
 
             cls.sign_rpms(repo.signkey, rpms_to_sign)
 
-        cs = [ThreadedCommand(repo.copy_cmd(rpm, dest), repo.user, repo.server) for rpm, dest in rpms_to_deploy]
+        cs = [ThreadedCommand(repo.copy_cmd(rpm, dest)) for rpm, dest in rpms_to_deploy]
         par(cs); rcs = get_results(cs, deploy_wait)
 
         cls.update(repo)
