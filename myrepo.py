@@ -207,101 +207,6 @@ def is_local(fqdn_or_hostname):
     return fqdn_or_hostname.startswith("localhost")
 
 
-def shell(cmd, workdir=None, dryrun=False, stop_on_failure=True):
-    """
-    @cmd      str   command string, e.g. "ls -l ~".
-    @workdir  str or None  In which dir to run given command?
-    @dryrun   bool  if True, just print command string to run and returns.
-    @stop_on_failure bool  if True, RuntimeError will not be raised.
-
-    TODO: Popen.communicate might be blocked. How about using Popen.wait
-    instead?
-
-    >>> assert 0 == shell("echo ok > /dev/null")
-    >>> assert 0 == shell("ls null", "/dev")
-    >>> assert 0 == shell("ls null", "/dev", dryrun=True)
-    >>> try:
-    ...    rc = shell("ls", "/root")
-    ... except RuntimeError:
-    ...    pass
-    >>> rc = shell("echo OK | grep -q NG 2>/dev/null", stop_on_failure=False)
-    """
-    logging.info("Run: %s [%s]" % (cmd, workdir is None and os.curdir or workdir))
-
-    if dryrun:
-        logging.info("Exit as requested (dry run mode).")
-        return 0
-
-    try:
-        proc = subprocess.Popen(cmd, shell=True, cwd=workdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        proc.wait()
-        rc = proc.returncode
-
-    except Exception, e:
-        raise RuntimeError("Error (%s) during executing: %s" % (repr(e.__class__), str(e)))
-
-    if rc == 0:
-        return rc
-    else:
-        if stop_on_failure:
-            raise RuntimeError(" Failed: %s,\n rc=%d" % (cmd, rc))
-        else:
-            logging.error("cmd=%s, rc=%d" % (cmd, rc))
-            return rc
-
-
-def rshell(cmd, user, host, workdir, dryrun=False, stop_on_failure=True):
-    """
-    @user     str  (remote) user to run given command.
-    @host     str  on which host to run given command?
-    """
-    if not is_local(host):
-        if workdir is None:
-            workdir = os.curdir
-
-        cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
-        workdir = os.curdir  # redefine it as $cmd will be run from local.
-
-    return shell(cmd, workdir, dryrun, stop_on_failure)
-
-
-
-class Command(object):
-    """Object to wrap command to run.
-    """
-
-    def __init__(self, cmd, user=None, host="localhost", workdir=None,
-            dryrun=False, stop_on_failure=True):
-        self.cmd = cmd
-        self.host = host
-        self.dryrun = dryrun
-        self.stop_on_failure = stop_on_failure
-
-        if user is None:
-            self.user = get_username()
-        else:
-            self.user = user
-
-        if is_local(host) and workdir is not None and "~" in workdir:
-            self.workdir = os.path.expanduser(workdir)
-        else:
-            self.workdir = workdir
-
-    def __str__(self):
-        return "%s in %s on %s@%s" % (self.cmd, self.workdir, self.user, self.host)
-
-    def __eq__(self, other):
-        return self.cmd == other.cmd and \
-            self.user == other.user and \
-            self.host == other.host and \
-            self.workdir == other.workdir and \
-            self.dryrun == other.dryrun and \
-            self.stop_on_failure == other.stop_on_failure
-
-    def run(self):
-        return rshell(self.cmd, self.user, self.host, self.workdir, self.dryrun, self.stop_on_failure)
-
-
 
 class ThreadedCommand(object):
     """
@@ -703,25 +608,6 @@ class TestMiscFuncs(unittest.TestCase):
         open(os.path.join(d, 'c', 'd', 'z'), "w").write("test")
 
         rm_rf(d)
-
-    def test_rshell(self):
-        rc = shell("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
-
-        if rc != 0:
-            logging.info("sshd is not working on this host. Skip this test: test_rshell")
-            return
-
-        rhost = find_accessible_remote_host()
-
-        if not rhost:
-            logging.info("target host is not accessible via ssh. Skip this test: test_rshell")
-            return
-
-        rc = rshell("ls /dev/null", get_username(), rhost, os.curdir)
-        assert rc == 0, rc
-
-        rc = rshell("ls null", get_username(), rhost, "/dev")
-        assert rc == 0, rc
 
 
 
