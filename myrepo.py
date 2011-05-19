@@ -310,15 +310,13 @@ class ThreadedCommand(object):
     """
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
-            timeout=None, stop_on_failure=True, communicate=False):
-        self.process = None
-        self.thread = None
-
+            stop_on_failure=True, timeout=None, verbose=True):
         self.host = host
-        self.user = user is None and get_username() or user
-        self.timeout = timeout
         self.stop_on_failure = stop_on_failure
-        self.communicate = communicate
+        self.timeout = timeout
+        self.verbose = verbose
+
+        self.user = user is None and get_username() or user
 
         if is_local(host):
             if "~" in workdir:
@@ -331,24 +329,31 @@ class ThreadedCommand(object):
         self.workdir = workdir
         self.cmd_str = "%s [%s]" % (self.cmd, self.workdir)
 
+        self.process = None
+        self.thread = None
+        self.result = None
+
     def run_async(self):
-        def func(communicate):
-            logging.info("Start running: %s" % self.cmd_str)
+        def func():
+            if self.verbose:
+                logging.info("Run: %s" % self.cmd_str)
 
-            if communicate:
-                self.process = subprocess.Popen(self.cmd, shell=True,
-                                                cwd=self.workdir,
-                                                stdin=subprocess.PIPE,
-                                                stdout=subprocess.PIPE
-                )
-                (_out, _err) = self.process.communicate()
-            else:
-                self.process = subprocess.Popen(self.cmd, shell=True, cwd=self.workdir)
-                self.process.wait()
+            self.process = subprocess.Popen(self.cmd,
+                                            bufsize=4096,
+                                            shell=True,
+                                            cwd=self.workdir,
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE
+            )
+            out, err = self.process.communicate()
+            rc = self.process.poll()
 
-            logging.info("Finished: %s" % self.cmd_str)
+            self.result = (rc, out, err)
 
-        self.thread = threading.Thread(target=func, args=(self.communicate,))
+            logging.debug("Finished: %s" % self.cmd_str)
+
+        self.thread = threading.Thread(target=func)
         self.thread.start()
 
     def get_result(self):
@@ -360,27 +365,44 @@ class ThreadedCommand(object):
         self.thread.join(self.timeout)
 
         if self.thread.is_alive():
-            logging.info("Terminating: %s" % self.cmd_str)
+            if self.verbose:
+                logging.info("Terminating: %s" % self.cmd_str)
 
             self.process.terminate()
             self.thread.join()
 
-        rc = self.process.returncode
+        (rc, out, err) = self.result
 
         if rc != 0:
-            emsg = "Failed: %s,\n rc=%d" % (self.cmd, rc)
+            emsg = "Failed: %s,\n rc=%d, err=%s" % (self.cmd, rc, err)
 
             if self.stop_on_failure:
                 raise RuntimeError(emsg)
             else:
                 logging.warn(emsg)
 
-        return rc
+        return (rc, out, err)
 
     def run(self):
         self.run_async()
         return self.get_result()
 
+
+
+def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
+        stop_on_failure=True, timeout=None):
+    cmd = ThreadedCommand(cmd_str, user, host, workdir, stop_on_failure, timeout)
+    return cmd.run()
+
+
+def run_and_get_status(*args, **kwargs):
+    (rc, out, err) = run(*args, **kwargs)
+    return rc
+
+
+def run_and_get_output(*args, **kwargs):
+    (rc, out, err) = run(*args, **kwargs)
+    return out
 
 
 def sequence(cmds, stop_on_failure=False, stop_on_success=False):
@@ -391,11 +413,11 @@ def sequence(cmds, stop_on_failure=False, stop_on_success=False):
 
     @cmds  [Command]  A list of [Threaded]Command objects
     """
-    rcs = []
+    rs = []
 
     for c in cmds:
-        rc = c.run()
-        rcs.append(rc)
+        r = (rc, out, err) = c.run()
+        rs.append(r)
 
         if stop_on_failure and rc != 0:
             break
@@ -403,29 +425,19 @@ def sequence(cmds, stop_on_failure=False, stop_on_success=False):
         if stop_on_success and rc == 0:
             break
 
-    return rcs
+    return rs
 
 
-def par(cmds):
-    """Run commands in parallel and returns return codes of each.
-
-    @cmds  [Command]  A list of [Threaded]Command objects
+def prun_and_get_results(cmds, wait=WAIT_FOREVER):
     """
-    for c in cmds:
-        c.run_async()
-
-
-def snd(x, y):
+    @cmds  [ThreadedCommand]
+    @wait  Int  Timewait value in seconds.
     """
-    >>> snd(1, 2)
-    2
-    """
-    return y
-
-
-def get_results(cmds, wait=WAIT_FOREVER):
     def is_valid_timeout(timeout):
         return isinstance(timeout, int) and timeout > 0
+
+    for c in cmds:
+        c.run_async()
 
     if wait != WAIT_FOREVER:
         ts = [c.timeout for c in cmds if is_valid_timeout(c.timeout)]
@@ -444,6 +456,14 @@ def get_results(cmds, wait=WAIT_FOREVER):
             time.sleep(timeout)
 
     return [c.get_result() for c in cmds]
+
+
+def snd(x, y):
+    """
+    >>> snd(1, 2)
+    2
+    """
+    return y
 
 
 def rm_rf(target):
@@ -585,12 +605,12 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
         return ThreadedCommand(c, user, timeout=5, stop_on_failure=False)
 
     checks = [check_cmd(user, rhost) for rhost in rhosts]
-    rcs = sequence(checks, stop_on_success=True)
+    rs = sequence(checks, stop_on_success=True)
 
-    if rcs[-1] != 0:
+    if rs[-1][0] != 0:
         return False
 
-    return rhosts[len(rcs)-1]
+    return rhosts[len(rs)-1]
 
 
 
@@ -797,15 +817,14 @@ class RpmOperations(object):
 
         @keyid   GPG Key ID to sign with
         @rpms    RPM file path list
+
+        FIXME: replace os.system() with other way.
         """
         rpms = " ".join(rpms)
-        sign_cmd = "rpm --resign --define \"_signature %s\" --define \"_gpg_name %s\" %s" % ("gpg", keyid, rpms)
-        verify_cmd = "rpm --checksig -v " + rpms
+        c = "rpm --resign --define \"_signature %s\" --define \"_gpg_name %s\" %s" % ("gpg", keyid, rpms)
+        rc = os.system(c)
 
-        # TODO: "rpm --checksig ..." looks returning 1 even if it suceeds.
-        cs = [Command(sign_cmd), Command(verify_cmd, stop_on_failure=False)]
-
-        return sequence(cs, stop_on_failure=True)
+        return rc
 
     @classmethod
     def build_cmds(cls, repo, srpm):
@@ -814,10 +833,9 @@ class RpmOperations(object):
     @classmethod
     def build(cls, repo, srpm, wait=WAIT_FOREVER):
         cs = cls.build_cmds(repo, srpm)
-        par(cs)
-        rcs = get_results(cs, wait)
+        rs = prun_and_get_results(cs, wait)
 
-        return rcs
+        return rs
 
 
 
@@ -839,18 +857,14 @@ class RepoOperations(object):
         return cls.rpmops.build(repo, srpm, wait)
 
     @classmethod
-    def sequence(cls, cmds, *args, **kwargs):
-        return sequence(cmds, *args, **kwargs)
-
-    @classmethod
     def deploy(cls, repo, srpm, build=True, build_wait=WAIT_FOREVER,
             deploy_wait=WAIT_FOREVER):
         """
         FIXME: ugly code around signkey check.
         """
         if build:
-            rcs = cls.build(repo, srpm, build_wait)
-            assert all(r == 0 for r in rcs)
+            rs = cls.build(repo, srpm, build_wait)
+            assert all(r[0] == 0 for r in rs)
 
         destdir = cls.destdir(repo)
         rpms_to_deploy = []   # :: [(rpm_path, destdir)]
@@ -873,7 +887,8 @@ class RepoOperations(object):
             cls.sign_rpms(repo.signkey, rpms_to_sign)
 
         cs = [ThreadedCommand(repo.copy_cmd(rpm, dest)) for rpm, dest in rpms_to_deploy]
-        par(cs); rcs = get_results(cs, deploy_wait)
+        rs = prun_and_get_results(cs, deploy_wait)
+        assert all(r[0] == 0 for r in rs)
 
         cls.update(repo)
 
@@ -899,8 +914,9 @@ class RepoOperations(object):
             "\n".join("%s,rpmattr=%%config(noreplace)" % mcfg for mcfg in mock_cfg_files) + "\n"
         )
 
-        cmd = Command(repo.mock_cfg_rpm_build_cmd(workdir, listfile_path), repo.user)
-        cmd.run()
+        rc = run_and_get_status(repo.mock_cfg_rpm_build_cmd(workdir, listfile_path), repo.user)
+        if rc != 0:
+            raise RuntimeError("Failed to create mock.cfg rpm")
 
         srpms = glob.glob(
             "%(workdir)s/mock-data-%(reponame)s-%(distversion)s/mock-data-*.src.rpm" % \
@@ -938,16 +954,14 @@ class RepoOperations(object):
             keydir = os.path.join(workdir, repo.keydir[1:])
             os.makedirs(keydir)
 
-            c = Command("gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile), workdir=workdir)
-            c.run()
+            rc = run_and_get_status("gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile), workdir=workdir)
 
             release_file_list = os.path.join(workdir, "files.list")
             open(release_file_list, "w").write(
                 release_file_path + ",rpmattr=%config\n" + workdir + repo.keyfile + "\n"
             )
 
-        cmd = ThreadedCommand(repo.release_rpm_build_cmd(workdir, release_file_path), repo.user)
-        cmd.run()
+        rc = run_and_get_status(repo.release_rpm_build_cmd(workdir, release_file_path), repo.user)
 
         srpms = glob.glob("%s/%s-release-%s/%s-release*.src.rpm" % (workdir, repo.name, repo.distversion, repo.name))
         if not srpms:
@@ -965,8 +979,7 @@ class RepoOperations(object):
         """
         destdir = cls.destdir(repo)
 
-        cmd = Command("mkdir -p " + " ".join(repo.rpmdirs(destdir)), repo.user, repo.server)
-        cmd.run()
+        rc = run("mkdir -p " + " ".join(repo.rpmdirs(destdir)), repo.user, repo.server)
 
         cls.deploy_release_rpm(repo)
 
@@ -989,8 +1002,8 @@ class RepoOperations(object):
 
         cs = [ThreadedCommand(c, repo.user, repo.server, d) for d in repo.rpmdirs(destdir)]
 
-        par(cs)
-        return get_results(cs)
+        rs = prun_and_get_results(cs)
+        return rs
 
 
 
@@ -1527,7 +1540,7 @@ class TestProgramRemote(unittest.TestCase):
         rm_rf(self.workdir)
 
     def test_init_with_all_options_set_explicitly(self):
-        rc = shell("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
+        rc = run_and_get_status("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
 
         if rc != 0:
             logging.info("sshd is not working on this host. Skip this test: TestProgramRemote.test_init_with_all_options_set_explicitly")
