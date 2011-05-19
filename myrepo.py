@@ -521,19 +521,20 @@ def is_noarch(srpm):
     return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
 
 
-def mock_cfg_add_repos(mock_cfg_path, repos_content, templates=TEMPLATES):
+def mock_cfg_add_repos(dist, repos_content, templates=TEMPLATES):
     """
     Updated mock.cfg with addingg repository definitions in
     given content and returns it.
 
-    @mock_cfg_path  str  Path to the original mock.cfg file
+    @dist  Distribution  Distribution object
     @repos_content  str  Repository definitions to add into mock.cfg
     """
     cfg = dict()
     cfg["config_opts"] = dict()
 
-    execfile(mock_cfg_path, cfg)
+    execfile(dist.mockcfg(), cfg)
 
+    cfg["config_opts"]["root"] = dist.label
     cfg["config_opts"]["yum.conf"] += "\n\n" + repos_content
 
     tmpl = templates.get("mock.cfg", "")
@@ -674,6 +675,9 @@ class Distribution(object):
     def mockdir(self):
         return "/var/lib/mock/%s/result" % self.label
 
+    def mockcfg(self):
+        return "/etc/mock/%s.cfg" % self.label
+
     def build_cmd(self, srpm):
         """
         NOTE: mock will print log messages to stderr (not stdout).
@@ -711,6 +715,11 @@ class TestDistribution(unittest.TestCase):
         d = Distribution("fedora-14", "x86_64")
 
         self.assertEquals(d.mockdir(), "/var/lib/mock/fedora-14-x86_64/result")
+
+    def test_mockcfg(self):
+        d = Distribution("fedora-14", "x86_64")
+
+        self.assertEquals(d.mockcfg(), "/etc/mock/fedora-14-x86_64.cfg")
 
     def test_build_cmd(self):
         d = Distribution("fedora-14", "x86_64")
@@ -1108,7 +1117,7 @@ pmaker -n mock-data-${repo.name} \\
         if release_file_content is None:
             release_file_content = self.release_file_content()
 
-        return mock_cfg_add_repos("/etc/mock/%s.cfg" % dist.label, release_file_content)
+        return mock_cfg_add_repos(dist, release_file_content)
 
     def release_rpm_build_cmd(self, workdir, release_file_path):
         logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
@@ -1577,8 +1586,9 @@ Examples:
 
     p.add_option("-q", "--quiet", action="store_true", help="Quiet mode")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+    p.add_option("", "--debug", action="store_true", help="Debug mode")
 
-    p.add_option("-T", "--test", action="store_true", help="Run test suite")
+    p.add_option("", "--test", action="store_true", help="Run test suite")
     p.add_option("", "--tlevel", type="choice", choices=test_choices,
         help="Select the level of tests to run. Choices are " + ", ".join(test_choices) + " [%default]")
 
@@ -1633,11 +1643,13 @@ def main():
     (options, args) = p.parse_args()
 
     if options.verbose:
+        logging.getLogger().setLevel(logging.INFO)
+    elif options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
     elif options.quiet:
-        logging.getLogger().setLevel(logging.WARN)
+        logging.getLogger().setLevel(logging.ERROR)
     else:
-        logging.getLogger().setLevel(logging.INFO)
+        logging.getLogger().setLevel(logging.WARN)
 
     if options.test:
         verbose_test = (options.verbose or options.debug)
