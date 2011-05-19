@@ -294,6 +294,49 @@ class ThreadedCommand(object):
 
 
 
+class TestThreadedCommand(unittest.TestCase):
+
+    def run_ok(self, cmd, rc_expected=0, out_expected="", err_expected=""):
+        """Helper method.
+
+        @cmd  ThreadedCommand object
+        """
+        (rc, out, err) = cmd.run()
+
+        self.assertEquals(rc, rc_expected)
+        self.assertEquals(out, out_expected)
+        self.assertEquals(err, err_expected)
+
+    def test_run_minimal_args(self):
+        cmd = "true"
+        c = ThreadedCommand(cmd)
+
+        self.run_ok(c)
+
+    def test_run_max_args(self):
+        cmd = "true"
+        c = ThreadedCommand(cmd, get_username(), "localhost", os.curdir, True, None, True)
+
+        self.run_ok(c)
+
+    def test_run_max_kwargs(self):
+        cmd = "true"
+        c = ThreadedCommand(cmd, user=get_username(), host="localhost",
+            workdir=os.curdir, stop_on_failure=True, timeout=None, verbose=True)
+
+        self.run_ok(c)
+
+    def test_run_timeout(self):
+        cmd = "sleep 10"
+        c = ThreadedCommand(cmd, stop_on_failure=False, timeout=1)
+
+        (rc, out, err) = c.run()
+
+        self.assertFalse(rc == 0)
+        self.assertEquals(out, "")
+
+
+
 def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
         stop_on_failure=True, timeout=None):
     cmd = ThreadedCommand(cmd_str, user, host, workdir, stop_on_failure, timeout)
@@ -1465,6 +1508,7 @@ def test(verbose, test_choice=TEST_BASIC):
     basic_tests = (
         TestMemoizedFuncs,
         TestMiscFuncs,
+        TestThreadedCommand,
         TestDistribution,
         TestFuncsWithSideEffects,
         TestRepo,
