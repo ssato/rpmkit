@@ -325,6 +325,10 @@ srpm:
 """,
     "package.spec":
 """\
+#set $conflicted_fileinfos = [fi for fi in $fileinfos if fi.conflicts]
+#set $not_conflicted_fileinfos = [fi for fi in $fileinfos if not fi.conflicts]
+
+
 Name:           $name
 Version:        $version
 Release:        1%{?dist}
@@ -354,13 +358,13 @@ This package provides some backup data collected on
 $host by $packager at $date.date.
 
 
-#if $conflicts.names
+#if $conflicted_fileinfos
 %package        overrides
-Summary:        Some more extra data
+Summary:        Some more extra data override files owned by other packages
 Group:          $group
 Requires:       %{name} = %{version}-%{release}
-#for $p in $conflicts.names
-Conflicts:      $p
+#for $fi in $conflicted_fileinfos
+Requires:       $fi.conflicts.name = ${fi.conflicts.version}-$fi.conflicts.release
 #end for
 
 
@@ -388,24 +392,43 @@ rm -rf \$RPM_BUILD_ROOT
 
 $getVar("scriptlets", "")
 
+#if $conflicted_fileinfos
+%define  savedir  /var/lib/pmaker/preserved
+
+%post           overrides
+if [ $1 = 1 ]; then    # install
+#for $fi in $conflicted_fileinfos
+    dir=%{savedir)\$(dirname $fi.original_path)
+
+    test -d \$dir || mkdir -p \$dir
+    cp -af $fi.original_path %{savedir)/\$dir && cp -af $fi.target $fi.original_path
+#end for
+elif [ $1 = 2 ]; then   # update
+    cp -af $fi.target $fi.original_path
+fi
+
+%preun          overrides
+if [ $1 = 0 ]; then    # uninstall (! update)
+#for $fi in $conflicted_fileinfos
+    cp -af %{savedir}/$fi.original_path $fi.original_path
+#end for
+fi
+#end if
+
 %files
 %defattr(-,root,root,-)
 %doc README
 %doc MANIFEST
-#for $fi in $fileinfos
-#if not $fi.conflicts
+#for $fi in $not_conflicted_fileinfos
 $fi.rpm_attr()$fi.target
-#end if
 #end for
 
-#if $conflicts.names
+#if $conflicts.packages
 %files          overrides
 %defattr(-,root,root,-)
 %doc MANIFEST.overrides
-#for $fi in $fileinfos
-#if $fi.conflicts
+#for $fi in $conflicted_fileinfos
 $fi.rpm_attr()$fi.target
-#end if
 #end for
 #end if
 
@@ -1821,7 +1844,7 @@ class Rpm(object):
                 date = None
 
         if data is None:
-            data = dict(concat((((f, h["name"]) for f in h["filenames"]) for h in Rpm.ts(rpmdb_path).dbMatch())))
+            data = dict(concat(((f, rpmh2nvrae(h)) for f in h["filenames"]) for h in Rpm.ts(rpmdb_path).dbMatch()))
 
             try:
                 # TODO: How to detect errors during/after pickle.dump.
@@ -1840,12 +1863,12 @@ if YUM_ENABLED:
     @memoize
     def rpm_search_provides_by_path(path):
         rs = rpmdb.searchProvides(path)
-        return rs and rs[0].name or False
+        return rs and rpmh2nvrae(rs[0]) or {}
 else:
     @memoize
     def rpm_search_provides_by_path(path):
         database = Rpm().filelist(rpmdb_path)
-        return database.get(path, False)
+        return database.get(path, {})
 
 
 
@@ -1879,7 +1902,7 @@ class TestRpm(unittest.TestCase):
         f = "/etc/fstab"
         db = Rpm().filelist()
         assert db.get(f)
-        assert db.get(f) == "setup"
+        assert db.get(f).get("name") == "setup"
 
 
 
@@ -2658,6 +2681,13 @@ def rpm_attr(fileinfo):
     return "%%attr(%(m)s, %(u)s, %(g)s)" % {"m":m, "u":u, "g":g,}
 
 
+def rpmh2nvrae(h):
+    """
+    @h  Rpm header-like object to allow access such like $header["name"].
+    """
+    return dict((k, h[k]) for k in ("name", "version", "release", "arch", "epoch"))
+
+
 def srcrpm_name_by_rpmspec(rpmspec):
     """Returns the name of src.rpm gotten from given RPM spec file.
     """
@@ -2857,22 +2887,30 @@ class OwnerModifier(FileInfoModifier):
 
 class RpmConflictsModifier(FileInfoModifier):
 
+    savedir = "/var/lib/pmaker/preserved"
+    newdir = "/var/lib/pmaker/new"
+
     def __init__(self, package, rpmdb_path=None):
         self.package = package
 
     def find_owner(self, path):
         """Find the package owns given path.
         """
-        owner_package = rpm_search_provides_by_path(path)
+        owner_nvrae = rpm_search_provides_by_path(path)
 
-        if owner_package and owner_package != self.package:
-            logging.warn("%s is owned by %s" % (path, owner_package))
-            return owner_package
+        if owner_nvrae and owner_nvrae["name"] != self.package:
+            logging.warn("%s is owned by %s" % (path, owner_nvrae["name"]))
+            return owner_nvrae
         else:
-            return ""
+            return {}
 
     def update(self, fileinfo, *args, **kwargs):
         fileinfo.conflicts = self.find_owner(fileinfo.path)
+
+        if fileinfo.conflicts:
+            fileinfo.original_path = fileinfo.path
+            fileinfo.target = os.path.join(self.newdir, fileinfo.path[1:])
+
         return fileinfo
 
 
@@ -3009,7 +3047,7 @@ class FilelistCollector(Collector):
 
         for target in self.list_targets(listfile):
             fi = self.fi_factory.create(target.path)
-            fi.conflicts = ""
+            fi.conflicts = {}
             fi.target = fi.path
 
             # Too verbose but useful in some cases:
@@ -3480,7 +3518,7 @@ class PackageMaker(object):
 
         if not self.package.get("conflicts", False):
             self.package["conflicts"] = {
-                "names": unique(fi.conflicts for fi in self.package["fileinfos"] if fi.conflicts),
+                "packages": unique(fi.conflicts for fi in self.package["fileinfos"] if fi.conflicts),
                 "files": unique(fi.target for fi in self.package["fileinfos"] if fi.conflicts),
             }
 
