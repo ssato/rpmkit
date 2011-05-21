@@ -286,10 +286,8 @@ $fi.target
 """,
     "MANIFEST.overrides":
 """\
-#for $fi in $fileinfos
-#if $fi.conflicts
+#for $fi in $conflicted_fileinfos
 $fi.target
-#end if
 #end for
 """,
     "rpm.mk":
@@ -325,9 +323,8 @@ srpm:
 """,
     "package.spec":
 """\
-#set $conflicted_fileinfos = [fi for fi in $fileinfos if fi.conflicts]
-#set $not_conflicted_fileinfos = [fi for fi in $fileinfos if not fi.conflicts]
-
+%define  savedir  /var/lib/pmaker/preserved
+%define  newdir  /var/lib/pmaker/installed
 
 Name:           $name
 Version:        $version
@@ -363,8 +360,9 @@ $host by $packager at $date.date.
 Summary:        Some more extra data override files owned by other packages
 Group:          $group
 Requires:       %{name} = %{version}-%{release}
-#for $fi in $conflicted_fileinfos
-Requires:       $fi.conflicts.name = ${fi.conflicts.version}-$fi.conflicts.release
+#set $reqs = list(set([(fi.conflicts["name"], fi.conflicts["version"], fi.conflicts["release"]) for fi in $conflicted_fileinfos]))
+#for $name, $version, $release in $reqs
+Requires:       $name = ${version}-$release
 #end for
 
 
@@ -393,27 +391,28 @@ rm -rf \$RPM_BUILD_ROOT
 $getVar("scriptlets", "")
 
 #if $conflicted_fileinfos
-%define  savedir  /var/lib/pmaker/preserved
-
 %post           overrides
 if [ $1 = 1 ]; then    # install
-#for $fi in $conflicted_fileinfos
-    dir=%{savedir)\$(dirname $fi.original_path)
-
-    test -d \$dir || mkdir -p \$dir
-    cp -af $fi.original_path %{savedir)/\$dir && cp -af $fi.target $fi.original_path
+#for $dir, $fis in $conflicted_fileinfos_groupby_dir
+    sdir=%{savedir}$dir
+    test -d \$sdir || mkdir -p \$sdir
+#for $fi in $fis
+    cp -af $fi.original_path %{savedir}/\$sdir && cp -af $fi.target $fi.original_path || :
+#end for
 #end for
 elif [ $1 = 2 ]; then   # update
-    cp -af $fi.target $fi.original_path
+    cp -af $fi.target $fi.original_path || :
 fi
+
 
 %preun          overrides
 if [ $1 = 0 ]; then    # uninstall (! update)
 #for $fi in $conflicted_fileinfos
-    cp -af %{savedir}/$fi.original_path $fi.original_path
+    cp -af %{savedir}$fi.original_path $fi.original_path || :
 #end for
 fi
 #end if
+
 
 %files
 %defattr(-,root,root,-)
@@ -423,7 +422,8 @@ fi
 $fi.rpm_attr()$fi.target
 #end for
 
-#if $conflicts.packages
+
+#if $conflicted_fileinfos
 %files          overrides
 %defattr(-,root,root,-)
 %doc MANIFEST.overrides
@@ -431,6 +431,7 @@ $fi.rpm_attr()$fi.target
 $fi.rpm_attr()$fi.target
 #end for
 #end if
+
 
 %changelog
 #if $changelog
@@ -2888,7 +2889,7 @@ class OwnerModifier(FileInfoModifier):
 class RpmConflictsModifier(FileInfoModifier):
 
     savedir = "/var/lib/pmaker/preserved"
-    newdir = "/var/lib/pmaker/new"
+    newdir = "/var/lib/pmaker/installed"
 
     def __init__(self, package, rpmdb_path=None):
         self.package = package
@@ -3526,6 +3527,9 @@ class PackageMaker(object):
             [fi.target for fi in self.package["fileinfos"] if fi.type() == TYPE_FILE]
         )
 
+        self.package["conflicted_fileinfos"] = [fi for fi in self.package["fileinfos"] if fi.conflicts]
+        self.package["not_conflicted_fileinfos"] = [fi for fi in self.package["fileinfos"] if not fi.conflicts]
+
         self.genfile("configure.ac")
         self.genfile("Makefile.am")
         self.genfile("README")
@@ -3616,6 +3620,10 @@ class RpmPackageMaker(TgzPackageMaker):
 
     def preconfigure(self):
         super(RpmPackageMaker, self).preconfigure()
+
+        _dirname = lambda fi: os.path.dirname(fi.original_path)
+        self.package["conflicted_fileinfos_groupby_dir"] = \
+            [(dir, list(fis_g)) for dir, fis_g in groupby(self.package["conflicted_fileinfos"], _dirname)]
 
         self.genfile("rpm.mk")
         self.genfile("package.spec", "%s.spec" % self.pname)
