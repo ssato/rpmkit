@@ -215,11 +215,10 @@ class ThreadedCommand(object):
     """
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
-            stop_on_failure=True, timeout=None, verbose=True):
+            stop_on_failure=True, timeout=None):
         self.host = host
         self.stop_on_failure = stop_on_failure
         self.timeout = timeout
-        self.verbose = verbose
 
         self.user = user is None and get_username() or user
 
@@ -240,23 +239,25 @@ class ThreadedCommand(object):
 
     def run_async(self):
         def func():
-            if self.verbose:
-                logging.info("Run: %s" % self.cmd_str)
+            cmd_str_shorten = self.cmd_str[:60] + "..."
+
+            if logging.getLogger().level < logging.INFO:  # logging.DEBUG
+                stdout = sys.stdout
+            else:
+                stdout = open("/dev/null", "w")
+
+            logging.info("Run: %s" % cmd_str_shorten)
 
             self.process = subprocess.Popen(self.cmd,
                                             bufsize=4096,
                                             shell=True,
                                             cwd=self.workdir,
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE
+                                            stdout=stdout,
+                                            stderr=sys.stderr
             )
-            out, err = self.process.communicate()
-            rc = self.process.poll()
+            self.result = self.process.wait()
 
-            self.result = (rc, out, err)
-
-            logging.debug("Finished: %s" % self.cmd_str)
+            logging.debug("Finished: %s" % cmd_str_shorten)
 
         self.thread = threading.Thread(target=func)
         self.thread.start()
@@ -270,23 +271,22 @@ class ThreadedCommand(object):
         self.thread.join(self.timeout)
 
         if self.thread.is_alive():
-            if self.verbose:
-                logging.info("Terminating: %s" % self.cmd_str)
+            logging.warn("Terminating: %s" % self.cmd_str)
 
             self.process.terminate()
             self.thread.join()
 
-        (rc, out, err) = self.result
+        rc = self.result
 
         if rc != 0:
-            emsg = "Failed: %s,\n rc=%d, err=%s" % (self.cmd, rc, err)
+            emsg = "Failed: %s,\n rc=%d" % (self.cmd, rc)
 
             if self.stop_on_failure:
                 raise RuntimeError(emsg)
             else:
                 logging.warn(emsg)
 
-        return (rc, out, err)
+        return rc
 
     def run(self):
         self.run_async()
@@ -301,11 +301,9 @@ class TestThreadedCommand(unittest.TestCase):
 
         @cmd  ThreadedCommand object
         """
-        (rc, out, err) = cmd.run()
+        rc = cmd.run()
 
         self.assertEquals(rc, rc_expected)
-        self.assertEquals(out, out_expected)
-        self.assertEquals(err, err_expected)
 
     def test_run_minimal_args(self):
         cmd = "true"
@@ -315,14 +313,14 @@ class TestThreadedCommand(unittest.TestCase):
 
     def test_run_max_args(self):
         cmd = "true"
-        c = ThreadedCommand(cmd, get_username(), "localhost", os.curdir, True, None, True)
+        c = ThreadedCommand(cmd, get_username(), "localhost", os.curdir, True, None)
 
         self.run_ok(c)
 
     def test_run_max_kwargs(self):
         cmd = "true"
         c = ThreadedCommand(cmd, user=get_username(), host="localhost",
-            workdir=os.curdir, stop_on_failure=True, timeout=None, verbose=True)
+            workdir=os.curdir, stop_on_failure=True, timeout=None)
 
         self.run_ok(c)
 
@@ -330,10 +328,9 @@ class TestThreadedCommand(unittest.TestCase):
         cmd = "sleep 10"
         c = ThreadedCommand(cmd, stop_on_failure=False, timeout=1)
 
-        (rc, out, err) = c.run()
+        rc = c.run()
 
         self.assertFalse(rc == 0)
-        self.assertEquals(out, "")
 
 
 
@@ -344,13 +341,11 @@ def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
 
 
 def run_and_get_status(*args, **kwargs):
-    (rc, out, err) = run(*args, **kwargs)
-    return rc
+    return run(*args, **kwargs)
 
 
 def run_and_get_output(*args, **kwargs):
-    (rc, out, err) = run(*args, **kwargs)
-    return out
+    return run(*args, **kwargs)
 
 
 def sequence(cmds, stop_on_failure=False, stop_on_success=False):
@@ -364,8 +359,8 @@ def sequence(cmds, stop_on_failure=False, stop_on_success=False):
     rs = []
 
     for c in cmds:
-        r = (rc, out, err) = c.run()
-        rs.append(r)
+        rc = c.run()
+        rs.append(rc)
 
         if stop_on_failure and rc != 0:
             break
@@ -556,7 +551,7 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
     checks = [check_cmd(user, rhost) for rhost in rhosts]
     rs = sequence(checks, stop_on_success=True)
 
-    if rs[-1][0] != 0:
+    if rs[-1] != 0:
         return False
 
     return rhosts[len(rs)-1]
@@ -802,7 +797,7 @@ class RepoOperations(object):
         """
         if build:
             rs = cls.build(repo, srpm, build_wait)
-            assert all(r[0] == 0 for r in rs)
+            assert all(rc == 0 for rc in rs)
 
         destdir = cls.destdir(repo)
         rpms_to_deploy = []   # :: [(rpm_path, destdir)]
@@ -826,7 +821,7 @@ class RepoOperations(object):
 
         cs = [ThreadedCommand(repo.copy_cmd(rpm, dest)) for rpm, dest in rpms_to_deploy]
         rs = prun_and_get_results(cs, deploy_wait)
-        assert all(r[0] == 0 for r in rs)
+        assert all(rc == 0 for rc in rs)
 
         cls.update(repo)
 
