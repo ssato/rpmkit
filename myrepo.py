@@ -279,7 +279,7 @@ class ThrdCommand(object):
         rc = self.result
 
         if rc != 0:
-            emsg = "Failed: %s,\n rc=%d" % (self.cmd, rc)
+            emsg = "Failed: %s, rc=%d" % (self.cmd, rc)
 
             if self.stop_on_failure:
                 raise RuntimeError(emsg)
