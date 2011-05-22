@@ -172,7 +172,7 @@ try:
     import json
     JSON_ENABLED = True
 
-except:
+except ImportError:
     JSON_ENABLED = False
 
     class json:
@@ -185,7 +185,7 @@ try:
     from yum import rpmsack
     YUM_ENABLED = True
 
-except:
+except ImportError:
     YUM_ENABLED = False
 
 
