@@ -208,7 +208,7 @@ def is_local(fqdn_or_hostname):
 
 
 
-class ThreadedCommand(object):
+class ThrdCommand(object):
     """
     Based on the idea found at
     http://stackoverflow.com/questions/1191374/subprocess-with-timeout
@@ -294,12 +294,12 @@ class ThreadedCommand(object):
 
 
 
-class TestThreadedCommand(unittest.TestCase):
+class TestThrdCommand(unittest.TestCase):
 
     def run_ok(self, cmd, rc_expected=0, out_expected="", err_expected=""):
         """Helper method.
 
-        @cmd  ThreadedCommand object
+        @cmd  ThrdCommand object
         """
         rc = cmd.run()
 
@@ -307,26 +307,26 @@ class TestThreadedCommand(unittest.TestCase):
 
     def test_run_minimal_args(self):
         cmd = "true"
-        c = ThreadedCommand(cmd)
+        c = ThrdCommand(cmd)
 
         self.run_ok(c)
 
     def test_run_max_args(self):
         cmd = "true"
-        c = ThreadedCommand(cmd, get_username(), "localhost", os.curdir, True, None)
+        c = ThrdCommand(cmd, get_username(), "localhost", os.curdir, True, None)
 
         self.run_ok(c)
 
     def test_run_max_kwargs(self):
         cmd = "true"
-        c = ThreadedCommand(cmd, user=get_username(), host="localhost",
+        c = ThrdCommand(cmd, user=get_username(), host="localhost",
             workdir=os.curdir, stop_on_failure=True, timeout=None)
 
         self.run_ok(c)
 
     def test_run_timeout(self):
         cmd = "sleep 10"
-        c = ThreadedCommand(cmd, stop_on_failure=False, timeout=1)
+        c = ThrdCommand(cmd, stop_on_failure=False, timeout=1)
 
         rc = c.run()
 
@@ -336,7 +336,7 @@ class TestThreadedCommand(unittest.TestCase):
 
 def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
         stop_on_failure=True, timeout=None):
-    cmd = ThreadedCommand(cmd_str, user, host, workdir, stop_on_failure, timeout)
+    cmd = ThrdCommand(cmd_str, user, host, workdir, stop_on_failure, timeout)
     return cmd.run()
 
 
@@ -373,7 +373,7 @@ def sequence(cmds, stop_on_failure=False, stop_on_success=False):
 
 def prun_and_get_results(cmds, wait=WAIT_FOREVER):
     """
-    @cmds  [ThreadedCommand]
+    @cmds  [ThrdCommand]
     @wait  Int  Timewait value in seconds.
     """
     def is_valid_timeout(timeout):
@@ -546,7 +546,7 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
         c = "ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost
         c += " && ssh %s@%s true > /dev/null 2> /dev/null" % (user, rhost)
 
-        return ThreadedCommand(c, user, timeout=5, stop_on_failure=False)
+        return ThrdCommand(c, user, timeout=5, stop_on_failure=False)
 
     checks = [check_cmd(user, rhost) for rhost in rhosts]
     rs = sequence(checks, stop_on_success=True)
@@ -761,7 +761,7 @@ class RpmOperations(object):
 
     @classmethod
     def build_cmds(cls, repo, srpm):
-        return [ThreadedCommand(repo.build_cmd(srpm, d)) for d in repo.dists_by_srpm(srpm)]
+        return [ThrdCommand(repo.build_cmd(srpm, d)) for d in repo.dists_by_srpm(srpm)]
 
     @classmethod
     def build(cls, repo, srpm, wait=WAIT_FOREVER):
@@ -819,7 +819,7 @@ class RepoOperations(object):
 
             cls.sign_rpms(repo.signkey, rpms_to_sign)
 
-        cs = [ThreadedCommand(repo.copy_cmd(rpm, dest)) for rpm, dest in rpms_to_deploy]
+        cs = [ThrdCommand(repo.copy_cmd(rpm, dest)) for rpm, dest in rpms_to_deploy]
         rs = prun_and_get_results(cs, deploy_wait)
         assert all(rc == 0 for rc in rs)
 
@@ -926,14 +926,14 @@ class RepoOperations(object):
         if len(repo.archs) > 1:
             c = "for d in %s; do (cd $d && ln -sf ../%s/*.noarch.rpm ./); done" % \
                 (" ".join(repo.archs[1:]), repo.dists[0].arch)
-            cmd = ThreadedCommand(c, repo.user, repo.server, destdir)
+            cmd = ThrdCommand(c, repo.user, repo.server, destdir)
             cmd.run()
 
         c = "test -d repodata"
         c += " && createrepo --update --deltas --oldpackagedirs . --database ."
         c += " || createrepo --deltas --oldpackagedirs . --database ."
 
-        cs = [ThreadedCommand(c, repo.user, repo.server, d) for d in repo.rpmdirs(destdir)]
+        cs = [ThrdCommand(c, repo.user, repo.server, d) for d in repo.rpmdirs(destdir)]
 
         rs = prun_and_get_results(cs)
         return rs
@@ -1512,7 +1512,7 @@ def test(verbose, test_choice=TEST_BASIC):
     basic_tests = (
         TestMemoizedFuncs,
         TestMiscFuncs,
-        TestThreadedCommand,
+        TestThrdCommand,
         TestDistribution,
         TestFuncsWithSideEffects,
         TestRepo,
