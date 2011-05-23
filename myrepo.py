@@ -802,9 +802,12 @@ class RepoOperations(object):
         destdir = cls.destdir(repo)
         rpms_to_deploy = []   # :: [(rpm_path, destdir)]
 
-        rpms_to_deploy.append((srpm, os.path.join(destdir, "sources")))
+        #rpms_to_deploy.append((srpm, os.path.join(destdir, "sources")))
 
         for d in repo.dists_by_srpm(srpm):
+            srpm_to_copy = glob.glob("%s/*.src.rpm" % d.mockdir())[0]
+            rpms_to_deploy.append((srpm_to_copy, os.path.join(destdir, "sources")))
+
             if is_noarch(srpm):
                 rpms = glob.glob("%s/*.noarch.rpm" % d.mockdir())
             else:
