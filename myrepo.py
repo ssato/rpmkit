@@ -665,7 +665,7 @@ class Distribution(object):
 
     @classmethod
     def parse_dist(self, dist):
-        return dist.split('-')
+        return dist.rsplit("-", 1)
 
     def mockdir(self):
         return "/var/lib/mock/%s/result" % self.label
@@ -705,6 +705,14 @@ class TestDistribution(unittest.TestCase):
         self.assertEquals(d.version, "14")
         self.assertEquals(d.arch, "x86_64")
         self.assertEquals(d.label, "fedora-14-x86_64")
+
+    def test__init__(self):
+        d = Distribution("fedora-xyz-variant-14", "i386")
+
+        self.assertEquals(d.name, "fedora-xyz-variant")
+        self.assertEquals(d.version, "14")
+        self.assertEquals(d.arch, "i386")
+        self.assertEquals(d.label, "fedora-xyz-variant-14-i386")
 
     def test_mockdir(self):
         d = Distribution("fedora-14", "x86_64")
