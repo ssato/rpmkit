@@ -1342,6 +1342,43 @@ def init_defaults(test_choices=TEST_CHOICES):
     return defaults
 
 
+def parse_dist_option(dist_str, sep=":"):
+    """Parse dist_str and returns (dist, build_dist).
+
+    SEE ALSO: parse_dists_option (below)
+
+    >>> parse_dist_option("fedora-14-i386")
+    ('fedora-14-i386', 'fedora-14-i386')
+    >>> parse_dist_option("fedora-14-i386:fedora-my-additions-14-i386")
+    ('fedora-14-i386', 'fedora-my-additions-14-i386')
+    """
+    tpl = dist_str.split(sep)
+    dist = tpl[0]
+
+    if len(tpl) < 2:
+        build_dist = dist
+    else:
+        build_dist = tpl[1]
+
+        if len(tpl) > 2:
+            logging.warn("Invalid format: too many '%s' in dist_str: %s. Ignore the rest" % (sep, dist_str))
+
+    return (dist, build_dist)
+
+
+def parse_dists_option(dists_str, sep=","):
+    """Parse --dists option and returns [(dist, build_dist)].
+
+    >>> parse_dists_option("fedora-14-i386")
+    [('fedora-14-i386', 'fedora-14-i386')]
+    >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386")
+    [('fedora-14-i386', 'fedora-my-additions-14-i386')]
+    >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386,rhel-6-i386:rhel-my-additions-6-i386")
+    [('fedora-14-i386', 'fedora-my-additions-14-i386'), ('rhel-6-i386', 'rhel-my-additions-6-i386')]
+    """
+    return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
+
+
 
 class TestFuncsWithSideEffects(unittest.TestCase):
 
