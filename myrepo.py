@@ -652,10 +652,11 @@ class TestMiscFuncs(unittest.TestCase):
 
 class Distribution(object):
 
-    def __init__(self, dist, arch="x86_64", build_dist=None):
+    def __init__(self, dist, arch="x86_64", bdist_label=None):
         """
         @dist  str   Distribution label, e.g. "fedora-14"
         @arch  str   Architecture, e.g. "i386"
+        @bdist_label  str  Distribution label to build, e.g. "fedora-14-i386"
         """
         self.label = "%s-%s" % (dist, arch)
         (self.name, self.version) = self.parse_dist(dist)
@@ -663,17 +664,17 @@ class Distribution(object):
 
         self.arch_pattern = (arch == "i386" and "i*86" or self.arch)
 
-        self.build_dist = build_dist is None and self.label or build_dist
+        self.bdist_label = bdist_label is None and self.label or bdist_label
 
     @classmethod
     def parse_dist(self, dist):
         return dist.rsplit("-", 1)
 
     def mockdir(self):
-        return "/var/lib/mock/%s/result" % self.build_dist
+        return "/var/lib/mock/%s/result" % self.bdist_label
 
     def mockcfg(self):
-        return "/etc/mock/%s.cfg" % self.build_dist
+        return "/etc/mock/%s.cfg" % self.bdist_label
 
     def build_cmd(self, srpm):
         """
@@ -685,7 +686,7 @@ class Distribution(object):
         else:
             fmt = "mock -r %s %s"
 
-        return fmt % (self.label, srpm)
+        return fmt % (self.bdist_label, srpm)
 
 
 
@@ -707,7 +708,7 @@ class TestDistribution(unittest.TestCase):
         self.assertEquals(d.version, "14")
         self.assertEquals(d.arch, "x86_64")
         self.assertEquals(d.label, "fedora-14-x86_64")
-        self.assertEquals(d.build_dist, d.label)
+        self.assertEquals(d.bdist_label, d.label)
 
     def test__init__2(self):
         d = Distribution("fedora-xyz-variant-14", "i386")
@@ -716,16 +717,16 @@ class TestDistribution(unittest.TestCase):
         self.assertEquals(d.version, "14")
         self.assertEquals(d.arch, "i386")
         self.assertEquals(d.label, "fedora-xyz-variant-14-i386")
-        self.assertEquals(d.build_dist, d.label)
+        self.assertEquals(d.bdist_label, d.label)
 
     def test__init__3(self):
-        d = Distribution("fedora-14", "x86_64", "fedora-xyz-variant-14")
+        d = Distribution("fedora-14", "x86_64", "fedora-xyz-variant-14-x86_64")
 
         self.assertEquals(d.name, "fedora")
         self.assertEquals(d.version, "14")
         self.assertEquals(d.arch, "x86_64")
         self.assertEquals(d.label, "fedora-14-x86_64")
-        self.assertEquals(d.build_dist, "fedora-xyz-variant-14")
+        self.assertEquals(d.bdist_label, "fedora-xyz-variant-14-x86_64")
 
     def test_mockdir(self):
         d = Distribution("fedora-14", "x86_64")
@@ -1041,6 +1042,7 @@ pmaker -n mock-data-${repo.name} \\
 
     def __init__(self, server, user, email, fullname, dist, archs,
             name=None, subdir=None, topdir=None, baseurl=None, signkey=None,
+            bdist_label=None,
             *args, **kwargs):
         """
         @server    server's hostname to provide this yum repo
@@ -1054,6 +1056,7 @@ pmaker -n mock-data-${repo.name} \\
         @topdir    repo's topdir or its format string, e.g. "/var/www/html/%(subdir)s".
         @baseurl   base url or its format string, e.g. "file://%(topdir)s".
         @signkey   GPG key ID for signing or None indicates will never sign rpms
+        @bdist_label  Distribution label to build srpms, e.g. "fedora-custom-addons-14-x86_64"
         """
         self.server = server
         self.user = user
@@ -1094,6 +1097,8 @@ pmaker -n mock-data-${repo.name} \\
             self.signkey = signkey
             self.keyurl = self._format(Repo.keyurl)
             self.keyfile = os.path.join(self.keydir, os.path.basename(self.keyurl))
+
+        self.bdist_label = bdist_label
 
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
@@ -1343,38 +1348,54 @@ def init_defaults(test_choices=TEST_CHOICES):
 
 
 def parse_dist_option(dist_str, sep=":"):
-    """Parse dist_str and returns (dist, build_dist).
+    """Parse dist_str and returns (dist, arch, bdist_label).
 
     SEE ALSO: parse_dists_option (below)
 
+    >>> try:
+    ...     parse_dist_option("invalid_dist_label.i386")
+    ... except AssertionError:
+    ...     pass
+    >>> 
     >>> parse_dist_option("fedora-14-i386")
-    ('fedora-14-i386', 'fedora-14-i386')
+    ('fedora-14', 'i386', 'fedora-14-i386')
     >>> parse_dist_option("fedora-14-i386:fedora-my-additions-14-i386")
-    ('fedora-14-i386', 'fedora-my-additions-14-i386')
+    ('fedora-14', 'i386', 'fedora-my-additions-14-i386')
+    >>> parse_dist_option("fedora-14-i386:fedora-my-additions-14-x86_64")
+    ('fedora-14', 'i386', 'fedora-my-additions-14-x86_64')
+    >>> parse_dist_option("fedora-14-i386:fedora-my-additions")
+    ('fedora-14', 'i386', 'fedora-my-additions')
     """
     tpl = dist_str.split(sep)
-    dist = tpl[0]
+    label = tpl[0]
+
+    assert "-" in label, "Invalid distribution label ('-' not found): " + label
+
+    (dist, arch) = label.rsplit("-", 1)
 
     if len(tpl) < 2:
-        build_dist = dist
+        bdist_label = label
     else:
-        build_dist = tpl[1]
-
+        bdist_label = tpl[1]
+ 
         if len(tpl) > 2:
             logging.warn("Invalid format: too many '%s' in dist_str: %s. Ignore the rest" % (sep, dist_str))
 
-    return (dist, build_dist)
+    return (dist, arch, bdist_label)
 
 
 def parse_dists_option(dists_str, sep=","):
-    """Parse --dists option and returns [(dist, build_dist)].
+    """Parse --dists option and returns [(dist, arch, bdist_label)].
+
+    # d[:d.rfind("-")])
+    #archs = [l.split("-")[-1] for l in labels]
 
     >>> parse_dists_option("fedora-14-i386")
-    [('fedora-14-i386', 'fedora-14-i386')]
+    [('fedora-14', 'i386', 'fedora-14-i386')]
     >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386")
-    [('fedora-14-i386', 'fedora-my-additions-14-i386')]
+    [('fedora-14', 'i386', 'fedora-my-additions-14-i386')]
     >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386,rhel-6-i386:rhel-my-additions-6-i386")
-    [('fedora-14-i386', 'fedora-my-additions-14-i386'), ('rhel-6-i386', 'rhel-my-additions-6-i386')]
+    [('fedora-14', 'i386', 'fedora-my-additions-14-i386'), ('rhel-6', 'i386', 'rhel-my-additions-6-i386')]
     """
     return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
 
