@@ -1067,8 +1067,10 @@ pmaker -n mock-data-${repo.name} \\
         self.hostname = server.split('.')[0]
         self.multiarch = "i386" in self.archs and "x86_64" in self.archs
 
+        self.bdist_label = bdist_label
+
         (self.distname, self.distversion) = Distribution.parse_dist(self.dist)
-        self.dists = [Distribution(self.dist, arch) for arch in self.archs]
+        self.dists = [Distribution(self.dist, arch, bdist_label) for arch in self.archs]
         self.distdir = os.path.join(self.distname, self.distversion)
 
         self.subdir = subdir is None and self.subdir or subdir
@@ -1097,8 +1099,6 @@ pmaker -n mock-data-${repo.name} \\
             self.signkey = signkey
             self.keyurl = self._format(Repo.keyurl)
             self.keyfile = os.path.join(self.keydir, os.path.basename(self.keyurl))
-
-        self.bdist_label = bdist_label
 
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
