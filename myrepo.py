@@ -652,7 +652,7 @@ class TestMiscFuncs(unittest.TestCase):
 
 class Distribution(object):
 
-    def __init__(self, dist, arch="x86_64"):
+    def __init__(self, dist, arch="x86_64", build_dist=None):
         """
         @dist  str   Distribution label, e.g. "fedora-14"
         @arch  str   Architecture, e.g. "i386"
@@ -663,15 +663,17 @@ class Distribution(object):
 
         self.arch_pattern = (arch == "i386" and "i*86" or self.arch)
 
+        self.build_dist = build_dist is None and self.label or build_dist
+
     @classmethod
     def parse_dist(self, dist):
         return dist.rsplit("-", 1)
 
     def mockdir(self):
-        return "/var/lib/mock/%s/result" % self.label
+        return "/var/lib/mock/%s/result" % self.build_dist
 
     def mockcfg(self):
-        return "/etc/mock/%s.cfg" % self.label
+        return "/etc/mock/%s.cfg" % self.build_dist
 
     def build_cmd(self, srpm):
         """
@@ -705,14 +707,25 @@ class TestDistribution(unittest.TestCase):
         self.assertEquals(d.version, "14")
         self.assertEquals(d.arch, "x86_64")
         self.assertEquals(d.label, "fedora-14-x86_64")
+        self.assertEquals(d.build_dist, d.label)
 
-    def test__init__(self):
+    def test__init__2(self):
         d = Distribution("fedora-xyz-variant-14", "i386")
 
         self.assertEquals(d.name, "fedora-xyz-variant")
         self.assertEquals(d.version, "14")
         self.assertEquals(d.arch, "i386")
         self.assertEquals(d.label, "fedora-xyz-variant-14-i386")
+        self.assertEquals(d.build_dist, d.label)
+
+    def test__init__3(self):
+        d = Distribution("fedora-14", "x86_64", "fedora-xyz-variant-14")
+
+        self.assertEquals(d.name, "fedora")
+        self.assertEquals(d.version, "14")
+        self.assertEquals(d.arch, "x86_64")
+        self.assertEquals(d.label, "fedora-14-x86_64")
+        self.assertEquals(d.build_dist, "fedora-xyz-variant-14")
 
     def test_mockdir(self):
         d = Distribution("fedora-14", "x86_64")
