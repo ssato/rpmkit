@@ -270,6 +270,10 @@ install-data-hook::
 
 MKDIR_P ?= mkdir -p
 SED ?= sed
+
+# Quick hack for the 'filename too long' problem with tar's --old-archive (o)
+# option which automake uses:
+am__tar = \${AMTAR} chf - "\$\$tardir"
 """,
     "README":
 """\
