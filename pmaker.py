@@ -213,7 +213,7 @@ TEMPLATES = {
     "configure.ac":
 """\
 AC_INIT([$name],[$version])
-AM_INIT_AUTOMAKE([${compressor.am_opt} foreign subdir-objects])
+AM_INIT_AUTOMAKE([${compressor.am_opt} foreign subdir-objects tar-pax])
 
 dnl http://www.flameeyes.eu/autotools-mythbuster/automake/silent.html
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
@@ -270,10 +270,6 @@ install-data-hook::
 
 MKDIR_P ?= mkdir -p
 SED ?= sed
-
-# Quick hack for the 'filename too long' problem with tar's --old-archive (o)
-# option which automake uses:
-am__tar = \${AMTAR} chf - "\$\$tardir"
 """,
     "README":
 """\
