@@ -2121,9 +2121,13 @@ class DirOperations(FileOperations):
             logging.debug("Failed: os.makedirs, dest=%s, mode=%o" % (dest, mode))
             logging.warn(e)
 
-            if not os.path.exists(dest):
-                os.chmod(dest, os.lstat(dest).st_mode | os.W_OK | os.X_OK)
-                os.makedirs(dest, mode)
+            logging.info("skip to copy " + dest)
+
+            # FIXME: What can be done with it?
+            #
+            #if not os.path.exists(dest):
+            #    os.chmod(dest, os.lstat(dest).st_mode | os.W_OK | os.X_OK)
+            #    os.makedirs(dest, mode)
 
         uid = os.getuid()
         gid = os.getgid()
@@ -2230,7 +2234,6 @@ class TestDirOperations(unittest.TestCase):
             self.nsamples
         )
 
-
     def tearDown(self):
         rm_rf(self.workdir)
 
@@ -2311,6 +2314,8 @@ class FileInfo(object):
         self.perm_default = "0644"
 
         self.rpmattr = None
+
+        self.target = path
 
         for k, v in kwargs.iteritems():
             self[k] = v
@@ -2781,6 +2786,10 @@ class Target(object):
     def attrs(self):
         return self.attrs
 
+    def path(self):
+        return path
+
+
 
 class FileInfoFilter(object):
     """
@@ -2894,10 +2903,15 @@ class RpmConflictsModifier(FileInfoModifier):
     newdir = "/var/lib/pmaker/installed"
 
     def __init__(self, package, rpmdb_path=None):
+        """
+        @package  str  Name of the package to be built
+        """
         self.package = package
 
     def find_owner(self, path):
         """Find the package owns given path.
+
+        @path  str  File/dir/symlink path
         """
         owner_nvrae = rpm_search_provides_by_path(path)
 
@@ -2927,8 +2941,15 @@ class TargetAttributeModifier(FileInfoModifier):
         self.overrides = overrides
 
     def update(self, fileinfo, target, *args, **kwargs):
-        for attr in self.overrides or target.attrs:
-            if attr == "path":  # fileinfo.path must not be override.
+        """
+        @fileinfo  FileInfo object
+        @target    Target object
+        """
+        attrs_to_override = self.overrides and self.overrides or target.attrs
+
+        for attr in attrs_to_override:
+            if attr == "path":  # fileinfo.path must not be overridden.
+                logging.warn("You cannot overwrite original path of the fileinfo: path=" + fileinfo.path)
                 continue
 
             val = getattr(target, attr, None)
@@ -2990,6 +3011,49 @@ class TestOwnerModifier(unittest.TestCase):
 
         self.assertEquals(new_fileinfo.uid, 0)
         self.assertEquals(new_fileinfo.gid, 0)
+
+
+
+class TestTargetAttributeModifier(unittest.TestCase):
+
+    _multiprocess_shared_ = True
+
+    target_path = "/etc/resolv.conf"
+
+    def setUp(self):
+        mode = "0644"
+        csum = checksum(self.target_path)
+        self.owner = (uid, gid) = (500, 500)
+
+        self.fileinfo = FileInfo(self.target_path, mode, uid, gid, csum, {})
+        self.target = Target(
+            self.target_path,
+            {
+                "target": "/var/lib/network/resolv.conf",
+                "uid": 0,
+                "gid": 0,
+                "mode": "0600",
+                "rpmattr": "%config"
+            }
+        )
+
+    def test_update(self):
+        tgt = copy.copy(self.target)
+
+        modifier = TargetAttributeModifier()
+        new_fileinfo = modifier.update(self.fileinfo, tgt)
+
+        for attr in tgt.attrs:
+            self.assertEquals(getattr(new_fileinfo, attr, None), getattr(tgt, attr, None))
+
+    def test__init__with_overrides(self):
+        tgt = copy.copy(self.target)
+        tgt.target = os.path.join(self.target_path + ".d", os.path.basename(self.target_path))
+
+        modifier = TargetAttributeModifier(("target", ))
+        new_fileinfo = modifier.update(self.fileinfo, tgt)
+
+        self.assertEquals(new_fileinfo.target, tgt.target)
 
 
 
@@ -4103,6 +4167,7 @@ def run_unittests(verbose, test_choice):
         TestMiscFunctions,
         TestDestdirModifier,
         TestOwnerModifier,
+        TestTargetAttributeModifier,
         TestFilelistCollector,
         TestExtFilelistCollector,
         TestJsonFilelistCollector,
