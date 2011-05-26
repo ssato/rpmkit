@@ -118,7 +118,7 @@ try:
 except ImportError:
     foldl = reduce
 
-    def partial(func, *args, **keywords):
+    def curry(func, *args, **keywords):
         """@see 'functools.partial' section in Python Library Reference
         """
         def newfunc(*fargs, **fkeywords):
