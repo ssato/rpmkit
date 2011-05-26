@@ -2967,6 +2967,31 @@ class TestDestdirModifier(unittest.TestCase):
 
 
 
+class TestOwnerModifier(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
+
+    target_path = "/etc/resolv.conf"
+
+    def setUp(self):
+        mode = "0644"
+        csum = checksum(self.target_path)
+        self.owner = (uid, gid) = (500, 500)
+
+        self.fileinfos = [
+            FileInfo(self.target_path, mode, uid, gid, csum, {}),
+        ]
+
+        self.modifier = OwnerModifier(0, 0)
+
+    def test_update(self):
+        new_fileinfo = self.modifier.update(self.fileinfos[0])
+
+        self.assertEquals(new_fileinfo.uid, 0)
+        self.assertEquals(new_fileinfo.gid, 0)
+
+
+
 class Collector(object):
     """Abstract class for collector classes
     """
@@ -4076,6 +4101,7 @@ def run_unittests(verbose, test_choice):
         TestSymlinkOperations,
         TestMiscFunctions,
         TestDestdirModifier,
+        TestOwnerModifier,
         TestFilelistCollector,
         TestExtFilelistCollector,
         TestJsonFilelistCollector,
