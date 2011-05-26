@@ -2122,7 +2122,8 @@ class DirOperations(FileOperations):
             logging.warn(e)
 
             if not os.path.exists(dest):
-                os.makedirs(dest, 0755)
+                os.chmod(dest, os.lstat(dest).st_mode | os.W_OK | os.X_OK)
+                os.makedirs(dest, mode)
 
         uid = os.getuid()
         gid = os.getgid()
