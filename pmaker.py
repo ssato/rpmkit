@@ -114,9 +114,23 @@ import rpm
 
 
 try:
-    from functools import reduce as foldl
+    from functools import partial as curry, reduce as foldl
 except ImportError:
     foldl = reduce
+
+    def partial(func, *args, **keywords):
+        """@see 'functools.partial' section in Python Library Reference
+        """
+        def newfunc(*fargs, **fkeywords):
+            newkeywords = keywords.copy()
+            newkeywords.update(fkeywords)
+            return func(*(args + fargs), **newkeywords)
+
+        newfunc.func = func
+        newfunc.args = args
+        newfunc.keywords = keywords
+
+        return newfunc
 
 
 try:
@@ -2855,8 +2869,13 @@ class FileInfoModifier(object):
     Collector.collect().
     """
 
+    _priority = 0
+
     def __init__(self, *args, **kwargs):
         pass
+
+    def __cmp__(self, other):
+        return cmp(self._priority, other._priority)
 
     def update(self, fileinfo, *args, **kwargs):
         """Just returns given fileinfo w/ no modification.
@@ -2869,6 +2888,8 @@ class FileInfoModifier(object):
 
 
 class DestdirModifier(FileInfoModifier):
+
+    _priority = 1
 
     def __init__(self, destdir):
         self.destdir = destdir
@@ -2903,6 +2924,8 @@ class DestdirModifier(FileInfoModifier):
 
 class OwnerModifier(FileInfoModifier):
 
+    _priority = 5
+
     def __init__(self, owner_uid=0, owner_gid=0):
         self.uid = owner_uid
         self.gid = owner_gid
@@ -2915,6 +2938,8 @@ class OwnerModifier(FileInfoModifier):
 
 
 class RpmConflictsModifier(FileInfoModifier):
+
+    _priority = 6
 
     savedir = "/var/lib/pmaker/preserved"
     newdir = "/var/lib/pmaker/installed"
@@ -2939,17 +2964,19 @@ class RpmConflictsModifier(FileInfoModifier):
             return {}
 
     def update(self, fileinfo, *args, **kwargs):
-        fileinfo.conflicts = self.find_owner(fileinfo.path)
+        fileinfo.conflicts = self.find_owner(fileinfo.target)
 
         if fileinfo.conflicts:
             fileinfo.original_path = fileinfo.path
-            fileinfo.target = os.path.join(self.newdir, fileinfo.path[1:])
+            fileinfo.target = os.path.join(self.newdir, fileinfo.target[1:])
 
         return fileinfo
 
 
 
 class TargetAttributeModifier(FileInfoModifier):
+
+    _priority = 9
 
     def __init__(self, overrides=()):
         """
@@ -3104,6 +3131,13 @@ class Collector(object):
         if not self.enabled():
             raise RuntimeError("Pluing %s cannot run as necessary function is not available." % self.__name__)
 
+    def get_modifiers(self):
+        """
+        Returns registered modifiers sorted by these priorities.
+        """
+        for m in sorted(self.modifiers):
+            yield m
+
 
 
 class FilelistCollector(Collector):
@@ -3195,7 +3229,7 @@ class FilelistCollector(Collector):
                 if filter.pred(fi):  # filter out if pred -> True:
                     continue
 
-            for modifier in self.modifiers:
+            for modifier in self.get_modifiers():
                 fi = modifier.update(fi, target, self.trace)
 
             fileinfos.append(fi)
