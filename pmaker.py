@@ -82,7 +82,6 @@
 #
 
 from distutils.sysconfig import get_python_lib
-from functools import partial as curry, reduce as foldl
 from itertools import count, groupby
 
 import ConfigParser as cp
@@ -112,6 +111,13 @@ import tempfile
 import unittest
 
 import rpm
+
+
+try:
+    from functools import reduce as foldl
+except ImportError:
+    foldl = reduce
+
 
 try:
     from Cheetah.Template import Template
