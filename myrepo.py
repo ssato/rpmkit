@@ -516,12 +516,13 @@ def is_noarch(srpm):
     return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
 
 
-def mock_cfg_add_repos(dist, repos_content, templates=TEMPLATES):
+def mock_cfg_add_repos(repo, dist, repos_content, templates=TEMPLATES):
     """
     Updated mock.cfg with addingg repository definitions in
     given content and returns it.
 
-    @dist  Distribution  Distribution object
+    @repo  Repo object
+    @dist  Distribution object
     @repos_content  str  Repository definitions to add into mock.cfg
     """
     cfg = dict()
@@ -529,7 +530,7 @@ def mock_cfg_add_repos(dist, repos_content, templates=TEMPLATES):
 
     execfile(dist.mockcfg(), cfg)
 
-    cfg["config_opts"]["root"] = dist.label
+    cfg["config_opts"]["root"] = repo.buildroot(dist)
     cfg["config_opts"]["yum.conf"] += "\n\n" + repos_content
 
     tmpl = templates.get("mock.cfg", "")
@@ -670,8 +671,11 @@ class Distribution(object):
     def parse_dist(self, dist):
         return dist.rsplit("-", 1)
 
+    def buildroot(self):
+        return self.bdist_label
+
     def mockdir(self):
-        return "/var/lib/mock/%s/result" % self.bdist_label
+        return "/var/lib/mock/%s/result" % self.buildroot()
 
     def mockcfg(self):
         return "/etc/mock/%s.cfg" % self.bdist_label
@@ -1103,6 +1107,9 @@ pmaker -n mock-data-${repo.name} \\
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
 
+    def buildroot(self, dist):
+        return "%s-%s" % (self.name, dist.label)
+
     def rpmdirs(self, destdir=None):
         f = destdir is None and snd or os.path.join
 
@@ -1141,7 +1148,7 @@ pmaker -n mock-data-${repo.name} \\
         if release_file_content is None:
             release_file_content = self.release_file_content()
 
-        return mock_cfg_add_repos(dist, release_file_content)
+        return mock_cfg_add_repos(self, dist, release_file_content)
 
     def release_rpm_build_cmd(self, workdir, release_file_path):
         logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
@@ -1771,11 +1778,20 @@ def main():
     #pprint.pprint(config)
     #sys.exit()
 
-    dists = config["dists"].split(",")
+    dabs = parse_dists_option(config["dists"])  # [(dist, arch, bdist_label)]
     repos = []
 
-    for dist, labels in groupby(dists, lambda d: d[:d.rfind("-")]):
-        archs = [l.split("-")[-1] for l in labels]
+    # old way:
+    #dists = config["dists"].split(",")
+    #for dist, labels in groupby(dists, lambda d: d[:d.rfind("-")]):
+    #    archs = [l.split("-")[-1] for l in labels]
+
+    # extended new way:
+    for dist, dists in groupby(dabs, lambda d: d[0]):  # d[0]: dist
+        dists = list(dists)  # it's a generator and has internal state.
+
+        archs = [d[1] for d in dists]  # d[1]: arch
+        bdist_label = [d[2] for d in dists][0]  # d[2]: bdist_label
 
         repo = Repo(
             config["server"],
@@ -1789,6 +1805,7 @@ def main():
             config["topdir"],
             config["baseurl"],
             config["signkey"],
+            bdist_label
         )
 
         repos.append(repo)
