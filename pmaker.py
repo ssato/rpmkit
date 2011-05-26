@@ -1497,6 +1497,8 @@ def get_compressor(compressors=COMPRESSORS):
         logging.warn("Automake looks not installed. Packaging process can go up to \"preconfigure\" step.")
         UPTO = STEP_PRECONFIGURE
 
+        return ("gzip",  "gz",  "")  # fallback to the default.
+
     for cmd, ext, am_opt in compressors:
         # bzip2 tries compressing input from stdin even it
         # is invoked with --version option. So give null input to it.
