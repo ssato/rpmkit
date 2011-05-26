@@ -2847,7 +2847,8 @@ class DestdirModifier(FileInfoModifier):
         self.destdir = destdir
 
     def rewrite_with_destdir(self, path):
-        """Rewrite target (install destination) path as DESTDIR in autotools.
+        """Rewrite target (install destination) path by assuming path is
+        consist of DESTDIR and actual installation path and stripping DESTDIR.
 
         >>> assert DestdirModifier("/a/b").rewrite_with_destdir("/a/b/c") == "/c"
         >>> assert DestdirModifier("/a/b/").rewrite_with_destdir("/a/b/c") == "/c"
@@ -2935,6 +2936,34 @@ class TargetAttributeModifier(FileInfoModifier):
                 setattr(fileinfo, attr, val)
 
         return fileinfo
+
+
+
+class TestDestdirModifier(unittest.TestCase):
+
+    _multiprocess_can_split_ = True
+
+    target_path = "/etc/resolv.conf"
+
+    def setUp(self):
+        destdir = "/destdir"
+        mode = "0644"
+        csum = checksum(self.target_path)
+
+        self.fileinfos = [
+            FileInfo(destdir + self.target_path, mode, 0, 0, csum, {}),
+            FileInfo("/not_destdir" + self.target_path, mode, 0, 0, csum, {}),
+        ]
+
+        self.modifier = DestdirModifier(destdir)
+
+    def test_update_ok(self):
+        new_fileinfo = self.modifier.update(self.fileinfos[0])
+
+        self.assertEquals(new_fileinfo.target, self.target_path)
+
+    def test_update_ng(self):
+        self.assertRaises(RuntimeError, self.modifier.update, self.fileinfos[1])
 
 
 
@@ -4046,6 +4075,7 @@ def run_unittests(verbose, test_choice):
         TestDirOperations,
         TestSymlinkOperations,
         TestMiscFunctions,
+        TestDestdirModifier,
         TestFilelistCollector,
         TestExtFilelistCollector,
         TestJsonFilelistCollector,
