@@ -122,11 +122,13 @@ except ImportError:
 try:
     from Cheetah.Template import Template
     UPTO = "build"
+    CHEETAH_ENABLED = True
 
 except ImportError:
     logging.warn("python-cheetah is not found. Packaging process can go up to \"setup\" step.")
 
     UPTO = "setup"
+    CHEETAH_ENABLED = False
 
     def Template(*args, **kwargs):
         raise RuntimeError("python-cheetah is missing and cannot proceed any more.")
@@ -1486,7 +1488,7 @@ def get_fullname():
 
 
 def get_compressor(compressors=COMPRESSORS):
-    global UPTO
+    global UPTO, CHEETAH_ENABLED
 
     found = False
 
@@ -1494,8 +1496,8 @@ def get_compressor(compressors=COMPRESSORS):
     am_files_pattern = am_dir_pattern + "/am/*.am"
     
     if len(glob.glob(am_dir_pattern)) == 0:
-        logging.warn("Automake looks not installed. Packaging process can go up to \"preconfigure\" step.")
-        UPTO = STEP_PRECONFIGURE
+        UPTO = CHEETAH_ENABLED and STEP_PRECONFIGURE or STEP_SETUP
+        logging.warn("Automake looks not installed. Packaging process can go up to \"%s\" step." % UPTO)
 
         return ("gzip",  "gz",  "")  # fallback to the default.
 
