@@ -1490,25 +1490,36 @@ def get_compressor(compressors=COMPRESSORS):
 
     found = False
 
+    am_dir_pattern = "/usr/share/automake-*"
+    am_files_pattern = am_dir_pattern + "/am/*.am"
+    am_installed = glob.glob(am_dir_pattern) > 0
+
     for cmd, ext, am_opt in compressors:
         # bzip2 tries compressing input from stdin even it
         # is invoked with --version option. So give null input to it.
         cmd_c = "%s --version > /dev/null 2> /dev/null < /dev/null" % cmd
 
         if os.system(cmd_c) == 0:
-            am_support_c = "grep -q -e '^dist-%s:' /usr/share/automake-*/am/*.am 2> /dev/null" % cmd
+            if am_installed:
+                am_support_c = "grep -q -e '^dist-%s:' %s 2> /dev/null" % (cmd, am_files_pattern)
 
-            if os.system(am_support_c) == 0:
-                found = True
-                break
+                if os.system(am_support_c) == 0:
+                    found = True
+                    break
+            else:
+                logging.warn("Automake looks not installed. Packaging process can go up to \"preconfigure\" step.")
+                UPTO = STEP_PRECONFIGURE
 
     if not found:
         #logging.warn("any compressors not found. Packaging process can go up to \"setup\" step.")
         #UPTO = STEP_SETUP
         #return False
 
-        # gzip must exist at least and not reached here:
-        raise RuntimeError("No compressor found! Aborting...")
+        if am_installed:
+            # gzip must exist at least and not reached here:
+            raise RuntimeError("No compressor found! Aborting...")
+        else:
+            return ("gzip",  "gz",  "")  # it should be ok.
 
     return (cmd, ext, am_opt)
 
