@@ -261,6 +261,9 @@ AC_OUTPUT
 """\
 #import os.path
 EXTRA_DIST = MANIFEST MANIFEST.overrides
+#if $conflicted_fileinfos
+EXTRA_DIST += apply-overrides revert-overrides
+#end if
 #if $format == "rpm"
 EXTRA_DIST += ${name}.spec rpm.mk
 
@@ -473,31 +476,38 @@ $changelog
 set -e
 
 #if $conflicted_fileinfos
+files="
+#for $fi in $conflicted_fileinfos
+#if $fi.type() == "file"
+$fi.original_path
+#end if
+#end for
+"
 
-#for $dir, $fis in $conflicted_fileinfos_groupby_dir
-savedir=$conflicts_savedir/$dir
-test -d \$savedir || mkdir -p \$savedir
+for f in \$files
+do
+    dest=$conflicts_savedir\$f
 
-#for $fi in $fis
-dest=\$savedir/$fi.original_path
+#raw
+    dir=$(dirname $dest)
+    test -d $dir || mkdir -p $dir
 
-if test -f \$dest; then
-    csum1=\$(sha1sum $fi.original_path | cut -f 1 -d ' ')
-    csum2=\$(sha1sum \$dest | cut -f 1 -d ' ')
+    if test -f $dest; then
+        csum1=$(sha1sum $f | cut -f 1 -d ' ')
+        csum2=$(sha1sum $dest | cut -f 1 -d ' ')
 
-    if test "x\$csum1" = "x\$csum2"; then
-        echo "[Info] Looks already saved. Skip it: $fi.original_path"
+        if test "x$csum1" = "x$csum2"; then
+            echo "[Info] Looks already saved. Skip it: $f"
+        else
+            echo "[Info] Overwrite priviously saved one: $f"
+            cp -af $f $dest
+        fi
     else
-        echo "[Debug] Overwrite priviously saved one: $fi.original_path"
-        cp -af $fi.original_path \$savedir
+        echo "[Debug] Saving: $f"
+        cp -a $f $dest
     fi
-else
-    echo "[Debug] Saving: $fi.original_path"
-    cp -a $fi.original_path \$savedir
-fi
-#end for
-#end for
-
+#end raw
+done
 #else
 # No conflicts and nothing to do:
 exit 0
@@ -509,24 +519,31 @@ exit 0
 set -e
 
 #if $conflicted_fileinfos
-
-#for $dir, $fis in $conflicted_fileinfos_groupby_dir
-savedir=$conflicts_savedir/$dir
-
-#for $fi in $fis
-backup=\$savedir/$fi.original_path
-
-csum1=\$(sha1sum $fi.original_path | cut -f 1 -d ' ')
-csum2=\$(sha1sum \$backup | cut -f 1 -d ' ')
-
-if test "x\$csum1" = "x\$csum2"; then
-    echo "[Info] Looks already backed up. Skip it: $fi.original_path"
-else
-    echo "[Info] Restore from backup: $fi.original_path"
-    cp -af \$backup $fi.original_path
-fi
+files="
+#for $fi in $conflicted_fileinfos
+#if $fi.type() == "file"
+$fi.original_path
+#end if
 #end for
-#end for
+"
+
+for f in \$files
+do
+    backup=$conflicts_savedir\$f
+
+#raw
+    csum1=$(sha1sum $f | cut -f 1 -d ' ')
+    csum2=$(sha1sum $backup | cut -f 1 -d ' ')
+
+    if test "x$csum1" = "x$csum2"; then
+        echo "[Info] Looks already backed up. Skip it: $f"
+    else
+        echo "[Info] Restore from backup: $f"
+        cp -af $backup $f
+    fi
+#end raw
+done
+#else
 # No conflicts and nothing to do:
 exit 0
 #end if
@@ -3761,18 +3778,16 @@ class PackageMaker(object):
         if not self.package.get("fileinfos", False):
             self.load()
 
-        if not self.package.get("conflicts", False):
-            self.package["conflicts"] = {
-                "packages": unique(fi.conflicts for fi in self.package["fileinfos"] if fi.conflicts),
-                "files": unique(fi.target for fi in self.package["fileinfos"] if fi.conflicts),
-            }
-
         self.package["distdata"] = distdata_in_makefile_am(
             [fi.target for fi in self.package["fileinfos"] if fi.type() == TYPE_FILE]
         )
 
         self.package["conflicted_fileinfos"] = [fi for fi in self.package["fileinfos"] if fi.conflicts]
         self.package["not_conflicted_fileinfos"] = [fi for fi in self.package["fileinfos"] if not fi.conflicts]
+
+        _dirname = lambda fi: os.path.dirname(fi.original_path)
+        self.package["conflicted_fileinfos_groupby_dir"] = \
+            [(dir, list(fis_g)) for dir, fis_g in groupby(self.package["conflicted_fileinfos"], _dirname)]
 
         self.genfile("configure.ac")
         self.genfile("Makefile.am")
@@ -3866,10 +3881,6 @@ class RpmPackageMaker(TgzPackageMaker):
 
     def preconfigure(self):
         super(RpmPackageMaker, self).preconfigure()
-
-        _dirname = lambda fi: os.path.dirname(fi.original_path)
-        self.package["conflicted_fileinfos_groupby_dir"] = \
-            [(dir, list(fis_g)) for dir, fis_g in groupby(self.package["conflicted_fileinfos"], _dirname)]
 
         self.genfile("rpm.mk")
         self.genfile("package.spec", "%s.spec" % self.pname)
