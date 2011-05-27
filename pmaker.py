@@ -231,6 +231,11 @@ COMPRESSORS = (
 )
 
 
+CONFLICTS_STATEDIR = "/var/lib/%(name)s-overrides"
+CONFLICTS_SAVEDIR = os.path.join(CONFLICTS_STATEDIR, "saved")
+CONFLICTS_NEWDIR = os.path.join(CONFLICTS_STATEDIR, "new")
+
+
 TEMPLATES = {
     "configure.ac":
 """\
@@ -406,6 +411,13 @@ make %{?_smp_mflags} V=0
 rm -rf \$RPM_BUILD_ROOT
 make install DESTDIR=\$RPM_BUILD_ROOT
 
+#if $conflicted_fileinfos
+mkdir -p \$RPM_BUILD_ROOT$conflicts_savedir
+mkdir -p \$RPM_BUILD_ROOT%{_libexecdir}/%{name}-overrides
+install -m 755 apply-overrides \$RPM_BUILD_ROOT%{_libexecdir}/%{name}-overrides
+install -m 755 revert-overrides \$RPM_BUILD_ROOT%{_libexecdir}/%{name}-overrides
+#end if
+
 
 %clean
 rm -rf \$RPM_BUILD_ROOT
@@ -414,24 +426,14 @@ $getVar("scriptlets", "")
 
 #if $conflicted_fileinfos
 %post           overrides
-if [ $1 = 1 ]; then    # install
-#for $dir, $fis in $conflicted_fileinfos_groupby_dir
-    sdir=%{savedir}$dir
-    test -d \$sdir || mkdir -p \$sdir
-#for $fi in $fis
-    cp -af $fi.original_path %{savedir}/\$sdir && cp -af $fi.target $fi.original_path || :
-#end for
-#end for
-elif [ $1 = 2 ]; then   # update
-    cp -af $fi.target $fi.original_path || :
+if [ $1 = 1 -o $1 = 2 ]; then    # install or update
+    %{_libexecdir}/%{name}-overrides/apply-overrides
 fi
 
 
 %preun          overrides
 if [ $1 = 0 ]; then    # uninstall (! update)
-#for $fi in $conflicted_fileinfos
-    cp -af %{savedir}$fi.original_path $fi.original_path || :
-#end for
+    %{_libexecdir}/%{name}-overrides/revert-overrides
 fi
 #end if
 
@@ -449,6 +451,8 @@ $fi.rpm_attr()$fi.target
 %files          overrides
 %defattr(-,root,root,-)
 %doc MANIFEST.overrides
+%dir $conflicts_savedir
+%{_libexecdir}/%{name}-overrides/*-overrides
 #for $fi in $conflicted_fileinfos
 $fi.rpm_attr()$fi.target
 #end for
@@ -461,6 +465,69 @@ $changelog
 #else
 * $date.timestamp ${packager} <${mail}> - ${version}-${release}
 - Initial packaging.
+#end if
+""",
+    "apply-overrides":
+"""\
+#! /bin/bash
+set -e
+
+#if $conflicted_fileinfos
+
+#for $dir, $fis in $conflicted_fileinfos_groupby_dir
+savedir=$conflicts_savedir/$dir
+test -d \$savedir || mkdir -p \$savedir
+
+#for $fi in $fis
+dest=\$savedir/$fi.original_path
+
+if test -f \$dest; then
+    csum1=\$(sha1sum $fi.original_path | cut -f 1 -d ' ')
+    csum2=\$(sha1sum \$dest | cut -f 1 -d ' ')
+
+    if test "x\$csum1" = "x\$csum2"; then
+        echo "[Info] Looks already saved. Skip it: $fi.original_path"
+    else
+        echo "[Debug] Overwrite priviously saved one: $fi.original_path"
+        cp -af $fi.original_path \$savedir
+    fi
+else
+    echo "[Debug] Saving: $fi.original_path"
+    cp -a $fi.original_path \$savedir
+fi
+#end for
+
+#else
+# No conflicts and nothing to do:
+exit 0
+#end if
+""",
+    "revert-overrides":
+"""\
+#! /bin/bash
+set -e
+
+#if $conflicted_fileinfos
+
+#for $dir, $fis in $conflicted_fileinfos_groupby_dir
+savedir=$conflicts_savedir/$dir
+
+#for $fi in $fis
+backup=\$savedir/$fi.original_path
+
+csum1=\$(sha1sum $fi.original_path | cut -f 1 -d ' ')
+csum2=\$(sha1sum \$backup | cut -f 1 -d ' ')
+
+if test "x\$csum1" = "x\$csum2"; then
+    echo "[Info] Looks already backed up. Skip it: $fi.original_path"
+else
+    echo "[Info] Restore from backup: $fi.original_path"
+    cp -af \$backup $fi.original_path
+fi
+#end for
+#end for
+# No conflicts and nothing to do:
+exit 0
 #end if
 """,
     "debian/control":
@@ -2941,14 +3008,14 @@ class RpmConflictsModifier(FileInfoModifier):
 
     _priority = 6
 
-    savedir = "/var/lib/pmaker/preserved"
-    newdir = "/var/lib/pmaker/installed"
-
     def __init__(self, package, rpmdb_path=None):
         """
         @package  str  Name of the package to be built
         """
         self.package = package
+
+        self.savedir = CONFLICTS_SAVEDIR % {"name": package}
+        self.newdir = CONFLICTS_NEWDIR % {"name": package}
 
     def find_owner(self, path):
         """Find the package owns given path.
@@ -2967,8 +3034,11 @@ class RpmConflictsModifier(FileInfoModifier):
         fileinfo.conflicts = self.find_owner(fileinfo.target)
 
         if fileinfo.conflicts:
-            fileinfo.original_path = fileinfo.path
-            fileinfo.target = os.path.join(self.newdir, fileinfo.target[1:])
+            fileinfo.original_path = fileinfo.target
+
+            path = fileinfo.target[1:]  # strip "/" at the head.
+            fileinfo.target = os.path.join(self.newdir, path)
+            fileinfo.save_path = os.path.join(self.savedir, path)
 
         return fileinfo
 
@@ -3623,6 +3693,9 @@ class PackageMaker(object):
 
         self.package["relations"] = relmap
 
+        self.package["conflicts_savedir"] = CONFLICTS_SAVEDIR % self.package
+        self.package["conflicts_newdir"] = CONFLICTS_NEWDIR % self.package
+
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
@@ -3705,6 +3778,8 @@ class PackageMaker(object):
         self.genfile("README")
         self.genfile("MANIFEST")
         self.genfile("MANIFEST.overrides")
+        self.genfile("apply-overrides")
+        self.genfile("revert-overrides")
 
     def configure(self):
         if on_debug_mode():
