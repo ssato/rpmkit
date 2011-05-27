@@ -496,6 +496,7 @@ else
     cp -a $fi.original_path \$savedir
 fi
 #end for
+#end for
 
 #else
 # No conflicts and nothing to do:
