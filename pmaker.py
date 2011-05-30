@@ -2024,47 +2024,6 @@ class TestRpm(unittest.TestCase):
 
 
 
-class ObjDict(dict):
-    """
-    Dict class works like object.
-
-    >>> o = ObjDict()
-    >>> o["a"] = "aaa"
-    >>> assert o.a == o["a"]
-    >>> assert o.a == "aaa"
-    >>> o.a = "bbb"
-    >>> assert o.a == "bbb"
-    >>> assert o["a"] == o.a
-    >>> 
-
-    TODO: pickle support. (The following does not work):
-
-    #>>> workdir = tempfile.mkdtemp(dir="/tmp", prefix="objdict-doctest-")
-    #>>> pkl_f = os.path.join(workdir, "objdict.pkl")
-    #>>> pickle.dump(o, open(pkl_f, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
-    #>>> assert o == pickle.load(open(pkl_f))
-    """
-
-    def __getattr__(self, key):
-        return self.__dict__.get(key, None)
-
-    def __setattr__(self, key, val):
-        self.__dict__[key] = val
-
-    def __getitem__(self, key):
-        return self.__dict__.get(key, None)
-
-    def __setitem__(self, key, val):
-        self.__dict__[key] = val
-
-    def __getstate__(self):
-        return self.__dict__
-
-    def __setstate__(self, d):
-        self.__dict__.update(d)
-
-
-
 class FileOperations(object):
     """Class to implement operations for FileInfo classes.
 
