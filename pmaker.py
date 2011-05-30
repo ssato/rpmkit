@@ -1743,8 +1743,9 @@ def cache_needs_updates_p(cache_file, expires=0):
 
 
 class TestDecoratedFuncs(unittest.TestCase):
-    """It seems that doctests in decarated functions are not run.  This class
-    is a workaround for this issue.
+    """It seems that doctests in decorated functions become out of scope and
+    not executed during running doctests. This class is a workaround for this
+    issue.
     """
 
     _multiprocess_can_split_ = True
