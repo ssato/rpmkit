@@ -2220,10 +2220,14 @@ class DirOperations(FileOperations):
 
 class SymlinkOperations(FileOperations):
 
+    link_instead_of_copy = False
+
     @classmethod
     def copy_main(cls, fileinfo, dest, use_pyxattr=False):
-        os.symlink(fileinfo.linkto, dest)
-        #shell("cp -a %s %s" % (fileinfo.path, dest))
+        if cls.link_instead_of_copy:
+            os.symlink(fileinfo.linkto, dest)
+        else:
+            shell("cp -a %s %s" % (fileinfo.path, dest))
 
 
 
@@ -4425,6 +4429,7 @@ def option_parser(V=__version__, pmaps=PACKAGE_MAKERS, itypes=COLLECTORS,
         "debug": cds.get("debug", False),
         "ignore_owner": cds.get("ignore_owner", False),
         "destdir": cds.get("destdir", ""),
+        "link": cds.get("link", False),
         "with_pyxattr": cds.get("with_pyxattr", False),
 
         "name": cds.get("name", ""),
@@ -4510,9 +4515,7 @@ Examples:
         "RELATIVE_OUTPUT_PATH_IN_SRCDIR:TEMPLATE_FILE such like \"package.spec:/tmp/foo.spec.tmpl\", "
         "and \"debian/rules:mydebrules.tmpl, Makefile.am:/etc/foo/mymakefileam.tmpl\". "
         "Supported template syntax is Python Cheetah: http://www.cheetahtemplate.org .")
-    bog.add_option("", "--rewrite-linkto", action="store_true",
-        help="Whether to rewrite symlink's linkto (path of the objects "
-            "that symlink point to) if --destdir is specified")
+    bog.add_option("", "--link", action="store_true", help="Make symlinks for symlinks instead of copying them")
     bog.add_option("", "--with-pyxattr", action="store_true", help="Get/set xattributes of files with pure python code.")
     p.add_option_group(bog)
 
@@ -4705,6 +4708,9 @@ def main(argv=sys.argv, compressors=COMPRESSORS, templates=TEMPLATES):
     pkg["host"] = hostname()
 
     pkg["format"] = options.format
+
+    if options.link:
+        SymlinkOperations.link_instead_of_copy = True
 
     if options.with_pyxattr:
         if not PYXATTR_ENABLED:
