@@ -1013,7 +1013,7 @@ pmaker -n ${repo.name}-release --license MIT \\
     --url ${repo.baseurl} \\
     --summary "Yum repo files for ${repo.name}" \\
     --packager "${repo.fullname}" \\
-    --mail "${repo.email}" \\
+    --email "${repo.email}" \\
     --pversion ${repo.distversion}  \\
     --no-rpmdb --no-mock \\
     --ignore-owner \\
@@ -1036,7 +1036,7 @@ pmaker -n mock-data-${repo.name} \\
     --url ${repo.baseurl} \\
     --summary "Mock cfg files of yum repo ${repo.name}" \\
     --packager "${repo.fullname}" \\
-    --mail "${repo.email}" \\
+    --email "${repo.email}" \\
     --pversion ${repo.distversion}  \\
     --no-rpmdb --no-mock \\
     --ignore-owner \\
