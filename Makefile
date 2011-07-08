@@ -66,12 +66,12 @@ build-pmaker: pmaker.py
 	python pmaker.py --build-self $(logopt) --pversion $(PMVERSION) --upto sbuild --workdir $(WORKDIR)
 
 build-rpmkit: $(WORKDIR)/files.list
-	python pmaker.py -n rpmkit --license GPLv3+ \
+	pmaker -n rpmkit --license GPLv3+ \
 		--group "System Environment/Base" --pversion $(VERSION) \
 		--url https://github.com/ssato/rpmkit/ \
 		--summary "RPM toolKit" \
 		--relations "requires:$(REQUIRES)" \
-		--packager "$(FULLNAME)" --mail $(EMAIL) \
+		--packager "$(FULLNAME)" --email $(EMAIL) \
 		--upto sbuild \
 		-w $(WORKDIR) --destdir $(WORKDIR) \
 		--ignore-owner $(logopt) \
