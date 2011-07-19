@@ -545,7 +545,7 @@ password = secretpasswd
     oog = optparse.OptionGroup(p, "Output options")
     oog.add_option('-o', '--output', help="Output file [default: stdout]")
     oog.add_option('-F', '--format', help="Output format (non-json)", default=False)
-    oog.add_option('-D', '--delimiter', help="Delimiter in outputs if --format specified [%default]", default="\\n")
+    oog.add_option('-D', '--delimiter', help="Delimiter in outputs if --format specified [\\n]", default="\n")
     oog.add_option('-I', '--indent', help="Indent for JSON output. 0 means no indent. [%default]", type="int", default=2)
     p.add_option_group(oog)
 
