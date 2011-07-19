@@ -9,7 +9,7 @@ PMVERSION ?= 0.2.$(shell date +%Y%m%d).$(REVISION)
 DEBUG	?= 0
 
 #py_SOURCES = rpm2json.py xpack.py myrepo.py rpms2sqldb.py
-py_SOURCES = rpm2json.py myrepo.py rpms2sqldb.py
+py_SOURCES = rpm2json.py myrepo.py rpms2sqldb.py swapi.py
 sh_SOURCES = list-srpmnames-by-file.sh list-requires-by-package-name.sh
 
 REQUIRES = python-cheetah,rpm-python,mock,rpm-build,sqlite,autoconf,automake,packagemaker
@@ -60,10 +60,7 @@ $(WORKDIR)/files.list: $(py_SCRIPTS) $(sh_SCRIPTS) $(etcdirs)
 	mv $@.tmp $@
 
 
-build: build-pmaker build-rpmkit
-
-build-pmaker: pmaker.py
-	python pmaker.py --build-self $(logopt) --pversion $(PMVERSION) --upto sbuild --workdir $(WORKDIR)
+build: build-rpmkit
 
 build-rpmkit: $(WORKDIR)/files.list
 	pmaker -n rpmkit --license GPLv3+ \
