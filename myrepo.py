@@ -24,7 +24,7 @@
 # Requirements: createrepo, ssh, packagemaker (see below)
 #
 # SEE ALSO: createrepo(8)
-# SEE ALSO: https://github.com/ssato/rpmkit/blob/pmaker.py
+# SEE ALSO: https://github.com/ssato/packagemaker
 #
 
 from Cheetah.Template import Template
