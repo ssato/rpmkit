@@ -354,9 +354,12 @@ class RpcApi(object):
     def multicall(self, method_name, argsets):
         """Quick hack to implement XML-RPC's multicall like function.
 
+        Please note that it returns a generator not a list.
+
         @see xmlrpclib.MultiCall
         """
-        return [self.call(method_name, arg) for arg in argsets]
+        for arg in argsets:
+            yield self.call(method_name, arg)
 
 
 
@@ -601,7 +604,7 @@ def main(argv):
         args = parse_api_args(options.args)
         res = rapi.call(api, *args)
 
-    if not isinstance(res, list):
+    if not (isinstance(res, list) or getattr(res, "next", False)):
         res = [res]
 
     if options.format:
