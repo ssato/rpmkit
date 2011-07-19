@@ -59,6 +59,12 @@ except ImportError:
     from md5 import md5
 
 
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
+
 
 """
 Examples:
@@ -367,7 +373,7 @@ def __parse(arg):
         if re.match(r'[1-9]\d*', arg):
             return int(arg)
         elif re.match(r'{.*}', arg):
-            return simplejson.loads(arg)  # retry with simplejson
+            return json.loads(arg)  # retry with json module
         else:
             return str(arg)
 
@@ -399,7 +405,7 @@ def parse_api_args(args, arg_sep=','):
         return []
 
     try:
-        x = simplejson.loads(args)
+        x = json.loads(args)
         if isinstance(x, list):
             ret = x
         else:
@@ -418,7 +424,7 @@ def results_to_json_str(results, indent=2):
     >>> results_to_json_str([123, 'abc', {'x':'yz'}])
     '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
     """
-    return simplejson.dumps(results, ensure_ascii=False, indent=indent)
+    return json.dumps(results, ensure_ascii=False, indent=indent)
 
 
 def configure_with_configfile(config_file, profile=""):
