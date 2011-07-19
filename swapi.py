@@ -598,7 +598,7 @@ def main(argv):
         list_args = parse_api_args(options.list_args)
         res = rapi.multicall(api, list_args)
     else:
-        args = (options.args and parse_api_args(options.args) or [])
+        args = parse_api_args(options.args)
         res = rapi.call(api, *args)
 
     if not isinstance(res, list):
