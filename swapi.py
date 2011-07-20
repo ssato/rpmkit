@@ -45,6 +45,7 @@ import itertools
 import logging
 import optparse
 import os
+import os.path
 import pprint
 import random
 import re
@@ -204,6 +205,21 @@ def object_to_id(obj):
     'eea457285a61f212e4bbaaf890263ab4'
     """
     return str_to_id(str(obj))
+
+
+def shorten_dict_keynames(dic, prefix=None):
+    """It seems that API key names are shortened a bit at a time. The keys
+    having prefix (e.g. 'channel_') will be deprecated but still remains in the
+    old code (i.e. RHN hosted). This function is to hide and keep backward
+    compatibility about it.
+
+    >>> shorten_dict_keynames({'channel_label':'foo-channel', 'channel_name':'Foo Channel'}, 'channel_')
+    {'label': 'foo-channel', 'name': 'Foo Channel'}
+    """
+    if prefix is None:
+        prefix = os.path.commonprefix(dic.keys())
+
+    return dict([(k.replace(prefix, ''), v) for k, v in dic.iteritems()])
 
 
 def run(cmd_str):
@@ -585,6 +601,7 @@ password = secretpasswd
     oog.add_option('', '--group', help="Group results by given key", default="")
     oog.add_option('', '--select', help="Select results by given key and value pair in format key:value", default="")
     oog.add_option('', '--deselect', help="Deselect results by given key and value pair in format key:value", default="")
+    oog.add_option('', '--no-short-keys', help="Do not shorten keys in results by common longest prefix [%default]", action="store_false", dest="short_keys", default=True)
     p.add_option_group(oog)
 
     aog = optparse.OptionGroup(p, "API argument options")
@@ -641,6 +658,9 @@ def main(argv):
 
     if not (isinstance(res, list) or getattr(res, "next", False)):
         res = [res]
+
+    if options.short_keys:
+        res = [shorten_dict_keynames(r) for r in res]
 
     if options.sort:
         res = sorted_by(res, options.sort)
