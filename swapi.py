@@ -41,6 +41,7 @@ import cPickle as pickle
 import commands
 import datetime
 import getpass
+import itertools
 import logging
 import optparse
 import os
@@ -430,12 +431,20 @@ def results_to_json_str(results, indent=2):
     return json.dumps(results, ensure_ascii=False, indent=indent)
 
 
-def sorted_by(results, keys):
-    pass
+def sorted_by(results, keyfunc):
+    assert callable(keyfunc)
+
+    return sorted(results, key=keyfunc)
 
 
-def grouped_by(results, keys):
-    pass
+def grouped_by(results, keyfunc):
+    assert callable(keyfunc)
+
+    groups = []
+    for k, grp in itertools.groupby(results, keyfunc):
+        groups.append(list(grp))
+
+    return groups
 
 
 def configure_with_configfile(config_file, profile=""):
