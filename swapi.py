@@ -430,6 +430,14 @@ def results_to_json_str(results, indent=2):
     return json.dumps(results, ensure_ascii=False, indent=indent)
 
 
+def sorted_by(results, keys):
+    pass
+
+
+def grouped_by(results, keys):
+    pass
+
+
 def configure_with_configfile(config_file, profile=""):
     """
     @config_file  Configuration file path, ex. '~/.swapi/config'.
