@@ -45,6 +45,7 @@ import itertools
 import logging
 import optparse
 import os
+import pprint
 import random
 import re
 import simplejson
@@ -188,6 +189,7 @@ CACHE_EXPIRING_DATES = 1  # [days]
 
 def str_to_id(s):
     return md5(s).hexdigest()
+
 
 def object_to_id(obj):
     """Object -> id.
@@ -431,20 +433,32 @@ def results_to_json_str(results, indent=2):
     return json.dumps(results, ensure_ascii=False, indent=indent)
 
 
-def sorted_by(results, keyfunc):
-    assert callable(keyfunc)
+def key_to_keyfunc(key):
+    def f(x):
+        return x[key]
 
-    return sorted(results, key=keyfunc)
+    return f
 
 
-def grouped_by(results, keyfunc):
-    assert callable(keyfunc)
+def sorted_by(results, key):
+    return sorted(results, key=key_to_keyfunc(key))
 
-    groups = []
-    for k, grp in itertools.groupby(results, keyfunc):
-        groups.append(list(grp))
 
-    return groups
+def group_by(results, key):
+    groups = dict()
+
+    for k, grp in itertools.groupby(results, key_to_keyfunc(key)):
+        groups[k] = groups.get(k, []) + list(grp)
+
+    return groups.values()
+
+
+def select_by(results, key, value):
+    return [r for r in results if r.get(key, None) == value]
+
+
+def deselect_by(results, key, value):
+    return [r for r in results if r.get(key, None) != value]
 
 
 def configure_with_configfile(config_file, profile=""):
@@ -567,6 +581,10 @@ password = secretpasswd
     oog.add_option('-F', '--format', help="Output format (non-json)", default=False)
     oog.add_option('-D', '--delimiter', help="Delimiter in outputs if --format specified [\\n]", default="\n")
     oog.add_option('-I', '--indent', help="Indent for JSON output. 0 means no indent. [%default]", type="int", default=2)
+    oog.add_option('', '--sort', help="Sort out results by given key", default="")
+    oog.add_option('', '--group', help="Group results by given key", default="")
+    oog.add_option('', '--select', help="Select results by given key and value pair in format key:value", default="")
+    oog.add_option('', '--deselect', help="Deselect results by given key and value pair in format key:value", default="")
     p.add_option_group(oog)
 
     aog = optparse.OptionGroup(p, "API argument options")
@@ -623,6 +641,21 @@ def main(argv):
 
     if not (isinstance(res, list) or getattr(res, "next", False)):
         res = [res]
+
+    if options.sort:
+        res = sorted_by(res, options.sort)
+
+    if options.group:
+        res = group_by(res, options.group)
+
+    if options.select:
+        (key, value) = options.select.split(":")
+        res = select_by(res, key, value)
+        pprint.pprint(res)
+
+    if options.deselect:
+        (key, value) = options.deselect.split(":")
+        res = deselect_by(res, key, value)
 
     if options.format:
         for r in res:
