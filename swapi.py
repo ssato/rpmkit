@@ -68,6 +68,17 @@ except ImportError:
     import simplejson as json
 
 
+try:
+    all
+except NameError:
+    def all(xs):
+        for x in xs:
+            if not x:
+                return False
+
+        return True
+
+
 
 """
 Examples:
@@ -207,17 +218,73 @@ def object_to_id(obj):
     return str_to_id(str(obj))
 
 
+def dict_equals(d0, d1, allow_more=False):
+    """
+    @param d0  a dict
+    @param d1  a dict
+    @param allow_more  Whether to allow d0 or d1 has more items than other.
+
+    >>> dict_equals(dict(), dict())
+    True
+    >>> dict_equals(dict(a=0, b=1), dict(a=0, b=1))
+    True
+    >>> dict_equals(dict(a=0, b=1), dict(b=1, a=0))
+    True
+    >>> dict_equals(dict(a=0, b=1), dict())
+    False
+    >>> dict_equals(dict(a=0, b=1), dict(b=1, a=0, c=2))
+    False
+    """
+    if not allow_more and len(d0.keys()) != len(d1.keys()):
+        return False
+
+    return all(k in d1.keys() and d0[k] == d1.get(k) for k in d0.keys())
+
+
+def all_eq(xs):
+    """Whether all items in xs (list or generator) equals each other.
+
+    >>> all_eq([c for c in ""])
+    False
+    >>> all_eq([c for c in "aaba"])
+    False
+    >>> all_eq([c for c in "aaaa"])
+    True
+    """
+    xs = list(xs)  # xs may be a generator...
+
+    return xs and all(x == xs[0] for x in xs[1:]) or False
+
+
+def longest_common_prefix(*args):
+    """Variant of LCS = Longest Common Sub-sequence.
+
+    >>> longest_common_prefix("abc", "ab", "abcd")
+    'ab'
+    >>> longest_common_prefix("abc", "bc")
+    ''
+    """
+    return "".join(x[0] for x in itertools.takewhile(all_eq, itertools.izip(*args)))
+
+
 def shorten_dict_keynames(dic, prefix=None):
     """It seems that API key names are shortened a bit at a time. The keys
     having prefix (e.g. 'channel_') will be deprecated but still remains in the
     old code (i.e. RHN hosted). This function is to hide and keep backward
     compatibility about it.
 
-    >>> shorten_dict_keynames({'channel_label':'foo-channel', 'channel_name':'Foo Channel'}, 'channel_')
-    {'label': 'foo-channel', 'name': 'Foo Channel'}
+    >>> d0 = dict(channel_label='foo-channel', channel_name='Foo Channel')
+    >>> d_ref = dict(label="foo-channel", name="Foo Channel")
+    >>> d1 = shorten_dict_keynames(d0, 'channel_')
+    >>> d2 = shorten_dict_keynames(d0)
+    >>> assert dict_equals(d_ref, d1)
+    >>> assert dict_equals(d_ref, d2)
     """
+    if not isinstance(dic, dict):  # dic may be a str.
+        return dic
+
     if prefix is None:
-        prefix = os.path.commonprefix(dic.keys())
+        prefix = longest_common_prefix(*dic.keys())
 
     return dict([(k.replace(prefix, ''), v) for k, v in dic.iteritems()])
 
@@ -388,8 +455,9 @@ def __parse(arg):
     1234567
     >>> __parse('abcXYZ012')
     'abcXYZ012'
+    >>> d = dict(channelLabel="foo-i386-5")
     >>> __parse('{"channelLabel": "foo-i386-5"}')
-    {'channelLabel': 'foo-i386-5'}
+    {u'channelLabel': u'foo-i386-5'}
     """
     try:
         if re.match(r'[1-9]\d*', arg):
@@ -417,11 +485,11 @@ def parse_api_args(args, arg_sep=','):
     >>> parse_api_args('abcXYZ012')
     ['abcXYZ012']
     >>> parse_api_args('{"channelLabel": "foo-i386-5"}')
-    [{'channelLabel': 'foo-i386-5'}]
+    [{u'channelLabel': u'foo-i386-5'}]
     >>> parse_api_args('1234567,abcXYZ012,{"channelLabel": "foo-i386-5"}')
-    [1234567, 'abcXYZ012', {'channelLabel': 'foo-i386-5'}]
+    [1234567, 'abcXYZ012', {u'channelLabel': u'foo-i386-5'}]
     >>> parse_api_args('[1234567,"abcXYZ012",{"channelLabel": "foo-i386-5"}]')
-    [1234567, 'abcXYZ012', {'channelLabel': 'foo-i386-5'}]
+    [1234567, u'abcXYZ012', {u'channelLabel': u'foo-i386-5'}]
     """
     if not args:
         return []
