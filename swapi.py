@@ -458,8 +458,8 @@ def __parse(arg):
     >>> __parse('abcXYZ012')
     'abcXYZ012'
     >>> d = dict(channelLabel="foo-i386-5")
-    >>> __parse('{"channelLabel": "foo-i386-5"}')
-    {u'channelLabel': u'foo-i386-5'}
+    >>> d = __parse('{"channelLabel": "foo-i386-5"}')
+    >>> assert d["channelLabel"] == "foo-i386-5"
     """
     try:
         if re.match(r'[1-9]\d*', arg):
@@ -486,12 +486,18 @@ def parse_api_args(args, arg_sep=','):
     [1234567]
     >>> parse_api_args('abcXYZ012')
     ['abcXYZ012']
-    >>> parse_api_args('{"channelLabel": "foo-i386-5"}')
-    [{u'channelLabel': u'foo-i386-5'}]
-    >>> parse_api_args('1234567,abcXYZ012,{"channelLabel": "foo-i386-5"}')
-    [1234567, 'abcXYZ012', {u'channelLabel': u'foo-i386-5'}]
-    >>> parse_api_args('[1234567,"abcXYZ012",{"channelLabel": "foo-i386-5"}]')
-    [1234567, u'abcXYZ012', {u'channelLabel': u'foo-i386-5'}]
+
+    >>> assert parse_api_args('{"channelLabel": "foo-i386-5"}')[0]["channelLabel"] == "foo-i386-5"
+
+    >>> (i, s, d) = parse_api_args('1234567,abcXYZ012,{"channelLabel": "foo-i386-5"}')
+    >>> assert i == 1234567
+    >>> assert s == "abcXYZ012"
+    >>> assert d["channelLabel"] == "foo-i386-5"
+
+    >>> (i, s, d) = parse_api_args('[1234567,"abcXYZ012",{"channelLabel": "foo-i386-5"}]')
+    >>> assert i == 1234567
+    >>> assert s == "abcXYZ012"
+    >>> assert d["channelLabel"] == "foo-i386-5"
     """
     if not args:
         return []
@@ -663,7 +669,6 @@ password = secretpasswd
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
-    oog.add_option('-o', '--output', help="Output file [default: stdout]")
     oog.add_option('-F', '--format', help="Output format (non-json)", default=False)
     oog.add_option('-D', '--delimiter', help="Delimiter in outputs if --format specified [\\n]", default="\n")
     oog.add_option('-I', '--indent', help="Indent for JSON output. 0 means no indent. [%default]", type="int", default=2)
@@ -704,13 +709,10 @@ def main(argv):
 
     if len(args) == 0:
         parser.print_usage()
-        return 0
+        return ""
 
     if options.no_cache:
         enable_cache = False
-
-    if options.output:
-        out = open(options.output, 'w')
 
     api = args[0]
 
@@ -742,8 +744,7 @@ def main(argv):
         (key, values) = options.select.split(":")
         values = values.split(",")
 
-        res = select_by(res, key, values)
-        pprint.pprint(res)
+        return results_to_json_str(select_by(res, key, values), options.index)
 
     if options.deselect:
         (key, values) = options.deselect.split(":")
@@ -752,12 +753,13 @@ def main(argv):
         res = deselect_by(res, key, values)
 
     if options.format:
-        for r in res:
-            out.write(options.format % r + options.delimiter)
+        return options.delimiter.join(options.format % r for r in res)
     else:
-        print >> out, results_to_json_str(res, options.indent)
+        return results_to_json_str(res, options.indent)
 
-    return 0
+
+def cui_main(argv):
+    print main(argv)
 
 
 
@@ -808,11 +810,11 @@ def test():
     doctest.testmod(verbose=True)
     unittests()
 
-    sys.exit(0)
+    sys.exit()
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(cui_main(sys.argv))
 
 
 # vim: set sw=4 ts=4 expandtab:
