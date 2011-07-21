@@ -672,7 +672,7 @@ password = secretpasswd
     oog.add_option('', '--group', help="Group results by given key", default="")
     oog.add_option('', '--select', help="Select results by given key and value pair in format key:value0,value1,...", default="")
     oog.add_option('', '--deselect', help="Deselect results by given key and value pair in format key:value0,value1,...", default="")
-    oog.add_option('', '--no-short-keys', help="Do not shorten keys in results by common longest prefix [%default]", action="store_false", dest="short_keys", default=True)
+    oog.add_option('', '--no-short-keys', help="Do not shorten keys in results by common longest prefix [not %default]", action="store_false", dest="short_keys", default=True)
     p.add_option_group(oog)
 
     aog = optparse.OptionGroup(p, "API argument options")
