@@ -9,7 +9,7 @@ PMVERSION ?= 0.2.$(shell date +%Y%m%d).$(REVISION)
 DEBUG	?= 0
 
 #py_SOURCES = rpm2json.py xpack.py myrepo.py rpms2sqldb.py
-py_SOURCES = rpm2json.py myrepo.py rpms2sqldb.py swapi.py
+py_SOURCES = rpm2json.py myrepo.py rpms2sqldb.py swapi.py list_errata_for_rpmlist.py
 sh_SOURCES = list-srpmnames-by-file.sh list-requires-by-package-name.sh
 
 REQUIRES = python-cheetah,rpm-python,mock,rpm-build,sqlite,autoconf,automake,packagemaker
