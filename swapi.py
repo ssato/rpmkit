@@ -49,7 +49,6 @@ import os.path
 import pprint
 import random
 import re
-import simplejson
 import sys
 import time
 import unittest
