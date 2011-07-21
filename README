@@ -1,4 +1,4 @@
-Here are some rpm related scripts distributed under GPLv3+.
+Here are some rpm related scripts distributed under GPLv3+/GPLv2+.
 
 * COPYING.GPLv3: license file
 * README: this file
@@ -6,6 +6,7 @@ Here are some rpm related scripts distributed under GPLv3+.
 * list-srpmnames-by-file.sh: list names of src.rpms by file
 * rpm2json.py: dump json expression of rpm metadata
 * rpms2sqldb.py: scan rpm files and generated metadata database (sqlite)
+* swapi.py: cui tool to call Spacewalk/RHN RPC API from command line
 
 
 NOTES
