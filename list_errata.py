@@ -220,7 +220,7 @@ def main(argv):
     p.add_option("", "--errata", action="store_true", default=False,
         help="Output errata instead of update packages [%default]")
     p.add_option('-F', '--format', help="Output format (non-json)", default=False)
-    p.add_option('', '--swapi', help="Specify swapi's path or name [%default]", default="./swapi.py")
+    p.add_option('', '--swapi', help="Specify swapi's path or name [%default]", default="swapi")
     p.add_option("-v", "--verbose", action="count", dest='verbosity', help="Verbose mode", default=0)
 
     (options, args) = p.parse_args(argv[1:])
