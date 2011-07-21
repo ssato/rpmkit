@@ -537,7 +537,7 @@ def group_by(results, key):
     for k, grp in itertools.groupby(results, key_to_keyfunc(key)):
         groups[k] = groups.get(k, []) + list(grp)
 
-    return groups.values()
+    return groups
 
 
 def select_by(results, key, values):
