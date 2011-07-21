@@ -469,12 +469,12 @@ def group_by(results, key):
     return groups.values()
 
 
-def select_by(results, key, value):
-    return [r for r in results if r.get(key, None) == value]
+def select_by(results, key, values):
+    return [r for r in results if r.get(key, None) in values]
 
 
-def deselect_by(results, key, value):
-    return [r for r in results if r.get(key, None) != value]
+def deselect_by(results, key, values):
+    return [r for r in results if r.get(key, None) != values]
 
 
 def configure_with_configfile(config_file, profile=""):
@@ -599,8 +599,8 @@ password = secretpasswd
     oog.add_option('-I', '--indent', help="Indent for JSON output. 0 means no indent. [%default]", type="int", default=2)
     oog.add_option('', '--sort', help="Sort out results by given key", default="")
     oog.add_option('', '--group', help="Group results by given key", default="")
-    oog.add_option('', '--select', help="Select results by given key and value pair in format key:value", default="")
-    oog.add_option('', '--deselect', help="Deselect results by given key and value pair in format key:value", default="")
+    oog.add_option('', '--select', help="Select results by given key and value pair in format key:value0,value1,...", default="")
+    oog.add_option('', '--deselect', help="Deselect results by given key and value pair in format key:value0,value1,...", default="")
     oog.add_option('', '--no-short-keys', help="Do not shorten keys in results by common longest prefix [%default]", action="store_false", dest="short_keys", default=True)
     p.add_option_group(oog)
 
@@ -669,13 +669,17 @@ def main(argv):
         res = group_by(res, options.group)
 
     if options.select:
-        (key, value) = options.select.split(":")
-        res = select_by(res, key, value)
+        (key, values) = options.select.split(":")
+        values = values.split(",")
+
+        res = select_by(res, key, values)
         pprint.pprint(res)
 
     if options.deselect:
-        (key, value) = options.deselect.split(":")
-        res = deselect_by(res, key, value)
+        (key, values) = options.deselect.split(":")
+        values = values.split(",")
+
+        res = deselect_by(res, key, values)
 
     if options.format:
         for r in res:
