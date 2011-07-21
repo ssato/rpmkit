@@ -25,6 +25,25 @@
 #
 # SEE ALSO: https://access.redhat.com/knowledge/docs/Red_Hat_Network/API_Documentation/
 #
+import itertools
+import os
+import subprocess
+import sys
+
+
+
+LIST_ALL_RPMS_GROUPED_BY_NAME = "swapi -A %(channel_label)s --group name channel.software.listAllPackages"
+
+
+
+def rpm_metadata_from_list_g(list_file, sep=",", keys=("name", "version", "release", "arch", "epoch")):
+    for l in open(list_file).readlines():
+        l = l.rstrip()
+
+        if not l or l.startswith("#"):
+            continue
+
+        yield dict(itertools.izip_longest(keys, l.split(sep))
 
 
 def main():
