@@ -250,8 +250,11 @@ def all_eq(xs):
     False
     >>> all_eq(c for c in "aaaa")
     True
+    >>> all_eq([c for c in "aaaa"])
+    True
     """
-    xs = list(xs)  # xs may be a generator...
+    if not isinstance(xs, list):
+        xs = list(xs)  # xs may be a generator...
 
     return xs and all(x == xs[0] for x in xs[1:]) or False
 
