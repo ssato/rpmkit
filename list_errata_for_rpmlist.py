@@ -34,8 +34,8 @@ import os
 import os.path
 import pprint
 import random
-import subprocess
 import sys
+import swapi
 import yum
 
 
@@ -54,10 +54,12 @@ def concat(xss):
     """
     @param  xss  list of lists or generators
 
-    >>> concat([(i for i in range(3)), (i*2 for i in range(3))])
+    >>> concat([[]])
+    []
+    >>> concat([range(3), (i*2 for i in range(3))])
     [0, 1, 2, 0, 2, 4]
     """
-    return list(chain(*xss))
+    return list(chain(*list(xss)))
 
 
 def normalize_arch(arch):
@@ -116,33 +118,30 @@ def pkg_cmp(p1, p2):
     return yum.compareEVR(p2evr(p1), p2evr(p2))
 
 
-def all_packages_in_channel(channel, swapi="swapi"):
-    cmd = "%s -A %s --group name channel.software.listAllPackages" % (swapi, channel)
-    
-    return subprocess.check_output(cmd, shell=True)
+def all_packages_in_channel(channel):
+    args = "-A %s --group name channel.software.listAllPackages" % channel
+
+    return swapi.main(args.split())
 
 
-def errata_for_packages(packages, swapi="swapi"):
+def list_errata_for_packages(packages):
     pids = ",".join(str(p["id"]) for p in packages)
 
-    logging.debug("Try getting errata for packages (ids): " + pids)
-    cmd = "%s --list-args %s packages.listProvidingErrata" % (swapi, pids)
+    logging.info("Try getting errata for packages (ids): " + pids)
+    args = "--list-args %s packages.listProvidingErrata" % pids
     
-    return subprocess.check_output(cmd, shell=True)
+    return swapi.main(args.split())[0]
 
 
-def list_errata_for_packages(packages, swapi="swapi"):
-    return json.loads(errata_for_packages(packages, swapi))
-
-
-def all_packages_in_channels(channels, swapi="swapi"):
+def all_packages_in_channels(channels):
     ret = dict()
 
     for channel in channels:
-        logging.debug("Try getting package list of channel %s from RHNS" % channel)
-        d = json.loads(all_packages_in_channel(channel, swapi))
+        logging.info("Try getting package list of channel %s from RHNS" % channel)
+        d = all_packages_in_channel(channel)[0]
+        #pprint.pprint(d)
 
-        logging.debug("%d types of package found in channel %s" % (int(len(d.keys())), channel))
+        logging.info("%d types of package found in channel %s" % (int(len(d.keys())), channel))
         ret.update(d)
 
     return ret
@@ -220,7 +219,6 @@ def main(argv):
     p.add_option("", "--errata", action="store_true", default=False,
         help="Output errata instead of update packages [%default]")
     p.add_option('-F', '--format', help="Output format (non-json)", default=False)
-    p.add_option('', '--swapi', help="Specify swapi's path or name [%default]", default="swapi")
     p.add_option("-v", "--verbose", action="count", dest='verbosity', help="Verbose mode", default=0)
 
     (options, args) = p.parse_args(argv[1:])
@@ -238,26 +236,28 @@ def main(argv):
 
     input = args[0] == "-" and sys.stdin or open(args[0])
 
-    ps = all_packages_in_channels(channels, options.swapi)
+    ps = all_packages_in_channels(channels)
     installed = packages_from_list_g(input)
 
     updates = concat(list(find_updates_g(ps, installed)))
 
     if options.errata:
-        errata = concat(list_errata_for_packages(updates, options.swapi))
+        es = list_errata_for_packages(updates)
+        #pprint.pprint(es)
+        errata = concat(es)
 
         if options.format:
             for e in errata:
                 print(options.format % e)
         else:
-            pprint.pprint(errata)
+            print(swapi.results_to_json_str(errata))
 
     else:
         if options.format:
             for p in updates:
                 print(options.format % p)
         else:
-            pprint.pprint(updates)
+            print(swapi.results_to_json_str(updates))
 
     return 0
 
