@@ -695,7 +695,7 @@ def main(argv):
     enable_cache = True
 
     parser = option_parser()
-    (options, args) = parser.parse_args(argv[1:])
+    (options, args) = parser.parse_args(argv)
 
     if options.verbose > 0:
         loglevel = logging.INFO
@@ -757,7 +757,7 @@ def main(argv):
 
 
 def cui_main(argv):
-    result = main(argv)
+    result = main(argv[1:])
 
     if result is None:
         return 1
