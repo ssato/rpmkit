@@ -517,6 +517,7 @@ def parse_api_args(args, arg_sep=','):
 
 def results_to_json_str(results, indent=2):
     """
+    >>> assert results_to_json_str("abc") == '"abc"'
     >>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
     '[123, "abc", {"x": "yz"}]'
     >>> results_to_json_str([123, 'abc', {'x':'yz'}])
@@ -709,7 +710,7 @@ def main(argv):
 
     if len(args) == 0:
         parser.print_usage()
-        return ""
+        return None
 
     if options.no_cache:
         enable_cache = False
@@ -744,7 +745,7 @@ def main(argv):
         (key, values) = options.select.split(":")
         values = values.split(",")
 
-        return results_to_json_str(select_by(res, key, values), options.index)
+        res = select_by(res, key, values)
 
     if options.deselect:
         (key, values) = options.deselect.split(":")
@@ -752,14 +753,23 @@ def main(argv):
 
         res = deselect_by(res, key, values)
 
-    if options.format:
-        return options.delimiter.join(options.format % r for r in res)
-    else:
-        return results_to_json_str(res, options.indent)
+    return (res, options)
 
 
 def cui_main(argv):
-    print main(argv)
+    result = main(argv)
+
+    if result is None:
+        return 1
+
+    (res, options) = result
+
+    if options.format:
+        res = options.delimiter.join(options.format % r for r in res)
+
+    print results_to_json_str(res, options.indent)
+
+    return 0
 
 
 
