@@ -29,7 +29,12 @@ pylibdir = $(WORKDIR)/$(shell python -c "import distutils.sysconfig; print distu
 bin_PROGRAMS = $(bindir)/swapi
 py_SCRIPTS = $(patsubst %.py,$(bindir)/%,$(py_SOURCES))
 sh_SCRIPTS = $(patsubst %.sh,$(bindir)/%,$(sh_SOURCES))
-py_LIBS = $(patsubst %.py,$(pylibdir)/%,$(py_LIB_SOURCES))
+py_LIBS = $(addprefix $(pylibdir)/,$(py_LIB_SOURCES))
+
+# .pyc, .pyo:
+py_LIBS += $(addprefix $(pylibdir)/,$(subst py,pyc,$(py_LIB_SOURCES)))
+py_LIBS += $(addprefix $(pylibdir)/,$(subst py,pyo,$(py_LIB_SOURCES)))
+
 
 OBJS	= $(bin_PROGRAMS) $(py_SCRIPTS) $(sh_SCRIPTS) $(etcdirs) $(py_LIBS)
 
@@ -58,9 +63,15 @@ $(bindir)/%: %.sh
 	@test -d $(bindir) || mkdir -p $(bindir)
 	install -m 755 $< $@
 
-$(pylibdir)/%: %.py
+$(pylibdir)/%.py: %.py
 	@test -d $(pylibdir) || mkdir -p $(pylibdir)
 	install -m 644 $< $@
+
+$(pylibdir)/%.pyc: $(pylibdir)/%.py
+	python -c "import compileall; import sys; compileall.compile_dir('$(pylibdir)')"
+
+$(pylibdir)/%.pyo: $(pylibdir)/%.py
+	python -O -c "import compileall; import sys; compileall.compile_dir('$(pylibdir)')"
 
 $(etcdir):
 	@test -d $(etcdir) || mkdir -p $(etcdir)
