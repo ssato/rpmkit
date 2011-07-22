@@ -1,0 +1,8 @@
+#! /usr/bin/python
+#
+import swapi
+import sys
+
+sys.exit(swapi.cui_main(sys.argv))
+
+# vim: set sw=4 ts=4 expandtab:
