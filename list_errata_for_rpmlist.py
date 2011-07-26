@@ -159,7 +159,6 @@ def all_packages_in_channels(channels):
     for channel in channels:
         logging.info("Try getting package list of channel %s from RHNS" % channel)
         d = all_packages_in_channel(channel)[0]
-        #pprint.pprint(d)
 
         logging.info("%d types of package found in channel %s" % (int(len(d.keys())), channel))
         ret.update(d)
@@ -226,8 +225,13 @@ def find_updates_g(all_by_names, installed):
         candidates = all_by_names.get(pi["name"], [])
 
         if candidates:
-            logging.debug("update candidates for %s: %s" % (pkg2str(pi), pkgs2str(candidates)))
-            ps = [p for p in candidates if is_newer(p, pi)]
+            cs = []
+            for c in candidates:
+                c["epoch"] = normalize_epoch(c["epoch"])
+                cs.append(c)
+
+            logging.debug("update candidates for %s: %s" % (pkg2str(pi), pkgs2str(cs)))
+            ps = [p for p in cs if is_newer(p, pi)]
 
             if ps:
                 logging.debug("updates for %s: %s" % (pkg2str(pi), pkgs2str(ps)))
