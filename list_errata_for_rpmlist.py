@@ -56,7 +56,7 @@ def concat(xss):
 
     >>> concat([[]])
     []
-    >>> concat([range(3), (i*2 for i in range(3))])
+    >>> concat((range(3), (i*2 for i in range(3))))
     [0, 1, 2, 0, 2, 4]
     """
     return list(chain(*list(xss)))
@@ -101,6 +101,22 @@ def normalize_epoch(epoch):
             return epoch  # int?
 
 
+def pkg2str(package):
+    """
+    Returns string representation of a package dict.
+    """
+    return "%(name)s-%(version)s-%(release)s.%(arch)s:%(epoch)s" % package
+
+
+def pkgs2str(packages):
+    """
+    Returns string representation of [a package dict] (same name).
+    """
+    name = packages[0]["name"]
+    evrs = ("(e=%(epoch)s, v=%(version)s, r=%(release)s)" % p for p in packages)
+    return "name=" + name + ": " + ", ".join(evrs)
+
+
 def pkg_cmp(p1, p2):
     """
 
@@ -110,6 +126,10 @@ def pkg_cmp(p1, p2):
 
     >>> p3 = dict(name="kernel", version="2.6.38.8", release="32", arch="x86_64", epoch=0)
     >>> p4 = dict(name="kernel", version="2.6.38.8", release="35", arch="x86_64", epoch=0)
+    >>> assert pkg_cmp(p3, p4) < 0
+
+    >>> p5 = dict(name="rsync", version="2.6.8", release="3.1", arch="x86_64", epoch=0)
+    >>> p6 = dict(name="rsync", version="3.0.6", release="4.el5", arch="x86_64", epoch=0)
     >>> assert pkg_cmp(p3, p4) < 0
     """
     p2evr = lambda p: (p["epoch"], p["version"], p["release"])
@@ -166,7 +186,7 @@ def packages_from_list_g(list_file, sep=",", comment="#",
         p["arch"] = normalize_arch(p["arch"])
         p["epoch"] = normalize_epoch(p["epoch"])
 
-        logging.debug("installed package: " + str(p))
+        logging.debug("installed package: " + pkg2str(p))
 
         yield p
 
@@ -190,7 +210,7 @@ def find_latests(packages):
 
     for ps in (list(g) for _k, g in groupby(packages, p2name)):
         pi = len(ps) > 1 and find_latest(ps) or ps[0]
-        logging.debug("installed latest package: " + str(pi))
+        logging.debug("installed latest package: " + pkg2str(pi))
 
         yield pi
 
@@ -203,11 +223,15 @@ def find_updates_g(all_by_names, installed):
     is_newer = lambda p1, p2: pkg_cmp(p1, p2) > 0  # p1 is newer than p2.
 
     for pi in find_latests(installed):
-        ps = [p for p in all_by_names.get(pi["name"], []) if is_newer(p, pi)]
+        candidates = all_by_names.get(pi["name"], [])
 
-        if ps:
-            logging.debug("updates for %s: %s" % (str(pi), str(ps)))
-            yield ps
+        if candidates:
+            logging.debug("update candidates for %s: %s" % (pkg2str(pi), pkgs2str(candidates)))
+            ps = [p for p in candidates if is_newer(p, pi)]
+
+            if ps:
+                logging.debug("updates for %s: %s" % (pkg2str(pi), pkgs2str(ps)))
+                yield ps
 
 
 def main(argv):
@@ -236,10 +260,10 @@ def main(argv):
 
     input = args[0] == "-" and sys.stdin or open(args[0])
 
-    ps = all_packages_in_channels(channels)
-    installed = packages_from_list_g(input)
+    ps_ref = all_packages_in_channels(channels)
+    ps_installed = packages_from_list_g(input)
 
-    updates = concat(list(find_updates_g(ps, installed)))
+    updates = concat(list(find_updates_g(ps_ref, ps_installed)))
 
     if options.errata:
         es = list_errata_for_packages(updates)
@@ -264,5 +288,6 @@ def main(argv):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
+
 
 # vim: set sw=4 ts=4 expandtab:
