@@ -30,6 +30,7 @@ bin_PROGRAMS = $(bindir)/swapi
 py_SCRIPTS = $(patsubst %.py,$(bindir)/%,$(py_SOURCES))
 sh_SCRIPTS = $(patsubst %.sh,$(bindir)/%,$(sh_SOURCES))
 py_LIBS = $(addprefix $(pylibdir)/,$(py_LIB_SOURCES))
+changelog = $(WORKDIR)/changelog.xz
 
 # .pyc, .pyo:
 py_LIBS += $(addprefix $(pylibdir)/,$(subst py,pyc,$(py_LIB_SOURCES)))
@@ -72,6 +73,9 @@ $(pylibdir)/%.pyc: $(pylibdir)/%.py
 
 $(pylibdir)/%.pyo: $(pylibdir)/%.py
 	python -O -c "import compileall; import sys; compileall.compile_dir('$(pylibdir)')"
+
+$(WORKDIR)/changelog.xz:
+	git log > $@.src && xz -v9 $@.src > $@.tmp && mv $@.tmp $@
 
 $(etcdir):
 	@test -d $(etcdir) || mkdir -p $(etcdir)
