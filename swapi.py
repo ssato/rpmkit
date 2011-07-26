@@ -422,7 +422,7 @@ class RpcApi(object):
 
             # wait a little to avoid DoS attack to the server if called
             # multiple times.
-            time.sleep(random.random())
+            time.sleep(random.random() * 5)
 
             # Special cases which do not need session_id parameter:
             # api.{getVersion, systemVersion} and auth.login.
