@@ -108,13 +108,14 @@ def pkg2str(package):
     return "%(name)s-%(version)s-%(release)s.%(arch)s:%(epoch)s" % package
 
 
-def pkgs2str(packages):
+def pkgs2str(packages, with_name=False):
     """
     Returns string representation of [a package dict] (same name).
     """
-    name = packages[0]["name"]
+    name = with_name and "name=%(name)s, " % packages[0]["name"] or ""
     evrs = ("(e=%(epoch)s, v=%(version)s, r=%(release)s)" % p for p in packages)
-    return "name=" + name + ": " + ", ".join(evrs)
+
+    return  name + ", ".join(evrs)
 
 
 def pkg_cmp(p1, p2):
