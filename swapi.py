@@ -365,7 +365,7 @@ class Cache(object):
 
         delta = cur_time - cache_mtime  # TODO: How to do if it's negative value?
 
-        return (delta >= datetime.timedelta(self.expire_dates))
+        return delta >= datetime.timedelta(self.expire_dates)
 
 
 
@@ -386,7 +386,7 @@ class RpcApi(object):
 
         self.sid = False
 
-        self.cache = (enable_cache and Cache("%s:%s" % (self.url, self.userid), expire) or False)
+        self.cache = enable_cache and Cache("%s:%s" % (self.url, self.userid), expire) or False
 
     def __del__(self):
         self.logout()
@@ -510,7 +510,7 @@ def parse_api_args(args, arg_sep=','):
             ret = [x]
 
     except ValueError:
-        ret = [__parse(a) for a in args.split(arg_sep)]
+        ret = [__parse(a) for a in parse_list_str(args, arg_sep)]
 
     return ret
 
@@ -524,6 +524,17 @@ def results_to_json_str(results, indent=2):
     '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
     """
     return json.dumps(results, ensure_ascii=False, indent=indent)
+
+
+def parse_list_str(list_s, sep=","):
+    """
+    simple parser for a list of items separated with "," (comma) and so on.
+
+    >>> assert parse_list_str("") == []
+    >>> assert parse_list_str("a,b") == ["a", "b"]
+    >>> assert parse_list_str("a,b,") == ["a", "b"]
+    """
+    return [p for p in list_s.split(sep) if p]
 
 
 def key_to_keyfunc(key):
@@ -742,14 +753,26 @@ def main(argv):
         res = group_by(res, options.group)
 
     if options.select:
-        (key, values) = options.select.split(":")
-        values = values.split(",")
+        kvs  = parse_list_str(options.select, ":")
+
+        if len(kvs) < 2:
+            sys.stderr.write("Invalid value given for --select: %s\n" % options.select)
+            sys.exit(1)
+
+        (key, values) = kvs
+        values = parse_list_str(values, ",")
 
         res = select_by(res, key, values)
 
     if options.deselect:
-        (key, values) = options.deselect.split(":")
-        values = values.split(",")
+        kvs  = parse_list_str(options.deselect, ":")
+
+        if len(kvs) < 2:
+            sys.stderr.write("Invalid value given for --deselect: %s\n" % options.deselect)
+            sys.exit(1)
+
+        (key, values) = kvs
+        values = parse_list_str(values, ",")
 
         res = deselect_by(res, key, values)
 
