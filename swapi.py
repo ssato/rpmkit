@@ -373,7 +373,7 @@ class RpcApi(object):
     """Spacewalk / RHN XML-RPC API server object.
     """
 
-    def __init__(self, conn_params, enable_cache=True, expire=1):
+    def __init__(self, conn_params, enable_cache=True, expire=1, debug=False):
         """
         @conn_params  Connection parameters: server, userid, password, timeout, protocol.
         @enable_cache Whether to enable query result cache or not.
@@ -385,14 +385,14 @@ class RpcApi(object):
         self.timeout = conn_params.get('timeout')
 
         self.sid = False
-
+        self.debug = debug
         self.cache = enable_cache and Cache("%s:%s" % (self.url, self.userid), expire) or False
 
     def __del__(self):
         self.logout()
 
     def login(self):
-        self.server = xmlrpclib.ServerProxy(self.url)
+        self.server = xmlrpclib.ServerProxy(self.url, verbose=self.debug)
         self.sid = self.server.auth.login(self.userid, self.passwd, self.timeout)
 
     def logout(self):
@@ -730,7 +730,7 @@ def main(argv):
 
     conn_params = configure(options)
 
-    rapi = RpcApi(conn_params, enable_cache, options.expire)
+    rapi = RpcApi(conn_params, enable_cache, options.expire, options.verbose > 1)
     rapi.login()
 
     if options.list_args:
