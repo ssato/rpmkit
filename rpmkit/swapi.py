@@ -700,7 +700,7 @@ password = secretpasswd
     return p
 
 
-def main(argv):
+def mainloop(argv):
     loglevel = logging.WARN
     out = sys.stdout
     enable_cache = True
@@ -779,8 +779,8 @@ def main(argv):
     return (res, options)
 
 
-def cui_main(argv):
-    result = main(argv[1:])
+def main(argv):
+    result = mainloop(argv[1:])
 
     if result is None:
         return 1
@@ -847,7 +847,7 @@ def test():
 
 
 if __name__ == '__main__':
-    sys.exit(cui_main(sys.argv))
+    sys.exit(main(sys.argv))
 
 
 # vim: set sw=4 ts=4 expandtab:
