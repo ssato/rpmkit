@@ -1,0 +1,55 @@
+%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
+
+#
+%define  internal_pmaker  0
+
+
+Name:           @PACKAGE@
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        Misc rpm and yum related utilities
+Group:          Development/Tools
+License:        GPLv3+
+URL:            https://github.com/ssato/rpmkit
+Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version}.tar.gz
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildRequires:  python
+Requires:       python-cheetah, rpm-python, mock, rpm-build, sqlite, autoconf, automake, packagemaker
+
+
+%description
+RpmKit (Rpm toolKit) contains miscellaneous rpm and yum related utitlities.
+
+
+%prep
+%setup -q
+
+
+%build
+%if %internal_pmaker
+%configure --with-internal-pmaker
+%else
+%configure
+%endif
+make %{?_smp_mflags}
+
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT
+
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+
+%files
+%defattr(-,root,root,-)
+%doc README
+%{_bindir}/*
+%{python_sitelib}/*
+
+
+%changelog
+* Mon Aug  1 2011 Satoru SATOH <ssato@redhat.com> - 0.1.20110801.1-1
+- Initial (static) packaging

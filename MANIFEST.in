@@ -1,0 +1,7 @@
+include MANIFEST.in
+include README
+include rpmkit.spec.in
+include setup.py
+include tests/*
+recursive-include rpmkit *.py
+include src/*
