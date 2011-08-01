@@ -12,6 +12,28 @@ Here are some rpm related scripts distributed under GPLv3+/GPLv2+.
 * swapi.py: cui tool to call Spacewalk/RHN RPC API from command line
 
 
+
+Build
+=======================
+
+Build w/ mock
+------------------------
+
+It takes some time to make a rpm but should be better, I think.
+
+1. python setup.py srpm
+2. mock -r <target_build_dist> dist/SRPMS/packagemaker-*.src.rpm
+
+
+Build w/o mock
+------------------------
+
+It's easier than the above but only possible to make a rpm for build host.
+
+1. python setup.py rpm
+
+
+
 NOTES
 ========================
 
