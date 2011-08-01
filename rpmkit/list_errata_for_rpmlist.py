@@ -159,6 +159,17 @@ def list_errata_for_packages(packages, details=False):
         return ret
 
 
+def list_errata_for_packages_2(packages, details=False):
+    afmt = "-A %s packages.listProvidingErrata"
+
+    for pkg in packages:
+        logging.info("Try getting errata for package: name=%s, id=%s" % (pkg["name"], pkg["id"]))
+        errata = swapi.shorten_dict_keynames(swapi.mainloop((afmt % pkg["id"]).split()))
+        errata["package"] = pkg
+
+        yield errata
+
+
 def all_packages_in_channels(channels):
     ret = dict()
 
@@ -276,8 +287,9 @@ def main(argv):
     updates = concat(list(find_updates_g(ps_ref, ps_installed)))
 
     if options.errata:
-        es = list_errata_for_packages(updates)
-        #pprint.pprint(es)
+        #es = list_errata_for_packages(updates)
+        es = list_errata_for_packages_2(updates)
+
         errata = concat(es)
 
         if options.format:
