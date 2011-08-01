@@ -1,10 +1,10 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
-#
-%define  internal_pmaker  0
+# disable debuginfo
+%define debug_package %{nil}
 
 
-Name:           @PACKAGE@
+Name:           rpmkit
 Version:        @VERSION@
 Release:        1%{?dist}
 Summary:        Misc rpm and yum related utilities
@@ -13,6 +13,7 @@ License:        GPLv3+
 URL:            https://github.com/ssato/rpmkit
 Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildArch:      noarch
 BuildRequires:  python
 Requires:       python-cheetah, rpm-python, mock, rpm-build, sqlite, autoconf, automake, packagemaker
 
@@ -26,17 +27,12 @@ RpmKit (Rpm toolKit) contains miscellaneous rpm and yum related utitlities.
 
 
 %build
-%if %internal_pmaker
-%configure --with-internal-pmaker
-%else
-%configure
-%endif
-make %{?_smp_mflags}
+%{__python} setup.py build
 
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make install DESTDIR=$RPM_BUILD_ROOT
+%{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
 
 
 %clean
