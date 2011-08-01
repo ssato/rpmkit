@@ -26,13 +26,16 @@ import logging
 import optparse
 import os
 import os.path
+import shlex
 import sys
 import tempfile
 import unittest
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../")))
+pkgdir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../"))
+print "# path=" + pkgdir
+sys.path.append(pkgdir)
 
-from myrepo import *
+from rpmkit.myrepo import *
 
 
 TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
@@ -373,7 +376,6 @@ class TestProgramLocal(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        self.prog = "python %s" % sys.argv[0]
         self.workdir = tempfile.mkdtemp(prefix="myrepo-test-tpl-")
 
     def tearDown(self):
@@ -387,16 +389,14 @@ class TestProgramLocal(unittest.TestCase):
         config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
         config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
 
-        config["prog"] = self.prog
-
-        cmd = "%(prog)s --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
         cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
         cmd += " init "
         cmd = cmd % config
 
         logging.info("cmd: " + cmd)
-        self.assertEquals(os.system(cmd), 0)
+        self.assertEquals(main(shlex.split(cmd)), 0)
 
     def test_init_with_all_options_set_explicitly_multi_dists(self):
         config = copy.copy(init_defaults())
@@ -407,7 +407,6 @@ class TestProgramLocal(unittest.TestCase):
         config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
 
         config["dists"] = "rhel-6-i386"
-        config["prog"] = self.prog
 
         try:
             key_list = subprocess.check_output("gpg --list-keys %s 2>/dev/null" % get_username(), shell=True)
@@ -419,7 +418,7 @@ class TestProgramLocal(unittest.TestCase):
             logging.warn("Cannot get the default gpg key list. Test w/o --signkey: err=%s" % str(e))
             keyopt = ""
 
-        cmd = "%(prog)s --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
         cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
         cmd += keyopt
@@ -427,7 +426,7 @@ class TestProgramLocal(unittest.TestCase):
         cmd = cmd % config
 
         logging.info("cmd: " + cmd)
-        self.assertEquals(os.system(cmd), 0)
+        self.assertEquals(main(shlex.split(cmd)), 0)
 
     def test_init_with_config(self):
         config = copy.copy(init_defaults())
@@ -435,7 +434,6 @@ class TestProgramLocal(unittest.TestCase):
         (dist_name, dist_version) = get_distribution()
         archs = list_archs()
 
-        config["prog"] = self.prog
         config["dists"] = "%s-%s-%s" % (dist_name, dist_version, archs[0])
 
         config["tmp_workdir"] = os.path.join(self.workdir, "repos")
@@ -455,11 +453,11 @@ email: jdoe@example.com
         conf = os.path.join(self.workdir, "myrepo.conf")
         open(conf, "w").write(config_content % self.workdir)
 
-        cmd = "%(prog)s -C " + conf + " init"
+        cmd = "argv0 -C " + conf + " init"
         cmd = cmd % config
 
         logging.info("cmd: " + cmd)
-        self.assertEquals(os.system(cmd), 0)
+        self.assertEquals(main(shlex.split(cmd)), 0)
 
     def test_build(self):
         pass
@@ -477,7 +475,6 @@ class TestProgramRemote(unittest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        self.prog = "python %s" % sys.argv[0]
         self.workdir = tempfile.mkdtemp(prefix="myrepo-test-tpr-")
 
     def tearDown(self):
@@ -503,16 +500,14 @@ class TestProgramRemote(unittest.TestCase):
         config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
         #config["baseurl"] = "http://%(server)s/%(topdir)s/%(subdir)s/%(distdir)s"
 
-        config["prog"] = self.prog
-
-        cmd = "%(prog)s --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
         cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
         cmd += " init "
         cmd = cmd % config
 
         logging.info("cmd: " + cmd)
-        self.assertEquals(os.system(cmd), 0)
+        self.assertEquals(main(shlex.split(cmd)), 0)
 
 
 
@@ -552,7 +547,7 @@ def test(verbose, test_choice=TEST_BASIC):
 
 
 
-def main(test_choices=TEST_CHOICES):
+def test_main(test_choices=TEST_CHOICES):
     p = optparse.OptionParser()
 
     p.add_option("-v", "--verbose", action="store_true", default=False, help="Verbose mode")
@@ -566,6 +561,6 @@ def main(test_choices=TEST_CHOICES):
 
 
 if __name__ == '__main__':
-    main()
+    test_main()
 
 # vim: set sw=4 ts=4 expandtab:
