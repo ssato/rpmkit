@@ -27,6 +27,7 @@
 #
 from __future__ import print_function
 from itertools import chain, izip, izip_longest, groupby
+from rpmkit import swapi
 
 import logging
 import optparse
@@ -35,7 +36,6 @@ import os.path
 import pprint
 import random
 import sys
-import swapi
 import yum
 
 
