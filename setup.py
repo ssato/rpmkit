@@ -110,8 +110,14 @@ setup(name=PACKAGE,
         "rpmkit",
     ],
     scripts=[
-        "list-requires-by-package-name.sh",
-        "list-srpmnames-by-file.sh",
+        "src/list-requires-by-package-name.sh",
+        "src/list-srpmnames-by-file.sh",
+        "src/list_errata_for_rpmlist",
+        "src/myrepo",
+        ## Comment it out if you don't use external 'packagemaker':
+        # "src/pmaker",
+        "src/rpm2json",
+        "src/rpms2sqldb",
         "src/swapi",
     ],
     cmdclass={
