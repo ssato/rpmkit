@@ -164,10 +164,15 @@ def list_errata_for_packages_2(packages, details=False):
 
     for pkg in packages:
         logging.info("Try getting errata for package: name=%s, id=%s" % (pkg["name"], pkg["id"]))
-        errata = swapi.shorten_dict_keynames(swapi.mainloop((afmt % pkg["id"]).split()))
-        errata["package"] = pkg
+        errata = swapi.mainloop((afmt % pkg["id"]).split())[0]
 
-        yield errata
+        es = []
+        for e in errata:
+            e = swapi.shorten_dict_keynames(e, "errata_")
+            e["package"] = pkg
+            es.append(e)
+
+        yield es
 
 
 def all_packages_in_channels(channels):
