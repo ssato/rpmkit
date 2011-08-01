@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
-import rpmkit.swapi
+import rpmkit.rpms2sqldb
 import sys
 
-sys.exit(rpmkit.swapi.main(sys.argv))
+sys.exit(rpmkit.rpms2sqldb.main())
 
 # vim: set sw=4 ts=4 expandtab:

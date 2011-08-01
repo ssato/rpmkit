@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
-import rpmkit.swapi
+import rpmkit.myrepo
 import sys
 
-sys.exit(rpmkit.swapi.main(sys.argv))
+sys.exit(rpmkit.myrepo.main(sys.argv))
 
 # vim: set sw=4 ts=4 expandtab:
