@@ -145,13 +145,18 @@ def all_packages_in_channel(channel):
     return swapi.mainloop(args.split())
 
 
-def list_errata_for_packages(packages):
+def list_errata_for_packages(packages, details=False):
     pids = ",".join(str(p["id"]) for p in packages)
 
     logging.info("Try getting errata for packages (ids): " + pids)
     args = "--list-args %s packages.listProvidingErrata" % pids
     
-    return swapi.mainloop(args.split())[0]
+    ret = [swapi.shorten_dict_keynames(e, "errata_") for e in swapi.mainloop(args.split())[0]]
+
+    if details:  # TBD
+        return ret
+    else:
+        return ret
 
 
 def all_packages_in_channels(channels):
