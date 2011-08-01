@@ -142,7 +142,7 @@ def pkg_cmp(p1, p2):
 def all_packages_in_channel(channel):
     args = "-A %s --group name channel.software.listAllPackages" % channel
 
-    return swapi.main(args.split())
+    return swapi.mainloop(args.split())
 
 
 def list_errata_for_packages(packages):
@@ -151,7 +151,7 @@ def list_errata_for_packages(packages):
     logging.info("Try getting errata for packages (ids): " + pids)
     args = "--list-args %s packages.listProvidingErrata" % pids
     
-    return swapi.main(args.split())[0]
+    return swapi.mainloop(args.split())[0]
 
 
 def all_packages_in_channels(channels):
