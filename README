@@ -1,3 +1,6 @@
+About
+=======================
+
 Here are some rpm related scripts distributed under GPLv3+/GPLv2+.
 
 * COPYING.GPLv3: license file
@@ -15,10 +18,10 @@ NOTES
 * filelist2rpm.py and xpack.py were removed as these are replaced with its
   successor, pmaker.py
 
-* pmaker.py: I decided to make and maintain in a decicated git repo for
-  packagemaker (pmaker). This script (legacy version now) will be kept for a
-  while but will not be updated any more.  Please look at the new repository of
-  packagemaker (pmaker) at:
+* pmaker.py: I decided to maintain in a decicated git repo for packagemaker
+  (pmaker). This script (legacy version now) will be kept for a while but will
+  not be updated any more.  Please look at the new repository of packagemaker
+  (pmaker) at:
 
   https://github.com/ssato/packagemaker/
 
