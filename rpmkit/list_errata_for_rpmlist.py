@@ -25,8 +25,9 @@
 #
 # SEE ALSO: https://access.redhat.com/knowledge/docs/Red_Hat_Network/API_Documentation/
 #
-from __future__ import print_function
+#from __future__ import print_function
 from itertools import chain, izip, izip_longest, groupby
+from rpmkit import swapi
 
 import logging
 import optparse
@@ -35,7 +36,6 @@ import os.path
 import pprint
 import random
 import sys
-import swapi
 import yum
 
 
@@ -145,13 +145,29 @@ def all_packages_in_channel(channel):
     return swapi.mainloop(args.split())
 
 
-def list_errata_for_packages(packages):
+def list_errata_for_packages(packages, details=False):
     pids = ",".join(str(p["id"]) for p in packages)
 
     logging.info("Try getting errata for packages (ids): " + pids)
     args = "--list-args %s packages.listProvidingErrata" % pids
     
-    return swapi.mainloop(args.split())[0]
+    ret = [swapi.shorten_dict_keynames(e, "errata_") for e in swapi.mainloop(args.split())[0]]
+
+    if details:  # TBD
+        return ret
+    else:
+        return ret
+
+
+def list_errata_for_packages_2(packages, details=False):
+    afmt = "-A %s packages.listProvidingErrata"
+
+    for pkg in packages:
+        logging.info("Try getting errata for package: name=%s, id=%s" % (pkg["name"], pkg["id"]))
+        errata = swapi.shorten_dict_keynames(swapi.mainloop((afmt % pkg["id"]).split()))
+        errata["package"] = pkg
+
+        yield errata
 
 
 def all_packages_in_channels(channels):
@@ -247,6 +263,7 @@ def main(argv):
     p.add_option("", "--channels", default=None, help=chan_help + " [MUST]")
     p.add_option("", "--errata", action="store_true", default=False,
         help="Output errata instead of update packages [%default]")
+    p.add_option('-o', '--output', help="Output file path")
     p.add_option('-F', '--format', help="Output format (non-json)", default=False)
     p.add_option("-v", "--verbose", action="count", dest='verbosity', help="Verbose mode", default=0)
 
@@ -270,23 +287,29 @@ def main(argv):
 
     updates = concat(list(find_updates_g(ps_ref, ps_installed)))
 
+    output = options.output and open(options.output, "w") or sys.stdout
+
     if options.errata:
-        es = list_errata_for_packages(updates)
-        #pprint.pprint(es)
+        #es = list_errata_for_packages(updates)
+        es = list_errata_for_packages_2(updates)
+
         errata = concat(es)
 
         if options.format:
             for e in errata:
-                print(options.format % e)
+                output.write(options.format % e + "\n")
         else:
-            print(swapi.results_to_json_str(errata))
+            output.write(swapi.results_to_json_str(errata))
 
     else:
         if options.format:
             for p in updates:
-                print(options.format % p)
+                output.write(options.format % p, "\n")
         else:
-            print(swapi.results_to_json_str(updates))
+            output.write(swapi.results_to_json_str(updates))
+
+    if output != sys.stdout:
+        output.close()
 
     return 0
 
