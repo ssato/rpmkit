@@ -3,7 +3,6 @@ About
 
 Here are some rpm related scripts distributed under GPLv3+/GPLv2+.
 
-* COPYING.GPLv3: license file
 * README: this file
 * list-requires-by-package-name.sh: list required rpms by package name
 * list-srpmnames-by-file.sh: list names of src.rpms by file
