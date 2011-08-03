@@ -1007,7 +1007,7 @@ echo "${repo.release_file},rpmattr=%config" | \\
 #end if
 pmaker -n ${repo.name}-release --license MIT \\
     -w ${repo.workdir} \\
-    --itype filelist.ext \\
+    --itype filelist \\
     --upto sbuild \\
     --group "System Environment/Base" \\
     --url ${repo.baseurl} \\
@@ -1030,7 +1030,7 @@ $repo.release_file_list
 pmaker -n mock-data-${repo.name} \\
     --license MIT \\
     -w ${repo.workdir} \\
-    --itype filelist.ext \\
+    --itype filelist \\
     --upto sbuild \\
     --group "Development/Tools" \\
     --url ${repo.baseurl} \\
