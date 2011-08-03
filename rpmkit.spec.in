@@ -48,5 +48,11 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Aug  4 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110804.1-1
+- myrepo: followed updates in packagemaker
+- myrepo: added unit / system test driver
+- all python code: moved into python_sitelib/rpmkit/ and arranged wrappers for each
+- bump up to 0.2.0
+
 * Mon Aug  1 2011 Satoru SATOH <ssato@redhat.com> - 0.1.20110801.1-1
 - Initial (static) packaging
