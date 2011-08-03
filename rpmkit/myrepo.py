@@ -33,7 +33,6 @@ from itertools import groupby, product
 
 import ConfigParser as cp
 import copy
-import doctest
 import glob
 import logging
 import optparse
@@ -49,7 +48,6 @@ import sys
 import tempfile
 import threading
 import time
-import unittest
 
 
 try:
@@ -295,46 +293,6 @@ class ThrdCommand(object):
 
 
 
-class TestThrdCommand(unittest.TestCase):
-
-    def run_ok(self, cmd, rc_expected=0, out_expected="", err_expected=""):
-        """Helper method.
-
-        @cmd  ThrdCommand object
-        """
-        rc = cmd.run()
-
-        self.assertEquals(rc, rc_expected)
-
-    def test_run_minimal_args(self):
-        cmd = "true"
-        c = ThrdCommand(cmd)
-
-        self.run_ok(c)
-
-    def test_run_max_args(self):
-        cmd = "true"
-        c = ThrdCommand(cmd, get_username(), "localhost", os.curdir, True, None)
-
-        self.run_ok(c)
-
-    def test_run_max_kwargs(self):
-        cmd = "true"
-        c = ThrdCommand(cmd, user=get_username(), host="localhost",
-            workdir=os.curdir, stop_on_failure=True, timeout=None)
-
-        self.run_ok(c)
-
-    def test_run_timeout(self):
-        cmd = "sleep 10"
-        c = ThrdCommand(cmd, stop_on_failure=False, timeout=1)
-
-        rc = c.run()
-
-        self.assertFalse(rc == 0)
-
-
-
 def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
         stop_on_failure=True, timeout=None):
     cmd = ThrdCommand(cmd_str, user, host, workdir, stop_on_failure, timeout)
@@ -560,98 +518,6 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
 
 
 
-class TestMemoizedFuncs(unittest.TestCase):
-    """Doctests in memoized functions and methods are not run as these are
-    rewritten by memoize decorator. So tests of these must be re-defined as
-    this.
-    """
-
-    _multiprocess_can_split_ = True
-
-    def test_memoize(self):
-        fun_0 = lambda a: a * 2
-        memoized_fun_0 = memoize(fun_0)
-
-        self.assertEquals(fun_0(2), memoized_fun_0(2))
-        self.assertEquals(memoized_fun_0(3), memoized_fun_0(3))
-
-    def test_list_archs(self):
-        """list_archs() depends on platform.machine() which returns read-only
-        system dependent value so full covered test is almost impossible.
-
-        Tests here covers some limited cases.
-        """
-        self.assertListEqual(list_archs("i586"), ["i386"])
-        self.assertListEqual(list_archs("i686"), ["i386"])
-        self.assertListEqual(list_archs("x86_64"), ["x86_64", "i386"])
-
-    def test_list_dists(self):
-        """TODO: write tests
-        """
-        pass
-
-    def test_is_git_available(self):
-        """TODO: write tests
-        """
-        pass
-
-    def test_hostname(self):
-        self.assertEquals(hostname(), subprocess.check_output("hostname").rstrip())
-
-    def test_username(self):
-        self.assertEquals(get_username(), subprocess.check_output("id -un", shell=True).rstrip())
-
-    def test_get_email(self):
-        """TODO: write tests
-        """
-        pass
-
-    def test_get_fullname(self):
-        """TODO: write tests
-        """
-        pass
-
-    def test_get_distribution(self):
-        """TODO: write tests
-        """
-        pass
-
-
-
-class TestMiscFuncs(unittest.TestCase):
-
-    _multiprocess_can_split_ = True
-
-    is_ssh_host_available = False
-
-    def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="myrepo-tests")
-
-    def tearDown(self):
-        rm_rf(self.workdir)
-
-    def test_rm_rf_twice(self):
-        d = self.workdir
-
-        rm_rf(d)
-        rm_rf(d)
-
-    def test_rm_rf_dirs(self):
-        d = self.workdir
-
-        for c in "abc":
-            os.makedirs(os.path.join(d, c))
-
-        os.makedirs(os.path.join(d, "c", "d"))
-
-        open(os.path.join(d, 'x'), "w").write("test")
-        open(os.path.join(d, 'a', 'y'), "w").write("test")
-        open(os.path.join(d, 'c', 'd', 'z'), "w").write("test")
-
-        rm_rf(d)
-
-
-
 class Distribution(object):
 
     def __init__(self, dist, arch="x86_64", bdist_label=None):
@@ -692,76 +558,6 @@ class Distribution(object):
             fmt = "mock -r %s %s"
 
         return fmt % (self.bdist_label, srpm)
-
-
-
-class TestDistribution(unittest.TestCase):
-
-    _multiprocess_can_split_ = True
-
-    def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="myrepo-tests")
-
-    def tearDown(self):
-        rm_rf(self.workdir)
-
-
-    def test__init__(self):
-        d = Distribution("fedora-14", "x86_64")
-
-        self.assertEquals(d.name, "fedora")
-        self.assertEquals(d.version, "14")
-        self.assertEquals(d.arch, "x86_64")
-        self.assertEquals(d.label, "fedora-14-x86_64")
-        self.assertEquals(d.bdist_label, d.label)
-
-    def test__init__2(self):
-        d = Distribution("fedora-xyz-variant-14", "i386")
-
-        self.assertEquals(d.name, "fedora-xyz-variant")
-        self.assertEquals(d.version, "14")
-        self.assertEquals(d.arch, "i386")
-        self.assertEquals(d.label, "fedora-xyz-variant-14-i386")
-        self.assertEquals(d.bdist_label, d.label)
-
-    def test__init__3(self):
-        d = Distribution("fedora-14", "x86_64", "fedora-xyz-variant-14-x86_64")
-
-        self.assertEquals(d.name, "fedora")
-        self.assertEquals(d.version, "14")
-        self.assertEquals(d.arch, "x86_64")
-        self.assertEquals(d.label, "fedora-14-x86_64")
-        self.assertEquals(d.bdist_label, "fedora-xyz-variant-14-x86_64")
-
-    def test_mockdir(self):
-        d = Distribution("fedora-14", "x86_64")
-
-        self.assertEquals(d.mockdir(), "/var/lib/mock/fedora-14-x86_64/result")
-
-    def test_mockcfg(self):
-        d = Distribution("fedora-14", "x86_64")
-
-        self.assertEquals(d.mockcfg(), "/etc/mock/fedora-14-x86_64.cfg")
-
-    def test_build_cmd(self):
-        d = Distribution("fedora-14", "x86_64")
-
-        logging.getLogger().setLevel(logging.WARNING)
-        c = d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
-        cref = "mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm > /dev/null 2> /dev/null"
-        self.assertEquals(c, cref)
-
-        logging.getLogger().setLevel(logging.INFO)
-        c = d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
-        cref = "mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm"
-        self.assertEquals(c, cref)
-
-    def test_arch_pattern(self):
-        d = Distribution("fedora-14", "x86_64")
-        self.assertEquals(d.arch_pattern, "x86_64")
-
-        d = Distribution("fedora-14", "i386")
-        self.assertEquals(d.arch_pattern, "i*86")
 
 
 
@@ -1177,94 +973,6 @@ pmaker -n mock-data-${repo.name} \\
 
 
 
-class TestRepo(unittest.TestCase):
-
-    _multiprocess_can_split_ = True
-
-    def setUp(self):
-        self.workdir = tempfile.mkdtemp(prefix="myrepo-repo-tests")
-        self.config = init_defaults()
-
-        # overrides some parameters:
-        self.config["topdir"] = os.path.join(self.workdir, "repos", "%(subdir)s")
-        self.config["baseurl"] = "file://%(topdir)s/%(distdir)s"
-        self.config["dist"] = "%s-%s" % get_distribution()
-        self.config["archs"] = list_archs()[:1]
-
-    def tearDown(self):
-        rm_rf(self.workdir)
-
-    def test_copy_cmd(self):
-        repo = Repo("localhost",
-                    self.config["user"],
-                    self.config["email"],
-                    self.config["fullname"],
-                    self.config["dist"],
-                    self.config["archs"],
-                    topdir=self.config["topdir"],
-                    baseurl=self.config["baseurl"]
-        )
-
-        (src, dst) = ("foo.txt", "bar.txt")
-
-        c0 = repo.copy_cmd(src, dst)
-        c1 = "cp -a %s %s" % (src, dst)
-        self.assertEquals(c0, c1)
-
-        (src, dst) = ("foo.txt", "~/bar.txt")
-
-        c2 = repo.copy_cmd(src, dst)
-        c3 = "cp -a %s %s" % (src, ("~" in dst and os.path.expanduser(dst) or dst))
-        self.assertEquals(c2, c3)
-
-        server = "repo-server.example.com"
-        repo = Repo(server,
-                    self.config["user"],
-                    self.config["email"],
-                    self.config["fullname"],
-                    self.config["dist"],
-                    self.config["archs"],
-                    topdir=self.config["topdir"],
-                    baseurl=self.config["baseurl"]
-        )
-
-        c4 = repo.copy_cmd(src, dst)
-        c5 = "scp -p %s %s@%s:%s" % (src, self.config["user"], server, dst)
-        self.assertEquals(c4, c5)
-
-    def test_release_file_content(self):
-        repo = Repo("localhost",
-                    self.config["user"],
-                    self.config["email"],
-                    self.config["fullname"],
-                    self.config["dist"],
-                    self.config["archs"],
-                    topdir=self.config["topdir"],
-                    baseurl=self.config["baseurl"]
-        )
-
-        repo.release_file_content()
-        #compile_template(self.release_file_tmpl, params)
-
-    def test_mock_file_content(self):
-        repo = Repo("localhost",
-                    self.config["user"],
-                    self.config["email"],
-                    self.config["fullname"],
-                    self.config["dist"],
-                    self.config["archs"],
-                    topdir=self.config["topdir"],
-                    baseurl=self.config["baseurl"]
-        )
-
-        rfc = repo.release_file_content()
-
-        for dist in repo.dists:
-            repo.mock_file_content(dist, rfc)
-            repo.mock_file_content(dist)
-
-
-
 def parse_conf_value(s):
     """Simple and naive parser to parse value expressions in config files.
 
@@ -1328,7 +1036,7 @@ def init_defaults_by_conffile(config=None, profile=None):
     return dict((k, parse_conf_value(v)) for k, v in d)
 
 
-def init_defaults(test_choices=TEST_CHOICES):
+def init_defaults():
     dists_full = list_dists()
     archs = list_archs()
 
@@ -1349,7 +1057,6 @@ def init_defaults(test_choices=TEST_CHOICES):
         "topdir": Repo.topdir,
         "baseurl": Repo.baseurl,
         "signkey": Repo.signkey,
-        "tlevel": test_choices[0],
     }
 
     return defaults
@@ -1409,220 +1116,7 @@ def parse_dists_option(dists_str, sep=","):
 
 
 
-class TestFuncsWithSideEffects(unittest.TestCase):
-
-    _multiprocess_can_split_ = True
-
-    def setUp(self):
-        self.workdir = tempfile.mkdtemp(dir="/tmp", prefix="myrepo-tests")
-
-    def tearDown(self):
-        rm_rf(self.workdir)
-
-    def test_init_defaults_by_conffile_config(self):
-        conf = """\
-[DEFAULT]
-a: aaa
-b: bbb
-"""
-        path = os.path.join(self.workdir, "config")
-        open(path, "w").write(conf)
-
-        params = init_defaults_by_conffile(path)
-        self.assertEquals(params["a"], "aaa")
-        self.assertEquals(params["b"], "bbb")
-
-    def test_init_defaults_by_conffile_config_and_profile_0(self):
-        conf = """\
-[profile0]
-a: aaa
-b: bbb
-"""
-        path = os.path.join(self.workdir, "config")
-        open(path, "w").write(conf)
-
-        params = init_defaults_by_conffile(path, "profile0")
-        self.assertEquals(params["a"], "aaa")
-        self.assertEquals(params["b"], "bbb")
-
-
-
-class TestProgramLocal(unittest.TestCase):
-
-    _multiprocess_can_split_ = True
-
-    def setUp(self):
-        self.workdir = tempfile.mkdtemp(prefix="myrepo-test-tpl-")
-
-    def tearDown(self):
-        rm_rf(self.workdir)
-
-    def test_init_with_all_options_set_explicitly(self):
-        config = copy.copy(init_defaults())
-
-        # force set some parameters:
-        config["server"] = "localhost"
-        config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
-        config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
-
-        cmd = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
-        cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
-        cmd += " --baseurl '%(baseurl)s' "
-        cmd += " init "
-        cmd = cmd % config
-
-        logging.info("cmd: " + cmd)
-        self.assertEquals(main(cmd), 0)
-
-    def test_init_with_all_options_set_explicitly_multi_dists(self):
-        config = copy.copy(init_defaults())
-
-        # force set some parameters:
-        config["server"] = "localhost"
-        config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
-        config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
-
-        config["dists"] = "rhel-6-i386"
-
-        try:
-            key_list = subprocess.check_output("gpg --list-keys %s 2>/dev/null" % get_username(), shell=True)
-            keyid = key_list.split()[1].split("/")[1]
-            #keyopt = " --signkey %s " % keyid
-            keyopt = " "  ## Disabled for a while.
-
-        except Exception, e:
-            logging.warn("Cannot get the default gpg key list. Test w/o --signkey: err=%s" % str(e))
-            keyopt = ""
-
-        cmd = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
-        cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
-        cmd += " --baseurl '%(baseurl)s' "
-        cmd += keyopt
-        cmd += " init "
-        cmd = cmd % config
-
-        logging.info("cmd: " + cmd)
-        self.assertEquals(main(cmd), 0)
-
-    def test_init_with_config(self):
-        config = copy.copy(init_defaults())
-
-        (dist_name, dist_version) = get_distribution()
-        archs = list_archs()
-
-        config["dists"] = "%s-%s-%s" % (dist_name, dist_version, archs[0])
-
-        config["tmp_workdir"] = os.path.join(self.workdir, "repos")
-
-        config_content = """
-[DEFAULT]
-server: localhost
-baseurl: file://%%(topdir)s/%%(distdir)s
-topdir: %s/var/lib/myrepo
-name: foo-bar
-dists: fedora-14-i386
-
-fullname: John DOe
-email: jdoe@example.com
-"""
-
-        conf = os.path.join(self.workdir, "myrepo.conf")
-        open(conf, "w").write(config_content % self.workdir)
-
-        cmd = "argv0 -C " + conf + " init"
-        cmd = cmd % config
-
-        logging.info("cmd: " + cmd)
-        self.assertEquals(main(cmd), 0)
-
-    def test_build(self):
-        pass
-
-    def test_deploy(self):
-        pass
-
-    def test_update(self):
-        pass
-
-
-
-class TestProgramRemote(unittest.TestCase):
-
-    _multiprocess_can_split_ = True
-
-    def setUp(self):
-        self.workdir = tempfile.mkdtemp(prefix="myrepo-test-tpr-")
-
-    def tearDown(self):
-        rm_rf(self.workdir)
-
-    def test_init_with_all_options_set_explicitly(self):
-        rc = run_and_get_status("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
-
-        if rc != 0:
-            logging.info("sshd is not working on this host. Skip this test: TestProgramRemote.test_init_with_all_options_set_explicitly")
-            return
-
-        rhost = find_accessible_remote_host()
-
-        if not rhost:
-            logging.info("target host is not accessible via ssh. Skip this test: test_rshell")
-            return
-
-        config = copy.copy(init_defaults())
-
-        # force set some parameters:
-        config["server"] = rhost
-        config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
-        #config["baseurl"] = "http://%(server)s/%(topdir)s/%(subdir)s/%(distdir)s"
-
-        args = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
-        args += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
-        args += " --baseurl '%(baseurl)s' "
-        args += " init "
-        args = args % config
-
-        logging.info("args: " + args)
-        self.assertEquals(main(args), 0)
-
-
-
-def test(verbose, test_choice=TEST_BASIC):
-    def tsuite(testcase):
-        return unittest.TestLoader().loadTestsFromTestCase(testcase)
-
-    basic_tests = (
-        TestMemoizedFuncs,
-        TestMiscFuncs,
-        TestThrdCommand,
-        TestDistribution,
-        TestFuncsWithSideEffects,
-        TestRepo,
-    )
-
-    system_tests = (
-        TestProgramLocal,
-        TestProgramRemote,
-    )
-
-    (major, minor) = sys.version_info[:2]
-
-    suites = [tsuite(c) for c in basic_tests]
-
-    if test_choice == TEST_FULL:
-        suites += [tsuite(c) for c in system_tests]
-
-    tests = unittest.TestSuite(suites)
-
-    doctest.testmod(verbose=verbose)
-
-    if major == 2 and minor < 5:
-        unittest.TextTestRunner().run(tests)
-    else:
-        unittest.TextTestRunner(verbosity=(verbose and 2 or 0)).run(tests)
-
-
-def opt_parser(test_choices=TEST_CHOICES):
+def opt_parser():
     defaults = init_defaults()
     distribution_choices = defaults["dists_full"]  # save it.
 
@@ -1645,7 +1139,7 @@ Examples:
   """
     )
 
-    for k in ("tests", "verbose", "quiet", "debug"):
+    for k in ("verbose", "quiet", "debug"):
         if not defaults.get(k, False):
             defaults[k] = False
 
@@ -1664,10 +1158,6 @@ Examples:
     p.add_option("-q", "--quiet", action="store_true", help="Quiet mode")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
     p.add_option("", "--debug", action="store_true", help="Debug mode")
-
-    p.add_option("", "--test", action="store_true", help="Run test suite")
-    p.add_option("", "--tlevel", type="choice", choices=test_choices,
-        help="Select the level of tests to run. Choices are " + ", ".join(test_choices) + " [%default]")
 
     iog = optparse.OptionGroup(p, "Options for 'init' command")
     iog.add_option('', "--name", help="Name of your yum repo or its format string [%default].")
@@ -1727,11 +1217,6 @@ def main(argv=sys.argv):
         logging.getLogger().setLevel(logging.ERROR)
     else:
         logging.getLogger().setLevel(logging.WARN)
-
-    if options.test:
-        verbose_test = (options.verbose or options.debug)
-        test(verbose_test, options.tlevel)
-        sys.exit()
 
     if not args:
         p.print_usage()
