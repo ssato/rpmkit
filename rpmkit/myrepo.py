@@ -246,7 +246,8 @@ class ThrdCommand(object):
             else:
                 stdout = open("/dev/null", "w")
 
-            logging.info("Run: %s" % cmd_str_shorten)
+            #logging.info("Run: %s" % cmd_str_shorten)
+            logging.info("Run: " + self.cmd_str)
 
             self.process = subprocess.Popen(self.cmd,
                                             bufsize=4096,
