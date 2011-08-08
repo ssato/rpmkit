@@ -793,11 +793,13 @@ class Repo(object):
     keydir = "/etc/pki/rpm-gpg"
     keyurl = "file://%(keydir)s/RPM-GPG-KEY-%(name)s-%(distversion)s"
 
+    metadata_expire = "2h"
+
     release_file_tmpl = """\
 [${repo.name}]
 name=Custom yum repository on ${repo.server} by ${repo.user} (\$basearch)
 baseurl=${repo.baseurl}/\$basearch/
-metadata_expire=2h
+metadata_expire=${repo.metadata_expire}
 enabled=1
 #if $repo.signkey
 gpgcheck=1
@@ -809,7 +811,7 @@ gpgcheck=0
 [${repo.name}-source]
 name=Custom yum repository on ${repo.server} by ${repo.user} (source)
 baseurl=${repo.baseurl}/sources/
-metadata_expire=2h
+metadata_expire=${repo.metadata_expire}
 enabled=0
 gpgcheck=0
 """
@@ -858,7 +860,7 @@ pmaker -n mock-data-${repo.name} \\
 
     def __init__(self, server, user, email, fullname, dist, archs,
             name=None, subdir=None, topdir=None, baseurl=None, signkey=None,
-            bdist_label=None,
+            bdist_label=None, metadata_expire=None,
             *args, **kwargs):
         """
         @server    server's hostname to provide this yum repo
@@ -873,6 +875,7 @@ pmaker -n mock-data-${repo.name} \\
         @baseurl   base url or its format string, e.g. "file://%(topdir)s".
         @signkey   GPG key ID for signing or None indicates will never sign rpms
         @bdist_label  Distribution label to build srpms, e.g. "fedora-custom-addons-14-x86_64"
+        @metadata_expire  Metadata expiration time, e.g. "2h", "1d"
         """
         self.server = server
         self.user = user
@@ -918,6 +921,9 @@ pmaker -n mock-data-${repo.name} \\
             self.signkey = signkey
             self.keyurl = self._format(Repo.keyurl)
             self.keyfile = os.path.join(self.keydir, os.path.basename(self.keyurl))
+
+        if metadata_expire is not None:
+            self.metadata_expire = metadata_expire
 
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
@@ -1075,6 +1081,7 @@ def init_defaults():
         "topdir": Repo.topdir,
         "baseurl": Repo.baseurl,
         "signkey": Repo.signkey,
+        "metadata_expire": Repo.metadata_expire,
     }
 
     return defaults
@@ -1301,7 +1308,8 @@ def main(argv=sys.argv):
             config["topdir"],
             config["baseurl"],
             config["signkey"],
-            bdist_label
+            bdist_label,
+            config["metadata_expire"],
         )
 
         repos.append(repo)
