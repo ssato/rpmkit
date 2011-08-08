@@ -389,14 +389,16 @@ class TestProgramLocal(unittest.TestCase):
         config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
         config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
 
-        cmd = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd = " init "
+        cmd += " --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
         cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
-        cmd += " init "
+        cmd += " -C /dev/null "
         cmd = cmd % config
+        cs = shlex.split(cmd)
 
-        logging.info("cmd: " + cmd)
-        self.assertEquals(main(shlex.split(cmd)), 0)
+        logging.info("args: " + str(cs))
+        self.assertEquals(main(["argv0"] + cs), 0)
 
     def test_init_with_all_options_set_explicitly_multi_dists(self):
         config = copy.copy(init_defaults())
@@ -418,15 +420,17 @@ class TestProgramLocal(unittest.TestCase):
             logging.warn("Cannot get the default gpg key list. Test w/o --signkey: err=%s" % str(e))
             keyopt = ""
 
-        cmd = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd = " init "
+        cmd += " --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
         cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
         cmd += keyopt
-        cmd += " init "
+        cmd += " -C /dev/null "
         cmd = cmd % config
+        cs = shlex.split(cmd)
 
-        logging.info("cmd: " + cmd)
-        self.assertEquals(main(shlex.split(cmd)), 0)
+        logging.info("args: " + str(cs))
+        self.assertEquals(main(["argv0"] + cs), 0)
 
     def test_init_with_config(self):
         config = copy.copy(init_defaults())
@@ -453,11 +457,12 @@ email: jdoe@example.com
         conf = os.path.join(self.workdir, "myrepo.conf")
         open(conf, "w").write(config_content % self.workdir)
 
-        cmd = "argv0 -C " + conf + " init"
+        cmd = "init -C " + conf
         cmd = cmd % config
+        cs = shlex.split(cmd)
 
-        logging.info("cmd: " + cmd)
-        self.assertEquals(main(shlex.split(cmd)), 0)
+        logging.info("args: " + str(cs))
+        self.assertEquals(main(["argv0"] + cs), 0)
 
     def test_build(self):
         pass
@@ -500,14 +505,16 @@ class TestProgramRemote(unittest.TestCase):
         config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
         #config["baseurl"] = "http://%(server)s/%(topdir)s/%(subdir)s/%(distdir)s"
 
-        cmd = "argv0 --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
+        cmd = "init "
+        cmd += " --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
         cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
-        cmd += " init "
+        cmd += " -C /dev/null "
         cmd = cmd % config
+        cs = shlex.split(cmd)
 
-        logging.info("cmd: " + cmd)
-        self.assertEquals(main(shlex.split(cmd)), 0)
+        logging.info("args: " + str(cs))
+        self.assertEquals(main(["argv0"] + cs), 0)
 
 
 
