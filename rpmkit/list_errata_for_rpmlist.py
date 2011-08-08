@@ -159,7 +159,7 @@ def list_errata_for_packages(packages, details=False):
         return ret
 
 
-def list_errata_for_packages_2(packages, details=True):
+def list_errata_for_packages_2(packages, details=False):
     afmt = "-A %s packages.listProvidingErrata"
 
     for pkg in packages:
