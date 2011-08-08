@@ -159,7 +159,7 @@ def list_errata_for_packages(packages, details=False):
         return ret
 
 
-def list_errata_for_packages_2(packages, details=False):
+def list_errata_for_packages_2(packages, details=True):
     afmt = "-A %s packages.listProvidingErrata"
 
     for pkg in packages:
@@ -169,7 +169,16 @@ def list_errata_for_packages_2(packages, details=False):
         es = []
         for e in errata:
             e = swapi.shorten_dict_keynames(e, "errata_")
+
+            if details:
+                efmt = "-A %s errata.getDetails"
+                ed = swapi.mainloop((efmt % e["advisory"]).split())[0][0]
+                ed = swapi.shorten_dict_keynames(ed, "errata_")
+
+                e.update(ed)
+
             e["package"] = pkg
+
             es.append(e)
 
         yield es
