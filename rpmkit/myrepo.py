@@ -484,17 +484,15 @@ def mock_cfg_add_repos(repo, dist, repos_content, templates=TEMPLATES):
     @dist  Distribution object
     @repos_content  str  Repository definitions to add into mock.cfg
     """
-    cfg = dict()
-    cfg["config_opts"] = dict()
+    cfg_opts = Distribution.mockcfg_opts(dist.mockcfg())
 
-    execfile(dist.mockcfg(), cfg)
-
-    cfg["config_opts"]["root"] = repo.buildroot(dist)
-    cfg["config_opts"]["yum.conf"] += "\n\n" + repos_content
+    cfg_opts["root"] = repo.buildroot(dist)
+    cfg_opts["myrepo_distname"] = dist.name
+    cfg_opts["yum.conf"] += "\n\n" + repos_content
 
     tmpl = templates.get("mock.cfg", "")
 
-    return compile_template(tmpl, {"cfg": cfg["config_opts"]})
+    return compile_template(tmpl, {"cfg": cfg_opts})
 
 
 @memoize
@@ -534,12 +532,29 @@ class Distribution(object):
 
         self.bdist_label = bdist_label is None and self.label or bdist_label
 
+        self.mock_config_opts = self.mockcfg_opts(self.mockcfg())
+
     @classmethod
     def parse_dist(self, dist):
         return dist.rsplit("-", 1)
 
+    @classmethod
+    def mockcfg_opts(self, mockcfg_path):
+        """
+        Load mock config file and returns $mock_config["config_opts"] as a dict.
+        """
+        cfg = dict()
+        cfg["config_opts"] = dict()
+
+        execfile(mockcfg_path, cfg)
+
+        return cfg["config_opts"]
+
+    def mockcfg_opts_get(self, key, fallback=None):
+        return self.mock_config_opts.get(key, fallback)
+
     def buildroot(self):
-        return self.bdist_label
+        return self.mockcfg_opts_get("root", self.bdist_label)
 
     def mockdir(self):
         return "/var/lib/mock/%s/result" % self.buildroot()
@@ -872,7 +887,10 @@ pmaker -n mock-data-${repo.name} \\
 
         (self.distname, self.distversion) = Distribution.parse_dist(self.dist)
         self.dists = [Distribution(self.dist, arch, bdist_label) for arch in self.archs]
-        self.distdir = os.path.join(self.distname, self.distversion)
+        self.distdir = os.path.join(
+            self.dists[0].mockcfg_opts_get("myrepo_distname", self.distname),
+            self.distversion
+        )
 
         self.subdir = subdir is None and self.subdir or subdir
 
