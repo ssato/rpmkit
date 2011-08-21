@@ -243,6 +243,8 @@ def dict_equals(d0, d1, allow_more=False):
 def all_eq(xs):
     """Whether all items in xs (list or generator) equals each other.
 
+    >>> all_eq(["a", "a", "a"])
+    True
     >>> all_eq(c for c in "")
     False
     >>> all_eq(c for c in "aaba")
@@ -252,8 +254,7 @@ def all_eq(xs):
     >>> all_eq([c for c in "aaaa"])
     True
     """
-    if not isinstance(xs, list):
-        xs = list(xs)  # xs may be a generator...
+    xs = sorted(xs, key=lambda x: len(x))
 
     return xs and all(x == xs[0] for x in xs[1:]) or False
 
