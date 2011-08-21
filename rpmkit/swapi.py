@@ -254,7 +254,8 @@ def all_eq(xs):
     >>> all_eq([c for c in "aaaa"])
     True
     """
-    xs = sorted(xs, key=lambda x: len(x))
+    if not isinstance(xs, list):
+        xs = list(xs)  # xs may be a generator...
 
     return xs and all(x == xs[0] for x in xs[1:]) or False
 
