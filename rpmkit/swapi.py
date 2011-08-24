@@ -243,6 +243,8 @@ def dict_equals(d0, d1, allow_more=False):
 def all_eq(xs):
     """Whether all items in xs (list or generator) equals each other.
 
+    >>> all_eq(["a", "a", "a"])
+    True
     >>> all_eq(c for c in "")
     False
     >>> all_eq(c for c in "aaba")
