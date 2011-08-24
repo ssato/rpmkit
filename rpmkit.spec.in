@@ -33,6 +33,7 @@ RpmKit (Rpm toolKit) contains miscellaneous rpm and yum related utitlities.
 %install
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/myrepo.d
 
 
 %clean
@@ -45,9 +46,13 @@ rm -rf $RPM_BUILD_ROOT
 %doc tests
 %{_bindir}/*
 %{python_sitelib}/*
+%{_sysconfdir}/myrepo.d
 
 
 %changelog
+* Wed Aug 24 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110824.1-1
+- make %{_sysconfdir}/myrepo.d owned by this package: suggested by yamato@redhat.com
+
 * Thu Aug  4 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110804.1-1
 - myrepo: followed updates in packagemaker
 - myrepo: added unit / system test driver
