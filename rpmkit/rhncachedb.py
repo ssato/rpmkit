@@ -146,21 +146,6 @@ def zip3(xs, ys, zs):
     return [(x,y,z) for (x,y),z in zip(zip(xs, ys), zs)]
 
 
-def concat(xss):
-    """
-    >>> concat([[1,2],[3,4,5]])
-    [1, 2, 3, 4, 5]
-    """
-    ys = []
-    for xs in xss:
-        if isinstance(xs, list):
-            ys += xs
-        else:
-            ys.append(xs)
-
-    return ys
-
-
 def unique(xs, cmp_f=cmp):
     """Returns sorted list of no duplicated items.
 
@@ -187,90 +172,11 @@ def unique(xs, cmp_f=cmp):
     return rs
 
 
-def memoize(fn):
-    """memoization decorator.
-    """
-    cache = {}
-
-    def wrapped(*args, **kwargs):
-        key = repr(args) + repr(kwargs)
-        if not cache.has_key(key):
-            cache[key] = fn(*args, **kwargs)
-
-        return cache[key]
-
-    return wrapped
-
-
-def foreach_rpms(topdir='.'):
-    """Equal to `find $topdir -name '*.rpm'`
-    """
-    for f in concat([[os.path.join(dirpath, f) for f in fs if f.endswith('.rpm')] for dirpath, _dirs, fs in os.walk(topdir)]):
-        yield f
-
-
-#@memoize
-def resolve_req_pids(rn, files, packages, provides):
-    """Resolve package ids of given package requirement.
-
-    @param rn: Req. name; req['name']
-    @param files:  All file paths list
-    @param packages:  All (unique) packages list
-    @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
-
-    @return: [pid]
-    """
-    # Handle special cases.
-    #
-    # TODO: What should be returned?
-    #
-    #if REQ_SPECIALS.match(rn):
-    #    return []
-
-    if rn.startswith('/'):  # it's a file path.
-        pids = [f['pid'] for f in files if f['path'] == rn]
-        if pids:
-            logging.debug("Found '%s' in files, pids=%s" % (rn, str(pids)))
-        else:
-            logging.warn("'%s' (file) NOT FOUND" % rn)
-    else:
-        pids = [p['pid'] for p in provides if p['name'] == rn]
-        if pids:
-            logging.debug("Found '%s' in provides. pids=%s" % (rn, str(pids)))
-        else:
-            pids = [p['pid'] for p in packages if p['name'] == rn]
-            if pids:
-                logging.debug("Found '%s' in packages. pids=%s" % (rn, str(pids)))
-            else:
-                logging.warn("'%s' NOT FOUND in files, provides and packages" % rn)
-
-    return unique(pids)
-
-
-def list_reqs_1(pid, reqs, files, packages, provides, distance=1):
-    """List required packages for the package of $pid.
-
-    @param pid:  Package ID
-    @param reqs:  Package's requires list (type: [{'name', 'version', 'flag', ...}])
-    @param files:  All file paths list
-    @param packages:  All (unique) packages list
-    @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
-    @param distance:  Distance to requires [1]
-
-    @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
-    """
-    rs = concat((
-        [{'name':r['name'], 'flags':r['flags'], 'version':r['version'], 'pid':pid, 'distance':distance, 'rpid':rpid} \
-            for rpid in resolve_req_pids(r['name'], files, packages, provides)] for r in reqs
-    ))
-
-    return rs
-
-
 
 class PackageMetadata(dict):
     """Package Metadata set.
     """
+
     def __init__(self, rpmfile):
         self.createFromRpmfile(rpmfile)
 
