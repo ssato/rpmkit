@@ -290,7 +290,7 @@ def shorten_dict_keynames(dic, prefix=None):
     if prefix is None:
         prefix = longest_common_prefix(*dic.keys())
 
-    return dict([(k.replace(prefix, ''), v) for k, v in dic.iteritems()])
+    return dict((k.replace(prefix, ''), v) for k, v in dic.iteritems())
 
 
 def run(cmd_str):
@@ -599,13 +599,13 @@ def configure_with_configfile(config_file, profile=""):
     except configparser.NoOptionError:
         pass
 
-    return {
-        'server': server,
-        'userid': userid,
-        'password': password,
-        'timeout': timeout,
-        'protocol': protocol
-    }
+    return dict(
+        server = server,
+        userid = userid,
+        password = password,
+        timeout = timeout,
+        protocol = protocol,
+    )
 
 
 def configure_with_options(config, options):
@@ -619,7 +619,13 @@ def configure_with_options(config, options):
     timeout = config.get('timeout') or ((options.timeout and options.timeout != TIMEOUT) and options.timeout or TIMEOUT)
     protocol = config.get('protocol') or ((options.protocol and options.protocol != PROTO) and options.protocol or PROTO)
 
-    return {'server':server, 'userid':userid, 'password':password, 'timeout':timeout, 'protocol':protocol}
+    return dict(
+        server = server,
+        userid = userid,
+        password = password,
+        timeout = timeout,
+        protocol = protocol,
+    )
 
 
 def configure(options):
@@ -684,7 +690,6 @@ password = secretpasswd
 
     oog = optparse.OptionGroup(p, "Output options")
     oog.add_option('-F', '--format', help="Output format (non-json)", default=False)
-    #oog.add_option('-D', '--delimiter', help="Delimiter in outputs if --format specified [\\n]", default="\n")
     oog.add_option('-I', '--indent', help="Indent for JSON output. 0 means no indent. [%default]", type="int", default=2)
     oog.add_option('', '--sort', help="Sort out results by given key", default="")
     oog.add_option('', '--group', help="Group results by given key", default="")
