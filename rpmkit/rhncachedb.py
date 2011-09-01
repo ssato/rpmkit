@@ -62,8 +62,7 @@ CREATE TABLE IF NOT EXISTS errata (
 );
 CREATE TABLE IF NOT EXISTS channels (
     cid INTEGER PRIMARY KEY,
-    label TEXT,
-    summary TEXT
+    label TEXT
 );
 CREATE TABLE IF NOT EXISTS files (
     path TEXT,
@@ -71,50 +70,12 @@ CREATE TABLE IF NOT EXISTS files (
     type TEXT,
     pid INTEGER
 );
-CREATE TABLE IF NOT EXISTS conflicts (
-    name TEXT,
-    flags TEXT,
-    version TEXT,
-    pid INTEGER
-);
-CREATE TABLE IF NOT EXISTS obsoletes (
-    name TEXT,
-    flags TEXT,
-    version TEXT,
-    pid INTEGER
-);
-CREATE TABLE IF NOT EXISTS provides (
-    name TEXT,
-    flags TEXT,
-    version TEXT,
-    pid INTEGER
-);
-CREATE TABLE IF NOT EXISTS requires (
-    name TEXT,
-    flags TEXT,
-    version TEXT,
+CREATE TABLE IF NOT EXISTS dependencies (
     pid INTEGER,
-    rpid INTEGER,
-    distance INTEGER,
-    pre BOOLEAN DEFAULT FALSE
+    name TEXT,
+    type TEXT,
+    modifier TEXT
 );
-CREATE INDEX IF NOT EXISTS filepath ON files (path);
-CREATE INDEX IF NOT EXISTS baseames ON files (basename);
-CREATE INDEX IF NOT EXISTS packagename ON packages (name);
-CREATE INDEX IF NOT EXISTS pkgconflicts on conflicts (pid);
-CREATE INDEX IF NOT EXISTS pkgobsoletes on obsoletes (pid);
-CREATE INDEX IF NOT EXISTS pkgprovides on provides (pid);
-CREATE INDEX IF NOT EXISTS pkgrequires on requires (pid);
-CREATE INDEX IF NOT EXISTS providesname ON provides (name);
-CREATE INDEX IF NOT EXISTS requiresname ON requires (name);
-CREATE TRIGGER IF NOT EXISTS removals AFTER DELETE ON packages
-    BEGIN
-        DELETE FROM files WHERE pid = old.pid;
-        DELETE FROM requires WHERE pid = old.pid;
-        DELETE FROM provides WHERE pid = old.pid;
-        DELETE FROM conflicts WHERE pid = old.pid;
-        DELETE FROM obsoletes WHERE pid = old.pid;
-    END;
 CREATE TABLE IF NOT EXISTS package_errata (
     pid INTEGER,
     advisory TEXT
@@ -135,6 +96,14 @@ CREATE TABLE IF NOT EXISTS channel_errata (
     cid INTEGER,
     advisory TEXT
 );
+CREATE INDEX IF NOT EXISTS filepath ON files (path);
+CREATE INDEX IF NOT EXISTS baseames ON files (basename);
+CREATE INDEX IF NOT EXISTS packagename ON packages (name);
+CREATE TRIGGER IF NOT EXISTS removals AFTER DELETE ON packages
+    BEGIN
+        DELETE FROM files WHERE pid = old.pid;
+        DELETE FROM dependencies WHERE pid = old.pid;
+    END;
 """
 
 
@@ -176,7 +145,10 @@ def unique(xs, cmp_f=cmp):
 
 class RApi(object):
 
-    def __init__(self, conn_params):
+    def __init__(self, swapi_args=""):
+        (options, args) = swapi.option_parser().parse_args(shlex.split(swapi_args))
+        conn_params = swapi.configure(options)
+
         self.rapi = swapi.RpcApi(conn_params)
         self.rapi.login()
 
@@ -211,11 +183,14 @@ def get_packages(rapi, channel):
     for p in ps:
         pid = p["id"]
 
+        p["arch"] = p["arch_label"]
+        p["pid"] = pid
+
         details = rapi.call("packages.getDetails", pid)
         p.update(details)
 
-        depends = rapi.call("packages.listDependencies", pid)
         files = rapi.call("packages.listFiles", pid)
+        depends = rapi.call("packages.listDependencies", pid)
         errata = rapi.call("packages.listErrata", pid)
 
         p.update(
@@ -260,6 +235,91 @@ def get_errata(rapi, channel):
         )
 
         yield e
+
+
+def dump_packages(self, db, packages):
+    conn = sqlite.connect(db)
+    conn.text_factory = str
+    cur = conn.cursor()
+
+    cur.execute("SELECT COUNT(*) FROM packages")
+
+    for p in packages:
+        logging.info("p=%s" % str(p)[:30])
+        
+        cur.execute(
+            """INSERT INTO packages(pid,
+                                    name,
+                                    version,
+                                    release,
+                                    arch,
+                                    epoch,
+                                    summary,
+                                    description,
+                                    license,
+                                    vendor,
+                                    build_host)
+            VALUES(:pid,
+                   :name,
+                   :version,
+                   :release,
+                   :arch,
+                   :epoch,
+                   :summary,
+                   :description,
+                   :license,
+                   :vendor,
+                   :build_host)
+            """, p)
+        conn.commit()
+
+        package_files = [
+            dict(
+                path = f["path"],
+                basename = os.path.basename(f["path"]),
+                type = f["type"],
+                pid = p["pid"],
+            ) for f in p["files"]
+        ]
+
+        cur.executemany(
+            """INSERT INTO files(path, basename, type, pid)
+                VALUES(:path, :basename, :type, :pid)""",
+            package_files
+        )
+        conn.commit()
+
+        package_depends = [
+            dict(
+                pid = p["pid"],
+                name = d["dependency"],
+                type = d["dependency_type"],
+                modifier = d["dependency_modifier"],
+            ) for d in p["depends"]
+        ]
+
+        cur.executemany(
+            """INSERT INTO dependencies(pid, name, type, modifier)
+                VALUES(:pid, :name, :type, :modifier)""",
+            package_depends
+        )
+        conn.commit()
+
+        package_errata = [
+            dict(pid = pid, advisory = e["advisory"]) for e in p["errata"]
+        ]
+
+        cur.executemany(
+            "INSERT INTO package_errata(pid, advisory) VALUES(:pid, :advisory)",
+            package_errata
+        )
+        conn.commit()
+
+
+def get_results(rapi, channels):
+    for c in channels:
+        packages_g = get_packages(rapi, channel)
+        errata_g = get_errata(rapi, channel)
 
 
 if __name__ == '__main__':
