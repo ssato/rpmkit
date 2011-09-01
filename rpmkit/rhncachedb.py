@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from rhnkit import swapi
+from rpmkit import swapi
 
 import datetime
 import glob
@@ -26,6 +26,7 @@ import optparse
 import os
 import pprint
 import re
+import shlex
 import sqlite3 as sqlite
 import sys
 
@@ -173,279 +174,96 @@ def unique(xs, cmp_f=cmp):
 
 
 
-class SQLDB(object):
+class RApi(object):
 
-    
+    def __init__(self, conn_params):
+        self.rapi = swapi.RpcApi(conn_params)
+        self.rapi.login()
 
-    def create(self, db, sql=DATABASE_SQL_DDL):
-        conn = sqlite.connect(db)
-        cur = conn.cursor()
-        cur.executescript(sql)
-        conn.commit()
-        cur.execute('INSERT INTO db_info(dbversion) VALUES (1)')
-        conn.commit()
-        conn.close()
-
-
-class Channel(object):
-
-    def __init__(self, cid, label, summary):
-        self.cid = cid
-        self.label = label
-        self.summary = summary
-
-    def create_table(self):
-
-    """CREATE TABLE IF NOT EXISTS channels (
-        id INTEGER PRIMARY KEY,
-        label TEXT,
-        summary TEXT
-    );
-    """
-
-    def list(channel):
-        args = "-A %s --group name channel.software.listAllPackages" % channel
-
-        return swapi.mainloop(args.split())
-
-
-
-class PackageMetadata(dict):
-    """Package Metadata set.
-    """
-
-    def __init__(self, rpmfile):
-        self.createFromRpmfile(rpmfile)
-
-
-    def guess_os_version(self, header):
-        """Guess RHEL major version from rpm header of the rpmfile.
-
-        - RHEL 3 => rpm.RPMTAG_RPMVERSION = '4.2.x' where x = 1,2,3
-            or '4.2' or '4.3.3' (comps-*3AS-xxx) or '4.1.1' (comps*-3[aA][Ss])
-        - RHEL 4 => rpm.RPMTAG_RPMVERSION = '4.3.3'
-        - RHEL 5 => rpm.RPMTAG_RPMVERSION = '4.4.2' or '4.4.2.3'
-        - RHEL 6 (beta) => rpm.RPMTAG_RPMVERSION = '4.7.0-rc1'
+    def __call__(self, api, args):
         """
-        rpmver = header[rpm.RPMTAG_RPMVERSION]
-        (name, version) = (header[rpm.RPMTAG_NAME], header[rpm.RPMTAG_VERSION])
+        :param api: 
+        """
+        args = swapi.parse_api_args(args)
+        res = rapi.call(api, *args)
 
-        irpmver = int(''.join(rpmver.split('.')[:3])[:3])
-
-        # Handle special cases at first:
-        if name in ('comps', 'comps-extras') and version in ('3AS', '3as'):
-            osver = 3
-        elif name in ('comps', 'comps-extras') and version == '4AS':
-            osver = 4
-        elif name == 'rpmdb-redhat' and version == '3':
-            osver = 3
-        elif (irpmver >= 421 and irpmver <= 423) or irpmver == 42:
-            osver = 3
-        elif irpmver == 433 or irpmver == 432 or irpmver == 431:
-            osver = 4
-        elif irpmver == 442:
-            osver = 5
-        elif irpmver == 470:
-            osver = 6
+        if isinstance(res, list) or getattr(res, "next", False):
+            res = [swapi.shorten_dict_keynames(r) for r in res]
         else:
-            osver = 0
+            res = swapi.shorten_dict_keynames(res)
 
-        return osver
-
-    def createFromRpmfile(self, rpmfile):
-        h = self.rpmheader(rpmfile)
-
-        self['name'] = h[rpm.RPMTAG_NAME]
-        self['version'] = h[rpm.RPMTAG_VERSION]
-        self['release'] = h[rpm.RPMTAG_RELEASE]
-        self['arch'] = h[rpm.RPMTAG_ARCH]
-        self['epoch'] = h[rpm.RPMTAG_EPOCH]  # May be None
-        self['summary'] = h[rpm.RPMTAG_SUMMARY]
-        self['description'] = h[rpm.RPMTAG_DESCRIPTION]
-        self['url'] = h[rpm.RPMTAG_URL]
-        self['license'] = h[rpm.RPMTAG_LICENSE]
-        self['vendor'] = h[rpm.RPMTAG_VENDOR]
-        self['group'] = h[rpm.RPMTAG_GROUP]
-        self['buildhost'] = h[rpm.RPMTAG_BUILDHOST]
-        self['sourcerpm'] = h[rpm.RPMTAG_SOURCERPM]
-        self['packager'] = h[rpm.RPMTAG_PACKAGER]
-        self['size_package'] = h[rpm.RPMTAG_SIZE]
-        self['size_archive'] = h[rpm.RPMTAG_ARCHIVESIZE]
-
-        self['os_version'] = self.guess_os_version(h)
-        self['srpmname'] = h[rpm.RPMTAG_SOURCERPM].split(h[rpm.RPMTAG_VERSION])[0][:-1]
-
-        dirs = h[rpm.RPMTAG_DIRNAMES]
-        self['files'] = [
-            {'path': f, 'basename': os.path.basename(f), 'type': (f in dirs and 'd' or 'f')}
-                for f in h[rpm.RPMTAG_FILENAMES]
-        ]
-
-        self['conflicts'] = [
-            {'name':n, 'version':v, 'flags':f} for n,v,f in \
-                zip3(h[rpm.RPMTAG_CONFLICTS], h[rpm.RPMTAG_CONFLICTFLAGS], h[rpm.RPMTAG_CONFLICTVERSION])
-        ]
-
-        self['obsoletes'] = [
-            {'name':n, 'version':v, 'flags':f} for n,v,f in \
-                zip3(h[rpm.RPMTAG_OBSOLETES], h[rpm.RPMTAG_OBSOLETEFLAGS], h[rpm.RPMTAG_OBSOLETEVERSION])
-        ]
-
-        self['provides'] = [
-            {'name':n, 'version':v, 'flags':f} for n,v,f in \
-                zip3(h[rpm.RPMTAG_PROVIDES], h[rpm.RPMTAG_PROVIDEFLAGS], h[rpm.RPMTAG_PROVIDEVERSION])
-        ]
-
-        self['requires'] = [
-            {'name':n, 'version':v, 'flags':f, 'distance':1} for n,v,f in \
-                zip3(h[rpm.RPMTAG_REQUIRES], h[rpm.RPMTAG_REQUIREFLAGS], h[rpm.RPMTAG_REQUIREVERSION])
-        ]
+        return res
 
 
 
-class RpmDB(object):
+def get_packages(rapi, channel):
+    """
+    Get Packages metadata from RHNS.
 
-    def guess_arch(self, archs):
-        archs = [a for a in archs if a != 'noarch']
+    :param channel:  software channel label to get packages.
 
-        if not archs:
-            return 'i386'  # maybe
+    :ref: https://access.redhat.com/knowledge/docs/Red_Hat_Network/API_Documentation/channel/software/ChannelSoftwareHandler.html
+    :ref: https://access.redhat.com/knowledge/docs/Red_Hat_Network/API_Documentation/packages/PackagesHandler.html
+    """
+    ps = rapi.call("channel.software.listAllPackages", channel)
+    assert ps
 
-        if 'x86_64' in archs:
-            return 'x86_64'
-        else:
-            return archs[0]
+    for p in ps:
+        pid = p["id"]
 
-    def collect(self, rpmdir='./'):
-        dists = {}
+        details = rapi.call("packages.getDetails", pid)
+        p.update(details)
 
-        for f in foreach_rpms(rpmdir):
-            p = PackageMetadata(f)
-            osver = p['os_version']
+        depends = rapi.call("packages.listDependencies", pid)
+        files = rapi.call("packages.listFiles", pid)
+        errata = rapi.call("packages.listErrata", pid)
 
-            if osver not in dists.keys():
-                dists[osver] = {}
-                dists[osver]['packages'] = [p]
-                dists[osver]['archs'] = [p['arch']]
-            else:
-                dists[osver]['packages'].append(p)
-                if p['arch'] not in dists[osver]['archs']:
-                    dists[osver]['archs'].append(p['arch'])
-
-        for dist in dists.keys():
-            dists[dist]['arch'] = self.guess_arch(dists[dist]['archs'])
-
-        self.dists = dists
-
-    def createdb(self, db, sql=DATABASE_SQL_DDL):
-        conn = sqlite.connect(db)
-        cur = conn.cursor()
-        cur.executescript(sql)
-        conn.commit()
-        cur.execute('INSERT INTO db_info(dbversion) VALUES (1)')
-        conn.commit()
-        conn.close()
-
-    def dumpdata(self, db, packages):
-        conn = sqlite.connect(db)
-        conn.text_factory = str
-        cur = conn.cursor()
-
-        cur.execute("SELECT COUNT(*) FROM packages")
-        index = cur.fetchone()[0] + 1
-
-        ps = []
-        for p in packages:
-            p['pid'] = index; index += 1
-
-            logging.info("p=%s" % str(p))
-            cur.execute(
-                "INSERT INTO packages(pid, name, version, release, arch, epoch, summary, description, url, license, vendor, pgroup, buildhost, sourcerpm, packager, size_package, size_archive, srpmname) VALUES(:pid, :name, :version, :release, :arch, :epoch, :summary, :description, :url, :license, :vendor, :group, :buildhost, :sourcerpm, :packager, :size_package, :size_archive, :srpmname)",
-                p
+        p.update(
+            dict(
+                depends = depends,
+                files = files,
+                errata = errata,
             )
+        )
 
-            pfs = [{'path':f['path'], 'basename':f['basename'], 'type':f['type'], 'pid':p['pid']} for f in p['files']]
-            cur.executemany("INSERT INTO files(path, basename, type, pid) VALUES(:path, :basename, :type, :pid)", pfs)
-            p['files'] = pfs
-            logging.info("pfs=%s" % str(pfs))
+        yield p
 
-            for k in ('conflicts', 'obsoletes', 'provides'):
-                xs = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p[k]]
-                cur.executemany("INSERT INTO %s(name, flags, version, pid) VALUES(:name, :flags, :version, :pid)" % k, xs)
-                p[k] = xs
-                logging.info("p[%s]=%s" % (k, str(xs)))
 
-            conn.commit()
+def get_errata(rapi, channel):
+    """
+    Get errata data in given channel from RHNS.
 
-            prs = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p['requires']]
-            #p['requires'] = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in prs]
-            p['requires'] = prs
-            logging.info("p[requires]=%s" % prs)
+    :param channel:  software channel label to get packages.
 
-            ps.append(p)
+    :ref: https://access.redhat.com/knowledge/docs/Red_Hat_Network/API_Documentation/channel/software/ChannelSoftwareHandler.html
+    :ref: https://access.redhat.com/knowledge/docs/Red_Hat_Network/API_Documentation/errata/ErrataHandler.html
+    """
+    errata = rapi.call("channel.software.listErrata", channel)
+    assert errata
 
-        ps2 = []
-        files = concat((p['files'] for p in ps))
-        provs = concat((p['provides'] for p in ps))
+    for e in errata:
+        advisory = e["advisory"]
 
-        for p in ps:
-            prs = list_reqs_1(p['pid'], p['requires'], files, ps, provs, 1)
-            logging.info("prs=%s" % prs)
-            cur.executemany(
-                "INSERT INTO requires(name, flags, version, pid, rpid, distance) VALUES(:name, :flags, :version, :pid, :rpid, :distance)",
-                prs
+        details = rapi.call("errata.getDetails", advisory)
+        e.update(details)
+
+        bugzilla = rapi.call("errata.bugzillaFixes", advisory)
+        cves = rapi.call("errata.listCves", advisory)
+        packages = rapi.call("errata.listPackages", advisory)
+
+        e.update(
+            dict(
+                bugzilla = bugzilla,
+                cves = cves,
+                packages = packages,
             )
-            conn.commit()
+        )
 
-            p['requires'] = prs
-            ps2.append(p)
-
-        conn.close()
-
-    def dumpdb(self, destdir='./', dist_fmt='rhel-%(arch)s-%(os_version)d', force=False):
-        for osver in self.dists.keys():
-            label = dist_fmt % {'os_version': osver, 'arch': self.dists[osver]['arch']}
-            db = os.path.join(destdir, "%s.sqlite" % label)
-            ps = self.dists[osver]['packages']
-
-            if not os.path.exists(db) or force:
-                self.createdb(db)
-
-            self.dumpdata(db, ps)
-
-
-
-def main():
-    tstamp = datetime.date.today().strftime("%Y%m%d")
-    outdir = "rpmdb_%s" % tstamp
-
-    p = optparse.OptionParser("%prog [OPTION ...] RPMDIR_0 [RPMDIR_1 ...]")
-    p.add_option('', '--outdir', default=outdir, help='Output dir. [%default]')
-    #p.add_option('', '--force', default=False, action='store_true', help='Force overwrite existing dbs. [false]')
-    (options, args) = p.parse_args()
-
-    if len(args) < 1:
-        p.print_usage()
-        sys.exit(1)
-
-    loglevel = logging.DEBUG
-    logging.getLogger().setLevel(loglevel)
-
-    rpmdirs = args
-
-    for dir in rpmdirs:
-        rpmdb = RpmDB()
-        rpmdb.collect(dir)
-
-        if not os.path.isdir(options.outdir):
-            os.makedirs(options.outdir)
-
-        rpmdb.dumpdb(options.outdir)
-        #rpmdb.dumpdb(options.outdir, force=options.force)
+        yield e
 
 
 if __name__ == '__main__':
     main()
 
 
-# vim: set sw=4 ts=4 et:
+# vim:sw=4 ts=4 et:
