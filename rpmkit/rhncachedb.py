@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS errata (
     last_modified_date TEXT,
 );
 CREATE TABLE IF NOT EXISTS channels (
-    id INTEGER PRIMARY KEY,
+    cid INTEGER PRIMARY KEY,
     label TEXT,
     summary TEXT
 );
@@ -173,6 +173,43 @@ def unique(xs, cmp_f=cmp):
 
 
 
+class SQLDB(object):
+
+    
+
+    def create(self, db, sql=DATABASE_SQL_DDL):
+        conn = sqlite.connect(db)
+        cur = conn.cursor()
+        cur.executescript(sql)
+        conn.commit()
+        cur.execute('INSERT INTO db_info(dbversion) VALUES (1)')
+        conn.commit()
+        conn.close()
+
+
+class Channel(object):
+
+    def __init__(self, cid, label, summary):
+        self.cid = cid
+        self.label = label
+        self.summary = summary
+
+    def create_table(self):
+
+    """CREATE TABLE IF NOT EXISTS channels (
+        id INTEGER PRIMARY KEY,
+        label TEXT,
+        summary TEXT
+    );
+    """
+
+    def list(channel):
+        args = "-A %s --group name channel.software.listAllPackages" % channel
+
+        return swapi.mainloop(args.split())
+
+
+
 class PackageMetadata(dict):
     """Package Metadata set.
     """
@@ -180,18 +217,6 @@ class PackageMetadata(dict):
     def __init__(self, rpmfile):
         self.createFromRpmfile(rpmfile)
 
-    def rpmheader(self, rpmfile):
-        """Read rpm header from a rpm file.
-
-        @see http://docs.fedoraproject.org/drafts/rpm-guide-en/ch16s04.html
-        """
-        ts = rpm.TransactionSet()
-        ts.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
-        fd = os.open(rpmfile, os.O_RDONLY)
-        h = ts.hdrFromFdno(fd)
-        os.close(fd)
-
-        return h
 
     def guess_os_version(self, header):
         """Guess RHEL major version from rpm header of the rpmfile.
@@ -279,6 +304,7 @@ class PackageMetadata(dict):
 
 
 class RpmDB(object):
+
     def guess_arch(self, archs):
         archs = [a for a in archs if a != 'noarch']
 
