@@ -24,6 +24,7 @@ import glob
 import logging
 import optparse
 import os
+import os.path
 import pprint
 import re
 import shlex
@@ -237,7 +238,7 @@ def get_errata(rapi, channel):
         yield e
 
 
-def dump_packages(self, db, packages):
+def dump_packages(self, db, cid, packages):
     conn = sqlite.connect(db)
     conn.text_factory = str
     cur = conn.cursor()
@@ -247,6 +248,13 @@ def dump_packages(self, db, packages):
     for p in packages:
         logging.info("p=%s" % str(p)[:30])
         
+        cur.execute(
+            """INSERT INTO channel_packages(cid, pid)
+                VALUES(:cid, :pid)""",
+            dict(cid = cid, pid = p["pid"])
+        )
+        conn.commit()
+
         cur.execute(
             """INSERT INTO packages(pid,
                                     name,
@@ -315,11 +323,26 @@ def dump_packages(self, db, packages):
         )
         conn.commit()
 
+    conn.close()
 
-def get_results(rapi, channels):
+
+def dump_results(rapi, db, channels):
+    conn = sqlite.connect(db)
+    conn.text_factory = str
+    cur = conn.cursor()
+
+    cur.execute("SELECT COUNT(*) FROM channels")
+    index = cur.fetchone()[0] + 1
+
+    conn.close()
+
     for c in channels:
+        cid = index; cid += 1
+
         packages_g = get_packages(rapi, channel)
         errata_g = get_errata(rapi, channel)
+
+        dump_packages
 
 
 if __name__ == '__main__':
