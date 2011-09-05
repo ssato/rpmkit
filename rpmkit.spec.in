@@ -15,7 +15,9 @@ Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python
-Requires:       python-cheetah, rpm-python, mock, rpm-build, sqlite, autoconf, automake, packagemaker
+Requires:       python-cheetah, rpm-python, rpm-build
+Requires:       sqlite, autoconf, automake, packagemaker
+Requires:       createrepo, mock
 
 
 %description
