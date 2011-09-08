@@ -595,6 +595,10 @@ def configure_with_configfile(config_file, profile=""):
     logging.debug(" Config profile: " + profile)
 
     for cfg in config_files:
+        if not os.path.exists(cfg):
+            logging.warn("Could not find config: " + cfg)
+            continue
+
         cp.read(cfg)
 
         if profile and cp.has_section(profile):
