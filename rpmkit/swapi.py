@@ -578,8 +578,11 @@ class Cache(object):
 
         logging.debug("expiration dates for %s: %d" % (method, expires))
 
-        if expires == 0:
+        if expires == 0: # it means never cache.
             return True
+
+        if expires < 0:  # it meens cache never expire.
+            return False
 
         try:
             mtime = os.stat(self.path(obj)).st_mtime
