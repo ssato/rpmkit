@@ -597,7 +597,7 @@ def configure_with_configfile(config_file, profile=""):
 
     for cfg in config_files:
         if not os.path.exists(cfg):
-            logging.warn("Could not find config: " + cfg)
+            logging.debug("Not found. Skipping: " + cfg)
             continue
 
         cp.read(cfg)
