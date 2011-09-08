@@ -618,7 +618,7 @@ class RpcApi(object):
         self.logout()
 
     def login(self):
-        self.server = xmlrpclib.ServerProxy(self.url, verbose=self.debug)
+        self.server = xmlrpclib.ServerProxy(self.url, verbose=self.debug, use_datetime=True)
         self.sid = self.server.auth.login(self.userid, self.passwd, self.timeout)
 
     def logout(self):
@@ -741,6 +741,20 @@ def parse_api_args(args, arg_sep=','):
     return ret
 
 
+
+class JSONEncoder(json.JSONEncoder):
+    """
+    @see http://stackoverflow.com/questions/455580/json-datetime-between-python-and-javascript
+    """
+
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.strftime('%Y-%m-%dT%H:%M:%S')
+        else:
+            return json.JSONEncoder.default(self, obj)
+
+
+
 def results_to_json_str(results, indent=2):
     """
     >>> assert results_to_json_str("abc") == '"abc"'
@@ -749,7 +763,7 @@ def results_to_json_str(results, indent=2):
     >>> results_to_json_str([123, 'abc', {'x':'yz'}])
     '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
     """
-    return json.dumps(results, ensure_ascii=False, indent=indent)
+    return json.dumps(results, ensure_ascii=False, indent=indent, cls=JSONEncoder)
 
 
 def parse_list_str(list_s, sep=","):
