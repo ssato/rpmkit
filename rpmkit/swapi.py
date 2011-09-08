@@ -592,7 +592,8 @@ def configure_with_configfile(config_file, profile=""):
     cp = configparser.SafeConfigParser()
 
     logging.debug(" Loading config files: %s" % ",".join(config_files))
-    logging.debug(" Config profile: " + profile and profile or "DEFAULT")
+    if profile:
+        logging.debug(" Config profile: " + profile)
 
     for cfg in config_files:
         if not os.path.exists(cfg):
