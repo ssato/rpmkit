@@ -320,10 +320,7 @@ class Cache(object):
         self.domain = domain
         self.domain_id = str_to_id(domain)
         self.cache_dir = os.path.join(cache_topdir, self.domain_id)
-        self.expire_dates = self.set_expire(expire)
-
-    def set_expire(self, dates):
-        return (dates > 0 and dates or 0)
+        self.expire_dates = expire > 0 and expire or 0
 
     def dir(self, obj):
         """Resolve the dir in which cache file of the object is saved.
