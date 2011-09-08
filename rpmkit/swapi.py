@@ -41,6 +41,7 @@ import cPickle as pickle
 import commands
 import datetime
 import getpass
+import glob
 import itertools
 import logging
 import optparse
@@ -76,6 +77,11 @@ except NameError:
                 return False
 
         return True
+
+try:
+    from collections import OrderedDict as dict
+except ImportError:
+    pass
 
 
 
@@ -192,6 +198,7 @@ TIMEOUT = 900
 
 CONFIG_DIR = os.path.join(os.environ.get('HOME', '.'), '.swapi')
 CONFIG = os.path.join(CONFIG_DIR, 'config')
+CONFIG_FILES = glob.glob("/etc/swapi.d/*.conf") + [CONFIG]
 
 CACHE_DIR = os.path.join(CONFIG_DIR, 'cache')
 CACHE_EXPIRING_DATES = 1  # [days]
@@ -571,33 +578,38 @@ def configure_with_configfile(config_file, profile=""):
     """
     @config_file  Configuration file path, ex. '~/.swapi/config'.
     """
-    (server,userid,password,timeout,protocol) = ('', '', '', TIMEOUT, PROTO)
+    (server, userid, password, timeout, protocol) = ('', '', '', TIMEOUT, PROTO)
 
     # expand '~/'
-    if '~' in config_file:
-        config_file = os.path.expanduser(config_file)
+    if config_file:
+        if '~' in config_file:
+            config_file = os.path.expanduser(config_file)
 
-    logging.debug(" config_file = %s" % config_file)
+        config_files = CONFIG_FILES + [config_file]
+    else:
+        config_files = CONFIG_FILES
 
     cp = configparser.SafeConfigParser()
 
-    try:
-        cp.read(config_file)
+    logging.debug(" Loading config files: %s" % ",".join(config_files))
+    logging.debug(" Config profile: " + profile)
+
+    for cfg in config_files:
+        cp.read(cfg)
 
         if profile and cp.has_section(profile):
-            sect = profile
+            try:
+                opts = dict(cp.items(profile))
+            except NoSectionError:
+                continue
         else:
-            sect = 'DEFAULT'
-        logging.debug(" profile = '%s'" % profile)
+            opts = cp.defaults()
 
-        server = cp.get(sect, 'server')
-        userid = cp.get(sect, 'userid')
-        password = cp.get(sect, 'password')
-        timeout = int(cp.get(sect, 'timeout'))
-        protocol = cp.get(sect, 'protocol')
-
-    except configparser.NoOptionError:
-        pass
+        server = opts.get("server", server)
+        userid = opts.get("userid", userid)
+        password = opts.get("password", password)
+        timeout = int(opts.get("timeout", timeout))
+        protocol = opts.get("protocol", protocol)
 
     return dict(
         server = server,
@@ -670,7 +682,9 @@ password = secretpasswd
 """ % {'cmd': cmd, 'config': CONFIG}
     )
 
-    p.add_option('-C', '--config', help='Config file path [%default]', default=CONFIG)
+    config_help = "Config file path [%s; loaded in this order]" % ",".join(CONFIG_FILES)
+
+    p.add_option('-C', '--config', help=config_help, default=None)
     p.add_option('-P', '--profile', help='Select profile (section) in config file')
     p.add_option('-v', '--verbose', help='verbose mode', default=0, action="count")
     p.add_option('-T', '--test', help='Test mode', default=False, action="store_true")
@@ -858,4 +872,4 @@ if __name__ == '__main__':
     sys.exit(main(sys.argv))
 
 
-# vim: set sw=4 ts=4 expandtab:
+# vim:sw=4 ts=4 expandtab:
