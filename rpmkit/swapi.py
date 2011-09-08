@@ -519,23 +519,25 @@ class Cache(object):
     """Pickle module based data caching backend.
     """
 
-    def __init__(self, domain, expire=CACHE_EXPIRING_DATES, cache_topdir=CACHE_DIR):
+    def __init__(self, domain, expire=CACHE_EXPIRING_DATES,
+            topdir=CACHE_DIR, expirations=API_CACHE_EXPIRATIONS):
         """Initialize domain-local caching parameters.
 
         @domain  a str represents target domain
         @expire  time period to expire cache in date (>= 0).
                  0 indicates disabling cache.
-        @cache_topdir  topdir to save cache files
+        @topdir  topdir to save cache files
         """
         self.domain = domain
-        self.domain_id = str_to_id(domain)
-        self.cache_dir = os.path.join(cache_topdir, self.domain_id)
+        self.topdir = os.path.join(topdir, domain)
+
         self.expire_dates = expire > 0 and expire or 0
+        self.expirations =  expirations
 
     def dir(self, obj):
         """Resolve the dir in which cache file of the object is saved.
         """
-        return os.path.join(self.cache_dir, object_to_id(obj))
+        return os.path.join(self.topdir, object_to_id(obj))
 
     def path(self, obj):
         """Resolve path to cache file of the object.
@@ -566,9 +568,17 @@ class Cache(object):
         except:
             return False
 
-
     def needs_update(self, obj):
-        if self.expire_dates == 0:
+        """FIXME: closely-coupled with data type of obj argument.
+
+        @obj    (api_method_name, api_args) :: (str, [str | int | ... ])
+        """
+        (method, args) = obj
+        expires = self.expirations.get(method, 0)  # Default: no cache
+
+        logging.debug("expiration dates for %s: %d" % (method, expires))
+
+        if expires == 0:
             return True
 
         try:
@@ -581,7 +591,7 @@ class Cache(object):
 
         delta = cur_time - cache_mtime  # TODO: How to do if it's negative value?
 
-        return delta >= datetime.timedelta(self.expire_dates)
+        return delta >= datetime.timedelta(expires)
 
 
 
