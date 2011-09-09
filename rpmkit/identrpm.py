@@ -106,8 +106,10 @@ def add_missing_infos(pkg, arch="x86_64"):
 
     :param pkg:  dict(name, version, release, ...)
     """
+    pkg.update(arch=arch)
+
     try:
-        c = "-A \"{name},{version},{release},\'\',{arch}\" packages.findByNvrea".format(arch=arch, **pkg)
+        c = "-A \"{name},{version},{release},\'\',{arch}\" packages.findByNvrea".format(**pkg)
         (r, _opts) = SW.mainloop(shlex.split(c))
         
         if not r:
@@ -120,6 +122,7 @@ def add_missing_infos(pkg, arch="x86_64"):
 
         if not r[0].get("arch", False):
             r[0]["arch"] = r[0]["arch_label"]
+
         return r[0]
 
     except Exception, e:
