@@ -1075,9 +1075,6 @@ class TestScript(unittest.TestCase):
     """TODO: More test cases.
     """
 
-    def setUp(self):
-        self.cmd = sys.argv[0]
-
     def __helper(self, args):
         (res, _opts) = real_main(shlex.split(args))
         #assert res, "args=" + args
