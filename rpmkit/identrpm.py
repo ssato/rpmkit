@@ -63,12 +63,17 @@ def parse_package_label(label):
     from given label (output of 'rpm -qa') containing version and other
     information.
 
-    >>> parse_package_label('MySQL-python-1.2.1-1.i386')
-    {'arch': 'i386', 'label': 'MySQL-python-1.2.1-1.i386', 'name': 'MySQL-python', 'release': '1.2.1', 'version': '11'}
-    >>> parse_package_label('cdparanoia-alpha9.8-27.2')
-    {'label': 'cdparanoia-alpha9.8-27.2', 'name': 'cdparanoia', 'release': 'alpha9.8', 'version': '27.2'}
-    >>> parse_package_label('ash-0.3.8-20.el4_7.1-i386')
-    {'arch': 'i386', 'label': 'ash-0.3.8-20.el4_7.1-i386', 'name': 'ash', 'release': '0.3.8', 'version': '20.el4_7.1'}
+    >>> d_ref = {'arch': 'i386', 'label': 'MySQL-python-1.2.1-1.i386', 'name': 'MySQL-python', 'version': '1.2.1', 'release': '1'}
+    >>> d = parse_package_label('MySQL-python-1.2.1-1.i386')
+    >>> assert SW.dict_equals(d, d_ref), "expected %s but got %s" % (str(d_ref), str(d))
+
+    >>> d_ref = {'label': 'cdparanoia-alpha9.8-27.2', 'name': 'cdparanoia', 'version': 'alpha9.8', 'release': '27.2'}
+    >>> d = parse_package_label('cdparanoia-alpha9.8-27.2')
+    >>> assert SW.dict_equals(d, d_ref), "expected %s but got %s" % (str(d_ref), str(d))
+
+    >>> d_ref = {'arch': 'i386', 'label': 'ash-0.3.8-20.el4_7.1-i386', 'name': 'ash', 'version': '0.3.8', 'release': '20.el4_7.1'}
+    >>> d = parse_package_label('ash-0.3.8-20.el4_7.1-i386')
+    >>> assert SW.dict_equals(d, d_ref), "expected %s but got %s" % (str(d_ref), str(d))
 
     ## FIXME: It seems there are some other special cases such $version and
     ## $release cannot be parsed correctly:
