@@ -936,6 +936,10 @@ password = secretpasswd
     cog.add_option('',   '--protocol', help='Spacewalk/RHN server protocol.', default=PROTO)
     p.add_option_group(cog)
 
+    xog = optparse.OptionGroup(p, "XML-RPC options")
+    xog.add_option('',   '--rpcdebug', help="XML-RPC Debug mode", action="store_true", default=False)
+    p.add_option_group(xog)
+
     caog = optparse.OptionGroup(p, "Cache options")
     caog.add_option('',   '--no-cache', help='Do not use query result cache', action="store_true", default=False)
     caog.add_option('',   '--expire', help='Expiration dates. 0 means refresh cache [%default]', default=1, type="int")
@@ -990,7 +994,7 @@ def mainloop(argv):
 
     conn_params = configure(options)
 
-    rapi = RpcApi(conn_params, enable_cache, options.expire, options.verbose > 1)
+    rapi = RpcApi(conn_params, enable_cache, options.expire, options.rpcdebug)
     rapi.login()
 
     if options.list_args:
