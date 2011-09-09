@@ -988,7 +988,7 @@ def init_rpcapi(options):
     return rapi
 
 
-def real_main(argv):
+def main(argv):
     out = sys.stdout
     enable_cache = True
 
@@ -1053,8 +1053,8 @@ def real_main(argv):
     return (res, options)
 
 
-def main(argv):
-    result = real_main(argv[1:])
+def realmain(argv):
+    result = main(argv[1:])
 
     if result is None:
         return 1
@@ -1076,7 +1076,7 @@ class TestScript(unittest.TestCase):
     """
 
     def __helper(self, args):
-        (res, _opts) = real_main(shlex.split(args))
+        (res, _opts) = main(shlex.split(args))
         #assert res, "args=" + args
 
     def test_api_wo_arg_and_sid(self):
@@ -1117,7 +1117,7 @@ def test():
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(realmain(sys.argv))
 
 
 # vim:sw=4 ts=4 expandtab:

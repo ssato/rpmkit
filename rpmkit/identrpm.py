@@ -115,11 +115,11 @@ def add_missing_infos(pkg, arch="x86_64"):
 
     try:
         c = "-A \"{name},{version},{release},\'\',{arch}\" packages.findByNvrea".format(**pkg)
-        (r, _opts) = SW.mainloop(shlex.split(c))
+        (r, _opts) = SW.main(shlex.split(c))
         
         if not r:
             c = "-A \"{name},{version},{release},\'\',noarch\" packages.findByNvrea".format(**pkg)
-            (r, _opts) = SW.mainloop(shlex.split(c))
+            (r, _opts) = SW.main(shlex.split(c))
  
         logging.debug("q=" + cmd + ", r=" + str(r))
 
@@ -135,7 +135,7 @@ def add_missing_infos(pkg, arch="x86_64"):
             fmt = '-A "name:{name} AND version:{version} AND release:{release}" packages.search.advanced'
             cmd = fmt.format(**pkg)
 
-            (r, _opts) = SW.mainloop(shlex.split(cmd))
+            (r, _opts) = SW.main(shlex.split(cmd))
             logging.debug("q=" + cmd + ", r=" + str(r))
 
             r[0]["epoch"] = normalize_epoch(r[0]["epoch"])
@@ -146,7 +146,8 @@ def add_missing_infos(pkg, arch="x86_64"):
             return r[0]
 
         except Exception, e:
-            #raise RuntimeError(str(e))
+            print str(e)
+
             logging.error("failed to query: nvr=({name}, {version}, {release})".format(**pkg))
             r = pkg
             r["epoch"] = 0
