@@ -110,6 +110,7 @@ setup(name=PACKAGE,
         "rpmkit",
     ],
     scripts=[
+        "src/identrpm",
         "src/list-requires-by-package-name.sh",
         "src/list-srpmnames-by-file.sh",
         "src/list_errata_for_rpmlist",
@@ -126,4 +127,4 @@ setup(name=PACKAGE,
     },
 )
 
-# vim: set sw=4 ts=4 et:
+# vim:sw=4 ts=4 et:
