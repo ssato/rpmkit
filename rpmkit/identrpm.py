@@ -106,7 +106,7 @@ def parse_package_label(label):
     return pkg
 
 
-def add_missing_infos(pkg, arch="x86_64"):
+def complement_package_metadata(pkg, arch="x86_64"):
     """Get missing package metadata and returns a dict.
 
     :param pkg:  dict(name, version, release, ...)
@@ -203,7 +203,7 @@ def main(argv=sys.argv):
         p = parse_package_label(pl)
 
         logging.debug("pkg=" + str(p))
-        p = add_missing_infos(p, options.arch)
+        p = complement_package_metadata(p, options.arch)
 
         if p is None:
             print "Not found: " + pl
