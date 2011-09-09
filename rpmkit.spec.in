@@ -21,7 +21,7 @@ Requires:       createrepo, mock
 
 
 %description
-RpmKit (Rpm toolKit) contains miscellaneous rpm and yum related utitlities.
+RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 
 
 %prep
