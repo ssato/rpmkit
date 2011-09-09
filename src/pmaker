@@ -1,8 +1,0 @@
-#! /usr/bin/python
-#
-import rpmkit.pmaker
-import sys
-
-sys.exit(rpmkit.pmaker.main())
-
-# vim: set sw=4 ts=4 expandtab:
