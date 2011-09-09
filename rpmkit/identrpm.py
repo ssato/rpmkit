@@ -1,4 +1,3 @@
-#! /usr/bin/python
 #
 # Identify given RPMs with using RHN API.
 #

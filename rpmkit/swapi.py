@@ -1,4 +1,3 @@
-#! /usr/bin/python
 #
 # Like utils/spacewalk-api, call Spacewalk/RHN RPC API from command line.
 #

@@ -1,4 +1,3 @@
-#! /usr/bin/python
 #
 # myrepo.py - Manage your yum repo and RPMs:
 #

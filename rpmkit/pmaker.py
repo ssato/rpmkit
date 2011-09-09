@@ -1,4 +1,3 @@
-#! /usr/bin/python
 #
 # PackageMaker is a successor of xpack.py, a script to build packages from
 # existing files on your system.

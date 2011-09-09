@@ -1,4 +1,3 @@
-#! /usr/bin/python
 #
 # rpm2json.py - Dump json data from binary rpm file
 #

@@ -1,4 +1,3 @@
-#! /usr/bin/python
 #
 # rpms2sqldb.py - Dump rpm metadata from rpm files to sqlite database
 #
