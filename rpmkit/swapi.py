@@ -964,21 +964,37 @@ password = secretpasswd
     return p
 
 
-def mainloop(argv):
-    loglevel = logging.WARN
+def init_log(verbose):
+    """Initialize logging module
+    """
+    level = logging.WARN  # default
+
+    if verbose > 0:
+        level = logging.INFO
+
+        if verbose > 1:
+            level = logging.DEBUG
+
+    logging.basicConfig(level=level)
+
+
+def init_rpcapi(options):
+    params = configure(options)
+
+    rapi = RpcApi(params, not options.no_cache, options.expire, options.rpcdebug)
+    rapi.login()
+
+    return rapi
+
+
+def real_main(argv):
     out = sys.stdout
     enable_cache = True
 
     parser = option_parser()
     (options, args) = parser.parse_args(argv)
 
-    if options.verbose > 0:
-        loglevel = logging.INFO
-
-        if options.verbose > 1:
-            loglevel = logging.DEBUG
-
-    logging.basicConfig(level=loglevel)
+    init_log(options.verbose)
 
     if options.test:
         test()
@@ -987,15 +1003,8 @@ def mainloop(argv):
         parser.print_usage()
         return None
 
-    if options.no_cache:
-        enable_cache = False
-
     api = args[0]
-
-    conn_params = configure(options)
-
-    rapi = RpcApi(conn_params, enable_cache, options.expire, options.rpcdebug)
-    rapi.login()
+    rapi = init_rpcapi(options)
 
     if options.list_args:
         list_args = parse_api_args(options.list_args)
@@ -1044,7 +1053,7 @@ def mainloop(argv):
 
 
 def main(argv):
-    result = mainloop(argv[1:])
+    result = real_main(argv[1:])
 
     if result is None:
         return 1
