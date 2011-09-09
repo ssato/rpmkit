@@ -50,6 +50,7 @@ import os.path
 import pprint
 import random
 import re
+import shlex
 import sys
 import time
 import unittest
@@ -1077,32 +1078,30 @@ class TestScript(unittest.TestCase):
     def setUp(self):
         self.cmd = sys.argv[0]
 
-    def __helper(self, cfmt):
-        cs = cfmt % self.cmd
-        (status, _output) = run(cs)
-
-        assert status == 0, "cmdline=%s" % cs
+    def __helper(self, args):
+        (res, _opts) = real_main(shlex.split(args))
+        #assert res, "args=" + args
 
     def test_api_wo_arg_and_sid(self):
-        self.__helper("%s api.getVersion")
+        self.__helper("api.getVersion")
 
     def test_api_wo_arg(self):
-        self.__helper("%s channel.listSoftwareChannels")
+        self.__helper("channel.listSoftwareChannels")
 
     def test_api_w_arg(self):
-        self.__helper("%s --args=rhel-i386-server-5 channel.software.getDetails")
+        self.__helper("--args=rhel-i386-server-5 channel.software.getDetails")
 
     def test_api_w_arg_and_format_option(self):
-        self.__helper("%s -A rhel-i386-server-5 --format '%%(channel_description)s' channel.software.getDetails")
+        self.__helper("-A rhel-i386-server-5 --format '%%(channel_description)s' channel.software.getDetails")
 
     def test_api_w_arg_multicall(self):
-        self.__helper("%s --list-args='rhel-i386-server-5,rhel-x86_64-server-5' channel.software.getDetails")
+        self.__helper("--list-args='rhel-i386-server-5,rhel-x86_64-server-5' channel.software.getDetails")
 
     def test_api_w_args(self):
-        self.__helper("%s -A 'rhel-i386-server-5,2010-04-01 08:00:00' channel.software.listAllPackages")
+        self.__helper("-A 'rhel-i386-server-5,2010-04-01 08:00:00' channel.software.listAllPackages")
 
     def test_api_w_args_as_list(self):
-        self.__helper("%s -A '[\"rhel-i386-server-5\",\"2010-04-01 08:00:00\"]' channel.software.listAllPackages")
+        self.__helper("-A '[\"rhel-i386-server-5\",\"2010-04-01 08:00:00\"]' channel.software.listAllPackages")
 
 
 
