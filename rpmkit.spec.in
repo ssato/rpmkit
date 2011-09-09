@@ -52,6 +52,13 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Sat Sep 10 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110910.1-1
+- identrpm: added new command to get metadata for given package labels
+- fixed some rpmlint errors
+- cleaned up some modules not used any more
+- swapi: added custom JSON encoder to format date strings in XML-RPC query results
+- swapi: make it allow setting cache expiration dates per API
+
 * Wed Aug 24 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110824.1-1
 - make %{_sysconfdir}/myrepo.d owned by this package: suggested by yamato@redhat.com
 
