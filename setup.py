@@ -109,18 +109,7 @@ setup(name=PACKAGE,
     packages=[
         "rpmkit",
     ],
-    scripts=[
-        "src/identrpm",
-        "src/list-requires-by-package-name.sh",
-        "src/list-srpmnames-by-file.sh",
-        "src/list_errata_for_rpmlist",
-        "src/myrepo",
-        ## Comment it out if you don't use external 'packagemaker':
-        # "src/pmaker",
-        "src/rpm2json",
-        "src/rpms2sqldb",
-        "src/swapi",
-    ],
+    scripts = glob.glob("src/*"),
     cmdclass={
         "srpm": SrpmCommand,
         "rpm":  RpmCommand,
