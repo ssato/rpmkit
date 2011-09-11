@@ -18,7 +18,8 @@ curdir = os.getcwd()
 sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
-VERSION = "0.2.0." + datetime.datetime.now().strftime("%Y%m%d")
+#VERSION = "0.2.1." + datetime.datetime.now().strftime("%Y%m%d")
+VERSION = "0.2.1"
 
 
 class SrpmCommand(Command):

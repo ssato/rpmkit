@@ -52,6 +52,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Sun Sep 11 2011 Satoru SATOH <ssato@redhat.com> - 0.2.1-1
+- Bump version
+- identrpm: fixed some bugs in parse_package_label()
+
 * Sat Sep 10 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110910.1-1
 - identrpm: added new command to get metadata for given package labels
 - fixed some rpmlint errors
