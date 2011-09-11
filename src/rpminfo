@@ -1,8 +1,0 @@
-#! /usr/bin/python
-#
-import rpmkit.identrpm
-import sys
-
-rpmkit.identrpm.main(sys.argv)
-
-# vim:sw=4 ts=4 expandtab:
