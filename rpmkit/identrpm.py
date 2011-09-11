@@ -194,8 +194,11 @@ where RPM_N = <name>-<version>-<release>[-<arch>]
 
 Examples:
 
-$ identrpm -v autoconf-2.59-12.noarch
+$ identrpm --format "{name},{version},{release},{arch},{epoch}" autoconf-2.59-12.noarch
 autoconf,2.59,12,noarch,0
+
+$ identrpm --format "{name}: {summary}" autoconf-2.59-12
+autoconf: A GNU tool for automatically configuring source code.
     """)
 
     p.add_option("-v", "--verbose", help="Verbose mode", default=0, action="count")
