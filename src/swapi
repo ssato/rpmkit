@@ -3,6 +3,6 @@
 import rpmkit.swapi
 import sys
 
-sys.exit(rpmkit.swapi.main(sys.argv))
+sys.exit(rpmkit.swapi.realmain(sys.argv))
 
-# vim: set sw=4 ts=4 expandtab:
+# vim:sw=4 ts=4 expandtab:

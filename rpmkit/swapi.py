@@ -992,7 +992,7 @@ def main(argv):
     enable_cache = True
 
     parser = option_parser()
-    (options, args) = parser.parse_args(argv)
+    (options, args) = parser.parse_args(argv[1:])
 
     init_log(options.verbose)
 
@@ -1053,7 +1053,7 @@ def main(argv):
 
 
 def realmain(argv):
-    result = main(argv[1:])
+    result = main(argv)
 
     if result is None:
         return 1
