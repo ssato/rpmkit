@@ -886,7 +886,7 @@ def configure(options):
     return conf
 
 
-def option_parser(cmd=sys.argv[0]):
+def option_parser(prog="swapi"):
     p = optparse.OptionParser("""%(cmd)s [OPTION ...] RPC_API_STRING
 
 Examples:
@@ -918,7 +918,8 @@ userid = rpcusr
 password = secretpasswd
 
 --------------------------------------------------------------
-""" % {'cmd': cmd, 'config': CONFIG}
+""" % {'cmd': prog, 'config': CONFIG},
+        prog = prog,
     )
 
     config_help = "Config file path [%s; loaded in this order]" % ",".join(CONFIG_FILES)
@@ -992,7 +993,7 @@ def main(argv):
     enable_cache = True
 
     parser = option_parser()
-    (options, args) = parser.parse_args(argv[1:])
+    (options, args) = parser.parse_args(argv)
 
     init_log(options.verbose)
 
@@ -1053,7 +1054,7 @@ def main(argv):
 
 
 def realmain(argv):
-    result = main(argv)
+    result = main(argv[1:])
 
     if result is None:
         return 1
