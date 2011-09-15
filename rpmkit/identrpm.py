@@ -202,6 +202,7 @@ autoconf: A GNU tool for automatically configuring source code.
     """)
 
     p.add_option("-v", "--verbose", help="Verbose mode", default=0, action="count")
+    p.add_option("-D", "--debug", action="store_const", dest="verbose", const=2, help="Debug mode")
     p.add_option("-i", "--input", help="Packages list file (output of 'rpm -qa')")
     p.add_option("-A", "--arch", help="Architecture of package[s] [%default]", default="x86_64")
     p.add_option("-F", "--format", help="Output format, e.g %s" % default_format, default=None)
