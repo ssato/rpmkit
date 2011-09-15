@@ -119,12 +119,20 @@ def complement_package_metadata(pkg):
     try:
         c = "-A \"{name},{version},{release},\'\',{arch}\" packages.findByNvrea".format(**pkg)
         logging.info(" Try getting info with API: packages.findByNvrea, arch=" + pkg["arch"])
-        (r, _opts) = SW.main(shlex.split(c))
+
+        cs = shlex.split(c)
+        logging.debug(" args passed to swapi.main(): " + str(cs))
+
+        (r, _opts) = SW.main(cs)
         
         if not r:
             logging.info(" Try getting info with API: packages.findByNvrea, arch=noarch")
             c = "-A \"{name},{version},{release},\'\',noarch\" packages.findByNvrea".format(**pkg)
-            (r, _opts) = SW.main(shlex.split(c))
+
+            cs = shlex.split(c)
+            logging.debug(" args passed to swapi.main(): " + str(cs))
+
+            (r, _opts) = SW.main(cs)
  
         logging.debug("q=" + cmd + ", r=" + str(r))
 
@@ -142,7 +150,10 @@ def complement_package_metadata(pkg):
 
             logging.info(" Try getting info with API: packages.search.advanced")
 
-            (r, _opts) = SW.main(shlex.split(cmd))
+            cs = shlex.split(cmd)
+            logging.debug(" args passed to swapi.main(): " + str(cs))
+
+            (r, _opts) = SW.main(cs)
             logging.debug("q=" + cmd + ", r=" + str(r))
 
             r[0]["epoch"] = normalize_epoch(r[0]["epoch"])
