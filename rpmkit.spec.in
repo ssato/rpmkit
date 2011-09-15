@@ -52,6 +52,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Sep 15 2011 Satoru SATOH <ssato@redhat.com> - 0.2.2-1
+- New upstream
+- src/swapi: fixed a grave bug wrongly calls rpmkit.swapi.main()
+- swapi: fixed internal API breakage in main()
+- identrpm: added --debug option
+
 * Sun Sep 11 2011 Satoru SATOH <ssato@redhat.com> - 0.2.1-1
 - Bump version
 - identrpm: fixed some bugs in parse_package_label()
