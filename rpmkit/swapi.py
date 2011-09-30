@@ -519,19 +519,14 @@ class Cache(object):
     """Pickle module based data caching backend.
     """
 
-    def __init__(self, domain, expire=CACHE_EXPIRING_DATES,
-            topdir=CACHE_DIR, expirations=API_CACHE_EXPIRATIONS):
+    def __init__(self, domain, topdir=CACHE_DIR, expirations=API_CACHE_EXPIRATIONS):
         """Initialize domain-local caching parameters.
 
         @domain  a str represents target domain
-        @expire  time period to expire cache in date (>= 0).
-                 0 indicates disabling cache.
         @topdir  topdir to save cache files
         """
         self.domain = domain
         self.topdir = os.path.join(topdir, domain)
-
-        self.expire_dates = expire > 0 and expire or 0
         self.expirations =  expirations
 
     def dir(self, obj):
@@ -602,11 +597,11 @@ class RpcApi(object):
     """Spacewalk / RHN XML-RPC API server object.
     """
 
-    def __init__(self, conn_params, enable_cache=True, expire=1, debug=False):
+    def __init__(self, conn_params, enable_cache=True, cachedir=CACHE_DIR, debug=False):
         """
         @conn_params  Connection parameters: server, userid, password, timeout, protocol.
         @enable_cache Whether to enable query result cache or not.
-        @expire  Cache expiration date
+        @cachedir     Cache saving directory
         """
         self.url = "%(protocol)s://%(server)s/rpc/api" % conn_params
         self.userid = conn_params.get('userid')
@@ -615,7 +610,7 @@ class RpcApi(object):
 
         self.sid = False
         self.debug = debug
-        self.cache = enable_cache and Cache("%s:%s" % (self.url, self.userid), expire) or False
+        self.cache = enable_cache and Cache("%s:%s" % (self.url, self.userid), cachedir) or False
 
     def __del__(self):
         self.logout()
@@ -943,7 +938,7 @@ password = secretpasswd
 
     caog = optparse.OptionGroup(p, "Cache options")
     caog.add_option('',   '--no-cache', help='Do not use query result cache', action="store_true", default=False)
-    caog.add_option('',   '--expire', help='Expiration dates. 0 means refresh cache [%default]', default=1, type="int")
+    caog.add_option('',   '--cachedir', help="Caching directory [%default]", default=CACHE_DIR)
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
@@ -959,7 +954,7 @@ password = secretpasswd
     aog = optparse.OptionGroup(p, "API argument options")
     aog.add_option('-A', '--args', default='',
         help='Api args other than session id in comma separated strings or JSON expression [empty]')
-    aog.add_option('', '--list-args', help='Specify List of API args')
+    aog.add_option('', '--list-args', help='Specify list of API arguments')
     p.add_option_group(aog)
 
     return p
@@ -982,7 +977,7 @@ def init_log(verbose):
 def init_rpcapi(options):
     params = configure(options)
 
-    rapi = RpcApi(params, not options.no_cache, options.expire, options.rpcdebug)
+    rapi = RpcApi(params, not options.no_cache, options.cachedir, options.rpcdebug)
     rapi.login()
 
     return rapi
