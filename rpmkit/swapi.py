@@ -57,7 +57,7 @@ import xmlrpclib
 
 
 try:
-    from hashlib import md5 # python 2.5+
+    from hashlib import md5  # python 2.5+
 except ImportError:
     from md5 import md5
 
@@ -82,7 +82,6 @@ try:
     from collections import OrderedDict as dict
 except ImportError:
     pass
-
 
 
 """
@@ -137,7 +136,7 @@ $ ./swapi.py --list-args="10821,10822,10823" packages.getDetails
     "package_vendor": "Red Hat, Inc.",
     "package_release": "7",
     "package_last_modified_date": "2006-08-22 21:56:01.0",
-    "package_description": "This package includes the documents in html and postscript for SNNS.\n",
+    "package_description": "This package includes the documents in ...\n",
     "package_id": 10823,
     "providing_channels": [
       "redhat-powertools-i386-7.0",
@@ -190,7 +189,6 @@ $ ./swapi.py -A 10170***** -I 0 --no-cache system.getDetails
 $
 
 """
-
 
 
 PROTO = 'https'
@@ -414,7 +412,6 @@ API_CACHE_EXPIRATIONS = {
 }
 
 
-
 def str_to_id(s):
     return md5(s).hexdigest()
 
@@ -514,7 +511,6 @@ def run(cmd_str):
     return commands.getstatusoutput(cmd_str)
 
 
-
 class Cache(object):
     """Pickle module based data caching backend.
     """
@@ -527,7 +523,7 @@ class Cache(object):
         """
         self.domain = domain
         self.topdir = os.path.join(topdir, domain)
-        self.expirations =  expirations
+        self.expirations = expirations
 
     def dir(self, obj):
         """Resolve the dir in which cache file of the object is saved.
@@ -573,7 +569,7 @@ class Cache(object):
 
         logging.debug("expiration dates for %s: %d" % (method, expires))
 
-        if expires == 0: # it means never cache.
+        if expires == 0:  # it means never cache.
             return True
 
         if expires < 0:  # it meens cache never expire.
@@ -590,7 +586,6 @@ class Cache(object):
         delta = cur_time - cache_mtime  # TODO: How to do if it's negative value?
 
         return delta >= datetime.timedelta(expires)
-
 
 
 class RpcApi(object):
@@ -674,7 +669,6 @@ class RpcApi(object):
             yield self.call(method_name, arg)
 
 
-
 def __parse(arg):
     """
     >>> __parse('1234567')
@@ -739,7 +733,6 @@ def parse_api_args(args, arg_sep=','):
     return ret
 
 
-
 class JSONEncoder(json.JSONEncoder):
     """
     @see http://stackoverflow.com/questions/455580/json-datetime-between-python-and-javascript
@@ -750,7 +743,6 @@ class JSONEncoder(json.JSONEncoder):
             return obj.strftime('%Y-%m-%dT%H:%M:%S')
         else:
             return json.JSONEncoder.default(self, obj)
-
 
 
 def results_to_json_str(results, indent=2):
@@ -845,13 +837,8 @@ def configure_with_configfile(config_file, profile=""):
         timeout = int(opts.get("timeout", timeout))
         protocol = opts.get("protocol", protocol)
 
-    return dict(
-        server = server,
-        userid = userid,
-        password = password,
-        timeout = timeout,
-        protocol = protocol,
-    )
+    return dict(server=server, userid=userid, password=password,
+        timeout=timeout, protocol=protocol)
 
 
 def configure_with_options(config, options):
@@ -865,13 +852,8 @@ def configure_with_options(config, options):
     timeout = config.get('timeout') or ((options.timeout and options.timeout != TIMEOUT) and options.timeout or TIMEOUT)
     protocol = config.get('protocol') or ((options.protocol and options.protocol != PROTO) and options.protocol or PROTO)
 
-    return dict(
-        server = server,
-        userid = userid,
-        password = password,
-        timeout = timeout,
-        protocol = protocol,
-    )
+    return dict(server=server, userid=userid, password=password,
+        timeout=timeout, protocol=protocol)
 
 
 def configure(options):
@@ -914,7 +896,7 @@ password = secretpasswd
 
 --------------------------------------------------------------
 """ % {'cmd': prog, 'config': CONFIG},
-        prog = prog,
+        prog=prog,
     )
 
     config_help = "Config file path [%s; loaded in this order]" % ",".join(CONFIG_FILES)
@@ -1022,7 +1004,7 @@ def main(argv):
         res = group_by(res, options.group)
 
     if options.select:
-        kvs  = parse_list_str(options.select, ":")
+        kvs = parse_list_str(options.select, ":")
 
         if len(kvs) < 2:
             sys.stderr.write("Invalid value given for --select: %s\n" % options.select)
@@ -1034,7 +1016,7 @@ def main(argv):
         res = select_by(res, key, values)
 
     if options.deselect:
-        kvs  = parse_list_str(options.deselect, ":")
+        kvs = parse_list_str(options.deselect, ":")
 
         if len(kvs) < 2:
             sys.stderr.write("Invalid value given for --deselect: %s\n" % options.deselect)
@@ -1065,7 +1047,6 @@ def realmain(argv):
     return 0
 
 
-
 class TestScript(unittest.TestCase):
     """TODO: More test cases.
     """
@@ -1094,7 +1075,6 @@ class TestScript(unittest.TestCase):
 
     def test_api_w_args_as_list(self):
         self.__helper("-A '[\"rhel-i386-server-5\",\"2010-04-01 08:00:00\"]' channel.software.listAllPackages")
-
 
 
 def unittests():
