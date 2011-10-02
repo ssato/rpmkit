@@ -31,7 +31,6 @@ import shlex
 import sys
 
 
-
 def normalize_epoch(epoch):
     """
 
@@ -63,35 +62,47 @@ def parse_package_label(label):
     from given label (output of 'rpm -qa') containing version and other
     information.
 
-    >>> d_ref = {'arch': 'noarch', 'label': 'autoconf-2.59-12.noarch', 'name': 'autoconf', 'version': '2.59', 'release': '12'}
+    >>> eq = SW.dict_equals
+    >>> d_ref = {
+    ...     'arch': 'noarch', 'label': 'autoconf-2.59-12.noarch',
+    ...     'name': 'autoconf', 'version': '2.59', 'release': '12',
+    ... }
     >>> d = parse_package_label('autoconf-2.59-12.noarch')
-    >>> assert SW.dict_equals(d, d_ref), "expected %s but got %s" % (str(d_ref), str(d))
-
-    >>> d_ref = {'arch': 'i386', 'label': 'MySQL-python-1.2.1-1.i386', 'name': 'MySQL-python', 'version': '1.2.1', 'release': '1'}
+    >>> assert eq(d, d_ref), "exp. %s vs. %s" % (str(d_ref), str(d))
+    >>> d_ref = {
+    ...     'arch': 'i386', 'label': 'MySQL-python-1.2.1-1.i386',
+    ...     'name': 'MySQL-python', 'version': '1.2.1', 'release': '1',
+    ... }
     >>> d = parse_package_label('MySQL-python-1.2.1-1.i386')
-    >>> assert SW.dict_equals(d, d_ref), "expected %s but got %s" % (str(d_ref), str(d))
-
-    >>> d_ref = {'label': 'cdparanoia-alpha9.8-27.2', 'name': 'cdparanoia', 'version': 'alpha9.8', 'release': '27.2'}
+    >>> assert eq(d, d_ref), "exp. %s vs. %s" % (str(d_ref), str(d))
+    >>> d_ref = {
+    ...     'label': 'cdparanoia-alpha9.8-27.2', 'name': 'cdparanoia',
+    ...     'version': 'alpha9.8', 'release': '27.2'
+    ... }
     >>> d = parse_package_label('cdparanoia-alpha9.8-27.2')
-    >>> assert SW.dict_equals(d, d_ref), "expected %s but got %s" % (str(d_ref), str(d))
-
-    >>> d_ref = {'arch': 'i386', 'label': 'ash-0.3.8-20.el4_7.1-i386', 'name': 'ash', 'version': '0.3.8', 'release': '20.el4_7.1'}
+    >>> assert eq(d, d_ref), "exp. %s vs. %s" % (str(d_ref), str(d))
+    >>> d_ref = {
+    ...     'arch': 'i386', 'label': 'ash-0.3.8-20.el4_7.1-i386',
+    ...     'name': 'ash', 'version': '0.3.8', 'release': '20.el4_7.1'
+    ... }
     >>> d = parse_package_label('ash-0.3.8-20.el4_7.1-i386')
-    >>> assert SW.dict_equals(d, d_ref), "expected %s but got %s" % (str(d_ref), str(d))
+    >>> assert eq(d, d_ref), "exp. %s vs. %s" % (str(d_ref), str(d))
 
     ## FIXME: It seems there are some other special cases such $version and
     ## $release cannot be parsed correctly:
     ##
     ##   parse_package_label('amanda-2.4.4p1.0.3E')  ==> Fail
     """
-    pkg = {'label':label}
+    pkg = {'label': label}
 
-    arch_re = re.compile(r'(?:.|-)+(?P<arch>i[356]86|x86_64|ppc|ia64|s390|s390x|noarch)')
+    arch_re = re.compile(
+        r"(?:.|-)+(?P<arch>i[356]86|x86_64|ppc|ia64|s390|s390x|noarch)"
+    )
     m = arch_re.match(label)
     if m:
         arch = m.groupdict().get('arch')
         pkg['arch'] = arch
-        label = label[:label.rfind(arch)-1]
+        label = label[:label.rfind(arch) - 1]
         #logging.debug("modified label=%s, arch=%s" % (label, arch))
 
     # Version string is consist of [0-9.]+ as usual, however there are some
@@ -124,7 +135,7 @@ def complement_package_metadata(pkg):
         logging.debug(" args passed to swapi.main(): " + str(cs))
 
         (r, _opts) = SW.main(cs)
-        
+
         if not r:
             logging.info(" Try getting info with API: packages.findByNvrea, arch=noarch")
             c = "-A \"{name},{version},{release},\'\',noarch\" packages.findByNvrea".format(**pkg)

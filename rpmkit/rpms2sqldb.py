@@ -390,7 +390,8 @@ class RpmDB(object):
 
         ps = []
         for p in packages:
-            p['pid'] = index; index += 1
+            p['pid'] = index
+            index += 1
 
             logging.info("p=%s" % str(p))
             cur.execute(

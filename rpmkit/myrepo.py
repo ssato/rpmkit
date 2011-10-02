@@ -4,7 +4,7 @@
 #  * Setup your own yum repos
 #  * build SRPMs and deploy SRPMs and RPMs into your repos.
 #
-# Copyright (C) 2011 Red Hat, Inc. 
+# Copyright (C) 2011 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -56,7 +56,6 @@ except ImportError:
     pass
 
 
-
 WAIT_TYPE = (WAIT_FOREVER, WAIT_MIN, WAIT_MAX) = (None, "min", "max")
 
 TIMEOUT_DEFAULT = 60 * 5  # 5 [min]
@@ -82,7 +81,6 @@ config_opts['$k'] = '$v'
 }
 
 
-
 def memoize(fn):
     """memoization decorator.
     """
@@ -90,8 +88,9 @@ def memoize(fn):
 
     def wrapped(*args, **kwargs):
         key = repr(args) + repr(kwargs)
-        if not cache.has_key(key):
+        if key not in cache:
             cache[key] = fn(*args, **kwargs)
+
         return cache[key]
 
     return wrapped
@@ -152,7 +151,6 @@ def compile_template(template, params, is_file=False):
 
     >>> tmpl_s = "a=$a b=$b"
     >>> params = {'a':1, 'b':'b'}
-    >>> 
     >>> assert "a=1 b=b" == compile_template(tmpl_s, params)
     """
     if is_file:
@@ -167,8 +165,8 @@ def compile_template(template, params, is_file=False):
 def list_archs(arch=None):
     """List 'normalized' architecutres this host (mock) can support.
     """
-    default = ["x86_64", "i386"]  # This order should be kept.
-    ia32_re = re.compile(r"i.86") # i386, i686, etc.
+    default = ["x86_64", "i386"]   # This order should be kept.
+    ia32_re = re.compile(r"i.86")  # i386, i686, etc.
 
     if arch is None:
         arch = platform.machine()
@@ -202,7 +200,6 @@ def is_local(fqdn_or_hostname):
     False
     """
     return fqdn_or_hostname.startswith("localhost")
-
 
 
 class ThrdCommand(object):
@@ -289,7 +286,6 @@ class ThrdCommand(object):
     def run(self):
         self.run_async()
         return self.get_result()
-
 
 
 def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
@@ -511,8 +507,7 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
     if rs[-1] != 0:
         return False
 
-    return rhosts[len(rs)-1]
-
+    return rhosts[len(rs) - 1]
 
 
 class Distribution(object):
@@ -574,7 +569,6 @@ class Distribution(object):
         return fmt % (self.bdist_label, srpm)
 
 
-
 class RpmOperations(object):
     """RPM related operations.
     """
@@ -606,7 +600,6 @@ class RpmOperations(object):
         rs = prun_and_get_results(cs, wait)
 
         return rs
-
 
 
 class RepoOperations(object):
@@ -777,7 +770,6 @@ class RepoOperations(object):
 
         rs = prun_and_get_results(cs)
         return rs
-
 
 
 class Repo(object):
@@ -995,7 +987,6 @@ pmaker -n mock-data-${repo.name} \\
         return compile_template(self.mock_cfg_rpm_build_tmpl, params)
 
 
-
 def parse_conf_value(s):
     """Simple and naive parser to parse value expressions in config files.
 
@@ -1034,7 +1025,7 @@ def init_defaults_by_conffile(config=None, profile=None):
     Initialize default values for options by loading config files.
     """
     if config is None:
-        home = os.environ.get("HOME", os.curdir) # Is there case that $HOME is empty?
+        home = os.environ.get("HOME", os.curdir)  # Is there case that $HOME is empty?
 
         confs = ["/etc/myreporc"]
         confs += sorted(glob.glob("/etc/myrepo.d/*.conf"))
@@ -1095,7 +1086,6 @@ def parse_dist_option(dist_str, sep=":"):
     ...     parse_dist_option("invalid_dist_label.i386")
     ... except AssertionError:
     ...     pass
-    >>> 
     >>> parse_dist_option("fedora-14-i386")
     ('fedora-14', 'i386', 'fedora-14-i386')
     >>> parse_dist_option("fedora-14-i386:fedora-my-additions-14-i386")
@@ -1137,7 +1127,6 @@ def parse_dists_option(dists_str, sep=","):
     [('fedora-14', 'i386', 'fedora-my-additions-14-i386'), ('rhel-6', 'i386', 'rhel-my-additions-6-i386')]
     """
     return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
-
 
 
 def opt_parser():
