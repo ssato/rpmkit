@@ -206,9 +206,9 @@ CACHE_EXPIRING_DATES = 1  # [days]
 API_CACHE_EXPIRATIONS = {
     # api method: expiration dates (0: no cache [default], 1.. days or -1: permanent)
     "activationkey.getDetails": 1,
-    #"activationkey.listActivatedSystems": 0,
-    #"activationkey.listActivationKeys": 0,
-    #"activationkey.listConfigChannels": 0,
+    "activationkey.listActivatedSystems": 1,
+    "activationkey.listActivationKeys": 1,
+    "activationkey.listConfigChannels": 1,
     "api.getApiCallList": 100,
     "api.getApiNamespaceCallList": 100,
     "api.getApiNamespaces": 100,
@@ -242,8 +242,8 @@ API_CACHE_EXPIRATIONS = {
     "configchannel.lookupFileInfo": 1,
     "distchannel.listDefaultMaps": 100,
     "errata.applicableToChannels": 1,
-    "errata.bugzillaFixes": -1,
-    "errata.findByCve": -1,
+    "errata.bugzillaFixes": 10,
+    "errata.findByCve": 10,
     "errata.getDetails": 1,
     "errata.listAffectedSystems": 1,
     "errata.listByDate": 1,
@@ -562,7 +562,7 @@ class Cache(object):
     def needs_update(self, obj):
         """FIXME: closely-coupled with data type of obj argument.
 
-        @obj    (api_method_name, api_args) :: (str, [str | int | ... ])
+        @obj  (api_method_name, api_args) :: (str, [str | int | ... ])
         """
         (method, args) = obj
         expires = self.expirations.get(method, 0)  # Default: no cache
