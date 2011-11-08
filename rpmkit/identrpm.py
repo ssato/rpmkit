@@ -144,7 +144,7 @@ def complement_package_metadata(pkg):
             logging.debug(" args passed to swapi.main(): " + str(cs))
 
             (r, _opts) = SW.main(cs)
- 
+
         logging.debug("q=" + cmd + ", r=" + str(r))
 
         r[0]["epoch"] = normalize_epoch(r[0]["epoch"])

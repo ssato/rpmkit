@@ -1106,7 +1106,7 @@ def parse_dist_option(dist_str, sep=":"):
         bdist_label = label
     else:
         bdist_label = tpl[1]
- 
+
         if len(tpl) > 2:
             logging.warn("Invalid format: too many '%s' in dist_str: %s. Ignore the rest" % (sep, dist_str))
 
@@ -1144,7 +1144,7 @@ Examples:
   %prog init -s yumserver.local -u foo -m foo@example.com -F "John Doe"
 
   # build SRPM:
-  %prog build packagemaker-0.1-1.src.rpm 
+  %prog build packagemaker-0.1-1.src.rpm
 
   # build SRPM and deploy RPMs and SRPMs into your yum repos:
   %prog deploy packagemaker-0.1-1.src.rpm
@@ -1215,7 +1215,7 @@ def main(argv=sys.argv):
     (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = ("init", "update", "build", "deploy")
 
     logformat = "%(asctime)s [%(levelname)-4s] myrepo: %(message)s"
-    logdatefmt = "%H:%M:%S" # too much? "%a, %d %b %Y %H:%M:%S"
+    logdatefmt = "%H:%M:%S"  # too much? "%a, %d %b %Y %H:%M:%S"
 
     logging.basicConfig(format=logformat, datefmt=logdatefmt)
 
@@ -1301,7 +1301,7 @@ def main(argv=sys.argv):
         )
 
         repos.append(repo)
- 
+
     srpms = args[1:]
 
     if srpms:

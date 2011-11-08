@@ -166,12 +166,12 @@ except ImportError:
         # and should need the followings:
         #get_all = classmethod(get_all)
         #set = classmethod(set)
-    
+
     PYXATTR_ENABLED = False
 
 
 try:
-    from hashlib import md5, sha1 #, sha256, sha512
+    from hashlib import md5, sha1  #, sha256, sha512
 
 except ImportError:  # python < 2.5
     from md5 import md5
@@ -210,10 +210,10 @@ except ImportError:
     YUM_ENABLED = False
 
 
-__title__   = "packagemaker"
+__title__ = "packagemaker"
 __version__ = "0.2"
-__author__  = "Satoru SATOH"
-__email__   = "satoru.satoh@gmail.com"
+__author__ = "Satoru SATOH"
+__email__ = "satoru.satoh@gmail.com"
 __website__ = "https://github.com/ssato/rpmkit"
 
 
@@ -904,7 +904,7 @@ $ rpm -qlp /tmp/pm-IzL80r/packagemaker-0.2.20110502/packagemaker-0.2.20110502-1.
 /usr/share/doc/packagemaker-0.2.20110502
 /usr/share/doc/packagemaker-0.2.20110502/MANIFEST
 /usr/share/doc/packagemaker-0.2.20110502/README
-$ sed -n "/^%files/,/^$/p" /tmp/pm-IzL80r/packagemaker-0.2.20110502/packagemaker.spec 
+$ sed -n "/^%files/,/^$/p" /tmp/pm-IzL80r/packagemaker-0.2.20110502/packagemaker.spec
 %files
 %defattr(-,root,root,-)
 %doc README
@@ -1284,7 +1284,6 @@ BUILD_STEPS = (
 )
 
 
-
 def dicts_comp(lhs, rhs, keys=False):
     """Compare dicts. $rhs may have keys (and values) $lhs does not have.
 
@@ -1323,7 +1322,7 @@ def memoize(fn):
 
     def wrapped(*args, **kwargs):
         key = repr(args) + repr(kwargs)
-        if not cache.has_key(key):
+        if not key in cache:
             cache[key] = fn(*args, **kwargs)
 
         return cache[key]
@@ -1934,7 +1933,7 @@ class Rpm(object):
         for h in mi:
             for fi in h.fiFromHeader():
                 if pred(fi):
-                    yield dict(zip(Rpm.fi_keys + ["package",], list(fi) + [h["name"],]))
+                    yield dict(zip(Rpm.fi_keys + ["package"], list(fi) + [h["name"]]))
 
         # Release them to avoid core dumped or getting wrong result next time.
         del mi
@@ -2385,7 +2384,7 @@ class FileInfo(object):
         self.realpath = os.path.realpath(path)
 
         self.mode = mode
-        self.uid= uid
+        self.uid = uid
         self.gid = gid
         self.checksum = checksum
         self.xattrs = xattrs or {}
