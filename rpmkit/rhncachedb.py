@@ -49,9 +49,10 @@ class Package(DeclBase):
     version = S.Column(S.String(512))
     release = S.Column(S.String(512))
     epoch = S.Column(S.String(16))
-    arcch = S.Column(S.String(64)
+    arcch = S.Column(S.String(64))
 
-    def __init__(self, name, version, release, epoch, arch):
+    def __init__(self, id, name, version, release, epoch, arch):
+        self.id = id
         self.name = name
         self.version = version
         self.release = release
@@ -71,7 +72,8 @@ class SoftwareChannel(DeclBase):
     label = S.Column(S.String(128))
     name = S.Column(S.String(256))
 
-    def __init__(self, label, name):
+    def __init__(self, id, label, name):
+        self.id = id
         self.label = label
         self.name = name
 
@@ -86,7 +88,8 @@ class Errata(DeclBase):
     synopsis = S.Column(S.String(4000))
     date = S.Column(S.String(256))
 
-    def __init__(self, name, type, synopsis, date):
+    def __init__(self, id, name, type, synopsis, date):
+        self.id = id
         self.name = name
         self.type = type
         self.synopsis = synopsis
@@ -97,8 +100,12 @@ class ChannelPackages(DeclBase):
 
     __tablename__ = "channelpackages"
 
-    cid = S.Column(S.Integer, ForeignKey("softwarechannels.id"))
-    pid = S.Column(S.Integer, ForeignKey("packages.id"))
+    id = S.Column(S.Integer, primary_key=True)
+    cid = S.Column(S.Integer, S.ForeignKey("softwarechannels.id"))
+    pid = S.Column(S.Integer, S.ForeignKey("packages.id"))
+
+    softwarechannel = SO.relationship(SoftwareChannel, backref="channelpackages")
+    package = SO.relationship(Package, backref="channelpackages")
 
     def __init__(self, cid, pid):
         self.cid = cid
@@ -112,8 +119,12 @@ class PackageErrata(DeclBase):
 
     __tablename__ = "packageerrata"
 
-    pid = S.Column(S.Integer, ForeignKey("packages.id"))
-    eid = S.Column(S.Integer, ForeignKey("errata.id"))
+    id = S.Column(S.Integer, primary_key=True)
+    pid = S.Column(S.Integer, S.ForeignKey("packages.id"))
+    eid = S.Column(S.Integer, S.ForeignKey("errata.id"))
+
+    package = SO.relationship(Package, backref="packageerrata")
+    errata = SO.relationship(Errata, backref="packageerrata")
 
     def __init__(self, pid, eid):
         self.pid = pid
@@ -155,48 +166,51 @@ def get_xs(cmd, cls, keys):
     return [cls(*itemgetter(*keys)(x)) for x in rpc(cmd)]
 
 
-def get_channels():
+def get_channels(verb=""):
     """
     @see http://docs.redhat.com/docs/en-US/Red_Hat_Network_Satellite/5.4.1/html/API_Overview/handlers/ChannelHandler.html
     """
     return get_xs(
-        "channel.listAllChannels", SoftwareChannel, ("id", "label", "name"),
+        verb + "channel.listAllChannels",
+        SoftwareChannel,
+        ("id", "label", "name"),
     )
 
 
-def get_packages(channel):
+def get_packages(channel, verb=""):
     """
     :param channel: Software channel label
     """
     return get_xs(
-        "-A %s channel.software.listAllPackages" % channel,
+        verb + "-A %s channel.software.listAllPackages" % channel,
         Package,
         ("id", "name", "version", "release", "epoch", "arch_label"),
-    ]
+    )
 
 
-def get_errata(channel):
+def get_errata(channel, verb=""):
     return get_xs(
-        "-A %s channel.software.listErrata" % channel,
+        verb + "-A %s channel.software.listErrata" % channel,
         Errata,
         ("id", "advisory_name", "advisory_type", "advisory_synopsis", "date"),
     )
 
-def get_errata_for_package(pid):
+def get_errata_for_package(pid, verb=""):
     """
     :param pid: Package ID
     """
     return get_xs(
-        "-A %s packages.listProvidingErrata" % pid,
+        verb + "-A %s packages.listProvidingErrata" % pid,
         PackageErrata,
-        ("pid", "eid"),
+        ("advisory", ),
     )
 
 
-def make_data():
+def make_data(verbosity=0):
     data = Bunch()
+    verb = " -v " if verbosity > 0 else " "
 
-    data.channels = get_channels()
+    data.channels = get_channels(verb)
 
     data.packages = []
     data.channelpackages = []
@@ -204,19 +218,19 @@ def make_data():
     data.packageerrata = []
 
     for c in data.channels:
-        ps = get_packages(c.label)
+        ps = get_packages(c.label, verb)
 
         for p in ps:
-            data.channelpackages.append(c.id, p.id)
+            data.channelpackages.append(ChannelPackages(c.id, p.id))
 
             if p not in data.packages:
                 data.packages.append(p)
 
-                es = get_errata_for_package(p.id)
+                es = get_errata_for_package(p.id, verb)
                 data.packageerrata.extend(es)
 
     for c in data.channels:
-        es = get_errata(c.label)
+        es = get_errata(c.label, verb)
 
         for e in es:
             if e not in data.errata:
@@ -231,11 +245,11 @@ def init_database(db_path=DB_PATH):
     DeclBase.metadata.create_all(engine)
 
 
-def import_data(db_path=DB_PATH):
+def import_data(db_path=DB_PATH, verbosity=0):
     engine = get_engine(db_path)
 
     session = SO.sessionmaker(bind=engine)
-    data = make_data()
+    data = make_data(verbosity)
 
     session.add_all(data.channels)
     session.add_all(data.packages)
@@ -246,23 +260,24 @@ def import_data(db_path=DB_PATH):
     session.commit()
 
 
-def do_init(db_path=DB_PATH):
+def do_init(db_path=DB_PATH, verbosity=0):
     init_database(db_path)
-    import_data(db_path)
+    import_data(db_path, verbosity)
 
 
 def do_update(db_path=DB_PATH):
     print "Not implemented yet!"
 
 
-def option_parser():
+def opt_parser():
     defaults = dict(
         verbosity=0,
+        dbpath=DB_PATH,
     )
 
     p = optparse.OptionParser("""%prog COMMAND [OPTION ...]
 
-    Commands: i[init], b[uild]
+    Commands: i[init], u[pdate]
 
     Examples:
 
@@ -273,6 +288,8 @@ def option_parser():
     %prog update -v
     """)
 
+    p.set_defaults(**defaults)
+
     p.add_option("-d", "--dbpath", help="Database path")
     p.add_option("-v", "--verbose", action="count", dest="verbosity",
         help="Verbose mode")
@@ -281,7 +298,7 @@ def option_parser():
 
 
 def main(argv=sys.argv):
-    logformat = "%(asctime)s [%(levelname)-4s] myrepo: %(message)s"
+    logformat = "%(asctime)s [%(levelname)-4s] rhncachedb: %(message)s"
     logdatefmt = "%H:%M:%S"  # too much? "%a, %d %b %Y %H:%M:%S"
 
     logging.basicConfig(format=logformat, datefmt=logdatefmt)
@@ -305,10 +322,10 @@ def main(argv=sys.argv):
     a0 = args[0]
 
     if a0.startswith('i'):
-        do_init(options.dbpath)
+        do_init(options.dbpath, options.verbosity)
 
     elif a0.startswith('u'):
-        do_update(options.dbpath)
+        do_update(options.dbpath, options.verbosity)
 
     else:
         logging.error(" Unknown command '%s'" % a0)
