@@ -177,15 +177,15 @@ wireshark
 wireshark-gnome
 $
 $ ./swapi.py -A 10170***** -I 0 system.getDetails
-[{"building": "", "city": "", "location_aware_download": "true", "base_entitlement": "enterprise_entitled", "description": "Initial Registration Parameters:\nOS: redhat-release\nRelease: 5Server\nCPU Arch: i686-redhat-linux", "address1": "", "address2": "", "auto_errata_update": "false", "state": "", "profile_name": "rhel-5-3-guest-1.net-1.local", "country": "", "rack": "", "room": ""}]
+[{"building": "", "profile_name": "rhel-5-3-guest-1.net-1.local", ...}]
 $ ./swapi.py -A '[10170*****,{"city": "tokyo", "rack": "ep7"}]' system.setDetails
 [
   1
 ]
 $ ./swapi.py -A 10170***** -I 0 system.getDetails
-[{"building": "", "city": "", "location_aware_download": "true", "base_entitlement": "enterprise_entitled", "description": "Initial Registration Parameters:\nOS: redhat-release\nRelease: 5Server\nCPU Arch: i686-redhat-linux", "address1": "", "address2": "", "auto_errata_update": "false", "state": "", "profile_name": "rhel-5-3-guest-1.net-1.local", "country": "", "rack": "", "room": ""}]
+[{"building": "", "city": "tokyo", ..."OS: redhat-release\nRelease: 5Server\n"...}]
 $ ./swapi.py -A 10170***** -I 0 --no-cache system.getDetails
-[{"building": "", "city": "tokyo", "location_aware_download": "true", "base_entitlement": "enterprise_entitled", "description": "Initial Registration Parameters:\nOS: redhat-release\nRelease: 5Server\nCPU Arch: i686-redhat-linux", "address1": "", "address2": "", "auto_errata_update": "false", "state": "", "profile_name": "rhel-5-3-guest-1.net-1.local", "country": "", "rack": "ep7", "room": ""}]
+[{"building": "", "city": "tokyo", ..."OS: redhat-release\nRelease: 5Server\n"...}]
 $
 
 """
@@ -204,7 +204,8 @@ CACHE_EXPIRING_DATES = 1  # [days]
 
 ## Cache expiration dates for each APIs:
 API_CACHE_EXPIRATIONS = {
-    # api method: expiration dates (0: no cache [default], 1.. days or -1: permanent)
+    # api method: expiration dates (0: no cache [default], 1.. days or
+    # -1: permanent)
     "activationkey.getDetails": 1,
     "activationkey.listActivatedSystems": 1,
     "activationkey.listActivationKeys": 1,
@@ -433,9 +434,9 @@ def object_to_id(obj):
 
 def dict_equals(d0, d1, allow_more=False):
     """
-    @param d0  a dict
-    @param d1  a dict
-    @param allow_more  Whether to allow d0 or d1 has more items than other.
+    :param d0: a dict
+    :param d1: a dict
+    :param allow_more: Whether to allow d0 or d1 has more items than other.
 
     >>> dict_equals(dict(), dict())
     True
@@ -482,7 +483,9 @@ def longest_common_prefix(*args):
     >>> longest_common_prefix("abc", "bc")
     ''
     """
-    return "".join(x[0] for x in itertools.takewhile(all_eq, itertools.izip(*args)))
+    return "".join(x[0] for x in itertools.takewhile(
+        all_eq, itertools.izip(*args))
+    )
 
 
 def shorten_dict_keynames(dic, prefix=None):
@@ -547,8 +550,8 @@ class Cache(object):
 
     def save(self, obj, data, protocol=pickle.HIGHEST_PROTOCOL):
         """
-        @obj   object of which obj_id will be used as key of the cached data
-        @data  data to saved in cache
+        :param obj:  object of which obj_id is used as caching key
+        :param data: data to saved in cache
         """
         if self.readonly:
             logging.debug(" Not save as in read-only mode.")
@@ -564,6 +567,8 @@ class Cache(object):
         try:
             # TODO: How to detect errors during/after pickle.dump.
             pickle.dump(data, open(cache_path, 'wb'), protocol)
+            #logging.debug(" Saved in " + cache_path)
+
             return True
         except:
             return False
@@ -571,7 +576,7 @@ class Cache(object):
     def needs_update(self, obj):
         """FIXME: closely-coupled with data type of obj argument.
 
-        @obj  (api_method_name, api_args) :: (str, [str | int | ... ])
+        :param obj: (api_method_name, api_args) :: (str, [str | int | ... ])
         """
         (method, args) = obj
         expires = self.expirations.get(method, 0)  # Default: no cache
@@ -592,7 +597,8 @@ class Cache(object):
         cur_time = datetime.datetime.now()
         cache_mtime = datetime.datetime.fromtimestamp(mtime)
 
-        delta = cur_time - cache_mtime  # TODO: How to do if it's negative value?
+        # TODO: How to do if it's negative value?
+        delta = cur_time - cache_mtime
 
         return delta >= datetime.timedelta(expires)
 
@@ -632,8 +638,12 @@ class RpcApi(object):
         self.logout()
 
     def login(self):
-        self.server = xmlrpclib.ServerProxy(self.url, verbose=self.debug, use_datetime=True)
-        self.sid = self.server.auth.login(self.userid, self.passwd, self.timeout)
+        self.server = xmlrpclib.ServerProxy(
+            self.url, verbose=self.debug, use_datetime=True,
+        )
+        self.sid = self.server.auth.login(
+            self.userid, self.passwd, self.timeout,
+        )
 
     def logout(self):
         if self.sid:
@@ -681,7 +691,10 @@ class RpcApi(object):
             return ret
 
         except xmlrpclib.Fault, m:
-            raise RuntimeError("rpc: method '%s', args '%s'\nError message: %s" % (method_name, str(args), m))
+            raise RuntimeError(
+                "rpc: method '%s', args '%s'\nError message: %s" % \
+                    (method_name, str(args), m)
+            )
 
     def multicall(self, method_name, argsets):
         """Quick hack to implement XML-RPC's multicall like function.
@@ -730,14 +743,17 @@ def parse_api_args(args, arg_sep=','):
     >>> parse_api_args('abcXYZ012')
     ['abcXYZ012']
 
-    >>> assert parse_api_args('{"channelLabel": "foo-i386-5"}')[0]["channelLabel"] == "foo-i386-5"
+    >>> cl = '{"channelLabel": "foo-i386-5"}'
+    >>> assert parse_api_args(cl)[0]["channelLabel"] == "foo-i386-5"
 
-    >>> (i, s, d) = parse_api_args('1234567,abcXYZ012,{"channelLabel": "foo-i386-5"}')
+    >>> args '1234567,abcXYZ012,{"channelLabel": "foo-i386-5"}'
+    >>> (i, s, d) = parse_api_args(args)
     >>> assert i == 1234567
     >>> assert s == "abcXYZ012"
     >>> assert d["channelLabel"] == "foo-i386-5"
 
-    >>> (i, s, d) = parse_api_args('[1234567,"abcXYZ012",{"channelLabel": "foo-i386-5"}]')
+    >>> args = '[1234567,"abcXYZ012",{"channelLabel": "foo-i386-5"}]'
+    >>> (i, s, d) = parse_api_args(args)
     >>> assert i == 1234567
     >>> assert s == "abcXYZ012"
     >>> assert d["channelLabel"] == "foo-i386-5"
@@ -760,7 +776,8 @@ def parse_api_args(args, arg_sep=','):
 
 class JSONEncoder(json.JSONEncoder):
     """
-    @see http://stackoverflow.com/questions/455580/json-datetime-between-python-and-javascript
+    @see
+    http://stackoverflow.com/questions/455580/json-datetime-between-python-and-javascript
     """
 
     def default(self, obj):
@@ -824,7 +841,8 @@ def configure_with_configfile(config_file, profile=""):
     """
     @config_file  Configuration file path, ex. '~/.swapi/config'.
     """
-    (server, userid, password, timeout, protocol) = ('', '', '', TIMEOUT, PROTO)
+    (server, userid, password, timeout, protocol) = \
+        ('', '', '', TIMEOUT, PROTO)
 
     # expand '~/'
     if config_file:
@@ -838,6 +856,7 @@ def configure_with_configfile(config_file, profile=""):
     cp = configparser.SafeConfigParser()
 
     logging.debug(" Loading config files: %s" % ",".join(config_files))
+
     if profile:
         logging.debug(" Config profile: " + profile)
 
@@ -871,11 +890,18 @@ def configure_with_options(config, options):
     @config   config parameters dict: {'server':, 'userid':, ...}
     @options  optparse.Options
     """
-    server = config.get('server') or (options.server or raw_input('Enter server name > '))
-    userid = config.get('userid') or (options.userid or raw_input('Enter user ID > '))
-    password = config.get('password') or (options.password or getpass.getpass('Enter your password > '))
-    timeout = config.get('timeout') or ((options.timeout and options.timeout != TIMEOUT) and options.timeout or TIMEOUT)
-    protocol = config.get('protocol') or ((options.protocol and options.protocol != PROTO) and options.protocol or PROTO)
+    server = config.get('server') or \
+        (options.server or raw_input('Enter server name > '))
+    userid = config.get('userid') or \
+        (options.userid or raw_input('Enter user ID > '))
+    password = config.get('password') or \
+        (options.password or getpass.getpass('Enter your password > '))
+    timeout = config.get('timeout') or \
+        ((options.timeout and options.timeout != TIMEOUT) and \
+            options.timeout or TIMEOUT)
+    protocol = config.get('protocol') or \
+        ((options.protocol and options.protocol != PROTO) and \
+            options.protocol or PROTO)
 
     return dict(server=server, userid=userid, password=password,
         timeout=timeout, protocol=protocol)
@@ -889,19 +915,44 @@ def configure(options):
 
 
 def option_parser(prog="swapi"):
+    defaults = dict(
+        config=None,
+        verbose=0,
+        test=False,
+        timeout=TIMEOUT,
+        protocol=PROTO,
+        rpcdebug=False,
+        no_cache=False,
+        cachedir=CACHE_DIR,
+        readonly=False,
+        format=False,
+        indent=2,
+        sort="",
+        group="",
+        select="",
+        deselect="",
+        short_keys=True,
+    )
+
     p = optparse.OptionParser("""%(cmd)s [OPTION ...] RPC_API_STRING
 
 Examples:
   %(cmd)s --args=10821 packages.listDependencies
   %(cmd)s --list-args="10821,10822,10823" packages.getDetails
   %(cmd)s -vv --args=10821 packages.listDependencies
-  %(cmd)s -P MySpacewalkProfile --args=rhel-x86_64-server-vt-5 channel.software.getDetails
-  %(cmd)s -C /tmp/s.cfg -A rhel-x86_64-server-vt-5,guest channel.software.isUserSubscribable
-  %(cmd)s -A "rhel-i386-server-5","2010-04-01 08:00:00" channel.software.listAllPackages
-  %(cmd)s -A '["rhel-i386-server-5","2010-04-01 08:00:00"]' channel.software.listAllPackages
+  %(cmd)s -P MySpacewalkProfile --args=rhel-x86_64-server-vt-5 \\
+    channel.software.getDetails
+  %(cmd)s -C /tmp/s.cfg -A rhel-x86_64-server-vt-5,guest \\
+    channel.software.isUserSubscribable
+  %(cmd)s -A "rhel-i386-server-5","2010-04-01 08:00:00" \\
+    channel.software.listAllPackages
+  %(cmd)s -A '["rhel-i386-server-5","2010-04-01 08:00:00"]' \\
+    channel.software.listAllPackages
   %(cmd)s --format "%%(label)s" channel.listSoftwareChannels
-  %(cmd)s -A 100010021 --no-cache -F "%%(hostname)s %%(description)s" system.getDetails
-  %(cmd)s -A '[1017068053,{"city": "tokyo", "rack": "rack-A-1"}]' system.setDetails
+  %(cmd)s -A 100010021 --no-cache -F "%%(hostname)s %%(description)s" \\
+    system.getDetails
+  %(cmd)s -A '[1017068053,{"city": "tokyo", "rack": "rack-A-1"}]' \\
+    system.setDetails
 
 
 Config file example (%(config)s):
@@ -924,43 +975,58 @@ password = secretpasswd
         prog=prog,
     )
 
-    config_help = "Config file path [%s; loaded in this order]" % ",".join(CONFIG_FILES)
+    p.set_defaults(**defaults)
 
-    p.add_option('-C', '--config', help=config_help, default=None)
-    p.add_option('-P', '--profile', help='Select profile (section) in config file')
-    p.add_option('-v', '--verbose', help='verbose mode', default=0, action="count")
-    p.add_option('-T', '--test', help='Test mode', default=False, action="store_true")
+    config_help = "Config file path [%s; loaded in this order]" % \
+        ",".join(CONFIG_FILES)
+
+    p.add_option('-C', '--config', help=config_help)
+    p.add_option('-P', '--profile',
+        help='Select profile (section) in config file'
+    )
+    p.add_option('-v', '--verbose', help='verbose mode', action="count")
+    p.add_option('-T', '--test', help='Test mode', action="store_true")
 
     cog = optparse.OptionGroup(p, "Connect options")
     cog.add_option('-s', '--server', help='Spacewalk/RHN server hostname.')
     cog.add_option('-u', '--userid', help='Spacewalk/RHN login user id')
     cog.add_option('-p', '--password', help='Spacewalk/RHN Login password')
-    cog.add_option('-t', '--timeout', help='Session timeout in sec [%default]', default=TIMEOUT)
-    cog.add_option('',   '--protocol', help='Spacewalk/RHN server protocol.', default=PROTO)
+    cog.add_option('-t', '--timeout', help='Session timeout in sec [%default]')
+    cog.add_option('',   '--protocol', help='Spacewalk/RHN server protocol.')
     p.add_option_group(cog)
 
     xog = optparse.OptionGroup(p, "XML-RPC options")
-    xog.add_option('',   '--rpcdebug', help="XML-RPC Debug mode", action="store_true", default=False)
+    xog.add_option('',   '--rpcdebug', help="XML-RPC Debug mode", action="store_true")
     p.add_option_group(xog)
 
     caog = optparse.OptionGroup(p, "Cache options")
-    caog.add_option('',   '--no-cache', help='Do not use query result cache', action="store_true", default=False)
-    caog.add_option('',   '--cachedir', help="Caching directory [%default]", default=CACHE_DIR)
-    caog.add_option('',   '--readonly', help="Use read-only cache", action="store_true", default=False)
+    caog.add_option('',   '--no-cache',
+        help='Do not use query result cache', action="store_true"
+    )
+    caog.add_option('',   '--cachedir', help="Caching directory [%default]")
+    caog.add_option('',   '--readonly', help="Use read-only cache", action="store_true")
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
-    oog.add_option('-F', '--format', help="Output format (non-json)", default=False)
-    oog.add_option('-I', '--indent', help="Indent for JSON output. 0 means no indent. [%default]", type="int", default=2)
-    oog.add_option('', '--sort', help="Sort out results by given key", default="")
-    oog.add_option('', '--group', help="Group results by given key", default="")
-    oog.add_option('', '--select', help="Select results by given key and value pair in format key:value0,value1,...", default="")
-    oog.add_option('', '--deselect', help="Deselect results by given key and value pair in format key:value0,value1,...", default="")
-    oog.add_option('', '--no-short-keys', help="Do not shorten keys in results by common longest prefix [not %default]", action="store_false", dest="short_keys", default=True)
+    oog.add_option('-F', '--format', help="Output format (non-json)")
+    oog.add_option('-I', '--indent',
+        help="Indent for JSON output. 0 means no indent. [%default]", type="int"
+    )
+    oog.add_option('', '--sort', help="Sort out results by given key")
+    oog.add_option('', '--group', help="Group results by given key")
+    oog.add_option('', '--select',
+        help="Select results by given key and value pair in format key:value0,value1,..."
+    )
+    oog.add_option('', '--deselect',
+        help="Deselect results by given key and value pair in format key:value0,value1,...")
+    oog.add_option('', '--no-short-keys'
+        help="Do not shorten keys in results by common longest prefix [not %default]",
+            action="store_false", dest="short_keys"
+    )
     p.add_option_group(oog)
 
     aog = optparse.OptionGroup(p, "API argument options")
-    aog.add_option('-A', '--args', default='',
+    aog.add_option('-A', '--args',
         help='Api args other than session id in comma separated strings or JSON expression [empty]')
     aog.add_option('', '--list-args', help='Specify list of API arguments')
     p.add_option_group(aog)
@@ -1036,7 +1102,9 @@ def main(argv):
         kvs = parse_list_str(options.select, ":")
 
         if len(kvs) < 2:
-            sys.stderr.write("Invalid value given for --select: %s\n" % options.select)
+            sys.stderr.write(
+                "Invalid value given for --select: %s\n" % options.select
+            )
             sys.exit(1)
 
         (key, values) = kvs
@@ -1048,7 +1116,9 @@ def main(argv):
         kvs = parse_list_str(options.deselect, ":")
 
         if len(kvs) < 2:
-            sys.stderr.write("Invalid value given for --deselect: %s\n" % options.deselect)
+            sys.stderr.write(
+                "Invalid value given for --deselect: %s\n" % options.deselect
+            )
             sys.exit(1)
 
         (key, values) = kvs
