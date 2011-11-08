@@ -515,14 +515,18 @@ class Cache(object):
     """Pickle module based data caching backend.
     """
 
-    def __init__(self, domain, topdir=CACHE_DIR, expirations=API_CACHE_EXPIRATIONS):
+    def __init__(self, domain, topdir=CACHE_DIR, readonly=False,
+            expirations=API_CACHE_EXPIRATIONS):
         """Initialize domain-local caching parameters.
 
-        @domain  a str represents target domain
-        @topdir  topdir to save cache files
+        :param domain: a str represents target domain
+        :param topdir: topdir to save cache files
+        :param readonly: Access to cache database is read only
+        :param expirations: Cache expiration dates map
         """
         self.domain = domain
         self.topdir = os.path.join(topdir, domain)
+        self.readonly = readonly
         self.expirations = expirations
 
     def dir(self, obj):
@@ -546,7 +550,12 @@ class Cache(object):
         @obj   object of which obj_id will be used as key of the cached data
         @data  data to saved in cache
         """
+        if self.readonly:
+            logging.debug(" Not save as in read-only mode.")
+            return
+
         cache_dir = self.dir(obj)
+
         if not os.path.isdir(cache_dir):
             os.makedirs(cache_dir, mode=0700)
 
@@ -592,11 +601,15 @@ class RpcApi(object):
     """Spacewalk / RHN XML-RPC API server object.
     """
 
-    def __init__(self, conn_params, enable_cache=True, cachedir=CACHE_DIR, debug=False):
+    def __init__(self, conn_params, enable_cache=True, cachedir=CACHE_DIR,
+            debug=False, readonly=False):
         """
-        @conn_params  Connection parameters: server, userid, password, timeout, protocol.
-        @enable_cache Whether to enable query result cache or not.
-        @cachedir     Cache saving directory
+        :param conn_params: Connection parameters: server, userid, password,
+            timeout, protocol.
+        :param enable_cache: Whether to enable query result cache or not.
+        :param cachedir: Cache saving directory
+        :param debug: Debug mode
+        :param readonly: Use read only cache
         """
         self.url = "%(protocol)s://%(server)s/rpc/api" % conn_params
         self.userid = conn_params.get('userid')
@@ -605,7 +618,15 @@ class RpcApi(object):
 
         self.sid = False
         self.debug = debug
-        self.cache = enable_cache and Cache("%s:%s" % (self.url, self.userid), cachedir) or False
+
+        if enable_cache:
+            self.cache = Cache(
+                "%s:%s" % (self.url, self.userid),
+                cachedir,
+                readonly,
+            )
+        else:
+            self.cache = False
 
     def __del__(self):
         self.logout()
@@ -620,13 +641,17 @@ class RpcApi(object):
 
     def call(self, method_name, *args):
         logging.debug(" Call: api=%s, args=%s" % (method_name, str(args)))
+
         try:
             if self.cache:
                 key = (method_name, args)
 
                 if not self.cache.needs_update(key):
                     ret = self.cache.load(key)
-                    logging.debug(" Loading cache: method=%s, args=%s" % (method_name, str(args)))
+                    logging.debug(
+                        " Loading cache: method=%s, args=%s" % \
+                            (method_name, str(args))
+                    )
 
                     if ret is not None:
                         logging.debug(" Found query result cache")
@@ -921,6 +946,7 @@ password = secretpasswd
     caog = optparse.OptionGroup(p, "Cache options")
     caog.add_option('',   '--no-cache', help='Do not use query result cache', action="store_true", default=False)
     caog.add_option('',   '--cachedir', help="Caching directory [%default]", default=CACHE_DIR)
+    caog.add_option('',   '--readonly', help="Use read-only cache", action="store_true", default=False)
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
@@ -959,7 +985,10 @@ def init_log(verbose):
 def init_rpcapi(options):
     params = configure(options)
 
-    rapi = RpcApi(params, not options.no_cache, options.cachedir, options.rpcdebug)
+    rapi = RpcApi(
+        params, not options.no_cache, options.cachedir, options.rpcdebug,
+        options.readonly,
+    )
     rapi.login()
 
     return rapi
@@ -1095,4 +1124,4 @@ if __name__ == '__main__':
     sys.exit(realmain(sys.argv))
 
 
-# vim:sw=4 ts=4 expandtab:
+# vim:sw=4 ts=4 et:
