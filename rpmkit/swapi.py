@@ -536,7 +536,13 @@ class Cache(object):
     def dir(self, obj):
         """Resolve the dir in which cache file of the object is saved.
         """
-        return os.path.join(self.topdir, object_to_id(obj))
+        oid = object_to_id(obj)
+
+        oid0 = oid[0]
+        oid1 = oid[1]
+        oid_rest = oid[2:]
+
+        return os.path.join(self.topdir, oid0, oid1, oid_rest)
 
     def path(self, obj):
         """Resolve path to cache file of the object.
