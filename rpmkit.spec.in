@@ -36,6 +36,7 @@ RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/myrepo.d
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
 
 
 %clean
@@ -49,9 +50,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/*
 %{python_sitelib}/*
 %{_sysconfdir}/myrepo.d
+%{_localstatedir}/swapi
 
 
 %changelog
+* Wed Nov  9 2011 Satoru SATOH <ssato@redhat.com> - 0.2.3-1
+- New upstream
+- swapi: various fixes and enhancements including no online access is needed if
+  cache is enough, system cache, read-only cache, pep8 error fixes, etc.
+
 * Thu Sep 15 2011 Satoru SATOH <ssato@redhat.com> - 0.2.2-1
 - New upstream
 - src/swapi: fixed a grave bug wrongly calls rpmkit.swapi.main()
