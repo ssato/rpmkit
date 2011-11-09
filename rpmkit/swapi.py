@@ -198,6 +198,7 @@ CONFIG_DIR = os.path.join(os.environ.get('HOME', '.'), '.swapi')
 CONFIG = os.path.join(CONFIG_DIR, 'config')
 CONFIG_FILES = glob.glob("/etc/swapi.d/*.conf") + [CONFIG]
 
+SYSTEM_CACHE_DIR = "/var/cache/swapi"
 CACHE_DIR = os.path.join(CONFIG_DIR, 'cache')
 CACHE_EXPIRING_DATES = 1  # [days]
 
@@ -554,7 +555,7 @@ class Cache(object):
         :param data: data to saved in cache
         """
         if self.readonly:
-            logging.debug(" Not save as in read-only mode.")
+            logging.debug(" Not save as in read-only mode: " + self.topdir)
             return
 
         cache_dir = self.dir(obj)
@@ -567,7 +568,7 @@ class Cache(object):
         try:
             # TODO: How to detect errors during/after pickle.dump.
             pickle.dump(data, open(cache_path, 'wb'), protocol)
-            #logging.debug(" Saved in " + cache_path)
+            logging.debug(" Saved in " + cache_path)
 
             return True
         except:
@@ -588,6 +589,10 @@ class Cache(object):
 
         if expires < 0:  # it meens cache never expire.
             return False
+
+        if not os.path.exists(self.path(obj)):
+            logging.info(" Cache file does not found for " + str(obj))
+            return True
 
         try:
             mtime = os.stat(self.path(obj)).st_mtime
@@ -629,13 +634,14 @@ class RpcApi(object):
         self.debug = debug
 
         if enable_cache:
-            self.cache = Cache(
-                "%s:%s" % (self.url, self.userid),
-                cachedir,
-                readonly,
-            )
+            cdomain = str_to_id("%s:%s" % (self.url, self.userid))
+
+            self.caches = [
+                Cache(cdomain, SYSTEM_CACHE_DIR, True),
+                Cache(cdomain, cachedir, readonly),
+            ]
         else:
-            self.cache = None
+            self.caches = []
 
     def __del__(self):
         self.logout()
@@ -656,19 +662,26 @@ class RpcApi(object):
         self.sid = None
 
     def get_from_cache(self, key):
-        """Get result from the cache.
+        """Get result from the caches.
         """
-        if self.cache.needs_update(key):
-            logging.debug(" Cache is old and not used: " + str(key))
-        else:
-            ret = self.cache.load(key)
-            logging.debug(" Loading cache: " + str(key))
+        for cache in self.caches:
+            logging.info(
+                " Try getting results from cache in " + cache.topdir
+            )
 
-            if ret is not None:
-                logging.debug(" Found query result cache")
-                return ret
+            if cache.needs_update(key):
+                logging.debug(
+                    " Cached result is old and not used: " + str(key)
+                )
+            else:
+                logging.debug(" Loading cache: " + str(key))
+                ret = cache.load(key)
 
-            logging.debug(" No query result cache found.")
+                if ret is not None:
+                    logging.info(" Found cached result for " + str(key))
+                    return ret
+
+            logging.debug(" No cached results found in " + cache.topdir)
 
         return None
 
@@ -676,7 +689,7 @@ class RpcApi(object):
         logging.debug(" Call: api=%s, args=%s" % (method_name, str(args)))
         key = (method_name, args)
 
-        if self.cache is not None:
+        if self.caches:
             ret = self.get_from_cache(key)
 
             if ret is not None:
@@ -700,8 +713,8 @@ class RpcApi(object):
             else:
                 ret = method(self.sid, *args)
 
-            if self.cache is not None:
-                self.cache.save(key, ret)
+            for cache in self.caches:
+                cache.save(key, ret)
 
             return ret
 
