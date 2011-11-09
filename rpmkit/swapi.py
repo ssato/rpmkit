@@ -581,7 +581,7 @@ class Cache(object):
         (method, args) = obj
         expires = self.expirations.get(method, 0)  # Default: no cache
 
-        logging.debug("expiration dates for %s: %d" % (method, expires))
+        logging.debug(" Expiration dates for %s: %d" % (method, expires))
 
         if expires == 0:  # it means never cache.
             return True
@@ -632,7 +632,7 @@ class RpcApi(object):
                 readonly,
             )
         else:
-            self.cache = False
+            self.cache = None
 
     def __del__(self):
         self.logout()
@@ -646,39 +646,49 @@ class RpcApi(object):
         )
 
     def logout(self):
-        if self.sid is not None:
-            self.server.auth.logout(self.sid)
-            self.sid = None
+        if self.sid is None:
+            return
+
+        self.server.auth.logout(self.sid)
+        self.sid = None
+
+    def get_from_cache(self, key):
+        """Get result from the cache.
+        """
+        if self.cache.needs_update(key):
+            logging.debug(" Cache is old and not used: " + str(key))
+        else:
+            ret = self.cache.load(key)
+            logging.debug(" Loading cache: " + str(key))
+
+            if ret is not None:
+                logging.debug(" Found query result cache")
+                return ret
+
+            logging.debug(" No query result cache found.")
+
+        return None
 
     def call(self, method_name, *args):
         logging.debug(" Call: api=%s, args=%s" % (method_name, str(args)))
+        key = (method_name, args)
+
+        if self.cache is not None:
+            ret = self.get_from_cache(key)
+
+            if ret is not None:
+                return ret
+
+        # wait a little to avoid DoS attack to the server if called
+        # multiple times.
+        time.sleep(random.random() * 5)
 
         try:
-            if self.cache:
-                key = (method_name, args)
-
-                if not self.cache.needs_update(key):
-                    ret = self.cache.load(key)
-                    logging.debug(
-                        " Loading cache: method=%s, args=%s" % \
-                            (method_name, str(args))
-                    )
-
-                    if ret is not None:
-                        logging.debug(" Found query result cache")
-                        return ret
-
-                    logging.debug(" No query result cache found.")
-
-            logging.debug(" Accessing the server to get results")
+            logging.debug(" Try accessing the server to get results")
             if self.sid is None:
                 self.login()
 
             method = getattr(self.server, method_name)
-
-            # wait a little to avoid DoS attack to the server if called
-            # multiple times.
-            time.sleep(random.random() * 5)
 
             # Special cases which do not need session_id parameter:
             # api.{getVersion, systemVersion} and auth.login.
@@ -687,7 +697,7 @@ class RpcApi(object):
             else:
                 ret = method(self.sid, *args)
 
-            if self.cache:
+            if self.cache is not None:
                 self.cache.save(key, ret)
 
             return ret
