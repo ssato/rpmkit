@@ -21,7 +21,7 @@ PACKAGE = "rpmkit"
 VERSION = "0.2.3"
 
 # daily snapshots:
-#VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
+VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
 
