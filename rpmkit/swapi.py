@@ -622,7 +622,7 @@ class RpcApi(object):
         self.passwd = conn_params.get('password')
         self.timeout = conn_params.get('timeout')
 
-        self.sid = False
+        self.sid = None
         self.debug = debug
 
         if enable_cache:
@@ -646,8 +646,9 @@ class RpcApi(object):
         )
 
     def logout(self):
-        if self.sid:
+        if self.sid is not None:
             self.server.auth.logout(self.sid)
+            self.sid = None
 
     def call(self, method_name, *args):
         logging.debug(" Call: api=%s, args=%s" % (method_name, str(args)))
@@ -669,7 +670,8 @@ class RpcApi(object):
 
                     logging.debug(" No query result cache found.")
 
-            if not self.sid:
+            logging.debug(" Accessing the server to get results")
+            if self.sid is None:
                 self.login()
 
             method = getattr(self.server, method_name)
@@ -1064,7 +1066,6 @@ def init_rpcapi(options):
         params, not options.no_cache, options.cachedir, options.rpcdebug,
         options.readonly,
     )
-    rapi.login()
 
     return rapi
 
