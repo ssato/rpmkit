@@ -178,14 +178,14 @@ wireshark-gnome
 $
 $ ./swapi.py -A 10170***** -I 0 system.getDetails
 [{"building": "", "profile_name": "rhel-5-3-guest-1.net-1.local", ...}]
-$ ./swapi.py -A '[10170*****,{"city": "tokyo", "rack": "ep7"}]' system.setDetails
+$ ./swapi.py -A '[10*****,{"city": "tokyo", "rack": "ep7"}]' system.setDetails
 [
   1
 ]
 $ ./swapi.py -A 10170***** -I 0 system.getDetails
-[{"building": "", "city": "tokyo", ..."OS: redhat-release\nRelease: 5Server\n"...}]
+[{"building": "", ..."OS: redhat-release\nRelease: 5Server\n"...}]
 $ ./swapi.py -A 10170***** -I 0 --no-cache system.getDetails
-[{"building": "", "city": "tokyo", ..."OS: redhat-release\nRelease: 5Server\n"...}]
+[{"building": "", ..."OS: redhat-release\nRelease: 5Server\n"...}]
 $
 
 """
@@ -204,8 +204,8 @@ CACHE_EXPIRING_DATES = 1  # [days]
 
 ## Cache expiration dates for each APIs:
 API_CACHE_EXPIRATIONS = {
-    # api method: expiration dates (0: no cache [default], 1.. days or
-    # -1: permanent)
+    # api method: expiration dates (0: no cache [default], 1.. days
+    # or -1: permanent)
     "activationkey.getDetails": 1,
     "activationkey.listActivatedSystems": 1,
     "activationkey.listActivationKeys": 1,
@@ -776,8 +776,7 @@ def parse_api_args(args, arg_sep=','):
 
 class JSONEncoder(json.JSONEncoder):
     """
-    @see
-    http://stackoverflow.com/questions/455580/json-datetime-between-python-and-javascript
+    @see http://goo.gl/vEwdE
     """
 
     def default(self, obj):
@@ -795,7 +794,9 @@ def results_to_json_str(results, indent=2):
     >>> results_to_json_str([123, 'abc', {'x':'yz'}])
     '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
     """
-    return json.dumps(results, ensure_ascii=False, indent=indent, cls=JSONEncoder)
+    return json.dumps(
+        results, ensure_ascii=False, indent=indent, cls=JSONEncoder
+    )
 
 
 def parse_list_str(list_s, sep=","):
@@ -996,38 +997,46 @@ password = secretpasswd
     p.add_option_group(cog)
 
     xog = optparse.OptionGroup(p, "XML-RPC options")
-    xog.add_option('',   '--rpcdebug', help="XML-RPC Debug mode", action="store_true")
+    xog.add_option('',   '--rpcdebug', action="store_true",
+        help="XML-RPC Debug mode")
     p.add_option_group(xog)
 
     caog = optparse.OptionGroup(p, "Cache options")
     caog.add_option('',   '--no-cache',
         help='Do not use query result cache', action="store_true"
     )
-    caog.add_option('',   '--cachedir', help="Caching directory [%default]")
-    caog.add_option('',   '--readonly', help="Use read-only cache", action="store_true")
+    caog.add_option('', '--cachedir', help="Caching directory [%default]")
+    caog.add_option('', '--readonly', action="store_true",
+        help="Use read-only cache")
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
     oog.add_option('-F', '--format', help="Output format (non-json)")
-    oog.add_option('-I', '--indent',
-        help="Indent for JSON output. 0 means no indent. [%default]", type="int"
+    oog.add_option('-I', '--indent', type="int",
+        help="Indent for JSON output. 0 means no indent. [%default]",
     )
     oog.add_option('', '--sort', help="Sort out results by given key")
     oog.add_option('', '--group', help="Group results by given key")
     oog.add_option('', '--select',
-        help="Select results by given key and value pair in format key:value0,value1,..."
+        help="Select results by given key and value pair in format " + \
+            "key:value0,value1,..."
     )
     oog.add_option('', '--deselect',
-        help="Deselect results by given key and value pair in format key:value0,value1,...")
-    oog.add_option('', '--no-short-keys'
-        help="Do not shorten keys in results by common longest prefix [not %default]",
-            action="store_false", dest="short_keys"
+        help="Deselect results by given key and value pair in format " + \
+            "key:value0,value1,..."
+    )
+    oog.add_option('', '--no-short-keys', action="store_false",
+        dest="short_keys",
+        help="Do not shorten keys in results by common longest prefix " + \
+            "[not %default]",
     )
     p.add_option_group(oog)
 
     aog = optparse.OptionGroup(p, "API argument options")
     aog.add_option('-A', '--args',
-        help='Api args other than session id in comma separated strings or JSON expression [empty]')
+        help="Api args other than session id in comma separated strings " + \
+            "or JSON expression [empty]"
+    )
     aog.add_option('', '--list-args', help='Specify list of API arguments')
     p.add_option_group(aog)
 
@@ -1164,16 +1173,28 @@ class TestScript(unittest.TestCase):
         self.__helper("--args=rhel-i386-server-5 channel.software.getDetails")
 
     def test_api_w_arg_and_format_option(self):
-        self.__helper("-A rhel-i386-server-5 --format '%%(channel_description)s' channel.software.getDetails")
+        self.__helper(
+            "-A rhel-i386-server-5 --format '%%(channel_description)s' " + \
+                "channel.software.getDetails"
+        )
 
     def test_api_w_arg_multicall(self):
-        self.__helper("--list-args='rhel-i386-server-5,rhel-x86_64-server-5' channel.software.getDetails")
+        self.__helper(
+            "--list-args='rhel-i386-server-5,rhel-x86_64-server-5' " + \
+                "channel.software.getDetails"
+        )
 
     def test_api_w_args(self):
-        self.__helper("-A 'rhel-i386-server-5,2010-04-01 08:00:00' channel.software.listAllPackages")
+        self.__helper(
+            "-A 'rhel-i386-server-5,2010-04-01 08:00:00' " + \
+                "channel.software.listAllPackages"
+        )
 
     def test_api_w_args_as_list(self):
-        self.__helper("-A '[\"rhel-i386-server-5\",\"2010-04-01 08:00:00\"]' channel.software.listAllPackages")
+        self.__helper(
+            "-A '[\"rhel-i386-server-5\",\"2010-04-01 08:00:00\"]' " + \
+                "channel.software.listAllPackages"
+        )
 
 
 def unittests():
