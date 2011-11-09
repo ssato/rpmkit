@@ -50,7 +50,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/*
 %{python_sitelib}/*
 %{_sysconfdir}/myrepo.d
-%{_localstatedir}/swapi
+%{_localstatedir}/cache/swapi
 
 
 %changelog
