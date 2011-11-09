@@ -246,10 +246,10 @@ API_CACHE_EXPIRATIONS = {
     "errata.applicableToChannels": 1,
     "errata.bugzillaFixes": 10,
     "errata.findByCve": 10,
-    "errata.getDetails": 1,
+    "errata.getDetails": 10,  # FIXME: How frequent errata updates?
     "errata.listAffectedSystems": 1,
     "errata.listByDate": 1,
-    "errata.listCves": 10,   # FIXME: How frequent errata updates?
+    "errata.listCves": 10,
     "errata.listKeywords": 10,
     "errata.listPackages": 10,
     "errata.listUnpublishedErrata": 10,
