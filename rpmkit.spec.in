@@ -54,6 +54,11 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Nov  9 2011 Satoru SATOH <ssato@redhat.com> - 0.2.3.20111109-1
+- New snapshot release
+- swapi: changed scheme to construct caching dir path for each objects to avoid
+  too many subdirs made in caching top dir
+
 * Wed Nov  9 2011 Satoru SATOH <ssato@redhat.com> - 0.2.3-1
 - New upstream
 - swapi: various fixes and enhancements including no online access is needed if
