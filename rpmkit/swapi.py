@@ -616,7 +616,7 @@ class RpcApi(object):
     """
 
     def __init__(self, conn_params, enable_cache=True, cachedir=CACHE_DIR,
-            debug=False, readonly=False):
+            debug=False, readonly=False, cacheonly=False):
         """
         :param conn_params: Connection parameters: server, userid, password,
             timeout, protocol.
@@ -624,6 +624,7 @@ class RpcApi(object):
         :param cachedir: Cache saving directory
         :param debug: Debug mode
         :param readonly: Use read only cache
+        :param cacheonly: Get results only from cache (w/o any access to RHNS)
         """
         self.url = "%(protocol)s://%(server)s/rpc/api" % conn_params
         self.userid = conn_params.get('userid')
@@ -632,8 +633,12 @@ class RpcApi(object):
 
         self.sid = None
         self.debug = debug
+        self.cacheonly = cacheonly
 
         if enable_cache:
+            if self.cacheonly:
+                readonly = True
+
             cdomain = str_to_id("%s:%s" % (self.url, self.userid))
 
             self.caches = [
@@ -692,7 +697,11 @@ class RpcApi(object):
         if self.caches:
             ret = self.get_from_cache(key)
 
-            if ret is not None:
+            if ret is None:
+                if self.cacheonly:
+                    logging.warn(" Cache-only mode but got no results!")
+                    return None
+            else:
                 return ret
 
         # wait a little to avoid DoS attack to the server if called
@@ -954,6 +963,7 @@ def option_parser(prog="swapi"):
         no_cache=False,
         cachedir=CACHE_DIR,
         readonly=False,
+        cacheonly=False,
         format=False,
         indent=2,
         sort="",
@@ -1036,6 +1046,10 @@ password = secretpasswd
     caog.add_option('', '--cachedir', help="Caching directory [%default]")
     caog.add_option('', '--readonly', action="store_true",
         help="Use read-only cache")
+    caog.add_option('', '--cacheonly', action="store_true",
+        help="Get results only from cache w/o any access to RHNS")
+    caog.add_option('', '--offline', dest="cacheonly",
+        help="Same as --cacheonly")
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
@@ -1090,7 +1104,7 @@ def init_rpcapi(options):
 
     rapi = RpcApi(
         params, not options.no_cache, options.cachedir, options.rpcdebug,
-        options.readonly,
+        options.readonly, options.cacheonly,
     )
 
     return rapi
@@ -1107,6 +1121,12 @@ def main(argv):
 
     if options.test:
         test()
+
+    if options.no_cache and options.cacheonly:
+        logging.error(
+            " Conflicted options were given: --no-cache and --cacheonly"
+        )
+        return None
 
     if len(args) == 0:
         parser.print_usage()
