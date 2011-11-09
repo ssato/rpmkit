@@ -597,7 +597,10 @@ class Cache(object):
         cur_time = datetime.datetime.now()
         cache_mtime = datetime.datetime.fromtimestamp(mtime)
 
-        # TODO: How to do if it's negative value?
+        # Cache looks created in the future. Update it later to fix its mtime.
+        if cur_time < cache_mtime:
+            return True
+
         delta = cur_time - cache_mtime
 
         return delta >= datetime.timedelta(expires)
