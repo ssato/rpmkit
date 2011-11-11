@@ -1054,7 +1054,7 @@ password = secretpasswd
         help="Use read-only cache")
     caog.add_option('', '--cacheonly', action="store_true",
         help="Get results only from cache w/o any access to RHNS")
-    caog.add_option('', '--offline', dest="cacheonly",
+    caog.add_option('', '--offline', action="store_true", dest="cacheonly",
         help="Same as --cacheonly")
     p.add_option_group(caog)
 
