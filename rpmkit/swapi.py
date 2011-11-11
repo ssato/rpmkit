@@ -216,14 +216,14 @@ API_CACHE_EXPIRATIONS = {
     "api.getApiNamespaces": 100,
     "api.getVersion": 100,
     "api.systemVersion": 100,
-    "channel.listAllChannels": 1,
-    "channel.listMyChannels": 1,
-    "channel.listPopularChannels": 1,
-    "channel.listRedHatChannels": 1,
-    "channel.listRetiredChannels": 1,
-    "channel.listSharedChannels": 1,
-    "channel.listSoftwareChannels": 1,
-    "channel.access.getOrgSharing": 1,
+    "channel.listAllChannels": 100,
+    "channel.listMyChannels": 100,
+    "channel.listPopularChannels": 100,
+    "channel.listRedHatChannels": 100,
+    "channel.listRetiredChannels": 100,
+    "channel.listSharedChannels": 100,
+    "channel.listSoftwareChannels": 100,
+    "channel.access.getOrgSharing": 100,
     "channel.org.list": 1,
     "channel.software.getChannelLastBuildById": 1,
     "channel.software.getDetails": 1,
@@ -677,10 +677,10 @@ class RpcApi(object):
         """
         for cache in self.caches:
             logging.info(
-                " Try getting results from cache in " + cache.topdir
+                " Try the cache: " + cache.topdir
             )
 
-            if cache.needs_update(key):
+            if not self.cacheonly and cache.needs_update(key):
                 logging.debug(
                     " Cached result is old and not used: " + str(key)
                 )
@@ -692,7 +692,7 @@ class RpcApi(object):
                     logging.info(" Found cached result for " + str(key))
                     return ret
 
-            logging.debug(" No cached results found in " + cache.topdir)
+            logging.debug(" No cached results found: " + cache.topdir)
 
         return None
 
@@ -1148,6 +1148,9 @@ def main(argv):
         args = parse_api_args(options.args)
         res = rapi.call(api, *args)
 
+    if res is None:
+        return []
+
     if not (isinstance(res, list) or getattr(res, "next", False)):
         res = [res]
 
@@ -1193,9 +1196,6 @@ def main(argv):
 
 def realmain(argv):
     result = main(argv[1:])
-
-    if result is None:
-        return 1
 
     (res, options) = result
 
