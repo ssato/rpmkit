@@ -550,13 +550,12 @@ def __cvss_data(cve, data):
     ...  u'Base Metrics': u'AV:N/AC:M/Au:N/C:P/I:P/A:P',
     ...  u'Base Score': u'6.8', u'Confidentiality Impact': u'Partial',
     ...  u'Integrity Impact': u'Partial'}
-    >>> d.update({
-    ...     u"AV": u"N", u"AC": u"M", u"Au": u"N",
-    ...     u"C": u"P", u"I": u"P", u"A": u"P",
-    ... })
-    >>> url = "http://nvd.nist.gov/cvss.cfm?version=2&name=%s&vector=%s" \
-    ...     % (cve, d["Base Metrics"])
-    >>> assert d == __cvss_data(cve, d)
+    >>> d["cve"] = cve
+    >>> d["metrics"] = dict(AV="N", AC="M", Au="N", C="P", I="P", A="P")
+    >>> d2 = __cvss_data(cve, d)
+    >>> assert d["cve"] == d2["cve"], d2["cve"]
+    >>> for k, v in d2["metrics"].iteritems():
+    ...     assert d["metrics"][k] == v, v
     """
     d = dict((k.replace(" ", "_").lower(), v) for k, v in data.iteritems())
     d["metrics"] = dict()
@@ -911,7 +910,7 @@ def parse_api_args(args, arg_sep=','):
     >>> cl = '{"channelLabel": "foo-i386-5"}'
     >>> assert parse_api_args(cl)[0]["channelLabel"] == "foo-i386-5"
 
-    >>> args '1234567,abcXYZ012,{"channelLabel": "foo-i386-5"}'
+    >>> args = '1234567,abcXYZ012,{"channelLabel": "foo-i386-5"}'
     >>> (i, s, d) = parse_api_args(args)
     >>> assert i == 1234567
     >>> assert s == "abcXYZ012"
