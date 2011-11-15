@@ -828,12 +828,12 @@ class RpcApi(object):
             else:
                 return ret
 
-        if method_name in VIRTUAL_APIS:
-            return self.call_virtual_api(method_name, *args)
-
         # wait a little to avoid DoS attack to the server if called
         # multiple times.
         time.sleep(random.random() * 5)
+
+        if method_name in VIRTUAL_APIS:
+            return self.call_virtual_api(method_name, *args)
 
         try:
             logging.debug(" Try accessing the server to get results")
