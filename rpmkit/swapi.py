@@ -34,7 +34,7 @@
 #
 # * Can call an API with multiple different arguments sets at once.
 #
-
+import BeautifulSoup
 import ConfigParser as configparser
 import cPickle as pickle
 import commands
@@ -53,6 +53,7 @@ import shlex
 import sys
 import time
 import unittest
+import urllib2
 import xmlrpclib
 
 
@@ -411,6 +412,8 @@ API_CACHE_EXPIRATIONS = {
     "user.listDefaultSystemGroups": 100,
     "user.listRoles": 100,
     "user.listUsers": 100,
+    # Extended original methods:
+    "swapi.errata.getCvss": 100,
 }
 
 
@@ -509,6 +512,76 @@ def shorten_dict_keynames(dic, prefix=None):
         prefix = longest_common_prefix(*dic.keys())
 
     return dict((k.replace(prefix, ''), v) for k, v in dic.iteritems())
+
+
+def urlread(url, data=None, headers={}):
+    """
+    Open given url and returns its contents or None.
+    """
+    req = urllib2.Request(url=url, data=data, headers=headers)
+
+    try:
+        return urllib2.urlopen(req).read()
+    except:
+        return None
+
+
+def cve2url(cve):
+    """
+    >>> url = "https://www.redhat.com/security/data/cve/CVE-2010-1585.html"
+    >>> assert url == cve2url("CVE-2010-1585")
+    """
+    return "https://www.redhat.com/security/data/cve/%s.html" % cve
+
+
+def normalize_cvss(cvss_data):
+    """
+
+    >>> d = {u'Access Complexity': u'Medium', u'Access Vector': u'Network',
+    ...  u'Authentication': u'None', u'Availability Impact': u'Partial',
+    ...  u'Base Metrics': u'AV:N/AC:M/Au:N/C:P/I:P/A:P',
+    ...  u'Base Score': u'6.8', u'Confidentiality Impact': u'Partial',
+    ...  u'Integrity Impact': u'Partial'}
+    >>> 
+    """
+    pass
+
+
+def get_cvss(cve):
+    """
+    Get CVSS data for given cve from the Red Hat www site.
+
+    :param cve: CVE name, e.g. "CVE-2010-1585" :: str
+
+    See the source of CVE www page for its format, e.g.
+    https://www.redhat.com/security/data/cve/CVE-2010-1585.html.
+    """
+    marker = "Base Score"
+
+    def pairs_g(xss):
+        for xs in xss:
+            assert len(xs) > 3, str(xs)
+            yield (xs[0], xs[1])
+            yield (xs[2], xs[3])
+
+    try:
+        data = urlread(cve2url(cve))
+        soup = BeautifulSoup.BeautifulSoup(data)
+
+        table = [
+            t for t in soup.findAll("table") if marker in t.tr.td.b.text
+        ][-1]
+        tds = [
+            [td.text for td in tr.findAll("td")] for tr in table.findAll("tr")
+        ]
+
+        # e.g. {"Base Score": "6.8", ..., "Access Vector": "Network", ...}
+        d = dict((k.strip(":"), v) for k, v in pairs_g(tds))
+
+    except Exception, e:
+        logging.warn(" Could not get CVSS data: err=" + str(e))
+
+    return None
 
 
 def run(cmd_str):
