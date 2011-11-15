@@ -412,9 +412,12 @@ API_CACHE_EXPIRATIONS = {
     "user.listDefaultSystemGroups": 100,
     "user.listRoles": 100,
     "user.listUsers": 100,
-    # Extended original methods:
-    "swapi.errata.getCvss": 100,
+    # Virtual (extended) RPC APIs:
+    #"swapi.errata.getCvss": 100,  # TODO: Implement this.
+    "swapi.cve.getCvss": 100,
 }
+
+VIRTUAL_APIS = dict()
 
 
 def str_to_id(s):
@@ -534,26 +537,50 @@ def cve2url(cve):
     return "https://www.redhat.com/security/data/cve/%s.html" % cve
 
 
-def normalize_cvss(cvss_data):
+def __cvss_data(cve, data):
     """
+    normalize and extend cvss data.
 
+    :param cve: CVE name, e.g. "CVE-2010-1585" :: str
+    :param data: CVSS data :: dict
+
+    >>> cve = "CVE-2010-1585"
     >>> d = {u'Access Complexity': u'Medium', u'Access Vector': u'Network',
     ...  u'Authentication': u'None', u'Availability Impact': u'Partial',
     ...  u'Base Metrics': u'AV:N/AC:M/Au:N/C:P/I:P/A:P',
     ...  u'Base Score': u'6.8', u'Confidentiality Impact': u'Partial',
     ...  u'Integrity Impact': u'Partial'}
-    >>> 
+    >>> d.update({
+    ...     u"AV": u"N", u"AC": u"M", u"Au": u"N",
+    ...     u"C": u"P", u"I": u"P", u"A": u"P",
+    ... })
+    >>> url = "http://nvd.nist.gov/cvss.cfm?version=2&name=%s&vector=%s" \
+    ...     % (cve, d["Base Metrics"])
+    >>> assert d == __cvss_data(cve, d)
     """
-    pass
+    d = dict((k.replace(" ", "_").lower(), v) for k, v in data.iteritems())
+    d["metrics"] = dict()
+
+    for kv in data.get("Base Metrics").split("/"):
+        k, v = kv.split(":")
+        d["metrics"][k] = v
+
+    url = "http://nvd.nist.gov/cvss.cfm?version=2&name=%s&vector=(%s)" % \
+        (cve, data["Base Metrics"])
+
+    d["cve"] = cve
+    d["url"] = url
+
+    return d
 
 
-def get_cvss(cve):
+def get_cvss_for_cve(cve):
     """
     Get CVSS data for given cve from the Red Hat www site.
 
     :param cve: CVE name, e.g. "CVE-2010-1585" :: str
 
-    See the source of CVE www page for its format, e.g.
+    See the HTML source of CVE www page for its format, e.g.
     https://www.redhat.com/security/data/cve/CVE-2010-1585.html.
     """
     marker = "Base Score"
@@ -577,11 +604,18 @@ def get_cvss(cve):
 
         # e.g. {"Base Score": "6.8", ..., "Access Vector": "Network", ...}
         d = dict((k.strip(":"), v) for k, v in pairs_g(tds))
+        logging.debug("d=" + str(d))
+
+        if d is not None:
+            return __cvss_data(cve, d)
 
     except Exception, e:
         logging.warn(" Could not get CVSS data: err=" + str(e))
 
     return None
+
+
+VIRTUAL_APIS["swapi.cve.getCvss"] = get_cvss_for_cve
 
 
 def run(cmd_str):
@@ -769,9 +803,21 @@ class RpcApi(object):
 
         return None
 
+    def ma_to_key(self, method_name, args):
+        return (method_name, args)
+
+    def call_virtual_api(self, method_name, *args):
+        ret = VIRTUAL_APIS[method_name](*args)
+
+        for cache in self.caches:
+            key = self.ma_to_key(method_name, args)
+            cache.save(key, ret)
+
+        return ret
+
     def call(self, method_name, *args):
         logging.debug(" Call: api=%s, args=%s" % (method_name, str(args)))
-        key = (method_name, args)
+        key = self.ma_to_key(method_name, args)
 
         if self.caches:
             ret = self.get_from_cache(key)
@@ -782,6 +828,9 @@ class RpcApi(object):
                     return None
             else:
                 return ret
+
+        if method_name in VIRTUAL_APIS:
+            return self.call_virtual_api(method_name, *args)
 
         # wait a little to avoid DoS attack to the server if called
         # multiple times.
@@ -1269,6 +1318,10 @@ def main(argv):
 
 def realmain(argv):
     result = main(argv[1:])
+
+    if not result:
+        print "[]" # empty results
+        return 0
 
     (res, options) = result
 
