@@ -54,6 +54,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Nov 17 2011 Satoru SATOH <ssato@redhat.com> - 0.2.4-1
+- New upstream
+- swapi: started to adding experimental virtual rpcs (swapi.cve.getCvss)
+- started to adding test cases separately
+- started to checking codes with pep8 command
+
 * Wed Nov  9 2011 Satoru SATOH <ssato@redhat.com> - 0.2.3.20111109-1
 - New snapshot release
 - swapi: changed scheme to construct caching dir path for each objects to avoid

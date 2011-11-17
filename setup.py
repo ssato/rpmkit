@@ -18,10 +18,10 @@ curdir = os.getcwd()
 sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
-VERSION = "0.2.3"
+VERSION = "0.2.4"
 
 # daily snapshots:
-VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
+#VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
 
