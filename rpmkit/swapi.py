@@ -34,6 +34,8 @@
 #
 # * Can call an API with multiple different arguments sets at once.
 #
+from operator import itemgetter
+
 import BeautifulSoup
 import ConfigParser as configparser
 import cPickle as pickle
@@ -52,7 +54,6 @@ import re
 import shlex
 import sys
 import time
-import unittest
 import urllib2
 import xmlrpclib
 
@@ -974,21 +975,14 @@ def parse_list_str(list_s, sep=","):
     return [p for p in list_s.split(sep) if p]
 
 
-def key_to_keyfunc(key):
-    def f(x):
-        return x[key]
-
-    return f
-
-
 def sorted_by(results, key):
-    return sorted(results, key=key_to_keyfunc(key))
+    return sorted(results, key=itemgetter(key))
 
 
 def group_by(results, key):
     groups = dict()
 
-    for k, grp in itertools.groupby(results, key_to_keyfunc(key)):
+    for k, grp in itertools.groupby(results, itemgetter(key)):
         groups[k] = groups.get(k, []) + list(grp)
 
     return groups
@@ -1083,7 +1077,6 @@ def option_parser(prog="swapi"):
     defaults = dict(
         config=None,
         verbose=0,
-        test=False,
         timeout=TIMEOUT,
         protocol=PROTO,
         rpcdebug=False,
@@ -1151,7 +1144,6 @@ password = secretpasswd
         help='Select profile (section) in config file'
     )
     p.add_option('-v', '--verbose', help='verbose mode', action="count")
-    p.add_option('-T', '--test', help='Test mode', action="store_true")
 
     cog = optparse.OptionGroup(p, "Connect options")
     cog.add_option('-s', '--server', help='Spacewalk/RHN server hostname.')
@@ -1246,9 +1238,6 @@ def main(argv):
 
     init_log(options.verbose)
 
-    if options.test:
-        test()
-
     if options.no_cache and options.cacheonly:
         logging.error(
             " Conflicted options were given: --no-cache and --cacheonly"
@@ -1319,7 +1308,7 @@ def realmain(argv):
     result = main(argv[1:])
 
     if not result:
-        print "[]" # empty results
+        print "[]"  # empty results
         return 0
 
     (res, options) = result
@@ -1331,62 +1320,6 @@ def realmain(argv):
         print results_to_json_str(res, options.indent)
 
     return 0
-
-
-class TestScript(unittest.TestCase):
-    """TODO: More test cases.
-    """
-
-    def __helper(self, args):
-        (res, _opts) = main(shlex.split(args))
-        #assert res, "args=" + args
-
-    def test_api_wo_arg_and_sid(self):
-        self.__helper("api.getVersion")
-
-    def test_api_wo_arg(self):
-        self.__helper("channel.listSoftwareChannels")
-
-    def test_api_w_arg(self):
-        self.__helper("--args=rhel-i386-server-5 channel.software.getDetails")
-
-    def test_api_w_arg_and_format_option(self):
-        self.__helper(
-            "-A rhel-i386-server-5 --format '%%(channel_description)s' " + \
-                "channel.software.getDetails"
-        )
-
-    def test_api_w_arg_multicall(self):
-        self.__helper(
-            "--list-args='rhel-i386-server-5,rhel-x86_64-server-5' " + \
-                "channel.software.getDetails"
-        )
-
-    def test_api_w_args(self):
-        self.__helper(
-            "-A 'rhel-i386-server-5,2010-04-01 08:00:00' " + \
-                "channel.software.listAllPackages"
-        )
-
-    def test_api_w_args_as_list(self):
-        self.__helper(
-            "-A '[\"rhel-i386-server-5\",\"2010-04-01 08:00:00\"]' " + \
-                "channel.software.listAllPackages"
-        )
-
-
-def unittests():
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestScript)
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
-
-def test():
-    import doctest
-
-    doctest.testmod(verbose=True)
-    unittests()
-
-    sys.exit()
 
 
 if __name__ == '__main__':
