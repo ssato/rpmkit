@@ -18,6 +18,7 @@ BuildRequires:  python
 Requires:       python-cheetah, rpm-python, rpm-build
 Requires:       sqlite, autoconf, automake, packagemaker
 Requires:       createrepo, mock
+Requires:       python-BeautifulSoup
 
 
 %description
