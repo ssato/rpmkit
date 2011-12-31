@@ -5,68 +5,27 @@ import glob
 import os
 import sys
 
-try:
-    import nose
-except ImportError:
-    if len(sys.argv) > 1 and sys.argv[1] == "test":
-        raise ImportError("python-nose is must for testing.")
-
-
 curdir = os.getcwd()
-
-
 sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
 VERSION = "0.2.4"
 
 # daily snapshots:
-#VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
-
+VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
 class SrpmCommand(Command):
 
     user_options = []
 
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        self.run_command('sdist')
-        self.build_rpm()
-
-    def build_rpm(self):
-        params = dict()
-
-        topdir = params["topdir"] = os.path.abspath(os.curdir)
-        rpmdir = params["rpmdir"] = os.path.join(topdir, "dist")
-        rpmspec = params["rpmspec"] = os.path.join(topdir, "%s.spec" % PACKAGE)
-
-        for subdir in ("RPMS", "BUILD", "BUILDROOT"):
-            sdir = params[subdir] = os.path.join(rpmdir, subdir)
-
-            if not os.path.exists(sdir):
-                os.makedirs(sdir, 0755)
-
-        open(rpmspec, "w").write(open(rpmspec + ".in").read().replace("@VERSION@", VERSION))
-
-        cmd = """rpmbuild -bs \
-            --define \"_topdir %(rpmdir)s\" --define \"_rpmdir %(rpmdir)s\" \
-            --define \"_sourcedir %(topdir)s/dist\" --define \"_buildroot %(BUILDROOT)s\" \
-            %(rpmspec)s
-            """ % params
-
-        os.system(cmd)
-
-
-
-class RpmCommand(Command):
-
-    user_options = []
+    build_stage = "s"
+    cmd_fmt = """rpmbuild -b%(build_stage)s \
+        --define \"_topdir %(rpmdir)s\" \
+        --define \"_sourcedir %(rpmdir)s\" \
+        --define \"_buildroot %(BUILDROOT)s\" \
+        %(rpmspec)s
+    """
 
     def initialize_options(self):
         pass
@@ -81,26 +40,29 @@ class RpmCommand(Command):
     def build_rpm(self):
         params = dict()
 
-        topdir = params["topdir"] = os.path.abspath(os.curdir)
-        rpmdir = params["rpmdir"] = os.path.join(topdir, "dist")
-        rpmspec = params["rpmspec"] = os.path.join(topdir, "%s.spec" % PACKAGE)
+        params["build_stage"] = self.build_stage
+        rpmdir = params["rpmdir"] = os.path.join(
+            os.path.abspath(os.curdir), "dist"
+        )
+        rpmspec = params["rpmspec"] = os.path.join(
+            rpmdir, "../%s.spec" % PACKAGE
+        )
 
-        for subdir in ("RPMS", "BUILD", "BUILDROOT"):
+        for subdir in ("SRPMS", "RPMS", "BUILD", "BUILDROOT"):
             sdir = params[subdir] = os.path.join(rpmdir, subdir)
 
             if not os.path.exists(sdir):
                 os.makedirs(sdir, 0755)
 
-        open(rpmspec, "w").write(open(rpmspec + ".in").read().replace("@VERSION@", VERSION))
+        c = open(rpmspec + ".in").read()
+        open(rpmspec, "w").write(c.replace("@VERSION@", VERSION))
 
-        cmd = """rpmbuild -bb \
-            --define \"_topdir %(rpmdir)s\" --define \"_srcrpmdir %(rpmdir)s\" \
-            --define \"_sourcedir %(topdir)s/dist\" --define \"_buildroot %(BUILDROOT)s\" \
-            %(rpmspec)s
-            """ % params
+        os.system(self.cmd_fmt % params)
 
-        os.system(cmd)
 
+class RpmCommand(SrpmCommand):
+
+    build_stage = "b"
 
 
 setup(name=PACKAGE,
@@ -113,7 +75,7 @@ setup(name=PACKAGE,
     packages=[
         "rpmkit",
     ],
-    scripts = glob.glob("src/*"),
+    scripts=glob.glob("src/*"),
     cmdclass={
         "srpm": SrpmCommand,
         "rpm":  RpmCommand,
