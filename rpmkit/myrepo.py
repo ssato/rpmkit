@@ -25,7 +25,6 @@
 # SEE ALSO: createrepo(8)
 # SEE ALSO: https://github.com/ssato/packagemaker
 #
-
 from Cheetah.Template import Template
 from functools import reduce as foldl
 from itertools import groupby, product
@@ -185,7 +184,10 @@ def list_dists():
     arch = list_archs()[0]
     reg = re.compile("%s/(?P<dist>.+)-%s.cfg" % (mockdir, arch))
 
-    return [reg.match(c).groups()[0] for c in sorted(glob.glob("%s/*-%s.cfg" % (mockdir, arch)))]
+    return [
+        reg.match(c).groups()[0] for c in \
+            sorted(glob.glob("%s/*-%s.cfg" % (mockdir, arch)))
+    ]
 
 
 def is_local(fqdn_or_hostname):
@@ -259,7 +261,10 @@ class ThrdCommand(object):
 
     def get_result(self):
         if self.thread is None:
-            logging.warn("Thread does not exist. Did you call %s.run_async() ?" % self.__class__.__name__)
+            logging.warn(
+                "Thread does not exist. Did you call %s.run_async() ?" % \
+                    self.__class__.__name__
+            )
             return None
 
         # it will block.
@@ -303,7 +308,8 @@ def run_and_get_output(*args, **kwargs):
 
 
 def sequence(cmds, stop_on_failure=False, stop_on_success=False):
-    """Run commands sequentially and returns return codes of each.
+    """
+    Run commands sequentially and returns return codes of each.
 
     The name of this function came from "sequence" function in Haskell's
     "Control.Monad" module, does Monad sequencing.
@@ -346,7 +352,10 @@ def prun_and_get_results(cmds, wait=WAIT_FOREVER):
                 timeout = min(ts)
             else:
                 if not is_valid_timeout(wait):
-                    RuntimeError("Invalid 'wait' value was passed to get_results: " + str(wait))
+                    RuntimeError(
+                        "Invalid 'wait' value was passed to get_results: " + \
+                            str(wait)
+                    )
                 else:
                     timeout = wait
 
@@ -377,7 +386,8 @@ def rm_rf(target):
     assert target != "/", warnmsg
     assert os.path.realpath(target) != "/", warnmsg
 
-    xs = glob.glob(os.path.join(target, "*")) + glob.glob(os.path.join(target, ".*"))
+    xs = glob.glob(os.path.join(target, "*")) + \
+        glob.glob(os.path.join(target, ".*"))
 
     for x in xs:
         if os.path.isdir(x):
@@ -410,7 +420,9 @@ def get_username():
 def get_email():
     if is_git_available():
         try:
-            email = subprocess.check_output("git config --get user.email 2>/dev/null", shell=True)
+            email = subprocess.check_output(
+                "git config --get user.email 2>/dev/null", shell=True
+            )
             return email.rstrip()
         except Exception, e:
             logging.warn("get_email: " + str(e))
@@ -425,7 +437,9 @@ def get_fullname():
     """
     if is_git_available():
         try:
-            fullname = subprocess.check_output("git config --get user.name 2>/dev/null", shell=True)
+            fullname = subprocess.check_output(
+                "git config --get user.name 2>/dev/null", shell=True
+            )
             return fullname.rstrip()
         except Exception, e:
             logging.warn("get_fullname: " + str(e))
@@ -585,14 +599,19 @@ class RpmOperations(object):
         FIXME: replace os.system() with other way.
         """
         rpms = " ".join(rpms)
-        c = "rpm --resign --define \"_signature %s\" --define \"_gpg_name %s\" %s" % ("gpg", keyid, rpms)
+        c = "rpm --resign"
+        c += " --define \"_signature %s\" --define \"_gpg_name %s\" %s" % \
+            ("gpg", keyid, rpms)
         rc = os.system(c)
 
         return rc
 
     @classmethod
     def build_cmds(cls, repo, srpm):
-        return [ThrdCommand(repo.build_cmd(srpm, d)) for d in repo.dists_by_srpm(srpm)]
+        return [
+            ThrdCommand(repo.build_cmd(srpm, d)) for d in \
+                repo.dists_by_srpm(srpm)
+        ]
 
     @classmethod
     def build(cls, repo, srpm, wait=WAIT_FOREVER):
@@ -636,7 +655,9 @@ class RepoOperations(object):
 
         for d in repo.dists_by_srpm(srpm):
             srpm_to_copy = glob.glob("%s/*.src.rpm" % d.mockdir())[0]
-            rpms_to_deploy.append((srpm_to_copy, os.path.join(destdir, "sources")))
+            rpms_to_deploy.append(
+                (srpm_to_copy, os.path.join(destdir, "sources"))
+            )
 
             if is_noarch(srpm):
                 rpms = glob.glob("%s/*.noarch.rpm" % d.mockdir())
@@ -648,11 +669,17 @@ class RepoOperations(object):
 
         if repo.signkey:
             # We don't need to sign SRPM:
-            rpms_to_sign = [rpm for rpm, _dest in rpms_to_deploy if not rpm.endswith("src.rpm")]
+            rpms_to_sign = [
+                rpm for rpm, _dest in rpms_to_deploy \
+                    if not rpm.endswith("src.rpm")
+            ]
 
             cls.sign_rpms(repo.signkey, rpms_to_sign)
 
-        cs = [ThrdCommand(repo.copy_cmd(rpm, dest)) for rpm, dest in rpms_to_deploy]
+        cs = [
+            ThrdCommand(repo.copy_cmd(rpm, dest)) for rpm, dest \
+                in rpms_to_deploy
+        ]
         rs = prun_and_get_results(cs, deploy_wait)
         assert all(rc == 0 for rc in rs)
 
@@ -669,7 +696,9 @@ class RepoOperations(object):
 
         for dist in repo.dists:
             mc = repo.mock_file_content(dist, release_file_content)
-            mock_cfg_path = os.path.join(mockcfgdir, "%s-%s.cfg" % (repo.name, dist.label))
+            mock_cfg_path = os.path.join(
+                mockcfgdir, "%s-%s.cfg" % (repo.name, dist.label)
+            )
 
             open(mock_cfg_path, "w").write(mc)
 
@@ -677,16 +706,20 @@ class RepoOperations(object):
 
         listfile_path = os.path.join(workdir, "mockcfg.files.list")
         open(listfile_path, "w").write(
-            "\n".join("%s,rpmattr=%%config(noreplace)" % mcfg for mcfg in mock_cfg_files) + "\n"
+            "\n".join(
+                "%s,rpmattr=%%config(noreplace)" % mcfg \
+                    for mcfg in mock_cfg_files) + "\n"
         )
 
-        rc = run_and_get_status(repo.mock_cfg_rpm_build_cmd(workdir, listfile_path), repo.user)
+        rc = run_and_get_status(
+            repo.mock_cfg_rpm_build_cmd(workdir, listfile_path), repo.user
+        )
         if rc != 0:
             raise RuntimeError("Failed to create mock.cfg rpm")
 
         srpms = glob.glob(
-            "%(workdir)s/mock-data-%(reponame)s-%(distversion)s/mock-data-*.src.rpm" % \
-                {"workdir": workdir, "reponame": repo.name, "distversion": repo.distversion}
+            "%(wdir)s/mock-data-%(repon)s-%(dver)s/mock-data-*.src.rpm" % \
+                {"wdir": workdir, "repo": repo.name, "dver": repo.distversion}
         )
         if not srpms:
             logging.error("Failed to build src.rpm")
@@ -704,7 +737,9 @@ class RepoOperations(object):
         @workdir str   Working directory
         """
         if workdir is None:
-            workdir = tempfile.mkdtemp(dir="/tmp", prefix="%s-release-" % repo.name)
+            workdir = tempfile.mkdtemp(dir="/tmp",
+                                       prefix="%s-release-" % repo.name
+                                       )
 
         rfc = repo.release_file_content()
 
@@ -720,16 +755,25 @@ class RepoOperations(object):
             keydir = os.path.join(workdir, repo.keydir[1:])
             os.makedirs(keydir)
 
-            rc = run_and_get_status("gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile), workdir=workdir)
+            rc = run_and_get_status(
+                "gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile),
+                workdir=workdir
+            )
 
             release_file_list = os.path.join(workdir, "files.list")
             open(release_file_list, "w").write(
-                release_file_path + ",rpmattr=%config\n" + workdir + repo.keyfile + "\n"
+                release_file_path + ",rpmattr=%config\n" + workdir + \
+                    repo.keyfile + "\n"
             )
 
-        rc = run_and_get_status(repo.release_rpm_build_cmd(workdir, release_file_path), repo.user)
+        rc = run_and_get_status(
+            repo.release_rpm_build_cmd(workdir, release_file_path), repo.user
+        )
 
-        srpms = glob.glob("%s/%s-release-%s/%s-release*.src.rpm" % (workdir, repo.name, repo.distversion, repo.name))
+        srpms = glob.glob(
+            "%s/%s-release-%s/%s-release*.src.rpm" % \
+                (workdir, repo.name, repo.distversion, repo.name)
+        )
         if not srpms:
             logging.error("Failed to build src.rpm")
             sys.exit(1)
@@ -745,7 +789,10 @@ class RepoOperations(object):
         """
         destdir = cls.destdir(repo)
 
-        rc = run("mkdir -p " + " ".join(repo.rpmdirs(destdir)), repo.user, repo.server)
+        rc = run(
+            "mkdir -p " + \
+                " ".join(repo.rpmdirs(destdir)), repo.user, repo.server
+        )
 
         cls.deploy_release_rpm(repo)
 
@@ -757,8 +804,11 @@ class RepoOperations(object):
 
         # hack: degenerate noarch rpms
         if len(repo.archs) > 1:
-            c = "for d in %s; do (cd $d && ln -sf ../%s/*.noarch.rpm ./); done" % \
-                (" ".join(repo.archs[1:]), repo.dists[0].arch)
+            c = "for d in %s; "
+            c += "   do (cd $d && ln -sf ../%s/*.noarch.rpm ./); "
+            c += "done"
+            c = c % (" ".join(repo.archs[1:]), repo.dists[0].arch)
+
             cmd = ThrdCommand(c, repo.user, repo.server, destdir)
             cmd.run()
 
@@ -766,7 +816,10 @@ class RepoOperations(object):
         c += " && createrepo --update --deltas --oldpackagedirs . --database ."
         c += " || createrepo --deltas --oldpackagedirs . --database ."
 
-        cs = [ThrdCommand(c, repo.user, repo.server, d) for d in repo.rpmdirs(destdir)]
+        cs = [
+            ThrdCommand(c, repo.user, repo.server, d) for d \
+                in repo.rpmdirs(destdir)
+        ]
 
         rs = prun_and_get_results(cs)
         return rs
@@ -858,14 +911,17 @@ pmaker -n mock-data-${repo.name} \\
         @user      username on the server
         @email     email address or its format string
         @fullname  full name, e.g. "John Doe".
-        @name      repository name or its format string, e.g. "rpmfusion-free", "%(distname)s-%(hostname)s-%(user)s"
+        @name      repository name or its format string, e.g. "rpmfusion-free",
+                   "%(distname)s-%(hostname)s-%(user)s"
         @dist      distribution string, e.g. "fedora-14"
         @archs     architecture list, e.g. ["i386", "x86_64"]
         @subdir    repo's subdir
-        @topdir    repo's topdir or its format string, e.g. "/var/www/html/%(subdir)s".
+        @topdir    repo's topdir or its format string, e.g.
+                   "/var/www/html/%(subdir)s".
         @baseurl   base url or its format string, e.g. "file://%(topdir)s".
         @signkey   GPG key ID for signing or None indicates will never sign rpms
-        @bdist_label  Distribution label to build srpms, e.g. "fedora-custom-addons-14-x86_64"
+        @bdist_label  Distribution label to build srpms, e.g.
+                   "fedora-custom-addons-14-x86_64"
         @metadata_expire  Metadata expiration time, e.g. "2h", "1d"
         """
         self.server = server
@@ -880,7 +936,9 @@ pmaker -n mock-data-${repo.name} \\
         self.bdist_label = bdist_label
 
         (self.distname, self.distversion) = Distribution.parse_dist(self.dist)
-        self.dists = [Distribution(self.dist, arch, bdist_label) for arch in self.archs]
+        self.dists = [
+            Distribution(self.dist, arch, bdist_label) for arch in self.archs
+        ]
         self.distdir = os.path.join(
             self.dists[0].mockcfg_opts_get("myrepo_distname", self.distname),
             self.distversion
@@ -929,7 +987,8 @@ pmaker -n mock-data-${repo.name} \\
 
     def copy_cmd(self, src, dst):
         if is_local(self.server):
-            cmd = "cp -a %s %s" % (src, ("~" in dst and os.path.expanduser(dst) or dst))
+            cmd = "cp -a %s %s" % \
+                (src, ("~" in dst and os.path.expanduser(dst) or dst))
         else:
             cmd = "scp -p %s %s@%s:%s" % (src, self.user, self.server, dst)
 
@@ -1025,7 +1084,8 @@ def init_defaults_by_conffile(config=None, profile=None):
     Initialize default values for options by loading config files.
     """
     if config is None:
-        home = os.environ.get("HOME", os.curdir)  # Is there case that $HOME is empty?
+        # Is there case that $HOME is empty?
+        home = os.environ.get("HOME", os.curdir)
 
         confs = ["/etc/myreporc"]
         confs += sorted(glob.glob("/etc/myrepo.d/*.conf"))
@@ -1108,7 +1168,9 @@ def parse_dist_option(dist_str, sep=":"):
         bdist_label = tpl[1]
 
         if len(tpl) > 2:
-            logging.warn("Invalid format: too many '%s' in dist_str: %s. Ignore the rest" % (sep, dist_str))
+            m = "Invalid format: too many '%s' in dist_str: %s. " + \
+                "Ignore the rest"
+            logging.warn(m % (sep, dist_str))
 
     return (dist, arch, bdist_label)
 
@@ -1123,7 +1185,11 @@ def parse_dists_option(dists_str, sep=","):
     [('fedora-14', 'i386', 'fedora-14-i386')]
     >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386")
     [('fedora-14', 'i386', 'fedora-my-additions-14-i386')]
-    >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386,rhel-6-i386:rhel-my-additions-6-i386")
+    >>> s = ["fedora-14-i386"
+    >>> s.append("fedora-my-additions-14-i386")
+    >>> s.append("rhel-6-i386:rhel-my-additions-6-i386")
+    >>> ds = s.join(":")
+    >>> parse_dists_option(ds)
     [('fedora-14', 'i386', 'fedora-my-additions-14-i386'), ('rhel-6', 'i386', 'rhel-my-additions-6-i386')]
     """
     return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
@@ -1162,22 +1228,30 @@ Examples:
 
     p.add_option("-s", "--server", help="Server to provide your yum repos.")
     p.add_option("-u", "--user", help="Your username on the server [%default]")
-    p.add_option("-m", "--email", help="Your email address or its format string[%default]")
+    p.add_option("-m", "--email",
+        help="Your email address or its format string[%default]")
     p.add_option("-F", "--fullname", help="Your full name [%default]")
 
-    p.add_option("", "--dists", help="Comma separated distribution labels including arch. "
-        "Options are some of " + distribution_choices + " [%default]")
+    p.add_option("", "--dists",
+        help="Comma separated distribution labels including arch. "
+        "Options are some of " + distribution_choices + " [%default]"
+    )
 
     p.add_option("-q", "--quiet", action="store_true", help="Quiet mode")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
     p.add_option("", "--debug", action="store_true", help="Debug mode")
 
     iog = optparse.OptionGroup(p, "Options for 'init' command")
-    iog.add_option('', "--name", help="Name of your yum repo or its format string [%default].")
-    iog.add_option("", "--subdir", help="Repository sub dir name [%default]")
-    iog.add_option("", "--topdir", help="Repository top dir or its format string [%default]")
-    iog.add_option('', "--baseurl", help="Repository base URL or its format string [%default]")
-    iog.add_option('', "--signkey", help="GPG key ID if signing RPMs to deploy")
+    iog.add_option('', "--name",
+        help="Name of your yum repo or its format string [%default].")
+    iog.add_option("", "--subdir",
+        help="Repository sub dir name [%default]")
+    iog.add_option("", "--topdir",
+        help="Repository top dir or its format string [%default]")
+    iog.add_option('', "--baseurl",
+        help="Repository base URL or its format string [%default]")
+    iog.add_option('', "--signkey",
+        help="GPG key ID if signing RPMs to deploy")
     p.add_option_group(iog)
 
     return p
@@ -1212,7 +1286,8 @@ def do_command(cmd, repos, srpm=None, wait=WAIT_FOREVER):
 
 
 def main(argv=sys.argv):
-    (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = ("init", "update", "build", "deploy")
+    (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY) = \
+        ("init", "update", "build", "deploy")
 
     logformat = "%(asctime)s [%(levelname)-4s] myrepo: %(message)s"
     logdatefmt = "%H:%M:%S"  # too much? "%a, %d %b %Y %H:%M:%S"
@@ -1244,11 +1319,13 @@ def main(argv=sys.argv):
 
     elif a0.startswith('b'):
         cmd = CMD_BUILD
-        assert len(args) >= 2, "'%s' command requires an argument to specify srpm[s]" % cmd
+        assert len(args) >= 2, \
+            "'%s' command requires an argument to specify srpm[s]" % cmd
 
     elif a0.startswith('d'):
         cmd = CMD_DEPLOY
-        assert len(args) >= 2, "'%s' command requires an argument to specify srpm[s]" % cmd
+        assert len(args) >= 2, \
+            "'%s' command requires an argument to specify srpm[s]" % cmd
 
     else:
         logging.error(" Unknown command '%s'" % a0)
@@ -1316,4 +1393,5 @@ def main(argv=sys.argv):
 if __name__ == '__main__':
     main(sys.argv)
 
-# vim: set sw=4 ts=4 expandtab:
+
+# vim:sw=4 ts=4 et:

@@ -2,7 +2,7 @@
 #
 # Tests for myrepo.py
 #
-# Copyright (C) 2011 Red Hat, Inc. 
+# Copyright (C) 2011 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -42,7 +42,6 @@ TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
 TEST_RHOSTS = ("192.168.122.1", "127.0.0.1")
 
 
-
 class TestThrdCommand(unittest.TestCase):
 
     def run_ok(self, cmd, rc_expected=0, out_expected="", err_expected=""):
@@ -62,7 +61,9 @@ class TestThrdCommand(unittest.TestCase):
 
     def test_run_max_args(self):
         cmd = "true"
-        c = ThrdCommand(cmd, get_username(), "localhost", os.curdir, True, None)
+        c = ThrdCommand(
+            cmd, get_username(), "localhost", os.curdir, True, None
+        )
 
         self.run_ok(c)
 
@@ -82,9 +83,9 @@ class TestThrdCommand(unittest.TestCase):
         self.assertFalse(rc == 0)
 
 
-
 class TestMemoizedFuncs(unittest.TestCase):
-    """Doctests in memoized functions and methods are not run as these are
+    """
+    Doctests in memoized functions and methods are not run as these are
     rewritten by memoize decorator. So tests of these must be re-defined as
     this.
     """
@@ -119,10 +120,15 @@ class TestMemoizedFuncs(unittest.TestCase):
         pass
 
     def test_hostname(self):
-        self.assertEquals(hostname(), subprocess.check_output("hostname").rstrip())
+        self.assertEquals(
+            hostname(), subprocess.check_output("hostname").rstrip()
+        )
 
     def test_username(self):
-        self.assertEquals(get_username(), subprocess.check_output("id -un", shell=True).rstrip())
+        self.assertEquals(
+            get_username(),
+            subprocess.check_output("id -un", shell=True).rstrip()
+        )
 
     def test_get_email(self):
         """TODO: write tests
@@ -138,7 +144,6 @@ class TestMemoizedFuncs(unittest.TestCase):
         """TODO: write tests
         """
         pass
-
 
 
 class TestMiscFuncs(unittest.TestCase):
@@ -174,7 +179,6 @@ class TestMiscFuncs(unittest.TestCase):
         rm_rf(d)
 
 
-
 class TestDistribution(unittest.TestCase):
 
     _multiprocess_can_split_ = True
@@ -184,7 +188,6 @@ class TestDistribution(unittest.TestCase):
 
     def tearDown(self):
         rm_rf(self.workdir)
-
 
     def test__init__(self):
         d = Distribution("fedora-14", "x86_64")
@@ -224,16 +227,20 @@ class TestDistribution(unittest.TestCase):
         self.assertEquals(d.mockcfg(), "/etc/mock/fedora-14-x86_64.cfg")
 
     def test_build_cmd(self):
-        d = Distribution("fedora-14", "x86_64")
+        dn = "fedora-16"
+        arch = "x86_64"
+        srpm = "python-virtinst-0.500.5-1.fc16.src.rpm"
+
+        d = Distribution(dn, arch)
 
         logging.getLogger().setLevel(logging.WARNING)
-        c = d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
-        cref = "mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm > /dev/null 2> /dev/null"
+        c = d.build_cmd(srpm)
+        cref = "mock -r %s-%s %s > /dev/null 2> /dev/null" % (dn, arch, srpm)
         self.assertEquals(c, cref)
 
         logging.getLogger().setLevel(logging.INFO)
-        c = d.build_cmd("python-virtinst-0.500.5-1.fc14.src.rpm")
-        cref = "mock -r fedora-14-x86_64 python-virtinst-0.500.5-1.fc14.src.rpm"
+        c = d.build_cmd(srpm)
+        cref = "mock -r %s-%s %s" % (dn, arch, srpm)
         self.assertEquals(c, cref)
 
     def test_arch_pattern(self):
@@ -242,7 +249,6 @@ class TestDistribution(unittest.TestCase):
 
         d = Distribution("fedora-14", "i386")
         self.assertEquals(d.arch_pattern, "i*86")
-
 
 
 class TestRepo(unittest.TestCase):
@@ -254,7 +260,10 @@ class TestRepo(unittest.TestCase):
         self.config = init_defaults()
 
         # overrides some parameters:
-        self.config["topdir"] = os.path.join(self.workdir, "repos", "%(subdir)s")
+        self.config["topdir"] = os.path.join(self.workdir,
+                                             "repos",
+                                             "%(subdir)s"
+                                             )
         self.config["baseurl"] = "file://%(topdir)s/%(distdir)s"
         self.config["dist"] = "%s-%s" % get_distribution()
         self.config["archs"] = list_archs()[:1]
@@ -282,7 +291,8 @@ class TestRepo(unittest.TestCase):
         (src, dst) = ("foo.txt", "~/bar.txt")
 
         c2 = repo.copy_cmd(src, dst)
-        c3 = "cp -a %s %s" % (src, ("~" in dst and os.path.expanduser(dst) or dst))
+        c3 = "cp -a %s %s" % \
+            (src, ("~" in dst and os.path.expanduser(dst) or dst))
         self.assertEquals(c2, c3)
 
         server = "repo-server.example.com"
@@ -332,7 +342,6 @@ class TestRepo(unittest.TestCase):
             repo.mock_file_content(dist)
 
 
-
 class TestFuncsWithSideEffects(unittest.TestCase):
 
     _multiprocess_can_split_ = True
@@ -370,7 +379,6 @@ b: bbb
         self.assertEquals(params["b"], "bbb")
 
 
-
 class TestProgramLocal(unittest.TestCase):
 
     _multiprocess_can_split_ = True
@@ -386,12 +394,18 @@ class TestProgramLocal(unittest.TestCase):
 
         # force set some parameters:
         config["server"] = "localhost"
-        config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
+        config["topdir"] = os.path.join(self.workdir,
+                                        "%(user)s",
+                                        "public_html",
+                                        "%(subdir)s"
+                                        )
         config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
 
         cmd = " init "
-        cmd += " --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
-        cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
+        cmd += " --server '%(server)s' --user '%(user)s'"
+        cmd += " --email '%(email)s' --fullname '%(fullname)s'"
+        cmd += " --dists %(dists)s --name '%(name)s'"
+        cmd += " --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
         cmd += " -C /dev/null "
         cmd = cmd % config
@@ -405,24 +419,34 @@ class TestProgramLocal(unittest.TestCase):
 
         # force set some parameters:
         config["server"] = "localhost"
-        config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
+        config["topdir"] = os.path.join(self.workdir,
+                                        "%(user)s",
+                                        "public_html",
+                                        "%(subdir)s"
+                                        )
         config["baseurl"] = "file://" + config["topdir"] + "/%(distdir)s"
 
         config["dists"] = "rhel-6-i386"
 
         try:
-            key_list = subprocess.check_output("gpg --list-keys %s 2>/dev/null" % get_username(), shell=True)
+            key_list = subprocess.check_output(
+                "gpg --list-keys %s 2>/dev/null" % get_username(), shell=True
+            )
             keyid = key_list.split()[1].split("/")[1]
-            #keyopt = " --signkey %s " % keyid
-            keyopt = " "  ## Disabled for a while.
+            keyopt = " "  # Disabled for a while.
 
         except Exception, e:
-            logging.warn("Cannot get the default gpg key list. Test w/o --signkey: err=%s" % str(e))
+            logging.warn(
+                "Cannot get the default gpg key list. " + \
+                    "Test w/o --signkey: err=%s" % str(e)
+            )
             keyopt = ""
 
         cmd = " init "
-        cmd += " --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
-        cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
+        cmd += " --server '%(server)s' --user '%(user)s'"
+        cmd += " --email '%(email)s' --fullname '%(fullname)s'"
+        cmd += " --dists %(dists)s --name '%(name)s'"
+        cmd += " --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
         cmd += keyopt
         cmd += " -C /dev/null "
@@ -474,7 +498,6 @@ email: jdoe@example.com
         pass
 
 
-
 class TestProgramRemote(unittest.TestCase):
 
     _multiprocess_can_split_ = True
@@ -486,28 +509,44 @@ class TestProgramRemote(unittest.TestCase):
         rm_rf(self.workdir)
 
     def test_init_with_all_options_set_explicitly(self):
-        rc = run_and_get_status("test -x /sbin/service && /sbin/service sshd status > /dev/null 2> /dev/null")
+        rc = run_and_get_status(
+            "test -x /sbin/service && " + \
+                "/sbin/service sshd status > /dev/null 2> /dev/null"
+        )
 
         if rc != 0:
-            logging.info("sshd is not working on this host. Skip this test: TestProgramRemote.test_init_with_all_options_set_explicitly")
+            logging.info(
+                "sshd is not working on this host. " + \
+                    "Skip this test: " + \
+                    "TestProgramRemote." + \
+                    "test_init_with_all_options_set_explicitly"
+            )
             return
 
         rhost = find_accessible_remote_host()
 
         if not rhost:
-            logging.info("target host is not accessible via ssh. Skip this test: test_rshell")
+            logging.info(
+                "target host is not accessible via ssh. " + \
+                    "Skip this test: test_rshell"
+            )
             return
 
         config = copy.copy(init_defaults())
 
         # force set some parameters:
         config["server"] = rhost
-        config["topdir"] = os.path.join(self.workdir, "%(user)s", "public_html", "%(subdir)s")
-        #config["baseurl"] = "http://%(server)s/%(topdir)s/%(subdir)s/%(distdir)s"
+        config["topdir"] = os.path.join(self.workdir,
+                                        "%(user)s",
+                                        "public_html",
+                                        "%(subdir)s"
+                                        )
 
         cmd = "init "
-        cmd += " --server '%(server)s' --user '%(user)s' --email '%(email)s' --fullname '%(fullname)s' "
-        cmd += " --dists %(dists)s --name '%(name)s' --subdir '%(subdir)s' --topdir '%(topdir)s' "
+        cmd += " --server '%(server)s' --user '%(user)s'"
+        cmd += " -email '%(email)s' --fullname '%(fullname)s' "
+        cmd += " --dists %(dists)s --name '%(name)s'"
+        cmd += " --subdir '%(subdir)s' --topdir '%(topdir)s' "
         cmd += " --baseurl '%(baseurl)s' "
         cmd += " -C /dev/null "
         cmd = cmd % config
@@ -517,8 +556,7 @@ class TestProgramRemote(unittest.TestCase):
         self.assertEquals(main(["argv0"] + cs), 0)
 
 
-
-def test(verbose, test_choice=TEST_BASIC):
+def main(verbose, test_choice=TEST_BASIC):
     def tsuite(testcase):
         return unittest.TestLoader().loadTestsFromTestCase(testcase)
 
@@ -553,21 +591,25 @@ def test(verbose, test_choice=TEST_BASIC):
         unittest.TextTestRunner(verbosity=(verbose and 2 or 0)).run(tests)
 
 
-
-def test_main(test_choices=TEST_CHOICES):
+def realmain(test_choices=TEST_CHOICES):
     p = optparse.OptionParser()
 
-    p.add_option("-v", "--verbose", action="store_true", default=False, help="Verbose mode")
-    p.add_option("", "--level", type="choice", choices=test_choices, default="basic",
-        help="Select the level of tests to run. Choices are " + ", ".join(test_choices) + " [%default]")
+    p.add_option("-v", "--verbose", action="store_true", default=False,
+        help="Verbose mode")
+    p.add_option("", "--level", type="choice", choices=test_choices,
+        default="basic",
+        help="Select the level of tests to run. Choices are " + \
+            ", ".join(test_choices) + " [%default]"
+    )
 
     (options, args) = p.parse_args()
 
-    test(options.verbose, options.level)
+    main(options.verbose, options.level)
     sys.exit()
 
 
 if __name__ == '__main__':
-    test_main()
+    realmain()
 
-# vim: set sw=4 ts=4 expandtab:
+
+# vim:sw=4 ts=4 et:
