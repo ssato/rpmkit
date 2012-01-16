@@ -610,8 +610,9 @@ class RpmOperations(object):
 
     @classmethod
     def build_cmds(cls, repo, srpm):
+        TC = ThrdCommand
         return [
-            ThrdCommand(repo.build_cmd(srpm, d)) for d in \
+            TC(repo.build_cmd(srpm, d), timeout=repo.timeout) for d in \
                 repo.dists_by_srpm(srpm)
         ]
 
@@ -802,6 +803,7 @@ class RepoOperations(object):
     def update(cls, repo):
         """'createrepo --update ...', etc.
         """
+        timeout = 5
         destdir = cls.destdir(repo)
 
         # hack: degenerate noarch rpms
@@ -906,7 +908,7 @@ pmaker -n mock-data-${repo.name} \\
 
     def __init__(self, server, user, email, fullname, dist, archs,
             name=None, subdir=None, topdir=None, baseurl=None, signkey=None,
-            bdist_label=None, metadata_expire=None,
+            bdist_label=None, metadata_expire=None, timeout=None,
             *args, **kwargs):
         """
         @server    server's hostname to provide this yum repo
@@ -925,6 +927,7 @@ pmaker -n mock-data-${repo.name} \\
         @bdist_label  Distribution label to build srpms, e.g.
                    "fedora-custom-addons-14-x86_64"
         @metadata_expire  Metadata expiration time, e.g. "2h", "1d"
+        @timeout   Timeout
         """
         self.server = server
         self.user = user
@@ -975,6 +978,8 @@ pmaker -n mock-data-${repo.name} \\
 
         if metadata_expire is not None:
             self.metadata_expire = metadata_expire
+
+        self.timeout = timeout
 
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
@@ -1134,6 +1139,7 @@ def init_defaults():
         "baseurl": Repo.baseurl,
         "signkey": Repo.signkey,
         "metadata_expire": Repo.metadata_expire,
+        "timeout": 5,
     }
 
     return defaults
@@ -1227,11 +1233,13 @@ Examples:
     p.set_defaults(**defaults)
 
     p.add_option("-C", "--config", help="Configuration file")
+    p.add_option("-T", "--timeout", type="int",
+        help="Timeout [sec] for each operations [%default]")
 
     p.add_option("-s", "--server", help="Server to provide your yum repos.")
     p.add_option("-u", "--user", help="Your username on the server [%default]")
     p.add_option("-m", "--email",
-        help="Your email address or its format string[%default]")
+        help="Your email address or its format string [%default]")
     p.add_option("-F", "--fullname", help="Your full name [%default]")
 
     p.add_option("", "--dists",
@@ -1377,6 +1385,7 @@ def main(argv=sys.argv):
             config["signkey"],
             bdist_label,
             config["metadata_expire"],
+            config["timeout"],
         )
 
         repos.append(repo)
