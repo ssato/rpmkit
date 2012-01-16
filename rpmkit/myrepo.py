@@ -222,7 +222,8 @@ class ThrdCommand(object):
             if "~" in workdir:
                 workdir = os.path.expanduser(workdir)
         else:
-            cmd = "ssh %s@%s 'cd %s && %s'" % (user, host, workdir, cmd)
+            cmd = "ssh %s@%s -o ConnectTimeout=5 'cd %s && %s'" % \
+                (user, host, workdir, cmd)
             workdir = os.curdir
 
         self.cmd = cmd
@@ -511,7 +512,8 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
 
     def check_cmd(uesr, rhost):
         c = "ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost
-        c += " && ssh %s@%s true > /dev/null 2> /dev/null" % (user, rhost)
+        c += " && ssh %s@%s -o ConnectTimeout=5 true >/dev/null 2>/dev/null" \
+            % (user, rhost)
 
         return ThrdCommand(c, user, timeout=5, stop_on_failure=False)
 
