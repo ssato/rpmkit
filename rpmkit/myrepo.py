@@ -1139,7 +1139,7 @@ def init_defaults():
         "baseurl": Repo.baseurl,
         "signkey": Repo.signkey,
         "metadata_expire": Repo.metadata_expire,
-        "timeout": 5,
+        "timeout": 10,
     }
 
     return defaults
