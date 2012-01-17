@@ -300,14 +300,6 @@ def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
     return cmd.run()
 
 
-def run_and_get_status(*args, **kwargs):
-    return run(*args, **kwargs)
-
-
-def run_and_get_output(*args, **kwargs):
-    return run(*args, **kwargs)
-
-
 def sequence(cmds, stop_on_failure=False, stop_on_success=False):
     """
     Run commands sequentially and returns return codes of each.
@@ -714,7 +706,7 @@ class RepoOperations(object):
                     for mcfg in mock_cfg_files) + "\n"
         )
 
-        rc = run_and_get_status(
+        rc = run(
             repo.mock_cfg_rpm_build_cmd(workdir, listfile_path), repo.user
         )
         if rc != 0:
@@ -758,7 +750,7 @@ class RepoOperations(object):
             keydir = os.path.join(workdir, repo.keydir[1:])
             os.makedirs(keydir)
 
-            rc = run_and_get_status(
+            rc = run(
                 "gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile),
                 workdir=workdir
             )
@@ -769,7 +761,7 @@ class RepoOperations(object):
                     repo.keyfile + "\n"
             )
 
-        rc = run_and_get_status(
+        rc = run(
             repo.release_rpm_build_cmd(workdir, release_file_path), repo.user
         )
 
@@ -1193,10 +1185,9 @@ def parse_dists_option(dists_str, sep=","):
     [('fedora-14', 'i386', 'fedora-14-i386')]
     >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386")
     [('fedora-14', 'i386', 'fedora-my-additions-14-i386')]
-    >>> s = ["fedora-14-i386"
-    >>> s.append("fedora-my-additions-14-i386")
+    >>> s = ["fedora-14-i386:fedora-my-additions-14-i386"]
     >>> s.append("rhel-6-i386:rhel-my-additions-6-i386")
-    >>> ds = s.join(":")
+    >>> ds = ",".join(s)
     >>> parse_dists_option(ds)
     [('fedora-14', 'i386', 'fedora-my-additions-14-i386'), ('rhel-6', 'i386', 'rhel-my-additions-6-i386')]
     """
