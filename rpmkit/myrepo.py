@@ -316,33 +316,6 @@ def snd(x, y):
     return y
 
 
-def rm_rf(target):
-    """'rm -rf' in python.
-    """
-    if not os.path.exists(target):
-        return
-
-    if os.path.isfile(target):
-        os.remove(target)
-        return
-
-    warnmsg = "You're trying to rm -rf / !"
-    assert target != "/", warnmsg
-    assert os.path.realpath(target) != "/", warnmsg
-
-    xs = glob.glob(os.path.join(target, "*")) + \
-        glob.glob(os.path.join(target, ".*"))
-
-    for x in xs:
-        if os.path.isdir(x):
-            rm_rf(x)
-        else:
-            os.remove(x)
-
-    if os.path.exists(target):
-        os.removedirs(target)
-
-
 @memoize
 def is_git_available():
     return os.system("git --version > /dev/null 2> /dev/null") == 0
