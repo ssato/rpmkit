@@ -95,55 +95,6 @@ def memoize(fn):
     return wrapped
 
 
-@memoize
-def is_foldable(xs):
-    """@see http://www.haskell.org/haskellwiki/Foldable_and_Traversable
-
-    >>> is_foldable([])
-    True
-    >>> is_foldable(())
-    True
-    >>> is_foldable(x for x in range(3))
-    True
-    >>> is_foldable(None)
-    False
-    >>> is_foldable(True)
-    False
-    >>> is_foldable(1)
-    False
-    """
-    return isinstance(xs, (list, tuple)) or callable(getattr(xs, "next", None))
-
-
-def listplus(list_lhs, foldable_rhs):
-    """
-    (++) in python.
-    """
-    return list_lhs + list(foldable_rhs)
-
-
-def concat(xss):
-    """
-    >>> concat([[]])
-    []
-    >>> concat((()))
-    []
-    >>> concat([[1,2,3],[4,5]])
-    [1, 2, 3, 4, 5]
-    >>> concat([[1,2,3],[4,5,[6,7]]])
-    [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat(((1,2,3),(4,5,[6,7])))
-    [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat(((1,2,3),(4,5,[6,7])))
-    [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat((i, i*2) for i in range(3))
-    [0, 0, 1, 2, 2, 4]
-    """
-    assert is_foldable(xss)
-
-    return foldl(listplus, (xs for xs in xss), [])
-
-
 def compile_template(template, params, is_file=False):
     """
     TODO: Add test case that $template is a filename.
