@@ -155,7 +155,7 @@ def is_local(fqdn_or_hostname):
     return fqdn_or_hostname.startswith("localhost")
 
 
-class ThrdCommand(object):
+class ThreadedCommand(object):
     """
     Based on the idea found at
     http://stackoverflow.com/questions/1191374/subprocess-with-timeout
@@ -247,7 +247,7 @@ class ThrdCommand(object):
 
 def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
         stop_on_failure=True, timeout=None):
-    cmd = ThrdCommand(cmd_str, user, host, workdir, stop_on_failure, timeout)
+    cmd = ThreadedCommand(cmd_str, user, host, workdir, stop_on_failure, timeout)
     return cmd.run()
 
 
@@ -277,7 +277,7 @@ def sequence(cmds, stop_on_failure=False, stop_on_success=False):
 
 def prun_and_get_results(cmds, wait=WAIT_FOREVER):
     """
-    @cmds  [ThrdCommand]
+    @cmds  [ThreadedCommand]
     @wait  Int  Timewait value in seconds.
     """
     def is_valid_timeout(timeout):
@@ -458,7 +458,7 @@ def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
         c += " && ssh %s@%s -o ConnectTimeout=5 true >/dev/null 2>/dev/null" \
             % (user, rhost)
 
-        return ThrdCommand(c, user, timeout=5, stop_on_failure=False)
+        return ThreadedCommand(c, user, timeout=5, stop_on_failure=False)
 
     checks = [check_cmd(user, rhost) for rhost in rhosts]
     rs = sequence(checks, stop_on_success=True)
@@ -553,7 +553,7 @@ class RpmOperations(object):
 
     @classmethod
     def build_cmds(cls, repo, srpm):
-        TC = ThrdCommand
+        TC = ThreadedCommand
         return [
             TC(repo.build_cmd(srpm, d), timeout=repo.timeout) for d in \
                 repo.dists_by_srpm(srpm)
@@ -623,7 +623,7 @@ class RepoOperations(object):
             cls.sign_rpms(repo.signkey, rpms_to_sign)
 
         cs = [
-            ThrdCommand(repo.copy_cmd(rpm, dest)) for rpm, dest \
+            ThreadedCommand(repo.copy_cmd(rpm, dest)) for rpm, dest \
                 in rpms_to_deploy
         ]
         rs = prun_and_get_results(cs, deploy_wait)
@@ -756,7 +756,7 @@ class RepoOperations(object):
             c += "done"
             c = c % (" ".join(repo.archs[1:]), repo.dists[0].arch)
 
-            cmd = ThrdCommand(c, repo.user, repo.server, destdir)
+            cmd = ThreadedCommand(c, repo.user, repo.server, destdir)
             cmd.run()
 
         c = "test -d repodata"
@@ -764,7 +764,7 @@ class RepoOperations(object):
         c += " || createrepo --deltas --oldpackagedirs . --database ."
 
         cs = [
-            ThrdCommand(c, repo.user, repo.server, d) for d \
+            ThreadedCommand(c, repo.user, repo.server, d) for d \
                 in repo.rpmdirs(destdir)
         ]
 
