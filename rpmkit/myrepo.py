@@ -182,7 +182,7 @@ class ThreadedCommand(object):
 
     def run_async(self):
         def func():
-            cmd_str_shorten = self.cmd_str[:60] + "..."
+            #cmd_str_shorten = self.cmd_str[:60] + "..."
 
             if logging.getLogger().level < logging.INFO:  # logging.DEBUG
                 stdout = sys.stdout
@@ -201,7 +201,7 @@ class ThreadedCommand(object):
             )
             self.result = self.process.wait()
 
-            logging.debug("Finished: %s" % cmd_str_shorten)
+            logging.debug("Finished: %s" % self.cmd_str)
 
         self.thread = threading.Thread(target=func)
         self.thread.start()
@@ -219,8 +219,11 @@ class ThreadedCommand(object):
 
         if self.thread.is_alive():
             logging.warn("Terminating: %s" % self.cmd_str)
+            try:
+                self.process.terminate()
+            except OSError:  # the process exited already.
+                pass
 
-            self.process.terminate()
             self.thread.join()
 
         rc = self.result
