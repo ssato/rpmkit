@@ -1107,8 +1107,11 @@ Examples:
     p.add_option("-F", "--fullname", help="Your full name [%default]")
 
     p.add_option("", "--dists",
-        help="Comma separated distribution labels including arch. "
-        "Options are some of " + distribution_choices + " [%default]"
+        help="Comma separated distribution labels including arch "
+        "(optionally w/ build (mock) distribution label). "
+        "Options are some of " + distribution_choices + " [%default] "
+        "and these combinations: e.g. fedora-16-x86_64, "
+        "rhel-6-i386:my-custom-addon-rhel-6-i386"
     )
 
     p.add_option("-q", "--quiet", action="store_true", help="Quiet mode")
