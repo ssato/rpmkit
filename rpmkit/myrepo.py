@@ -543,7 +543,8 @@ class Distribution(object):
     @classmethod
     def mockcfg_opts(self, mockcfg_path):
         """
-        Load mock config file and returns $mock_config["config_opts"] as a dict.
+        Load mock config file and returns $mock_config["config_opts"] as a
+        dict.
         """
         cfg = dict()
         cfg["config_opts"] = dict()
@@ -604,7 +605,7 @@ class RpmOperations(object):
     def build_cmds(cls, repo, srpm):
         TC = ThrdCommand
         return [
-            TC(repo.build_cmd(srpm, d), timeout=repo.timeout) for d in \
+            TC(repo.build_cmd(srpm, d)) for d in \
                 repo.dists_by_srpm(srpm)
         ]
 
@@ -646,8 +647,6 @@ class RepoOperations(object):
         destdir = cls.destdir(repo)
         rpms_to_deploy = []   # :: [(rpm_path, destdir)]
 
-        #rpms_to_deploy.append((srpm, os.path.join(destdir, "sources")))
-
         for d in repo.dists_by_srpm(srpm):
             srpm_to_copy = glob.glob("%s/*.src.rpm" % d.mockdir())[0]
             rpms_to_deploy.append(
@@ -672,8 +671,8 @@ class RepoOperations(object):
             cls.sign_rpms(repo.signkey, rpms_to_sign)
 
         cs = [
-            ThrdCommand(repo.copy_cmd(rpm, dest)) for rpm, dest \
-                in rpms_to_deploy
+            ThrdCommand(repo.copy_cmd(rpm, dest), timeout=repo.timeout) \
+                for rpm, dest in rpms_to_deploy
         ]
         rs = prun_and_get_results(cs, deploy_wait)
         assert all(rc == 0 for rc in rs)
@@ -751,7 +750,8 @@ class RepoOperations(object):
             os.makedirs(keydir)
 
             rc = run(
-                "gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile),
+                "gpg --export --armor %s > ./%s" % \
+                    (repo.signkey, repo.keyfile),
                 workdir=workdir
             )
 
@@ -813,8 +813,8 @@ class RepoOperations(object):
         c += " || createrepo --deltas --oldpackagedirs . --database ."
 
         cs = [
-            ThrdCommand(c, repo.user, repo.server, d) for d \
-                in repo.rpmdirs(destdir)
+            ThrdCommand(c, repo.user, repo.server, d, timeout=timeout) \
+                for d in repo.rpmdirs(destdir)
         ]
 
         rs = prun_and_get_results(cs)
@@ -915,7 +915,8 @@ pmaker -n mock-data-${repo.name} \\
         @topdir    repo's topdir or its format string, e.g.
                    "/var/www/html/%(subdir)s".
         @baseurl   base url or its format string, e.g. "file://%(topdir)s".
-        @signkey   GPG key ID for signing or None indicates will never sign rpms
+        @signkey   GPG key ID for signing or None indicates will never sign
+                   rpms
         @bdist_label  Distribution label to build srpms, e.g.
                    "fedora-custom-addons-14-x86_64"
         @metadata_expire  Metadata expiration time, e.g. "2h", "1d"
@@ -966,7 +967,9 @@ pmaker -n mock-data-${repo.name} \\
         else:
             self.signkey = signkey
             self.keyurl = self._format(Repo.keyurl)
-            self.keyfile = os.path.join(self.keydir, os.path.basename(self.keyurl))
+            self.keyfile = os.path.join(
+                self.keydir, os.path.basename(self.keyurl)
+            )
 
         if metadata_expire is not None:
             self.metadata_expire = metadata_expire
