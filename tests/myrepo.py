@@ -42,6 +42,27 @@ TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
 TEST_RHOSTS = ("192.168.122.1", "127.0.0.1")
 
 
+@memoize
+def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
+    if user is None:
+        user = get_username()
+
+    def check_cmd(uesr, rhost):
+        c = "ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost
+        c += " && ssh %s@%s -o ConnectTimeout=5 true >/dev/null 2>/dev/null" \
+            % (user, rhost)
+
+        return ThrdCommand(c, user, timeout=5, stop_on_failure=False)
+
+    checks = [check_cmd(user, rhost) for rhost in rhosts]
+    for rhost in rhosts:
+        rc = check_cmd(user, rhost).run()
+        if rc == 0:
+            return  rhost
+
+    return None
+
+
 class TestThrdCommand(unittest.TestCase):
 
     def run_ok(self, cmd, rc_expected=0, out_expected="", err_expected=""):

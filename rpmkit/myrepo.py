@@ -56,12 +56,7 @@ except ImportError:
 
 
 WAIT_TYPE = (WAIT_FOREVER, WAIT_MIN, WAIT_MAX) = (None, "min", "max")
-
 TIMEOUT_DEFAULT = 60 * 5  # 5 [min]
-
-
-TEST_CHOICES = (TEST_BASIC, TEST_FULL) = ("basic", "full")
-TEST_RHOSTS = ("192.168.122.1", "127.0.0.1")
 
 TEMPLATES = {
     "mock.cfg":
@@ -251,30 +246,6 @@ def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
     return cmd.run()
 
 
-def sequence(cmds, stop_on_failure=False, stop_on_success=False):
-    """
-    Run commands sequentially and returns return codes of each.
-
-    The name of this function came from "sequence" function in Haskell's
-    "Control.Monad" module, does Monad sequencing.
-
-    @cmds  [Command]  A list of [Threaded]Command objects
-    """
-    rs = []
-
-    for c in cmds:
-        rc = c.run()
-        rs.append(rc)
-
-        if stop_on_failure and rc != 0:
-            break
-
-        if stop_on_success and rc == 0:
-            break
-
-    return rs
-
-
 def prun_and_get_results(cmds, wait=WAIT_FOREVER):
     """
     @cmds  [ThreadedCommand]
@@ -419,27 +390,6 @@ def mock_cfg_add_repos(repo, dist, repos_content, templates=TEMPLATES):
     tmpl = templates.get("mock.cfg", "")
 
     return compile_template(tmpl, {"cfg": cfg_opts})
-
-
-@memoize
-def find_accessible_remote_host(user=None, rhosts=TEST_RHOSTS):
-    if user is None:
-        user = get_username()
-
-    def check_cmd(uesr, rhost):
-        c = "ping -q -c 1 -w 1 %s > /dev/null 2> /dev/null" % rhost
-        c += " && ssh %s@%s -o ConnectTimeout=5 true >/dev/null 2>/dev/null" \
-            % (user, rhost)
-
-        return ThreadedCommand(c, user, timeout=5, stop_on_failure=False)
-
-    checks = [check_cmd(user, rhost) for rhost in rhosts]
-    rs = sequence(checks, stop_on_success=True)
-
-    if rs[-1] != 0:
-        return False
-
-    return rhosts[len(rs) - 1]
 
 
 class Distribution(object):
@@ -1109,10 +1059,9 @@ def parse_dists_option(dists_str, sep=","):
     [('fedora-14', 'i386', 'fedora-14-i386')]
     >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386")
     [('fedora-14', 'i386', 'fedora-my-additions-14-i386')]
-    >>> s = ["fedora-14-i386:fedora-my-additions-14-i386"]
-    >>> s.append("rhel-6-i386:rhel-my-additions-6-i386")
-    >>> ds = ",".join(s)
-    >>> parse_dists_option(ds)
+    >>> ss = ["fedora-14-i386:fedora-my-additions-14-i386"]
+    >>> ss += ["rhel-6-i386:rhel-my-additions-6-i386"]
+    >>> parse_dists_option(",".join(ss))
     [('fedora-14', 'i386', 'fedora-my-additions-14-i386'), ('rhel-6', 'i386', 'rhel-my-additions-6-i386')]
     """
     return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
