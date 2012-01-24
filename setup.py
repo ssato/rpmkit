@@ -74,6 +74,7 @@ setup(name=PACKAGE,
     url="https://github.com/ssato/rpmkit",
     packages=[
         "rpmkit",
+        "rpmkit.myrepo",
     ],
     scripts=glob.glob("src/*"),
     cmdclass={
