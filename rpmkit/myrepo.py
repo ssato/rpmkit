@@ -529,10 +529,11 @@ class RepoOperations(object):
                 (srpm_to_copy, os.path.join(destdir, "sources"))
             )
 
-            if is_noarch(srpm):
-                rpms = glob.glob("%s/*.noarch.rpm" % d.mockdir())
-            else:
-                rpms = glob.glob("%s/*.%s.rpm" % (d.mockdir(), d.arch_pattern))
+            rpms = [
+                f for f in glob.glob("%s/*.*.rpm" % d.mockdir())\
+                    if not f.endswith(".src.rpm")
+            ]
+            logging.debug("rpms=" + str([os.path.basename(f) for f in rpms]))
 
             for p in rpms:
                 rpms_to_deploy.append((p, os.path.join(destdir, d.arch)))
