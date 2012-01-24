@@ -26,7 +26,6 @@
 # SEE ALSO: https://github.com/ssato/packagemaker
 #
 from Cheetah.Template import Template
-from functools import reduce as foldl
 from itertools import groupby, product
 
 import ConfigParser as cp
@@ -37,7 +36,6 @@ import optparse
 import os
 import os.path
 import platform
-import pprint
 import re
 import rpm
 import socket
@@ -1232,10 +1230,6 @@ def main(argv=sys.argv):
         (options, args) = p.parse_args()
 
     config = copy.copy(options.__dict__)
-
-    # Kept for DEBUG:
-    #pprint.pprint(config)
-    #sys.exit()
 
     dabs = parse_dists_option(config["dists"])  # [(dist, arch, bdist_label)]
     repos = []
