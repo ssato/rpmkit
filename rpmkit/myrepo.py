@@ -56,7 +56,8 @@ except ImportError:
 
 
 WAIT_TYPE = (WAIT_FOREVER, WAIT_MIN, WAIT_MAX) = (None, "min", "max")
-TIMEOUT_DEFAULT = 60 * 5  # 5 [min]
+TIMEOUTS = (REMOTE_TIMEOUT, LOCAL_TIMEOUT, BUILD_TIMEOUT, MIN_TIMEOUT) = \
+    (60 * 10, 60 * 5, 60 * 10, 5)  # [sec]
 
 TEMPLATES = {
     "mock.cfg":
@@ -160,16 +161,15 @@ class ThreadedCommand(object):
             stop_on_failure=True, timeout=None):
         self.host = host
         self.stop_on_failure = stop_on_failure
+        self.user = get_username() if user is None else user
         self.timeout = timeout
-
-        self.user = user is None and get_username() or user
 
         if is_local(host):
             if "~" in workdir:
                 workdir = os.path.expanduser(workdir)
         else:
-            cmd = "ssh %s@%s -o ConnectTimeout=5 'cd %s && %s'" % \
-                (user, host, workdir, cmd)
+            cmd = "ssh -o ConnectTimeout=%d %s@%s 'cd %s && %s'" % \
+                (MIN_TIMEOUT, user, host, workdir, cmd)
             workdir = os.curdir
 
         self.cmd = cmd
@@ -182,8 +182,6 @@ class ThreadedCommand(object):
 
     def run_async(self):
         def func():
-            #cmd_str_shorten = self.cmd_str[:60] + "..."
-
             if logging.getLogger().level < logging.INFO:  # logging.DEBUG
                 stdout = sys.stdout
             else:
@@ -255,7 +253,7 @@ def prun_and_get_results(cmds, wait=WAIT_FOREVER):
     @wait  Int  Timewait value in seconds.
     """
     def is_valid_timeout(timeout):
-        return isinstance(timeout, int) and timeout > 0
+        return timeout is None or isinstance(timeout, int) and timeout > 0
 
     for c in cmds:
         c.run_async()
@@ -584,7 +582,9 @@ class RepoOperations(object):
         )
 
         rc = run(
-            repo.mock_cfg_rpm_build_cmd(workdir, listfile_path), repo.user
+            repo.mock_cfg_rpm_build_cmd(workdir, listfile_path),
+            repo.user,
+            timeout=BUILD_TIMEOUT
         )
         if rc != 0:
             raise RuntimeError("Failed to create mock.cfg rpm")
@@ -629,7 +629,8 @@ class RepoOperations(object):
 
             rc = run(
                 "gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile),
-                workdir=workdir
+                workdir=workdir,
+                timeout=MIN_TIMEOUT,
             )
 
             release_file_list = os.path.join(workdir, "files.list")
@@ -639,7 +640,9 @@ class RepoOperations(object):
             )
 
         rc = run(
-            repo.release_rpm_build_cmd(workdir, release_file_path), repo.user
+            repo.release_rpm_build_cmd(workdir, release_file_path),
+            repo.user,
+            timeout=BUILD_TIMEOUT
         )
 
         srpms = glob.glob(
@@ -662,8 +665,9 @@ class RepoOperations(object):
         destdir = cls.destdir(repo)
 
         rc = run(
-            "mkdir -p " + \
-                " ".join(repo.rpmdirs(destdir)), repo.user, repo.server
+            "mkdir -p " + " ".join(repo.rpmdirs(destdir)),
+            repo.user, repo.server,
+            timeout=repo.timeout
         )
 
         cls.deploy_release_rpm(repo)
@@ -672,8 +676,8 @@ class RepoOperations(object):
     def update(cls, repo):
         """'createrepo --update ...', etc.
         """
-        timeout = 5
         destdir = cls.destdir(repo)
+        _TC = ThreadedCommand
 
         # hack: degenerate noarch rpms
         if len(repo.archs) > 1:
@@ -682,7 +686,7 @@ class RepoOperations(object):
             c += "done"
             c = c % (" ".join(repo.archs[1:]), repo.dists[0].arch)
 
-            cmd = ThreadedCommand(c, repo.user, repo.server, destdir)
+            cmd = _TC(c, repo.user, repo.server, destdir, timeout=repo.timeout)
             cmd.run()
 
         c = "test -d repodata"
@@ -690,7 +694,7 @@ class RepoOperations(object):
         c += " || createrepo --deltas --oldpackagedirs . --database ."
 
         cs = [
-            ThreadedCommand(c, repo.user, repo.server, d) for d \
+            _TC(c, repo.user, repo.server, d, timeout=repo.timeout) for d \
                 in repo.rpmdirs(destdir)
         ]
 
@@ -1008,8 +1012,14 @@ def init_defaults():
         "baseurl": Repo.baseurl,
         "signkey": Repo.signkey,
         "metadata_expire": Repo.metadata_expire,
-        "timeout": 10,
     }
+
+    if is_local(defaults["server"]):
+        timeout = LOCAL_TIMEOUT
+    else:
+        timeout = REMOTE_TIMEOUT
+
+    defaults["timeout"] = timeout
 
     return defaults
 
@@ -1152,7 +1162,7 @@ def do_command(cmd, repos, srpm=None, wait=WAIT_FOREVER):
 
         threads.append(thread)
 
-    time.sleep(5)
+    time.sleep(MIN_TIMEOUT)
 
     for thread in threads:
         # it will block.
