@@ -52,6 +52,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/*
 %{_sysconfdir}/myrepo.d
 %{_localstatedir}/cache/swapi
+%{_datadir}/rpmkit/templates/1
 
 
 %changelog

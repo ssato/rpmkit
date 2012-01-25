@@ -15,6 +15,11 @@ VERSION = "0.2.4"
 VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
+data_files = [
+    ("share/rpmkit/templates/1/myrepo", glob.glob("templates/1/myrepo/*")),
+]
+
+
 class SrpmCommand(Command):
 
     user_options = []
@@ -77,6 +82,7 @@ setup(name=PACKAGE,
         "rpmkit.myrepo",
     ],
     scripts=glob.glob("src/*"),
+    data_files=data_files,
     cmdclass={
         "srpm": SrpmCommand,
         "rpm":  RpmCommand,
