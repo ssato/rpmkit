@@ -203,6 +203,43 @@ def parse_dists_option(dists_str, sep=","):
     return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
 
 
+def create_repos_from_dists_option(dists_s):
+    """
+    :param dists_s:  str represents target distributions
+
+    see also: parse_dists_option
+    """
+    dabs = parse_dists_option(dists_s)  # [(dist, arch, bdist_label)]
+    repos = []
+
+    for dist, dists in IT.groupby(dabs, operator.itemgetter(0)):  # d[0]: dist
+        dists = list(dists)  # it's a generator and has internal state.
+
+        archs = [d[1] for d in dists]  # d[1]: arch
+        bdist_label = [d[2] for d in dists][0]  # d[2]: bdist_label
+
+        repo = R.Repo(
+            config["server"],
+            config["user"],
+            config["email"],
+            config["fullname"],
+            dist,
+            archs,
+            config["name"],
+            config["subdir"],
+            config["topdir"],
+            config["baseurl"],
+            config["signkey"],
+            bdist_label,
+            config["metadata_expire"],
+            config["timeout"],
+        )
+
+        repos.append(repo)
+
+    return repos
+
+
 def opt_parser():
     defaults = init_defaults()
     distribution_choices = defaults["dists_full"]  # save it.
@@ -355,35 +392,8 @@ def main(argv=sys.argv):
 
     config = options.__dict__.copy()
 
-    dabs = parse_dists_option(config["dists"])  # [(dist, arch, bdist_label)]
-    repos = []
-
-    for dist, dists in IT.groupby(dabs, operator.itemgetter(0)):  # d[0]: dist
-        dists = list(dists)  # it's a generator and has internal state.
-
-        archs = [d[1] for d in dists]  # d[1]: arch
-        bdist_label = [d[2] for d in dists][0]  # d[2]: bdist_label
-
-        repo = R.Repo(
-            config["server"],
-            config["user"],
-            config["email"],
-            config["fullname"],
-            dist,
-            archs,
-            config["name"],
-            config["subdir"],
-            config["topdir"],
-            config["baseurl"],
-            config["signkey"],
-            bdist_label,
-            config["metadata_expire"],
-            config["timeout"],
-        )
-
-        repos.append(repo)
-
     srpms = args[1:]
+    repos = create_repos_from_dists_option(config["dists"])
 
     if srpms:
         for srpm in srpms:
