@@ -18,29 +18,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.memoize as M
+import rpmkit.tenjinwrapper as T
 
-import Cheetah.Template as CT
 import platform
 import re
 
 
 memoize = M.memoize
-
-
-def compile_template(template, params, is_file=False):
-    """
-    TODO: Add test case that $template is a filename.
-
-    >>> tmpl_s = "a=$a b=$b"
-    >>> params = {'a':1, 'b':'b'}
-    >>> assert "a=1 b=b" == compile_template(tmpl_s, params)
-    """
-    if is_file:
-        tmpl = CT.Template(file=template, searchList=params)
-    else:
-        tmpl = CT.Template(source=template, searchList=params)
-
-    return tmpl.respond()
+compile_template = T.template_compile
 
 
 @memoize
