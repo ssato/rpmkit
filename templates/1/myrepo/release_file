@@ -1,0 +1,24 @@
+[#{name}]
+name=Custom yum repository on #{server} by #{user} (\$basearch)
+baseurl=#{baseurl}/\$basearch/
+metadata_expire=#{metadata_expire}
+enabled=1
+<?py 
+if signkey:
+?>
+gpgcheck=1
+gpgkey=#{keyurl}
+<?py
+else:
+?>
+gpgcheck=0
+<?py
+#end if
+?>
+
+[#{name}-source]
+name=Custom yum repository on #{server} by #{user} (source)
+baseurl=#{baseurl}/sources/
+metadata_expire=#{metadata_expire}
+enabled=0
+gpgcheck=0

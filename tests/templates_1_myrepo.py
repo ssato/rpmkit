@@ -25,6 +25,7 @@ def tmplpath(fname):
         os.path.join(C.selfdir(), "../templates/1/myrepo", fname)
     )
 
+
 class Test_00(unittest.TestCase):
 
     def test_00_mock_cfg(self):
@@ -41,7 +42,19 @@ class Test_00(unittest.TestCase):
 ...""",
             ),
         )
+        c = T.template_compile(tmpl, context)
 
+    def test_01_release_file(self):
+        tmpl = tmplpath("release_file")
+
+        context = dict(
+            name="fedora",
+            server="repo.example.com",
+            user="foo",
+            baseurl="http://repo.example.com/repo",
+            metadata_expire="2h",
+            signkey=0,
+        )
         c = T.template_compile(tmpl, context)
 
 
