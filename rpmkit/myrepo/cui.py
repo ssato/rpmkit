@@ -35,6 +35,7 @@ import ConfigParser as cp
 import glob
 import itertools as IT
 import logging
+import operator
 import optparse
 import os
 import os.path
@@ -357,7 +358,7 @@ def main(argv=sys.argv):
     dabs = parse_dists_option(config["dists"])  # [(dist, arch, bdist_label)]
     repos = []
 
-    for dist, dists in IT.groupby(dabs, lambda d: d[0]):  # d[0]: dist
+    for dist, dists in IT.groupby(dabs, operator.itemgetter(0)):  # d[0]: dist
         dists = list(dists)  # it's a generator and has internal state.
 
         archs = [d[1] for d in dists]  # d[1]: arch
