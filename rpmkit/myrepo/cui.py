@@ -105,7 +105,7 @@ def init_defaults_by_conffile(config=None, profile=None):
     if not loaded:
         return {}
 
-    d = profile and cparser.items(profile) or cparser.defaults().iteritems()
+    d = cparser.items(profile) if profile else cparser.defaults().iteritems()
 
     return dict((k, parse_conf_value(v)) for k, v in d)
 
@@ -155,12 +155,12 @@ def parse_dist_option(dist_str, sep=":"):
     ...     pass
     >>> parse_dist_option("fedora-14-i386")
     ('fedora-14', 'i386', 'fedora-14-i386')
-    >>> parse_dist_option("fedora-14-i386:fedora-my-additions-14-i386")
-    ('fedora-14', 'i386', 'fedora-my-additions-14-i386')
-    >>> parse_dist_option("fedora-14-i386:fedora-my-additions-14-x86_64")
-    ('fedora-14', 'i386', 'fedora-my-additions-14-x86_64')
-    >>> parse_dist_option("fedora-14-i386:fedora-my-additions")
-    ('fedora-14', 'i386', 'fedora-my-additions')
+    >>> parse_dist_option("fedora-14-i386:fedora-extras-14-i386")
+    ('fedora-14', 'i386', 'fedora-extras-14-i386')
+    >>> parse_dist_option("fedora-14-i386:fedora-extras-14-x86_64")
+    ('fedora-14', 'i386', 'fedora-extras-14-x86_64')
+    >>> parse_dist_option("fedora-14-i386:fedora-extras")
+    ('fedora-14', 'i386', 'fedora-extras')
     """
     tpl = dist_str.split(sep)
     label = tpl[0]
@@ -190,12 +190,13 @@ def parse_dists_option(dists_str, sep=","):
 
     >>> parse_dists_option("fedora-14-i386")
     [('fedora-14', 'i386', 'fedora-14-i386')]
-    >>> parse_dists_option("fedora-14-i386:fedora-my-additions-14-i386")
-    [('fedora-14', 'i386', 'fedora-my-additions-14-i386')]
-    >>> ss = ["fedora-14-i386:fedora-my-additions-14-i386"]
-    >>> ss += ["rhel-6-i386:rhel-my-additions-6-i386"]
-    >>> parse_dists_option(",".join(ss))
-    [('fedora-14', 'i386', 'fedora-my-additions-14-i386'), ('rhel-6', 'i386', 'rhel-my-additions-6-i386')]
+    >>> parse_dists_option("fedora-14-i386:fedora-extras-14-i386")
+    [('fedora-14', 'i386', 'fedora-extras-14-i386')]
+    >>> ss = ["fedora-14-i386:fedora-extras-14-i386"]
+    >>> ss += ["rhel-6-i386:rhel-extras-6-i386"]
+    >>> r = [('fedora-14', 'i386', 'fedora-extras-14-i386')]
+    >>> r += [('rhel-6', 'i386', 'rhel-extras-6-i386')]
+    >>> assert r == parse_dists_option(",".join(ss))
     """
     return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
 

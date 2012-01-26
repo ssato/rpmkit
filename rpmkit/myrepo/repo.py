@@ -174,7 +174,7 @@ class Repo(object):
         @topdir    repo's topdir or its format string, e.g.
                    "/var/www/html/%(subdir)s".
         @baseurl   base url or its format string, e.g. "file://%(topdir)s".
-        @signkey   GPG key ID for signing or None indicates will never sign rpms
+        @signkey   GPG key ID to sign built, or None indicates will never sign
         @bdist_label  Distribution label to build srpms, e.g.
                    "fedora-custom-addons-14-x86_64"
         @metadata_expire  Metadata expiration time, e.g. "2h", "1d"
@@ -225,7 +225,10 @@ class Repo(object):
         else:
             self.signkey = signkey
             self.keyurl = self._format(Repo.keyurl)
-            self.keyfile = os.path.join(self.keydir, os.path.basename(self.keyurl))
+            self.keyfile = os.path.join(
+                self.keydir,
+                os.path.basename(self.keyurl)
+            )
 
         if metadata_expire is not None:
             self.metadata_expire = metadata_expire
@@ -265,7 +268,7 @@ class Repo(object):
         dist = self.dists[0]
         params = {"repo": self, "dist": dist}
 
-        return U.compile_template("release_file"], params)
+        return U.compile_template("release_file", params)
 
     def mock_file_content(self, dist, release_file_content=None):
         """
