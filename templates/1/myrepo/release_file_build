@@ -6,12 +6,12 @@ if not signkey:
 #end if
 ?>
 pmaker -n #{name}-release --license MIT \\
--w ${workdir} \\
+-w #{workdir} \\
 --stepto sbuild \\
 --group "System Environment/Base" \\
 --url #{baseurl} \\
 --summary "Yum repo files for #{name}" \\
---packager "#{.fullname}" \\
+--packager "#{fullname}" \\
 --email "#{email}" \\
 --pversion #{distversion}  \\
 --no-rpmdb --no-mock \\

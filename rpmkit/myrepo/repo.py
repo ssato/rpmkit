@@ -264,11 +264,7 @@ class Repo(object):
         return (is_noarch(srpm) and self.dists[:1] or self.dists)
 
     def release_file_content(self):
-        # this package will be noarch (arch-independent).
-        dist = self.dists[0]
-        params = {"repo": self, "dist": dist}
-
-        return U.compile_template("release_file", params)
+        return U.compile_template("release_file", self)
 
     def mock_file_content(self, dist, release_file_content=None):
         """
@@ -285,26 +281,24 @@ class Repo(object):
     def release_rpm_build_cmd(self, workdir, release_file_path):
         logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
 
-        repo = self.__dict__.copy()
-        repo.update({
+        context = self.__dict__.copy()
+        context.update({
             "release_file": release_file_path,
             "workdir": workdir,
             "logopt": logopt,
             "release_file_list": os.path.join(workdir, "files.list"),
         })
-        params = {"repo": repo}
 
-        return U.compile_template("release_file_build", params)
+        return U.compile_template("release_file_build", context)
 
     def mock_cfg_rpm_build_cmd(self, workdir, mock_cfg_file_list_path):
-        repo = self.__dict__.copy()
-        repo.update({
+        context = self.__dict__.copy()
+        context.update({
             "workdir": workdir,
             "mock_cfg_file_list": mock_cfg_file_list_path
         })
-        params = {"repo": repo}
 
-        return U.compile_template("mock_cfg_build", params)
+        return U.compile_template("mock_cfg_build", context)
 
 
 # vim:sw=4 ts=4 et:

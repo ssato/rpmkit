@@ -1,17 +1,10 @@
-<?py
-if not signkey:
-?>
-    echo "#{release_file},rpmattr=%config" | \\
-<?py
-#end if
-?>
 pmaker -n #{name}-release --license MIT \\
--w ${workdir} \\
+-w #{workdir} \\
 --stepto sbuild \\
 --group "Development/Tools" \\
 --url #{baseurl} \\
 --summary "Mock cfg files of yum repo #{name}" \\
---packager "#{.fullname}" \\
+--packager "#{fullname}" \\
 --email "#{email}" \\
 --pversion #{distversion}  \\
 --no-rpmdb --no-mock \\

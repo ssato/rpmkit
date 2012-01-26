@@ -57,5 +57,37 @@ class Test_00(unittest.TestCase):
         )
         c = T.template_compile(tmpl, context)
 
+    def test_02_release_file_build(self):
+        tmpl = tmplpath("release_file_build")
+
+        context = dict(
+            name="fedora",
+            fullname="John Doe",
+            email="jdoe@example.com",
+            baseurl="http://repo.example.com/repo",
+            distversion="16",
+            logopt="",
+            signkey=0,
+            workdir="/tmp",
+            release_file="/etc/yum.repos.d/fedora-16-xyz.repo",
+        )
+        c = T.template_compile(tmpl, context)
+
+    def test_03_mock_cfg_build(self):
+        tmpl = tmplpath("mock_cfg_build")
+
+        context = dict(
+            name="fedora",
+            fullname="John Doe",
+            email="jdoe@example.com",
+            baseurl="http://repo.example.com/repo",
+            distversion="16",
+            signkey=0,
+            workdir="/tmp",
+            mock_cfg="/etc/mock/fedora-16-xyz.cfg",
+            mock_cfg_file_list="/tmp/mockcfg.files.list",
+        )
+        c = T.template_compile(tmpl, context)
+
 
 # vim:sw=4 ts=4 et:
