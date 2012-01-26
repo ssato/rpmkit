@@ -1,5 +1,5 @@
 #
-# tenjin (pmaker.contrib.tenjin) wrapper module
+# tenjin (imported.tenjin) wrapper module
 #
 # Copyright (C) 2011 Satoru SATOH <ssato at redhat.com>
 #

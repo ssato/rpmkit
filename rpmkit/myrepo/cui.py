@@ -26,6 +26,7 @@
 # SEE ALSO: https://github.com/ssato/packagemaker
 #
 import rpmkit.myrepo.environ as E
+import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.repo as R
 import rpmkit.myrepo.repoops as RO
 import rpmkit.myrepo.shell as SH
@@ -43,10 +44,6 @@ import re
 import sys
 import threading
 import time
-
-
-# timeouts [sec]:
-(REMOTE_TIMEOUT, LOCAL_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 60 * 5, 5)
 
 
 def parse_conf_value(s):
@@ -138,9 +135,9 @@ def init_defaults():
     }
 
     if U.is_local(defaults["server"]):
-        timeout = LOCAL_TIMEOUT
+        timeout = G.LOCAL_TIMEOUT
     else:
-        timeout = REMOTE_TIMEOUT
+        timeout = G.REMOTE_TIMEOUT
 
     defaults["timeout"] = timeout
 
@@ -322,7 +319,7 @@ def do_command(cmd, repos, srpm=None, wait=SH.WAIT_FOREVER):
 
         threads.append(thread)
 
-    time.sleep(MIN_TIMEOUT)
+    time.sleep(G.MIN_TIMEOUT)
 
     for thread in threads:
         # it will block.

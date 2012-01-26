@@ -120,12 +120,12 @@ def rpm_header_from_rpmfile(rpmfile):
 
 @U.memoize
 def is_noarch(srpm):
-    """Determine if given srpm is noarch (arch-independent).
+    """Detect if given srpm is for noarch (arch-independent) package.
     """
     return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
 
 
-def mock_cfg_add_repos(repo, dist, repos_content, templates=TEMPLATES):
+def mock_cfg_add_repos(repo, dist, repos_content):
     """
     Updated mock.cfg with addingg repository definitions in
     given content and returns it.
@@ -140,9 +140,7 @@ def mock_cfg_add_repos(repo, dist, repos_content, templates=TEMPLATES):
     cfg_opts["myrepo_distname"] = dist.name
     cfg_opts["yum.conf"] += "\n\n" + repos_content
 
-    tmpl = templates.get("mock.cfg", "")
-
-    return U.compile_template(tmpl, {"cfg": cfg_opts})
+    return U.compile_template("mock.cfg", cfg_opts)
 
 
 class Repo(object):
@@ -267,7 +265,7 @@ class Repo(object):
         dist = self.dists[0]
         params = {"repo": self, "dist": dist}
 
-        return U.compile_template(TEMPLATES["release_file_tmpl"], params)
+        return U.compile_template("release_file"], params)
 
     def mock_file_content(self, dist, release_file_content=None):
         """
@@ -293,7 +291,7 @@ class Repo(object):
         })
         params = {"repo": repo}
 
-        return U.compile_template(TEMPLATES["release_file_build_tmpl"], params)
+        return U.compile_template("release_file_build", params)
 
     def mock_cfg_rpm_build_cmd(self, workdir, mock_cfg_file_list_path):
         repo = self.__dict__.copy()
@@ -303,7 +301,7 @@ class Repo(object):
         })
         params = {"repo": repo}
 
-        return U.compile_template(TEMPLATES["mock_cfg_rpm_build_tmpl"], params)
+        return U.compile_template("mock_cfg_build", params)
 
 
 # vim:sw=4 ts=4 et:

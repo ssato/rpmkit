@@ -16,6 +16,7 @@ VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
 data_files = [
+    # see rpmkit/myrepo/globals.py:
     ("share/rpmkit/templates/1/myrepo", glob.glob("templates/1/myrepo/*")),
 ]
 
