@@ -25,8 +25,10 @@
 # SEE ALSO: createrepo(8)
 # SEE ALSO: https://github.com/ssato/packagemaker
 #
+import rpmkit.myrepo.config as C
 import rpmkit.myrepo.environ as E
 import rpmkit.myrepo.globals as G
+import rpmkit.myrepo.parser as P
 import rpmkit.myrepo.repo as R
 import rpmkit.myrepo.repoops as RO
 import rpmkit.myrepo.shell as SH
@@ -46,168 +48,13 @@ import threading
 import time
 
 
-def parse_conf_value(s):
-    """Simple and naive parser to parse value expressions in config files.
-
-    >>> assert 0 == parse_conf_value("0")
-    >>> assert 123 == parse_conf_value("123")
-    >>> assert True == parse_conf_value("True")
-    >>> assert [1,2,3] == parse_conf_value("[1,2,3]")
-    >>> assert "a string" == parse_conf_value("a string")
-    >>> assert "0.1" == parse_conf_value("0.1")
-    """
-    intp = re.compile(r"^([0-9]|([1-9][0-9]+))$")
-    boolp = re.compile(r"^(true|false)$", re.I)
-    listp = re.compile(r"^(\[\s*((\S+),?)*\s*\])$")
-
-    def matched(pat, s):
-        m = pat.match(s)
-        return m is not None
-
-    if not s:
-        return ""
-
-    if matched(boolp, s):
-        return bool(s)
-
-    if matched(intp, s):
-        return int(s)
-
-    if matched(listp, s):
-        return eval(s)  # TODO: too danger. safer parsing should be needed.
-
-    return s
-
-
-def init_defaults_by_conffile(config=None, profile=None):
-    """
-    Initialize default values for options by loading config files.
-    """
-    if config is None:
-        # Is there case that $HOME is empty?
-        home = os.environ.get("HOME", os.curdir)
-
-        confs = ["/etc/myreporc"]
-        confs += sorted(glob.glob("/etc/myrepo.d/*.conf"))
-        confs += [os.environ.get("MYREPORC", os.path.join(home, ".myreporc"))]
-    else:
-        confs = (config,)
-
-    cparser = cp.SafeConfigParser()
-    loaded = False
-
-    for c in confs:
-        if os.path.exists(c):
-            logging.info("Loading config: %s" % c)
-            cparser.read(c)
-            loaded = True
-
-    if not loaded:
-        return {}
-
-    d = cparser.items(profile) if profile else cparser.defaults().iteritems()
-
-    return dict((k, parse_conf_value(v)) for k, v in d)
-
-
-def init_defaults():
-    dists_full = E.list_dists()
-    archs = E.list_archs()
-
-    dists = ["%s-%s" % E.get_distribution()]
-
-    distributions_full = ["%s-%s" % da for da in IT.product(dists_full, archs)]
-    distributions = ["%s-%s" % da for da in IT.product(dists, archs)]
-
-    defaults = {
-        "server": E.hostname(),
-        "user": E.get_username(),
-        "email":  E.get_email(),
-        "fullname": E.get_fullname(),
-        "dists_full": ",".join(distributions_full),
-        "dists": ",".join(distributions),
-        "name": R.Repo.name,
-        "subdir": R.Repo.subdir,
-        "topdir": R.Repo.topdir,
-        "baseurl": R.Repo.baseurl,
-        "signkey": R.Repo.signkey,
-        "metadata_expire": R.Repo.metadata_expire,
-    }
-
-    if U.is_local(defaults["server"]):
-        timeout = G.LOCAL_TIMEOUT
-    else:
-        timeout = G.REMOTE_TIMEOUT
-
-    defaults["timeout"] = timeout
-
-    return defaults
-
-
-def parse_dist_option(dist_str, sep=":"):
-    """Parse dist_str and returns (dist, arch, bdist_label).
-
-    SEE ALSO: parse_dists_option (below)
-
-    >>> try:
-    ...     parse_dist_option("invalid_dist_label.i386")
-    ... except AssertionError:
-    ...     pass
-    >>> parse_dist_option("fedora-14-i386")
-    ('fedora-14', 'i386', 'fedora-14-i386')
-    >>> parse_dist_option("fedora-14-i386:fedora-extras-14-i386")
-    ('fedora-14', 'i386', 'fedora-extras-14-i386')
-    >>> parse_dist_option("fedora-14-i386:fedora-extras-14-x86_64")
-    ('fedora-14', 'i386', 'fedora-extras-14-x86_64')
-    >>> parse_dist_option("fedora-14-i386:fedora-extras")
-    ('fedora-14', 'i386', 'fedora-extras')
-    """
-    tpl = dist_str.split(sep)
-    label = tpl[0]
-
-    assert "-" in label, "Invalid distribution label ('-' not found): " + label
-
-    (dist, arch) = label.rsplit("-", 1)
-
-    if len(tpl) < 2:
-        bdist_label = label
-    else:
-        bdist_label = tpl[1]
-
-        if len(tpl) > 2:
-            m = "Invalid format: too many '%s' in dist_str: %s. " + \
-                "Ignore the rest"
-            logging.warn(m % (sep, dist_str))
-
-    return (dist, arch, bdist_label)
-
-
-def parse_dists_option(dists_str, sep=","):
-    """Parse --dists option and returns [(dist, arch, bdist_label)].
-
-    # d[:d.rfind("-")])
-    #archs = [l.split("-")[-1] for l in labels]
-
-    >>> parse_dists_option("fedora-14-i386")
-    [('fedora-14', 'i386', 'fedora-14-i386')]
-    >>> parse_dists_option("fedora-14-i386:fedora-extras-14-i386")
-    [('fedora-14', 'i386', 'fedora-extras-14-i386')]
-    >>> ss = ["fedora-14-i386:fedora-extras-14-i386"]
-    >>> ss += ["rhel-6-i386:rhel-extras-6-i386"]
-    >>> r = [('fedora-14', 'i386', 'fedora-extras-14-i386')]
-    >>> r += [('rhel-6', 'i386', 'rhel-extras-6-i386')]
-    >>> assert r == parse_dists_option(",".join(ss))
-    """
-    return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
-
-
 def create_repos_from_dists_option(dists_s):
     """
     :param dists_s:  str represents target distributions
 
-    see also: parse_dists_option
+    see also: rpmkit.myrepo.parser.parse_dists_option
     """
-    dabs = parse_dists_option(dists_s)  # [(dist, arch, bdist_label)]
+    dabs = P.parse_dists_option(dists_s)  # [(dist, arch, bdist_label)]
     repos = []
 
     for dist, dists in IT.groupby(dabs, operator.itemgetter(0)):  # d[0]: dist
@@ -239,10 +86,8 @@ def create_repos_from_dists_option(dists_s):
 
 
 def opt_parser():
-    defaults = init_defaults()
-    distribution_choices = defaults["dists_full"]  # save it.
-
-    defaults.update(init_defaults_by_conffile())
+    defaults = C.init_defaults()
+    distribution_choices = defaults["distribution_choices"]
 
     p = optparse.OptionParser("""%prog COMMAND [OPTION ...] [ARGS]
 
