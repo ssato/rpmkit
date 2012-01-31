@@ -26,23 +26,16 @@
 # SEE ALSO: https://github.com/ssato/packagemaker
 #
 import rpmkit.myrepo.config as C
-import rpmkit.myrepo.environ as E
 import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.parser as P
 import rpmkit.myrepo.repo as R
 import rpmkit.myrepo.repoops as RO
 import rpmkit.myrepo.shell as SH
-import rpmkit.myrepo.utils as U
 
-import ConfigParser as cp
-import glob
 import itertools as IT
 import logging
 import operator
 import optparse
-import os
-import os.path
-import re
 import sys
 import threading
 import time
