@@ -29,22 +29,15 @@ import tempfile
 (BUILD_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 5)  # [sec]
 
 
-def sign_rpms(keyid, rpms):
-    """TODO: It might ask user about the gpg passphrase everytime this
-    method is called.  How to store the passphrase or streamline with
-    gpg-agent via rpm?
-
-    @keyid   GPG Key ID to sign with
-    @rpms    RPM file path list
+def sign_rpms_cmd(keyid, rpms):
     """
-    rpms = " ".join(rpms)
-    c = "rpm --resign"
-    c += " --define \"_signature %s\" --define \"_gpg_name %s\" %s" % \
-        ("gpg", keyid, rpms)
+    TODO: It might ask user about the gpg passphrase everytime this method is
+    called.  How to store the passphrase or streamline that with gpg-agent ?
 
-    rc = subprocess.check_call(c, shell=True)
-
-    return rc
+    :param keyid:  GPG Key ID to sign with :: str
+    :param rpms:  RPM file path list :: [str]
+    """
+    return U.compile_template("sign_rpms", {"keyid": keyid, "rpms": rpms})
 
 
 def build_cmds(repo, srpm):
@@ -121,7 +114,8 @@ def deploy(repo, srpm, build=True, build_wait=SH.WAIT_FOREVER,
         rpms_to_sign += brpms
 
     if repo.signkey:
-        sign_rpms(repo.signkey, rpms_to_sign)
+        c = sign_rpms_cmd(repo.signkey, rpms_to_sign)
+        subprocess.check_call(c, shell=True)
 
     cs = [
         SH.ThreadedCommand(repo.copy_cmd(rpm, dest)) for rpm, dest \
