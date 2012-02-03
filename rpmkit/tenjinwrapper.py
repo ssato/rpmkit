@@ -17,6 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.imported.tenjin as tenjin
+import logging
+import os.path
+import os
 
 
 # dirty hack for highly customized and looks a bit overkill (IMHO) module
@@ -42,8 +45,47 @@ unquote = tenjin.helpers.unquote
 _ENGINE = tenjin.Engine(cache=tenjin.MemoryCacheStorage())
 
 
-def template_compile(template_path, context={}, engine=_ENGINE):
+def template_compile_0(template_path, context={}, engine=_ENGINE):
+    """
+    :param template_path: Relative or absolute path of template file
+    :param context: Context information to instanciate template
+    :param engine: Template engine
+    """
     return engine.render(template_path, context)
+
+
+def find_template(path_or_name, search_paths=[], env_var="RPMKIT_TEMPLATE_PATH"):
+    """
+    :param path_or_name: Template path or name
+    :param search_paths: Template search path lista
+    :param env_var: Environment variable name to set template search path
+    """
+    if not search_paths:
+        p = os.environ.get(env_var, False)
+        search_paths = [p, os.curdir] if p else [os.curdir]
+
+    # Try $path_or_name at first:
+    if os.path.exists(path_or_name):
+        return path_or_name
+
+    # Try to find template in search paths:
+    for p in search_paths:
+        t = os.path.join(p, path_or_name)
+        if os.path.exists(t):
+            return t
+
+    raise RuntimeError(
+        "Template '%s' was not found. Search path: %s" % \
+            (path_or_name, str(search_paths))
+    )
+
+
+def template_compile(path_or_name, context={}, search_paths=[]):
+    """
+    :param path_or_name: Template path or filename
+    """
+    tmpl = find_template(path_or_name, search_paths)
+    return template_compile_0(tmpl, context)
 
 
 # vim:sw=4 ts=4 et:
