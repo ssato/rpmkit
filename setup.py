@@ -81,6 +81,7 @@ setup(name=PACKAGE,
     packages=[
         "rpmkit",
         "rpmkit.myrepo",
+        "rpmkit.tests",
     ],
     scripts=glob.glob("src/*"),
     data_files=data_files,
