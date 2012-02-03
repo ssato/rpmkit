@@ -264,7 +264,7 @@ class Repo(object):
         return (is_noarch(srpm) and self.dists[:1] or self.dists)
 
     def release_file_content(self):
-        return U.compile_template("release_file", self)
+        return U.compile_template("release_file", self.__dict__)
 
     def mock_file_content(self, dist, release_file_content=None):
         """

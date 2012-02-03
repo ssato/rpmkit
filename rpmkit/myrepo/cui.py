@@ -41,12 +41,13 @@ import threading
 import time
 
 
-def create_repos_from_dists_option(dists_s):
+def create_repos_from_dists_option(config):
     """
-    :param dists_s:  str represents target distributions
+    :param config:  Configuration parameters :: dict
 
     see also: rpmkit.myrepo.parser.parse_dists_option
     """
+    dists_s = config["dists"]
     dabs = P.parse_dists_option(dists_s)  # [(dist, arch, bdist_label)]
     repos = []
 
@@ -218,8 +219,7 @@ def main(argv=sys.argv):
         sys.exit(1)
 
     if options.config:
-        params = init_defaults()
-        params.update(init_defaults_by_conffile(options.config))
+        params = C.init_defaults(options.config)
 
         p.set_defaults(**params)
 
@@ -229,7 +229,7 @@ def main(argv=sys.argv):
     config = options.__dict__.copy()
 
     srpms = args[1:]
-    repos = create_repos_from_dists_option(config["dists"])
+    repos = create_repos_from_dists_option(config)
 
     if srpms:
         for srpm in srpms:

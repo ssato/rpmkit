@@ -94,11 +94,11 @@ def init_defaults_by_conffile(config=None, profile=None):
     return dict((k, P.parse_conf_value(v)) for k, v in d)
 
 
-def init_defaults():
+def init_defaults(config=None):
     defaults = init_defaults_0()
     defaults["distribution_choices"] = defaults["dists_full"]  # save it.
 
-    defaults.update(init_defaults_by_conffile())
+    defaults.update(init_defaults_by_conffile(config))
 
     return defaults
 
