@@ -47,11 +47,8 @@ def build_cmds(repo, srpm):
     ]
 
 
-def build(repo, srpm, wait=SH.WAIT_FOREVER):
-    cs = build_cmds(repo, srpm)
-    rs = SH.prun_and_get_results(cs, wait)
-
-    return rs
+def build(repo, srpm):
+    return SH.prun(build_cmds(repo, srpm))
 
 
 def __destdir(repo):
@@ -83,16 +80,15 @@ def update(repo):
             in repo.rpmdirs(destdir)
     ]
 
-    return SH.prun_and_get_results(cs)
+    return SH.prun(cs)
 
 
-def deploy(repo, srpm, build=True, build_wait=SH.WAIT_FOREVER,
-        deploy_wait=SH.WAIT_FOREVER):
+def deploy(repo, srpm, build=True):
     """
     FIXME: ugly code around signkey check.
     """
     if build:
-        assert all(rc == 0 for rc in build(repo, srpm, build_wait))
+        assert all(rc == 0 for rc in build(repo, srpm))
 
     destdir = __destdir(repo)
     rpms_to_deploy = []   # :: [(rpm_path, destdir)]
@@ -118,10 +114,10 @@ def deploy(repo, srpm, build=True, build_wait=SH.WAIT_FOREVER,
         subprocess.check_call(c, shell=True)
 
     cs = [
-        SH.ThreadedCommand(repo.copy_cmd(rpm, dest)) for rpm, dest \
-            in rpms_to_deploy
+        SH.ThreadedCommand(repo.copy_cmd(rpm, dest), timeout=repo.timeout) \
+            for rpm, dest in rpms_to_deploy
     ]
-    assert all(rc == 0 for rc in SH.prun_and_get_results(cs, deploy_wait))
+    assert all(rc == 0 for rc in SH.prun(cs))
 
     return update(repo)
 
