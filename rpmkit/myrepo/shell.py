@@ -27,8 +27,23 @@ import threading
 import time
 
 
-WAIT_TYPE = (WAIT_FOREVER, WAIT_MIN, WAIT_MAX) = (None, "min", "max")
 MIN_TIMEOUT = 5  # [sec]
+
+
+def is_valid_timeout(timeout):
+    """
+    >>> is_valid_timeout(None)
+    True
+    >>> is_valid_timeout(0)
+    True
+    >>> is_valid_timeout(10)
+    True
+    >>> is_valid_timeout(-1)
+    False
+    >>> is_valid_timeout("10")
+    False
+    """
+    return timeout is None or isinstance(timeout, int) and timeout >= 0
 
 
 class ThreadedCommand(object):
@@ -38,10 +53,19 @@ class ThreadedCommand(object):
     """
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
-            stop_on_failure=True, timeout=None):
-        self.host = host
-        self.stop_on_failure = stop_on_failure
+            timeout=None):
+        """
+        :param cmd: Command string
+        :param user: User to run command
+        :param host: Host to run command
+        :param workdir: Working directory
+        :param timeout: Time out in sec
+        """
+        assert is_valid_timeout(timeout), "Invalid timeout: " + str(timeout)
+
+        self.cmd = cmd
         self.user = E.get_username() if user is None else user
+        self.host = host
         self.timeout = timeout
 
         if U.is_local(host):
@@ -52,37 +76,49 @@ class ThreadedCommand(object):
                 (MIN_TIMEOUT, user, host, workdir, cmd)
             workdir = os.curdir
 
-        self.cmd = cmd
         self.workdir = workdir
         self.cmd_str = "%s [%s]" % (self.cmd, self.workdir)
-
-        self.process = None
         self.thread = None
+        self.proc = None
         self.result = None
+
+    def __str__(self):
+        return self.cmd_str
 
     def run_async(self):
         def func():
             if logging.getLogger().level < logging.INFO:  # logging.DEBUG
                 stdout = sys.stdout
             else:
-                stdout = open("/dev/null", "w")
+                stdout = open(getattr(os, "devnull", "/dev/null"), "w")
 
-            #logging.info("Run: %s" % cmd_str_shorten)
             logging.info("Run: " + self.cmd_str)
-
-            self.process = subprocess.Popen(self.cmd,
-                                            bufsize=4096,
-                                            shell=True,
-                                            cwd=self.workdir,
-                                            stdout=stdout,
-                                            stderr=sys.stderr
+            self.proc = subprocess.Popen(
+                self.cmd, bufsize=4096, shell=True, cwd=self.workdir,
+                stdout=stdout, stderr=sys.stderr,
             )
-            self.result = self.process.wait()
-
+            self.result = self.proc.wait()
             logging.debug("Finished: %s" % self.cmd_str)
 
         self.thread = threading.Thread(target=func)
         self.thread.start()
+
+    def terminate(self):
+        if self.proc and self.result is None:
+            logging.warn("Terminating: " + self.cmd_str)
+            self.proc.terminate()
+
+            rc = self.proc.poll()
+            if rc is None:
+                self.proc.kill()
+
+            # avoid creating zonbie.
+            try:
+                (_pid, _rc) = os.waitpid(self.proc.pid,  os.WNOHANG)
+            except OSError:
+                pass
+
+            self.result = -1
 
     def get_result(self):
         if self.thread is None:
@@ -90,74 +126,65 @@ class ThreadedCommand(object):
                 "Thread does not exist. Did you call %s.run_async() ?" % \
                     self.__class__.__name__
             )
-            return None
+            return -1
 
-        # it will block.
+        # it may block.
         self.thread.join(self.timeout)
 
-        if self.thread.is_alive():
-            logging.warn("Terminating: %s" % self.cmd_str)
-            try:
-                self.process.terminate()
-            except OSError:  # the process exited already.
-                pass
+        # NOTE: It seems there is a case that thread is not alive but process
+        # spawned from that thread is still alive.
+        self.terminate()
 
+        if self.thread.isAlive():
             self.thread.join()
 
-        rc = self.result
-
-        if rc != 0:
-            emsg = "Failed: %s, rc=%d" % (self.cmd, rc)
-
-            if self.stop_on_failure:
-                raise RuntimeError(emsg)
-            else:
-                logging.warn(emsg)
-
-        return rc
+        return self.result
 
     def run(self):
         self.run_async()
         return self.get_result()
 
 
-def run(cmd_str, user=None, host="localhost", workdir=os.curdir,
-        stop_on_failure=True, timeout=None):
-    cmd = ThreadedCommand(cmd_str, user, host, workdir, stop_on_failure, timeout)
-    return cmd.run()
-
-
-def prun_and_get_results(cmds, wait=WAIT_FOREVER):
+def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
+        stop_on_error=False):
     """
-    @cmds  [ThreadedCommand]
-    @wait  Int  Timewait value in seconds.
+    :param stop_on_error: Whether to raise exception if any errors occurred.
     """
-    def is_valid_timeout(timeout):
-        return timeout is None or isinstance(timeout, int) and timeout > 0
+    c = ThreadedCommand(cmd, user, host, workdir, timeout)
+    rc = c.run()
 
-    for c in cmds:
+    if rc != 0:
+        emsg = "Failed: %s, rc=%d" % (str(c), rc)
+
+        if stop_on_error:
+            raise RuntimeError(emsg)
+        else:
+            logging.warn(emsg)
+
+    return rc
+
+
+def prun(cs):
+    """
+    :param cs: A list of ThreadedCommand objects
+    """
+    cs_w_t = sorted(
+        (c for c in cs if c.timeout is not None), key=lambda c: c.timeout
+    )
+    cs_wo_t = [c for c in cs if c.timeout is None]
+
+    for c in reversed(cs_w_t):
         c.run_async()
 
-    if wait != WAIT_FOREVER:
-        ts = [c.timeout for c in cmds if is_valid_timeout(c.timeout)]
+    for c in cs_wo_t:
+        c.run_async()
 
-        if ts:
-            if wait == WAIT_MAX:
-                timeout = max(ts)
-            elif wait == WAIT_MIN:
-                timeout = min(ts)
-            else:
-                if not is_valid_timeout(wait):
-                    RuntimeError(
-                        "Invalid 'wait' value was passed to get_results: " + \
-                            str(wait)
-                    )
-                else:
-                    timeout = wait
+    # no timeouts suggests these should finish jobs immedicately.
+    rcs = [c.get_result() for c in cs_wo_t]
 
-            time.sleep(timeout)
+    rcs += [c.get_result() for c in cs_w_t]
 
-    return [c.get_result() for c in cmds]
+    return rcs
 
 
 # vim:sw=4 ts=4 et:
