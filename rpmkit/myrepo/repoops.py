@@ -15,10 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+import rpmkit.myrepo.distribution as D
 import rpmkit.myrepo.shell as SH
+import rpmkit.myrepo.utils as U
+import rpmkit.rpmutils as RU
 
 import glob
 import logging
+import operator
 import os
 import os.path
 import subprocess
@@ -27,6 +31,47 @@ import tempfile
 
 # timeouts:
 (BUILD_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 5)  # [sec]
+
+
+def __destdir(repo):
+    return os.path.join(repo.topdir, repo.distdir)
+
+
+def __snd(x, y):
+    """
+    >>> __snd(1, 2)
+    2
+    """
+    return y
+
+
+def rpmdirs(repo, destdir=None):
+    f = __snd if destdir is None else os.path.join
+    return [f(destdir, d) for d in ["sources"] + repo.archs]
+
+
+def dists_by_srpm(repo, srpm):
+    return repo.dists[:1] if RU.is_noarch(srpm) else repo.dists
+
+
+def mock_cfg_content(repo, dist):
+    """
+    Updated mock.cfg with addingg repository definitions in
+    given content and returns it.
+
+    :param repo:  Repo object
+    :param dist:  Distribution object
+    """
+    cfg_opts = D.mockcfg_opts(dist.mockcfg())
+    repo_defs = U.compile_template("release_file", repo.as_dict())
+
+    cfg_opts["root"] = "%s-%s" % (repo.name, dist.label)
+    cfg_opts["myrepo_distname"] = dist.name
+    cfg_opts["yum.conf"] += "\n\n" + repo_defs
+
+    context = {"cfg": cfg_opts}
+
+    return U.compile_template("mock.cfg", context)
 
 
 def sign_rpms_cmd(keyid, rpms):
@@ -40,19 +85,52 @@ def sign_rpms_cmd(keyid, rpms):
     return U.compile_template("sign_rpms", {"keyid": keyid, "rpms": rpms})
 
 
+def copy_cmd(repo, src, dst):
+    if U.is_local(repo.server):
+        if "~" in dst:
+            dst = os.path.expanduser(dst)
+
+        cmd = "cp -a %s %s" % (src, dst)
+    else:
+        cmd = "scp -p %s %s@%s:%s" % (src, repo.user, repo.server, dst)
+
+    return cmd
+
+
+def release_rpm_build_cmd(repo, workdir, release_file_path):
+    logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
+
+    context = repo.as_dict()
+    context.update({
+        "release_file": release_file_path,
+        "workdir": workdir,
+        "logopt": logopt,
+        "release_file_list": os.path.join(workdir, "files.list"),
+    })
+
+    return U.compile_template("release_file_build", context)
+
+
+def mock_cfg_rpm_build_cmd(repo, workdir, mock_cfg_file_list_path):
+    context = repo.as_dict()
+    context.update({
+        "workdir": workdir,
+        "mock_cfg_file_list": mock_cfg_file_list_path
+    })
+
+    return U.compile_template("mock_cfg_build", context)
+
+
 def build_cmds(repo, srpm):
     return [
-        SH.ThreadedCommand(repo.build_cmd(srpm, d), timeout=repo.timeout) \
-            for d in repo.dists_by_srpm(srpm)
+        SH.ThreadedCommand(d.build_cmd(srpm), timeout=repo.timeout) \
+            for d in dists_by_srpm(repo, srpm)
     ]
 
 
+# commands:
 def build(repo, srpm):
     return SH.prun(build_cmds(repo, srpm))
-
-
-def __destdir(repo):
-    return os.path.join(repo.topdir, repo.distdir)
 
 
 def update(repo):
@@ -76,8 +154,8 @@ def update(repo):
     c += " || createrepo --deltas --oldpackagedirs . --database ."
 
     cs = [
-        _TC(c, repo.user, repo.server, d, timeout=repo.timeout) for d \
-            in repo.rpmdirs(destdir)
+        _TC(c, repo.user, repo.server, d, timeout=repo.timeout) \
+            for d in rpmdirs(repo, destdir)
     ]
 
     return SH.prun(cs)
@@ -94,7 +172,7 @@ def deploy(repo, srpm, build=True):
     rpms_to_deploy = []   # :: [(rpm_path, destdir)]
     rpms_to_sign = []
 
-    for d in repo.dists_by_srpm(srpm):
+    for d in dists_by_srpm(repo, srpm):
         srpm_to_copy = glob.glob("%s/*.src.rpm" % d.mockdir())[0]
         rpms_to_deploy.append((srpm_to_copy, os.path.join(destdir, "sources")))
 
@@ -122,7 +200,7 @@ def deploy(repo, srpm, build=True):
     return update(repo)
 
 
-def deploy_mock_cfg_rpm(repo, workdir, release_file_content):
+def deploy_mock_cfg_rpm(repo, workdir):
     """Generate mock.cfg files and corresponding RPMs.
     """
     mockcfgdir = os.path.join(workdir, "etc", "mock")
@@ -131,7 +209,7 @@ def deploy_mock_cfg_rpm(repo, workdir, release_file_content):
     mock_cfg_files = []
 
     for dist in repo.dists:
-        mc = repo.mock_file_content(dist, release_file_content)
+        mc = mock_cfg_content(repo, dist)
         mock_cfg_path = os.path.join(
             mockcfgdir, "%s-%s.cfg" % (repo.name, dist.label)
         )
@@ -148,7 +226,7 @@ def deploy_mock_cfg_rpm(repo, workdir, release_file_content):
     )
 
     rc = SH.run(
-        repo.mock_cfg_rpm_build_cmd(workdir, listfile_path),
+        mock_cfg_rpm_build_cmd(repo, workdir, listfile_path),
         repo.user,
         timeout=BUILD_TIMEOUT
     )
@@ -178,9 +256,7 @@ def deploy_release_rpm(repo, workdir=None):
                                    prefix="%s-release-" % repo.name
                                    )
 
-    rfc = repo.release_file_content()
-
-    deploy_mock_cfg_rpm(repo, workdir, rfc)
+    deploy_mock_cfg_rpm(repo, workdir)
 
     reldir = os.path.join(workdir, "etc", "yum.repos.d")
     os.makedirs(reldir)
@@ -205,7 +281,7 @@ def deploy_release_rpm(repo, workdir=None):
         )
 
     rc = SH.run(
-        repo.release_rpm_build_cmd(workdir, release_file_path),
+        release_rpm_build_cmd(repo, workdir, release_file_path),
         repo.user,
         timeout=BUILD_TIMEOUT
     )
@@ -229,7 +305,7 @@ def init(repo):
     destdir = __destdir(repo)
 
     rc = SH.run(
-        "mkdir -p " + " ".join(repo.rpmdirs(destdir)),
+        "mkdir -p " + " ".join(rpmdirs(repo, destdir)),
         repo.user, repo.server,
         timeout=repo.timeout
     )

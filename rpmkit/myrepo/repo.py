@@ -16,52 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.myrepo.distribution as D
-import rpmkit.myrepo.utils as U
 
-import logging
 import os.path
-import rpm
-
-
-def snd(x, y):
-    """
-    >>> snd(1, 2)
-    2
-    """
-    return y
-
-
-def rpm_header_from_rpmfile(rpmfile):
-    """Read rpm.hdr from rpmfile.
-    """
-    return rpm.TransactionSet().hdrFromFdno(open(rpmfile, "rb"))
-
-
-@U.memoize
-def is_noarch(srpm):
-    """Detect if given srpm is for noarch (arch-independent) package.
-    """
-    return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
-
-
-def mock_cfg_add_repos(repo, dist, repos_content):
-    """
-    Updated mock.cfg with addingg repository definitions in
-    given content and returns it.
-
-    @repo  Repo object
-    @dist  Distribution object
-    @repos_content  str  Repository definitions to add into mock.cfg
-    """
-    cfg_opts = D.mockcfg_opts(dist.mockcfg())
-
-    cfg_opts["root"] = repo.buildroot(dist)
-    cfg_opts["myrepo_distname"] = dist.name
-    cfg_opts["yum.conf"] += "\n\n" + repos_content
-
-    context = {"cfg": cfg_opts}
-
-    return U.compile_template("1/myrepo/mock.cfg", context)
 
 
 class Repo(object):
@@ -156,70 +112,11 @@ class Repo(object):
 
         self.timeout = timeout
 
+    def as_dict(self):
+        return self.__dict__.copy()
+
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
 
-    def buildroot(self, dist):
-        return "%s-%s" % (self.name, dist.label)
-
-    def rpmdirs(self, destdir=None):
-        f = destdir is None and snd or os.path.join
-
-        return [f(destdir, d) for d in ["sources"] + self.archs]
-
-    def copy_cmd(self, src, dst):
-        if U.is_local(self.server):
-            cmd = "cp -a %s %s" % \
-                (src, ("~" in dst and os.path.expanduser(dst) or dst))
-        else:
-            cmd = "scp -p %s %s@%s:%s" % (src, self.user, self.server, dst)
-
-        return cmd
-
-    def build_cmd(self, srpm, dist):
-        """Returns Command object to build src.rpm
-        """
-        return dist.build_cmd(srpm)
-
-    def dists_by_srpm(self, srpm):
-        return (is_noarch(srpm) and self.dists[:1] or self.dists)
-
-    def release_file_content(self):
-        return U.compile_template("1/myrepo/release_file", self.__dict__)
-
-    def mock_file_content(self, dist, release_file_content=None):
-        """
-        Returns the content of mock.cfg for given dist.
-
-        @dist  Distribution  Distribution object
-        @release_file_content  str  The content of this repo's release file
-        """
-        if release_file_content is None:
-            release_file_content = self.release_file_content()
-
-        return mock_cfg_add_repos(self, dist, release_file_content)
-
-    def release_rpm_build_cmd(self, workdir, release_file_path):
-        logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
-
-        context = self.__dict__.copy()
-        context.update({
-            "release_file": release_file_path,
-            "workdir": workdir,
-            "logopt": logopt,
-            "release_file_list": os.path.join(workdir, "files.list"),
-        })
-
-        return U.compile_template("1/myrepo/release_file_build", context)
-
-    def mock_cfg_rpm_build_cmd(self, workdir, mock_cfg_file_list_path):
-        context = self.__dict__.copy()
-        context.update({
-            "workdir": workdir,
-            "mock_cfg_file_list": mock_cfg_file_list_path
-        })
-
-        return U.compile_template("1/myrepo/mock_cfg_build", context)
-
-
+ 
 # vim:sw=4 ts=4 et:

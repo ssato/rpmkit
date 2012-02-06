@@ -29,8 +29,7 @@ memoize = M.memoize
 
 
 def compile_template(tmpl_name, context={}):
-    #return T.template_compile(os.path.join("1/myrepo", tmpl_name), context)
-    return T.template_compile(tmpl_name, context)
+    return T.template_compile(os.path.join("1/myrepo", tmpl_name), context)
 
 
 @memoize
