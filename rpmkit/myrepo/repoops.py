@@ -156,7 +156,7 @@ def deploy_mock_cfg_rpm(repo, workdir, release_file_content):
         raise RuntimeError("Failed to create mock.cfg rpm")
 
     srpms = glob.glob(
-        "%(wdir)s/mock-data-%(repon)s-%(dver)s/mock-data-*.src.rpm" % \
+        "%(wdir)s/mock-data-%(repo)s-%(dver)s/mock-data-*.src.rpm" % \
             {"wdir": workdir, "repo": repo.name, "dver": repo.distversion}
     )
     if not srpms:

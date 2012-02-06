@@ -19,7 +19,6 @@
 #
 import rpmkit.memoize as M
 import rpmkit.tenjinwrapper as T
-import rpmkit.myrepo.globals as G
 
 import os.path
 import platform
@@ -30,8 +29,8 @@ memoize = M.memoize
 
 
 def compile_template(tmpl_name, context={}):
-    tmpl = os.path.join(G.TEMPLATES_DIR, tmpl_name)
-    return T.template_compile(tmpl, context)
+    #return T.template_compile(os.path.join("1/myrepo", tmpl_name), context)
+    return T.template_compile(tmpl_name, context)
 
 
 @memoize

@@ -140,7 +140,9 @@ def mock_cfg_add_repos(repo, dist, repos_content):
     cfg_opts["myrepo_distname"] = dist.name
     cfg_opts["yum.conf"] += "\n\n" + repos_content
 
-    return U.compile_template("mock.cfg", cfg_opts)
+    context = {"cfg": cfg_opts}
+
+    return U.compile_template("1/myrepo/mock.cfg", context)
 
 
 class Repo(object):
@@ -264,7 +266,7 @@ class Repo(object):
         return (is_noarch(srpm) and self.dists[:1] or self.dists)
 
     def release_file_content(self):
-        return U.compile_template("release_file", self.__dict__)
+        return U.compile_template("1/myrepo/release_file", self.__dict__)
 
     def mock_file_content(self, dist, release_file_content=None):
         """
@@ -289,7 +291,7 @@ class Repo(object):
             "release_file_list": os.path.join(workdir, "files.list"),
         })
 
-        return U.compile_template("release_file_build", context)
+        return U.compile_template("1/myrepo/release_file_build", context)
 
     def mock_cfg_rpm_build_cmd(self, workdir, mock_cfg_file_list_path):
         context = self.__dict__.copy()
@@ -298,7 +300,7 @@ class Repo(object):
             "mock_cfg_file_list": mock_cfg_file_list_path
         })
 
-        return U.compile_template("mock_cfg_build", context)
+        return U.compile_template("1/myrepo/mock_cfg_build", context)
 
 
 # vim:sw=4 ts=4 et:
