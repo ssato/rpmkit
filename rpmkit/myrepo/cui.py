@@ -144,7 +144,7 @@ Examples:
     return p
 
 
-def do_command(cmd, repos, srpm=None, wait=SH.WAIT_FOREVER):
+def do_command(cmd, repos, srpm=None):
     f = getattr(RO, cmd)
     threads = []
 
@@ -163,7 +163,7 @@ def do_command(cmd, repos, srpm=None, wait=SH.WAIT_FOREVER):
 
     for thread in threads:
         # it will block.
-        thread.join(wait)
+        thread.join()
 
         # Is there any possibility thread still live?
         if thread.is_alive():
