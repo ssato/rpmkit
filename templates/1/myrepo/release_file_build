@@ -5,9 +5,10 @@ if not signkey:
 <?py
 #end if
 ?>
-pmaker -n #{name}-release --license MIT \
+pmaker -n #{name}-release \
 -w #{workdir} \
 --stepto sbuild \
+--license MIT \
 --group "System Environment/Base" \
 --url #{baseurl} \
 --summary "Yum repo files for #{name}" \
