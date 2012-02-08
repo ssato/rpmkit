@@ -30,12 +30,9 @@ import os.path
 
 
 def init_defaults_0():
-    dists_full = E.list_dists()
     archs = E.list_archs()
-
+    distributions_full = E.list_dists()
     dists = ["%s-%s" % E.get_distribution()]
-
-    distributions_full = ["%s-%s" % da for da in IT.product(dists_full, archs)]
     distributions = ["%s-%s" % da for da in IT.product(dists, archs)]
 
     defaults = {

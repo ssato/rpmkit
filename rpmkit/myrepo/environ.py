@@ -47,15 +47,15 @@ def list_archs(arch=None):
 
 @M.memoize
 def list_dists():
-    """List available dist names, e.g. ["fedora-16", "rhel-6"]
+    """
+    List available distribution names including (name, version, arch),
+    e.g. ["fedora-16-i386", "fedora-16-x86_64", "rhel-6-x86_64"]
     """
     mockdir = "/etc/mock"
-    arch = list_archs()[0]
-    reg = re.compile("%s/(?P<dist>.+)-%s.cfg" % (mockdir, arch))
+    reg = re.compile(mockdir + "/(?P<dist>.+).cfg")
 
     return [
-        reg.match(c).groups()[0] for c in \
-            sorted(glob.glob("%s/*-%s.cfg" % (mockdir, arch)))
+        reg.match(c).groups()[0] for c in sorted(glob.glob(mockdir + "/*.cfg"))
     ]
 
 
