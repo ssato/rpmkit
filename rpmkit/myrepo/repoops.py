@@ -62,7 +62,7 @@ def mock_cfg_content(repo, dist):
     :param repo:  Repo object
     :param dist:  Distribution object
     """
-    cfg_opts = D.mockcfg_opts(dist.mockcfg())
+    cfg_opts = dist.mockcfg_opts()
     repo_defs = U.compile_template("release_file", repo.as_dict())
 
     cfg_opts["root"] = "%s-%s" % (repo.name, dist.label)

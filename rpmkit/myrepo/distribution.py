@@ -74,10 +74,13 @@ class Distribution(object):
         self.label = "%s-%s-%s" % (dname, dver, arch)
         self.bdist_label = self.label if bdist_label is None else bdist_label
         self.arch_pattern = "i*86" if arch == "i386" else self.arch
-        self.mockcfg_opts = mockcfg_opts(self.bdist_label)
+        self._mockcfg_opts = mockcfg_opts(self.bdist_label)
 
     def __buildroot(self):
         return self.mockcfg_opts.get("root", bdist_label)
+
+    def mockcfg_opts(self):
+        return self._mockcfg_opts
 
     def mockdir(self):
         return "/var/lib/mock/%s/result" % self.__buildroot()
