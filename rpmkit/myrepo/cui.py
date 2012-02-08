@@ -1,8 +1,5 @@
 #
-# myrepo.py - Manage your yum repo and RPMs:
-#
-#  * Setup your own yum repos
-#  * build SRPMs and deploy SRPMs and RPMs into your repos.
+# cui module
 #
 # Copyright (C) 2011 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
@@ -20,11 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Requirements: createrepo, ssh, packagemaker (see below)
-#
-# SEE ALSO: createrepo(8)
-# SEE ALSO: https://github.com/ssato/packagemaker
-#
 import rpmkit.myrepo.config as C
 import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.parser as P
@@ -41,42 +33,44 @@ import threading
 import time
 
 
-def create_repos_from_dists_option(config):
+def create_repos_from_dists_option_g(config):
     """
     :param config:  Configuration parameters :: dict
 
     see also: rpmkit.myrepo.parser.parse_dists_option
     """
     dists_s = config["dists"]
-    dabs = P.parse_dists_option(dists_s)  # [(dist, arch, bdist_label)]
-    repos = []
 
-    for dist, dists in IT.groupby(dabs, operator.itemgetter(0)):  # d[0]: dist
-        dists = list(dists)  # it's a generator and has internal state.
+    # dabs :: [(dist_name, dist_ver, dist_arch, bdist_label)]
+    dabs = P.parse_dists_option(dists_s)
+    key_f = operator.itemgetter(0, 1)  # dab :: (n, v, a, bd) -> (n, v)
 
-        archs = [d[1] for d in dists]  # d[1]: arch
-        bdist_label = [d[2] for d in dists][0]  # d[2]: bdist_label
+    # grouping distributions by (dist_name, dist_ver):
+    for dist, dists in IT.groupby(dabs, key_f):
+        dists = list(dists)  # It's a generator and should be converted.
 
-        repo = R.Repo(
-            config["server"],
-            config["user"],
-            config["email"],
-            config["fullname"],
-            dist,
-            archs,
-            config["name"],
-            config["subdir"],
-            config["topdir"],
-            config["baseurl"],
-            config["signkey"],
-            bdist_label,
-            config["metadata_expire"],
-            config["timeout"],
-        )
+        (dname, dver) = dist
+        archs = [d[2] for d in dists]  # d[2]: arch (see the type of dabs).
+        bdists = [d[3] for d in dists]  # d[3]: bdist_label
 
-        repos.append(repo)
-
-    return repos
+        for bdist in bdists:
+            yield R.Repo(
+                config["server"],
+                config["user"],
+                config["email"],
+                config["fullname"],
+                dname,
+                dver,
+                archs,
+                config["name"],
+                config["subdir"],
+                config["topdir"],
+                config["baseurl"],
+                config["signkey"],
+                bdist,
+                config["metadata_expire"],
+                config["timeout"],
+            )
 
 
 def opt_parser():
@@ -145,6 +139,11 @@ Examples:
 
 
 def do_command(cmd, repos, srpm=None):
+    """
+    :param cmd: sub command name :: str
+    :param repos: Repository objects (generator)
+    :param srpm: path to the target src.rpm :: str
+    """
     f = getattr(RO, cmd)
     threads = []
 
@@ -229,7 +228,7 @@ def main(argv=sys.argv):
     config = options.__dict__.copy()
 
     srpms = args[1:]
-    repos = create_repos_from_dists_option(config)
+    repos = create_repos_from_dists_option_g(config)
 
     if srpms:
         for srpm in srpms:

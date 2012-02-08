@@ -34,7 +34,7 @@ class Repo(object):
 
     metadata_expire = "2h"
 
-    def __init__(self, server, user, email, fullname, dist, archs,
+    def __init__(self, server, user, email, fullname, dname, dver, archs,
             name=None, subdir=None, topdir=None, baseurl=None, signkey=None,
             bdist_label=None, metadata_expire=None, timeout=None,
             *args, **kwargs):
@@ -45,7 +45,8 @@ class Repo(object):
         @fullname  full name, e.g. "John Doe".
         @name      repository name or its format string, e.g. "rpmfusion-free",
                    "%(distname)s-%(hostname)s-%(user)s"
-        @dist      distribution string, e.g. "fedora-14"
+        @dname     distribution name, e.g. "fedora", "rhel"
+        @dver      distribution version, e.g. "16", "6"
         @archs     architecture list, e.g. ["i386", "x86_64"]
         @subdir    repo's subdir
         @topdir    repo's topdir or its format string, e.g.
@@ -60,7 +61,6 @@ class Repo(object):
         self.server = server
         self.user = user
         self.fullname = fullname
-        self.dist = dist
         self.archs = archs
 
         self.hostname = server.split('.')[0]
@@ -68,9 +68,12 @@ class Repo(object):
 
         self.bdist_label = bdist_label
 
-        (self.distname, self.distversion) = D.parse_dist(self.dist)
+        self.distname = dname
+        self.distversion = dver
+        self.dist = "%s-%s" % (dname, dver)
+
         self.dists = [
-            D.Distribution(self.dist, arch, bdist_label) for arch in self.archs
+            D.Distribution(dname, dver, a, bdist_label) for a in self.archs
         ]
         self.distdir = os.path.join(
             self.dists[0].mockcfg_opts_get("myrepo_distname", self.distname),

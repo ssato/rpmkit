@@ -19,10 +19,6 @@ import collections
 import logging
 
 
-def parse_dist(dist):
-    return dist.rsplit("-", 1)
-
-
 def mockcfg_opts(mockcfg_path):
     """
     Load mock config file and returns $mock_config["config_opts"] as a
@@ -38,21 +34,26 @@ def mockcfg_opts(mockcfg_path):
 
 class Distribution(object):
 
-    def __init__(self, dist, arch="x86_64", bdist_label=None):
+    def __init__(self, dname, dver, arch="x86_64", bdist_label=None):
         """
-        @dist  str   Distribution label, e.g. "fedora-14"
-        @arch  str   Architecture, e.g. "i386"
-        @bdist_label  str  Distribution label to build, e.g. "fedora-14-i386"
+        :param dname:  Distribution name, e.g. "fedora", "rhel"
+        :param dver:   Distribution version, e.g. "16", "6"
+        :param arch:   Architecture, e.g. "i386", "x86_64"
+        :param bdist_label:  Build target distribution, e.g. "fedora-14-i386"
         """
-        self.label = "%s-%s" % (dist, arch)
-        (self.name, self.version) = parse_dist(dist)
+        self.name = dname
+        self.version = dver
         self.arch = arch
 
-        self.arch_pattern = (arch == "i386" and "i*86" or self.arch)
+        self.bdist_label = self.label if bdist_label is None else bdist_label
 
-        self.bdist_label = bdist_label is None and self.label or bdist_label
+        self.label = "%s-%s-%s" % (dname, dver, arch)
+        self.arch_pattern = "i*86" if arch == "i386" or self.arch
 
-        self.mock_config_opts = mockcfg_opts(self.mockcfg())
+        self.mock_config_opts = mockcfg_opts(self.mockcfg_path())
+
+    def mockcfg_path(self):
+        return "/etc/mock/%s.cfg" % self.bdist_label
 
     def mockcfg_opts_get(self, key, fallback=None):
         return self.mock_config_opts.get(key, fallback)
@@ -62,9 +63,6 @@ class Distribution(object):
 
     def mockdir(self):
         return "/var/lib/mock/%s/result" % self.buildroot()
-
-    def mockcfg(self):
-        return "/etc/mock/%s.cfg" % self.bdist_label
 
     def build_cmd(self, srpm):
         """
