@@ -47,12 +47,12 @@ def parse_conf_value(s):
         return int(s)
 
     if matched(listp, s):
-        return eval(s)  # TODO: too danger. safer parsing should be needed.
+        return eval(s)  # TODO: too danger. how to parse it safely?
 
     return s
 
 
-def parse_dist_option(dist_str, sep=":"):
+def parse_dist_option(dist, sep=":"):
     """Parse dist_str and returns (dist, arch, bdist_label).
 
     SEE ALSO: parse_dists_option (below)
@@ -61,21 +61,28 @@ def parse_dist_option(dist_str, sep=":"):
     ...     parse_dist_option("invalid_dist_label.i386")
     ... except AssertionError:
     ...     pass
-    >>> parse_dist_option("fedora-14-i386")
-    ('fedora-14', 'i386', 'fedora-14-i386')
-    >>> parse_dist_option("fedora-14-i386:fedora-extras-14-i386")
-    ('fedora-14', 'i386', 'fedora-extras-14-i386')
-    >>> parse_dist_option("fedora-14-i386:fedora-extras-14-x86_64")
-    ('fedora-14', 'i386', 'fedora-extras-14-x86_64')
-    >>> parse_dist_option("fedora-14-i386:fedora-extras")
-    ('fedora-14', 'i386', 'fedora-extras')
+    >>> parse_dist_option("fedora-16-i386")
+    ('fedora', '16', 'i386', 'fedora-16-i386')
+    >>> parse_dist_option("fedora-16-i386:fedora-extras-16-i386")
+    ('fedora', '16', 'i386', 'fedora-extras-16-i386')
+    >>> parse_dist_option("fedora-16-i386:fedora-extras-16-x86_64")
+    ('fedora', '16', 'i386', 'fedora-extras-16-x86_64')
+    >>> parse_dist_option("fedora-16-i386:fedora-extras")
+    ('fedora', '16', 'i386', 'fedora-extras')
     """
-    tpl = dist_str.split(sep)
+    emh = "Invalid distribution label '%s'. " % dist
+
+    tpl = dist.split(sep)
     label = tpl[0]
 
-    assert "-" in label, "Invalid distribution label ('-' not found): " + label
+    assert "-" in label, emh + "Separator '-' not found"
 
-    (dist, arch) = label.rsplit("-", 1)
+    try:
+        (name, ver, arch) = label.split("-")
+    except ValueError:
+        raise RuntimeError(
+            emh + "Its format should be <name>-<ver>-<arch>: " + label
+        )
 
     if len(tpl) < 2:
         bdist_label = label
@@ -83,30 +90,30 @@ def parse_dist_option(dist_str, sep=":"):
         bdist_label = tpl[1]
 
         if len(tpl) > 2:
-            m = "Invalid format: too many '%s' in dist_str: %s. " + \
-                "Ignore the rest"
-            logging.warn(m % (sep, dist_str))
+            logging.warn(
+                emh + "Too many separator '-' found. Ignore the rest."
+            )
 
-    return (dist, arch, bdist_label)
+    return (name, ver, arch, bdist_label)
 
 
-def parse_dists_option(dists_str, sep=","):
+def parse_dists_option(dists, sep=","):
     """Parse --dists option and returns [(dist, arch, bdist_label)].
 
     # d[:d.rfind("-")])
     #archs = [l.split("-")[-1] for l in labels]
 
-    >>> parse_dists_option("fedora-14-i386")
-    [('fedora-14', 'i386', 'fedora-14-i386')]
-    >>> parse_dists_option("fedora-14-i386:fedora-extras-14-i386")
-    [('fedora-14', 'i386', 'fedora-extras-14-i386')]
-    >>> ss = ["fedora-14-i386:fedora-extras-14-i386"]
+    >>> parse_dists_option("fedora-16-i386")
+    [('fedora', '16', 'i386', 'fedora-16-i386')]
+    >>> parse_dists_option("fedora-16-i386:fedora-extras-16-i386")
+    [('fedora', '16', 'i386', 'fedora-extras-16-i386')]
+    >>> ss = ["fedora-16-i386:fedora-extras-16-i386"]
     >>> ss += ["rhel-6-i386:rhel-extras-6-i386"]
-    >>> r = [('fedora-14', 'i386', 'fedora-extras-14-i386')]
-    >>> r += [('rhel-6', 'i386', 'rhel-extras-6-i386')]
+    >>> r = [('fedora', '16', 'i386', 'fedora-extras-16-i386')]
+    >>> r += [('rhel', '6', 'i386', 'rhel-extras-6-i386')]
     >>> assert r == parse_dists_option(",".join(ss))
     """
-    return [parse_dist_option(dist_str) for dist_str in dists_str.split(sep)]
+    return [parse_dist_option(dist) for dist in dists.split(sep)]
 
 
 # vim:sw=4 ts=4 et:
