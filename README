@@ -32,6 +32,18 @@ It's easier than the above but only possible to make a rpm for build host.
 1. python setup.py rpm
 
 
+TODO
+========================
+
+* Write tests:
+
+  * myrepo:
+
+    * config.py
+    * cui.py
+    * repo.py
+    * repoops.py
+
 
 NOTES
 ========================
