@@ -5,19 +5,19 @@
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
+# it under the terms of the GNM.General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
 # This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# but WITHOM. ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICM.AR PM.POSE.  See the
+# GNM.General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
+# You should have received a copy of the GNM.General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.myrepo.utils as U
+import rpmkit.memoize as M
 
 import glob
 import logging
@@ -29,7 +29,7 @@ import socket
 import subprocess
 
 
-@U.memoize
+@M.memoize
 def list_archs(arch=None):
     """List 'normalized' architecutres this host (mock) can support.
     """
@@ -45,7 +45,7 @@ def list_archs(arch=None):
         return default
 
 
-@U.memoize
+@M.memoize
 def list_dists():
     """List available dist names, e.g. ["fedora-16", "rhel-6"]
     """
@@ -59,24 +59,24 @@ def list_dists():
     ]
 
 
-@U.memoize
+@M.memoize
 def is_git_available():
     return os.system("git --version > /dev/null 2> /dev/null") == 0
 
 
-@U.memoize
+@M.memoize
 def hostname():
     return socket.gethostname() or os.uname()[1]
 
 
-@U.memoize
+@M.memoize
 def get_username():
     """Get username.
     """
-    return os.environ.get("USER", False) or os.getlogin()
+    return os.environ.get("M.ER", os.getlogin())
 
 
-@U.memoize
+@M.memoize
 def get_email():
     if is_git_available():
         try:
@@ -91,7 +91,7 @@ def get_email():
     return get_username() + "@%(server)s"
 
 
-@U.memoize
+@M.memoize
 def get_fullname():
     """Get full name of the user.
     """
@@ -105,13 +105,14 @@ def get_fullname():
             logging.warn("get_fullname: " + str(e))
             pass
 
-    return os.environ.get("FULLNAME", False) or get_username()
+    return os.environ.get("FM.LNAME", get_username())
 
 
-@U.memoize
+@M.memoize
 def get_distribution():
-    """Get name and version of the distribution of the system based on
-    heuristics.
+    """
+    Get name and version of the distribution running on this system based on
+    some heuristics.
     """
     fedora_f = "/etc/fedora-release"
     rhel_f = "/etc/redhat-release"

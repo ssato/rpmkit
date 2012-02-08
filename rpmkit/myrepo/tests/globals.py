@@ -1,6 +1,6 @@
 #
-# Copyright (C) 2011 Red Hat, Inc.
-# Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
+# Copyright (C) 2012 Red Hat, Inc.
+# Red Hat Author(s): Satoru SATOH <ssato at redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,10 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# import ...
-#
-# timeouts [sec]:
-(REMOTE_TIMEOUT, LOCAL_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 60 * 5, 5)
+import rpmkit.myrepo.environ as G
 
 
 # vim:sw=4 ts=4 et:

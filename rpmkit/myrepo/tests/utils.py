@@ -1,6 +1,6 @@
 #
-# Copyright (C) 2011 Red Hat, Inc.
-# Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
+# Copyright (C) 2012 Red Hat, Inc.
+# Red Hat Author(s): Satoru SATOH <ssato at redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,10 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# import ...
-#
-# timeouts [sec]:
-(REMOTE_TIMEOUT, LOCAL_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 60 * 5, 5)
+import rpmkit.myrepo.utils as U
+
+import unittest
+
+
+class Test_00(unittest.TestCase):
+
+    def test_00_compile_template(self):
+        pass
+
+    def test_10_is_local(self):
+        self.assertTrue(U.is_local("localhost"))
+        self.assertTrue(U.is_local("localhost.localdomain"))
+
+        self.assertFalse(U.is_local("repo-server.example.com"))
+        self.assertFalse(U.is_local("127.0.0.1"))  # special case
 
 
 # vim:sw=4 ts=4 et:

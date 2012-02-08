@@ -1,7 +1,7 @@
 #
 # misc utility routines
 #
-# Copyright (C) 2011 Red Hat, Inc.
+# Copyright (C) 2011, 2012 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,49 +17,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.memoize as M
 import rpmkit.tenjinwrapper as T
 
 import os.path
-import platform
-import re
 
 
-memoize = M.memoize
-
-
-def compile_template(tmpl_name, context={}):
-    return T.template_compile(os.path.join("1/myrepo", tmpl_name), context)
-
-
-@memoize
-def list_archs(arch=None):
-    """List 'normalized' architecutres this host (mock) can support.
+def compile_template(tmpl, context={}):
     """
-    default = ["x86_64", "i386"]   # This order should be kept.
-    ia32_re = re.compile(r"i.86")  # i386, i686, etc.
-
-    if arch is None:
-        arch = platform.machine()
-
-    if ia32_re.match(arch) is not None:
-        return ["i386"]
-    else:
-        return default
-
-
-@memoize
-def list_dists():
-    """List available dist names, e.g. ["fedora-14", "rhel-6"]
+    :param tmpl: Template file name or (abs or rel) path
+    :param context: Context parameters to instantiate the template :: dict
     """
-    mockdir = "/etc/mock"
-    arch = list_archs()[0]
-    reg = re.compile("%s/(?P<dist>.+)-%s.cfg" % (mockdir, arch))
-
-    return [
-        reg.match(c).groups()[0] for c in \
-            sorted(glob.glob("%s/*-%s.cfg" % (mockdir, arch)))
-    ]
+    return T.template_compile(os.path.join("1/myrepo", tmpl), context)
 
 
 def is_local(fqdn_or_hostname):
