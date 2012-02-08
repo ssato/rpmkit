@@ -75,7 +75,7 @@ class Repo(object):
         self.dists = [
             D.Distribution(dname, dver, a, bdist_label) for a in self.archs
         ]
-        self.distdir = "%s/%s" (dname, dver)
+        self.distdir = "%s/%s" % (dname, dver)
         self.subdir = self.subdir if subdir is None else subdir
         self.email = self._format(email)
 
