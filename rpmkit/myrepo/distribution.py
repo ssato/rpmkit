@@ -15,21 +15,47 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+import rpmkit.memoize as M
+
 import collections
 import logging
 
 
-def mockcfg_opts(mockcfg_path):
+def __mockcfg_path(bdist, topdir="/etc/mock"):
+    """
+    >>> __mockcfg_path("fedora-16-x86_64")
+    '/etc/mock/fedora-16-x86_64.cfg'
+    """
+    return "%s/%s.cfg" % (topdir, bdist)
+
+
+@M.memoize
+def mockcfg_opts(bdist):
     """
     Load mock config file and returns $mock_config["config_opts"] as a
     dict (collections.OrderedDict).
+
+    :param bdist: Build target distribution label, e.g. fedora-addon-16-x86_64
     """
     cfg = collections.OrderedDict()
     cfg["config_opts"] = collections.OrderedDict()
 
-    execfile(mockcfg_path, cfg)
+    execfile(__mockcfg_path(bdist), cfg)
 
     return cfg["config_opts"]
+
+
+def build_cmd(bdist_label, srpm):
+    """
+    NOTE: mock will print log messages to stderr (not stdout).
+    """
+    c = "mock -r %s %s" % (bdist_label, srpm)
+
+    # suppress log messages from mock in accordance with log level:
+    if logging.getLogger().level >= logging.WARNING:
+        c += " > /dev/null 2> /dev/null"
+
+    return c
 
 
 class Distribution(object):
@@ -45,36 +71,19 @@ class Distribution(object):
         self.version = dver
         self.arch = arch
 
-        self.bdist_label = self.label if bdist_label is None else bdist_label
-
         self.label = "%s-%s-%s" % (dname, dver, arch)
-        self.arch_pattern = "i*86" if arch == "i386" or self.arch
+        self.bdist_label = self.label if bdist_label is None else bdist_label
+        self.arch_pattern = "i*86" if arch == "i386" else self.arch
+        self.mockcfg_opts = mockcfg_opts(self.bdist_label)
 
-        self.mock_config_opts = mockcfg_opts(self.mockcfg_path())
-
-    def mockcfg_path(self):
-        return "/etc/mock/%s.cfg" % self.bdist_label
-
-    def mockcfg_opts_get(self, key, fallback=None):
-        return self.mock_config_opts.get(key, fallback)
-
-    def buildroot(self):
-        return self.mockcfg_opts_get("root", self.bdist_label)
+    def __buildroot(self):
+        return self.mockcfg_opts.get("root", bdist_label)
 
     def mockdir(self):
-        return "/var/lib/mock/%s/result" % self.buildroot()
+        return "/var/lib/mock/%s/result" % self.__buildroot()
 
     def build_cmd(self, srpm):
-        """
-        NOTE: mock will print log messages to stderr (not stdout).
-        """
-        # suppress log messages from mock in accordance with log level:
-        if logging.getLogger().level >= logging.WARNING:
-            fmt = "mock -r %s %s > /dev/null 2> /dev/null"
-        else:
-            fmt = "mock -r %s %s"
-
-        return fmt % (self.bdist_label, srpm)
+        return build_cmd(self.bdist_label, srpm)
 
 
 # vim:sw=4 ts=4 et:
