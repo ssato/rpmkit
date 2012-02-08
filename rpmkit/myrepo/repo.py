@@ -75,13 +75,8 @@ class Repo(object):
         self.dists = [
             D.Distribution(dname, dver, a, bdist_label) for a in self.archs
         ]
-        self.distdir = os.path.join(
-            self.dists[0].mockcfg_opts_get("myrepo_distname", self.distname),
-            self.distversion
-        )
-
-        self.subdir = subdir is None and self.subdir or subdir
-
+        self.distdir = "%s/%s" (dname, dver)
+        self.subdir = self.subdir if subdir is None else subdir
         self.email = self._format(email)
 
         if name is None:
