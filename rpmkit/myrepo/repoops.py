@@ -15,26 +15,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.myrepo.distribution as D
 import rpmkit.myrepo.shell as SH
 import rpmkit.myrepo.utils as U
 import rpmkit.rpmutils as RU
 
 import glob
 import logging
-import operator
 import os
 import os.path
-import subprocess
 import tempfile
 
 
 # timeouts:
 (BUILD_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 5)  # [sec]
-
-
-def __destdir(repo):
-    return os.path.join(repo.topdir, repo.distdir)
 
 
 def __snd(x, y):
@@ -126,78 +119,6 @@ def build_cmds(repo, srpm):
         SH.ThreadedCommand(d.build_cmd(srpm), timeout=repo.timeout) \
             for d in dists_by_srpm(repo, srpm)
     ]
-
-
-# commands:
-def build(repo, srpm):
-    return SH.prun(build_cmds(repo, srpm))
-
-
-def update(repo):
-    """'createrepo --update ...', etc.
-    """
-    destdir = __destdir(repo)
-    _TC = SH.ThreadedCommand
-
-    # hack: degenerate noarch rpms
-    if len(repo.archs) > 1:
-        c = "for d in %s; "
-        c += "   do (cd $d && ln -sf ../%s/*.noarch.rpm ./); "
-        c += "done"
-        c = c % (" ".join(repo.archs[1:]), repo.dists[0].arch)
-
-        cmd = _TC(c, repo.user, repo.server, destdir, timeout=repo.timeout)
-        cmd.run()
-
-    c = "test -d repodata"
-    c += " && createrepo --update --deltas --oldpackagedirs . --database ."
-    c += " || createrepo --deltas --oldpackagedirs . --database ."
-
-    cs = [
-        _TC(c, repo.user, repo.server, d, timeout=repo.timeout) \
-            for d in rpmdirs(repo, destdir)
-    ]
-
-    return SH.prun(cs)
-
-
-def deploy(repo, srpm, build=True):
-    """
-    FIXME: ugly code around signkey check.
-    """
-    if build:
-        assert all(rc == 0 for rc in build(repo, srpm))
-
-    destdir = __destdir(repo)
-    rpms_to_deploy = []   # :: [(rpm_path, destdir)]
-    rpms_to_sign = []
-
-    for d in dists_by_srpm(repo, srpm):
-        srpm_to_copy = glob.glob("%s/*.src.rpm" % d.mockdir())[0]
-        rpms_to_deploy.append((srpm_to_copy, os.path.join(destdir, "sources")))
-
-        brpms = [
-            f for f in glob.glob("%s/*.*.rpm" % d.mockdir())\
-                if not f.endswith(".src.rpm")
-        ]
-        logging.debug("rpms=" + str([os.path.basename(f) for f in brpms]))
-
-        for p in brpms:
-            rpms_to_deploy.append((p, os.path.join(destdir, d.arch)))
-
-        rpms_to_sign += brpms
-
-    if repo.signkey:
-        c = sign_rpms_cmd(repo.signkey, rpms_to_sign)
-        subprocess.check_call(c, shell=True)
-
-    cs = [
-        SH.ThreadedCommand(repo.copy_cmd(rpm, dest), timeout=repo.timeout) \
-            for rpm, dest in rpms_to_deploy
-    ]
-    assert all(rc == 0 for rc in SH.prun(cs))
-
-    return update(repo)
 
 
 def deploy_mock_cfg_rpm(repo, workdir):
@@ -297,20 +218,6 @@ def deploy_release_rpm(repo, workdir=None):
 
     deploy(repo, srpm)
     return update(repo)
-
-
-def init(repo):
-    """Initialize yum repository.
-    """
-    destdir = __destdir(repo)
-
-    rc = SH.run(
-        "mkdir -p " + " ".join(rpmdirs(repo, destdir)),
-        repo.user, repo.server,
-        timeout=repo.timeout
-    )
-
-    return deploy_release_rpm(repo)
 
 
 # vim:sw=4 ts=4 et:

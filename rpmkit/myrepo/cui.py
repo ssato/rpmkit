@@ -17,12 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+import rpmkit.myrepo.commands as CMD
 import rpmkit.myrepo.config as C
 import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.parser as P
 import rpmkit.myrepo.repo as R
-import rpmkit.myrepo.repoops as RO
-import rpmkit.myrepo.shell as SH
 
 import itertools as IT
 import logging
@@ -144,7 +143,7 @@ def do_command(cmd, repos, srpm=None):
     :param repos: Repository objects (generator)
     :param srpm: path to the target src.rpm :: str
     """
-    f = getattr(RO, cmd)
+    f = getattr(CMD, cmd)
     threads = []
 
     if srpm is not None:

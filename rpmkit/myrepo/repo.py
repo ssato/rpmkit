@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.myrepo.distribution as D
+import rpmkit.myrepo.repoops as RO
 
 import os.path
 
@@ -65,6 +66,7 @@ class Repo(object):
 
         self.hostname = server.split('.')[0]
         self.multiarch = "i386" in self.archs and "x86_64" in self.archs
+        self.primary_arch = "x86_64" if self.multiarch else self.archs[0]
 
         self.bdist_label = bdist_label
 
@@ -110,11 +112,17 @@ class Repo(object):
 
         self.timeout = timeout
 
-    def as_dict(self):
-        return self.__dict__.copy()
-
     def _format(self, fmt_or_var):
         return "%" in fmt_or_var and fmt_or_var % self.__dict__ or fmt_or_var
 
+    def as_dict(self):
+        return self.__dict__.copy()
+
+    def destdir(self):
+        return os.path.join(self.topdir, self.distdir)
+
+    def build_cmds(self, srpm):
+        return RO.build_cmds(self, srpm)
  
+
 # vim:sw=4 ts=4 et:
