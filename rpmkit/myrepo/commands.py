@@ -25,6 +25,19 @@ import os.path
 import subprocess
 
 
+def __snd(x, y):
+    """
+    >>> __snd(1, 2)
+    2
+    """
+    return y
+
+
+def __rpmdirs(repo, destdir=None):
+    f = __snd if destdir is None else os.path.join
+    return [f(destdir, d) for d in ["sources"] + repo.archs]
+
+
 def build(repo, srpm):
     return SH.prun(repo.build_cmds(srpm))
 
@@ -47,7 +60,7 @@ def update(repo):
 
     cs = [
         SH.ThreadedCommand(c, repo.user, repo.server, d, timeout=repo.timeout)
-            for d in rpmdirs(repo, destdir)
+            for d in __rpmdirs(repo, destdir)
     ]
 
     return SH.prun(cs)
@@ -96,7 +109,7 @@ def init(repo):
     """Initialize yum repository.
     """
     rc = SH.run(
-        "mkdir -p " + " ".join(rpmdirs(repo, repo.destdir())),
+        "mkdir -p " + " ".join(__rpmdirs(repo, repo.destdir())),
         repo.user, repo.server,
         timeout=repo.timeout
     )
