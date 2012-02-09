@@ -30,19 +30,6 @@ import tempfile
 (BUILD_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 5)  # [sec]
 
 
-def __snd(x, y):
-    """
-    >>> __snd(1, 2)
-    2
-    """
-    return y
-
-
-def rpmdirs(repo, destdir=None):
-    f = __snd if destdir is None else os.path.join
-    return [f(destdir, d) for d in ["sources"] + repo.archs]
-
-
 def dists_by_srpm(repo, srpm):
     return repo.dists[:1] if RU.is_noarch(srpm) else repo.dists
 
