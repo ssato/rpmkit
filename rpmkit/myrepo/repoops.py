@@ -77,6 +77,27 @@ def copy_cmd(repo, src, dst):
     return cmd
 
 
+def mock_cfg_gen(repo, workdir):
+    """Generate mock.cfg files and corresponding RPMs.
+    """
+    mockcfgdir = os.path.join(workdir, "etc", "mock")
+    os.makedirs(mockcfgdir)
+
+    files = []
+
+    for dist in repo.dists:
+        mc = mock_cfg_content(repo, dist)
+        mock_cfg_path = os.path.join(
+            mockcfgdir, "%s-%s.cfg" % (repo.name, dist.label)
+        )
+
+        open(mock_cfg_path, "w").write(mc)
+
+        files.append(mock_cfg_path)
+
+    return files
+
+
 def release_rpm_build_cmd(repo, workdir, release_file_path):
     logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
 
@@ -108,7 +129,11 @@ def build_cmds(repo, srpm):
     ]
 
 
-def deploy_mock_cfg_rpm(repo, workdir):
+def settup_workdir(prefix, topdir="/tmp"):
+    return tempfile.mkdtemp(dir=topdir, prefix=prefix)
+
+
+def build_and_deploy_mock_cfg_rpm(repo, workdir):
     """Generate mock.cfg files and corresponding RPMs.
     """
     mockcfgdir = os.path.join(workdir, "etc", "mock")
@@ -154,18 +179,11 @@ def deploy_mock_cfg_rpm(repo, workdir):
     return update(repo)
 
 
-def deploy_release_rpm(repo, workdir=None):
+def build_and_deploy_release_rpm(repo, workdir):
     """Generate (yum repo) release package.
 
     @workdir str   Working directory
     """
-    if workdir is None:
-        workdir = tempfile.mkdtemp(dir="/tmp",
-                                   prefix="%s-release-" % repo.name
-                                   )
-
-    deploy_mock_cfg_rpm(repo, workdir)
-
     reldir = os.path.join(workdir, "etc", "yum.repos.d")
     os.makedirs(reldir)
 

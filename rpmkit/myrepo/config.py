@@ -48,6 +48,7 @@ def init_defaults_0():
         "baseurl": R.Repo.baseurl,
         "signkey": R.Repo.signkey,
         "metadata_expire": R.Repo.metadata_expire,
+        "with_conf_rpms": False,
     }
 
     if U.is_local(defaults["server"]):

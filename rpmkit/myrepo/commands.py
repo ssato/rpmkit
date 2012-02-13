@@ -114,7 +114,17 @@ def init(repo):
         timeout=repo.timeout
     )
 
-    return RO.deploy_release_rpm(repo)
+    return rc
+
+
+def gen_conf_rpms(repo):
+    workdir = RO.settup_workdir("%s-release-" % repo.name)
+
+    rc = RO.build_and_deploy_mock_cfg_rpm(repo, workdir)
+    if rc == 0:
+        return RO.build_and_deploy_release_rpm(repo)
+    else:
+        return rc
 
 
 # vim:sw=4 ts=4 et:
