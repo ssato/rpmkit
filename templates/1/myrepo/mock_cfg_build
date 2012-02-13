@@ -8,7 +8,7 @@ pmaker -n #{name}-release \
 --packager "#{fullname}" \
 --email "#{email}" \
 --pversion #{distversion}  \
---no-rpmdb --no-mock \
+--no-rpmdb \
 --ignore-owner \
 --destdir #{workdir} \
 #{mock_cfg_file_list}
