@@ -19,6 +19,7 @@ import rpmkit.memoize as M
 
 import collections
 import logging
+import os.path
 
 
 def __mockcfg_path(bdist, topdir="/etc/mock"):
@@ -26,7 +27,32 @@ def __mockcfg_path(bdist, topdir="/etc/mock"):
     >>> __mockcfg_path("fedora-16-x86_64")
     '/etc/mock/fedora-16-x86_64.cfg'
     """
-    return "%s/%s.cfg" % (topdir, bdist)
+    return os.path.join(topdir, bdist + ".cfg")
+
+
+def __mockcfg_file_to_obj(mockcfg, cfg=collections.OrderedDict()):
+    """
+    FIXME: This is very naive and frail. It may be better to implement in
+    similar manner as setup_default_config_opts() does in /usr/sbin/mock.
+    """
+    try:
+        execfile(mockcfg, cfg)
+        return cfg
+
+    except KeyError, e:
+        cfg[str(e)] = collections.OrderedDict()
+        return __mockcfg_file_to_obj(mockcfg, cfg)  # run recursively
+
+
+def _buildroot(mockcfg_opts, bdist_label=None):
+    """
+
+    >>> bdist = "fedora-16-x86_64"
+    >>> cfg = {"root": bdist}
+    >>> _buildroot(cfg) == _buildroot({}, bdist)
+    True
+    """
+    return mockcfg_opts.get("root", bdist_label)
 
 
 @M.memoize
@@ -40,7 +66,7 @@ def mockcfg_opts(bdist):
     cfg = collections.OrderedDict()
     cfg["config_opts"] = collections.OrderedDict()
 
-    execfile(__mockcfg_path(bdist), cfg)
+    cfg = __mockcfg_file_to_obj(__mockcfg_path(bdist), cfg)
 
     return cfg["config_opts"]
 
@@ -49,13 +75,13 @@ def build_cmd(bdist_label, srpm):
     """
     NOTE: mock will print log messages to stderr (not stdout).
     """
-    c = "mock -r %s %s" % (bdist_label, srpm)
-
     # suppress log messages from mock in accordance with log level:
     if logging.getLogger().level >= logging.WARNING:
-        c += " > /dev/null 2> /dev/null"
+        logc = "> /dev/null 2> /dev/null"
+    else:
+        logc = ""
 
-    return c
+    return ' '.join(("mock -r", bdist_label, srpm, logc))
 
 
 class Distribution(object):
@@ -71,19 +97,17 @@ class Distribution(object):
         self.version = dver
         self.arch = arch
 
-        self.label = "%s-%s-%s" % (dname, dver, arch)
+        self.label = '-'.join((dname, dver, arch))
         self.bdist_label = self.label if bdist_label is None else bdist_label
         self.arch_pattern = "i*86" if arch == "i386" else self.arch
         self._mockcfg_opts = mockcfg_opts(self.bdist_label)
-
-    def __buildroot(self):
-        return self.mockcfg_opts.get("root", bdist_label)
 
     def mockcfg_opts(self):
         return self._mockcfg_opts
 
     def mockdir(self):
-        return "/var/lib/mock/%s/result" % self.__buildroot()
+        return "/var/lib/mock/%s/result" % \
+            _buildroot(self.mockcfg_opts(), self.bdist_label)
 
     def build_cmd(self, srpm):
         return build_cmd(self.bdist_label, srpm)

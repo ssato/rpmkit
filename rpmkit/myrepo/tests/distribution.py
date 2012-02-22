@@ -107,5 +107,23 @@ class Test_10_Distribution(unittest.TestCase):
 
         self.assertTrue(isinstance(d, D.Distribution))
 
+    def test_10_mockcfg_opts__w_min_args(self):
+        (n, v, _a) = sample_base_dist().split("-")
+        d = D.Distribution(n, v)
+
+        self.assertTrue(isinstance(d.mockcfg_opts(), dict))
+
+    def test_20_mockdir__w_min_args(self):
+        (n, v, _a) = sample_base_dist().split("-")
+        d = D.Distribution(n, v)
+
+        self.assertNotEquals(d.mockdir(), "")
+
+    def test_30_build_cmd__w_min_args(self):
+        (n, v, _a) = sample_base_dist().split("-")
+        d = D.Distribution(n, v)
+
+        self.assertNotEquals(d.build_cmd("foo-0.1.2-3.src.rpm"), "")
+
 
 # vim:sw=4 ts=4 et:
