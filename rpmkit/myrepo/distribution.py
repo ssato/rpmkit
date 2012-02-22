@@ -113,8 +113,9 @@ class Distribution(object):
         return mockcfg_opts(self.bdist)
 
     def mockdir(self):
-        return "/var/lib/mock/%s/result" % \
-            _buildroot(self.mockcfg_opts(), self.bdist)
+        #bdist = _buildroot(self.mockcfg_opts(), self.bdist)
+        bdist = self.bdist
+        return "/var/lib/mock/%s/result" % bdist
 
     def build_cmd(self, srpm):
         return build_cmd(self.bdist, srpm)

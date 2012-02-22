@@ -79,7 +79,7 @@ def deploy(repo, srpm, build_=True):
         assert all(rc == 0 for rc in build(repo, srpm))
 
     destdir = repo.destdir()
-    rpms_to_deploy = []   # :: [(rpm_path, destdir)]
+    rpms_to_deploy = []  # :: [(rpm_path, destdir)]
     rpms_to_sign = []
 
     for d in RO.dists_by_srpm(repo, srpm):
@@ -107,12 +107,14 @@ def deploy(repo, srpm, build_=True):
         subprocess.check_call(c, shell=True)
 
     cs = [
-        SH.ThreadedCommand(repo.copy_cmd(rpm, dest), timeout=repo.timeout) \
-            for rpm, dest in rpms_to_deploy
+        SH.ThreadedCommand(
+            RO.copy_cmd(repo, rpm, dest), timeout=repo.timeout
+        ) for rpm, dest in rpms_to_deploy
     ]
     assert all(rc == 0 for rc in SH.prun(cs))
+    assert all(rc == 0 for rc in update(repo))
 
-    return update(repo)
+    return 0
 
 
 def init(repo):
@@ -128,7 +130,7 @@ def init(repo):
 
 
 def gen_conf_rpms(repo):
-    workdir = __setup_workdir(repo.name + "-release-")
+    workdir = __setup_workdir("myrepo_" + repo.name + "-release-")
 
     srpms = [
         RO.build_release_srpm(repo, workdir),
@@ -138,7 +140,7 @@ def gen_conf_rpms(repo):
     assert len(srpms) == 2, "Failed to make release and/or mock.cfg SRPMs"
 
     for srpm in srpms:
-        assert deploy(repo, srpm, True) == 0, "Failed to build SRPM: " + srpm
+        deploy(repo, srpm, True)
 
     return 0
 
