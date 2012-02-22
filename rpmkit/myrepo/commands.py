@@ -120,11 +120,17 @@ def init(repo):
 def gen_conf_rpms(repo):
     workdir = RO.settup_workdir("%s-release-" % repo.name)
 
-    rc = RO.build_and_deploy_mock_cfg_rpm(repo, workdir)
-    if rc == 0:
-        return RO.build_and_deploy_release_rpm(repo)
-    else:
-        return rc
+    srpms = [
+        RO.build_release_srpm(repo, workdir),
+        RO.build_mock_cfg_srpm(repo, workdir)
+    ]
+
+    assert len(srpms) == 2, "Failed to make release and/or mock.cfg SRPMs"
+
+    for srpm in srpms:
+        assert deploy(repo, srpm, True) == 0, "Failed to build SRPM: " + srpm
+
+    return 0
 
 
 # vim:sw=4 ts=4 et:

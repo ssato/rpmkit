@@ -133,7 +133,7 @@ def settup_workdir(prefix, topdir="/tmp"):
     return tempfile.mkdtemp(dir=topdir, prefix=prefix)
 
 
-def build_and_deploy_mock_cfg_rpm(repo, workdir):
+def build_mock_cfg_srpm(repo, workdir):
     """Generate mock.cfg files and corresponding RPMs.
     """
     mockcfgdir = os.path.join(workdir, "etc", "mock")
@@ -173,13 +173,10 @@ def build_and_deploy_mock_cfg_rpm(repo, workdir):
     if not srpms:
         raise RuntimeError("Failed to build src.rpm")
 
-    srpm = srpms[0]
-
-    deploy(repo, srpm)
-    return update(repo)
+    return srpms[0]
 
 
-def build_and_deploy_release_rpm(repo, workdir):
+def build_release_srpm(repo, workdir):
     """Generate (yum repo) release package.
 
     @workdir str   Working directory
@@ -188,6 +185,8 @@ def build_and_deploy_release_rpm(repo, workdir):
     os.makedirs(reldir)
 
     release_file_path = os.path.join(reldir, "%s.repo" % repo.name)
+    rfc = U.compile_template("release_file", repo.as_dict())
+
     open(release_file_path, 'w').write(rfc)
 
     if repo.signkey:
@@ -219,10 +218,7 @@ def build_and_deploy_release_rpm(repo, workdir):
     if not srpms:
         raise RuntimeError("Failed to build src.rpm")
 
-    srpm = srpms[0]
-
-    deploy(repo, srpm)
-    return update(repo)
+    return srpms[0]
 
 
 # vim:sw=4 ts=4 et:
