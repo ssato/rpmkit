@@ -17,13 +17,13 @@
 #
 import rpmkit.myrepo.shell as SH
 import rpmkit.myrepo.utils as U
+import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
 
 import glob
 import logging
 import os
 import os.path
-import tempfile
 
 
 # timeouts:
@@ -32,6 +32,11 @@ import tempfile
 
 def dists_by_srpm(repo, srpm):
     return repo.dists[:1] if RU.is_noarch(srpm) else repo.dists
+
+
+@M.memoize
+def release_file_content(repo):
+    return U.compile_template("release_file", repo.as_dict())
 
 
 def mock_cfg_content(repo, dist):
@@ -43,11 +48,10 @@ def mock_cfg_content(repo, dist):
     :param dist:  Distribution object
     """
     cfg_opts = dist.mockcfg_opts()
-    repo_defs = U.compile_template("release_file", repo.as_dict())
 
     cfg_opts["root"] = "%s-%s" % (repo.name, dist.label)
     cfg_opts["myrepo_distname"] = dist.name
-    cfg_opts["yum.conf"] += "\n\n" + repo_defs
+    cfg_opts["yum.conf"] += "\n" + release_file_content(repo)
 
     context = {"cfg": cfg_opts}
 
@@ -77,49 +81,50 @@ def copy_cmd(repo, src, dst):
     return cmd
 
 
-def mock_cfg_gen(repo, workdir):
-    """Generate mock.cfg files and corresponding RPMs.
+def release_file_gen(repo, workdir):
+    """Generate release file (repo file) and returns its path.
+    """
+    reldir = os.path.join(workdir, "etc", "yum.repos.d")
+    os.makedirs(reldir)
+
+    relpath = os.path.join(reldir, repo.name + ".repo")
+
+    open(relpath, 'w').write(release_file_content(repo))  # may throw IOError.
+    return relpath
+
+
+def mock_cfg_gen_g(repo, workdir):
+    """Generate mock.cfg file and yield its path.
     """
     mockcfgdir = os.path.join(workdir, "etc", "mock")
     os.makedirs(mockcfgdir)
 
-    files = []
-
     for dist in repo.dists:
         mc = mock_cfg_content(repo, dist)
-        mock_cfg_path = os.path.join(
+        mcpath = os.path.join(
             mockcfgdir, "%s-%s.cfg" % (repo.name, dist.label)
         )
+        open(mcpath, "w").write(mc)  # may throw IOError.
 
-        open(mock_cfg_path, "w").write(mc)
-
-        files.append(mock_cfg_path)
-
-    return files
+        yield mcpath
 
 
-def release_rpm_build_cmd(repo, workdir, release_file_path):
+def mock_cfg_gen(repo, workdir):
+    """Generate mock.cfg files and returns these paths.
+    """
+    return [p for p in mock_cfg_gen_g(repo, workdir)]
+
+
+def rpm_build_cmd(repo, workdir, listfile, pname):
     logopt = logging.getLogger().level < logging.INFO and "--verbose" or ""
 
     context = repo.as_dict()
     context.update({
-        "release_file": release_file_path,
-        "workdir": workdir,
-        "logopt": logopt,
-        "release_file_list": os.path.join(workdir, "files.list"),
+        "workdir": workdir, "logopt": logopt, "listfile": listfile,
+        "pkgname": pname,
     })
 
-    return U.compile_template("release_file_build", context)
-
-
-def mock_cfg_rpm_build_cmd(repo, workdir, mock_cfg_file_list_path):
-    context = repo.as_dict()
-    context.update({
-        "workdir": workdir,
-        "mock_cfg_file_list": mock_cfg_file_list_path
-    })
-
-    return U.compile_template("mock_cfg_build", context)
+    return U.compile_template("rpmbuild", context)
 
 
 def build_cmds(repo, srpm):
@@ -129,49 +134,33 @@ def build_cmds(repo, srpm):
     ]
 
 
-def setup_workdir(prefix, topdir="/tmp"):
-    return tempfile.mkdtemp(dir=topdir, prefix=prefix)
-
-
 def build_mock_cfg_srpm(repo, workdir):
     """Generate mock.cfg files and corresponding RPMs.
     """
-    mockcfgdir = os.path.join(workdir, "etc", "mock")
-    os.makedirs(mockcfgdir)
+    mcfiles = mock_cfg_gen(repo, workdir)
+    c = "\n".join(
+        mc + ",rpmattr=%config(noreplace)" for mc in mcfiles
+    ) + "\n"
 
-    mock_cfg_files = []
+    listfile = os.path.join(workdir, "mockcfg.files.list")
+    open(listfile, "w").write(c)
 
-    for dist in repo.dists:
-        mc = mock_cfg_content(repo, dist)
-        mock_cfg_path = os.path.join(
-            mockcfgdir, "%s-%s.cfg" % (repo.name, dist.label)
-        )
-
-        open(mock_cfg_path, "w").write(mc)
-
-        mock_cfg_files.append(mock_cfg_path)
-
-    listfile_path = os.path.join(workdir, "mockcfg.files.list")
-    open(listfile_path, "w").write(
-        "\n".join(
-            "%s,rpmattr=%%config(noreplace)" % mcfg \
-                for mcfg in mock_cfg_files) + "\n"
-    )
+    pname = "mock-data-" + repo.name
 
     rc = SH.run(
-        mock_cfg_rpm_build_cmd(repo, workdir, listfile_path),
+        rpm_build_cmd(repo, workdir, listfile, pname),
         repo.user,
         timeout=BUILD_TIMEOUT
     )
     if rc != 0:
         raise RuntimeError("Failed to create mock.cfg rpm")
 
-    srpms = glob.glob(
-        "%(wdir)s/mock-data-%(repo)s-%(dver)s/mock-data-*.src.rpm" % \
-            {"wdir": workdir, "repo": repo.name, "dver": repo.distversion}
-    )
+    pattern = "%(wdir)s/mock-data-%(repo)s-%(dver)s/mock-data-*.src.rpm" % \
+        {"wdir": workdir, "repo": repo.name, "dver": repo.distversion}
+    srpms = glob.glob(pattern)
+
     if not srpms:
-        raise RuntimeError("Failed to build src.rpm")
+        raise RuntimeError("Failed to build src.rpm. pattern=" + pattern)
 
     return srpms[0]
 
@@ -179,15 +168,11 @@ def build_mock_cfg_srpm(repo, workdir):
 def build_release_srpm(repo, workdir):
     """Generate (yum repo) release package.
 
-    @workdir str   Working directory
+    :param repo: Repository object
+    :param workdir: Working directory in which build rpms
     """
-    reldir = os.path.join(workdir, "etc", "yum.repos.d")
-    os.makedirs(reldir)
-
-    release_file_path = os.path.join(reldir, "%s.repo" % repo.name)
-    rfc = U.compile_template("release_file", repo.as_dict())
-
-    open(release_file_path, 'w').write(rfc)
+    relpath = release_file_gen(repo, workdir)
+    c = relpath + ",rpmattr=%config\n"
 
     if repo.signkey:
         keydir = os.path.join(workdir, repo.keydir[1:])
@@ -198,25 +183,25 @@ def build_release_srpm(repo, workdir):
             workdir=workdir,
             timeout=MIN_TIMEOUT,
         )
+        c += workdir + repo.keyfile + "\n"
 
-        release_file_list = os.path.join(workdir, "files.list")
-        open(release_file_list, "w").write(
-            release_file_path + ",rpmattr=%config\n" + workdir + \
-                repo.keyfile + "\n"
-        )
+    listfile = os.path.join(workdir, "release.files.list")
+    open(listfile, "w").write(c)
+
+    pname = repo.name + "-release"
 
     rc = SH.run(
-        release_rpm_build_cmd(repo, workdir, release_file_path),
+        rpm_build_cmd(repo, workdir, listfile, pname),
         repo.user,
         timeout=BUILD_TIMEOUT
     )
 
-    srpms = glob.glob(
-        "%s/%s-release-%s/%s-release*.src.rpm" % \
-            (workdir, repo.name, repo.distversion, repo.name)
-    )
+    pattern = "%s/%s-release-%s/%s-release*.src.rpm" % \
+        (workdir, repo.name, repo.distversion, repo.name)
+    srpms = glob.glob(pattern)
+
     if not srpms:
-        raise RuntimeError("Failed to build src.rpm")
+        raise RuntimeError("Failed to build src.rpm. pattern=" + pattern)
 
     return srpms[0]
 

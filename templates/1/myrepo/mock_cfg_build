@@ -1,6 +1,6 @@
 pmaker -n #{name}-release \
 -w #{workdir} \
---stepto build \
+--stepto sbuild \
 --license MIT \
 --group "Development/Tools" \
 --url #{baseurl} \
@@ -11,5 +11,5 @@ pmaker -n #{name}-release \
 --no-rpmdb \
 --ignore-owner \
 --destdir #{workdir} \
-#{mock_cfg_file_list}
+#{listfile}
 

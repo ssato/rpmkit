@@ -13,7 +13,7 @@ else:
 ?>
 gpgcheck=0
 <?py
-#end if
+#endif
 ?>
 
 [#{name}-source]

@@ -1,11 +1,5 @@
-<?py
-if not signkey:
-?>
-    echo "#{release_file},rpmattr=%config" | \
-<?py
-#end if
-?>
-pmaker -n #{name}-release \
+pmaker \
+-n #{name}-release \
 -w #{workdir} \
 --stepto sbuild \
 --license MIT \
@@ -19,14 +13,4 @@ pmaker -n #{name}-release \
 --ignore-owner \
 #{logopt} \
 --destdir #{workdir} \
-<?py
-if signkey:
-?>
-#{release_file_list}
-<?py
-else:
-?>
--
-<?py
-#end if
-?>
+#{listfile}

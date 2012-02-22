@@ -23,6 +23,7 @@ import logging
 import os
 import os.path
 import subprocess
+import tempfile
 
 
 def __snd(x, y):
@@ -36,6 +37,10 @@ def __snd(x, y):
 def __rpmdirs(repo, destdir=None):
     f = __snd if destdir is None else os.path.join
     return [f(destdir, d) for d in ["sources"] + repo.archs]
+
+
+def __setup_workdir(prefix, topdir="/tmp"):
+    return tempfile.mkdtemp(dir=topdir, prefix=prefix)
 
 
 def build(repo, srpm):
@@ -66,23 +71,28 @@ def update(repo):
     return SH.prun(cs)
 
 
-def deploy(repo, srpm, build=True):
+def deploy(repo, srpm, build_=True):
     """
     FIXME: ugly code around signkey check.
     """
-    if build:
+    if build_:
         assert all(rc == 0 for rc in build(repo, srpm))
 
     destdir = repo.destdir()
     rpms_to_deploy = []   # :: [(rpm_path, destdir)]
     rpms_to_sign = []
 
-    for d in dists_by_srpm(repo, srpm):
-        srpm_to_copy = glob.glob("%s/*.src.rpm" % d.mockdir())[0]
+    for d in RO.dists_by_srpm(repo, srpm):
+        rpmdir = d.mockdir()
+
+        srpms_to_copy = glob.glob(rpmdir + "/*.src.rpm")
+        assert srpms_to_copy, "Could not find src.rpm in " + rpmdir
+
+        srpm_to_copy = srpms_to_copy[0]
         rpms_to_deploy.append((srpm_to_copy, os.path.join(destdir, "sources")))
 
         brpms = [
-            f for f in glob.glob("%s/*.*.rpm" % d.mockdir())\
+            f for f in glob.glob(rpmdir + "/*.rpm") \
                 if not f.endswith(".src.rpm")
         ]
         logging.debug("rpms=" + str([os.path.basename(f) for f in brpms]))
@@ -118,7 +128,7 @@ def init(repo):
 
 
 def gen_conf_rpms(repo):
-    workdir = RO.setup_workdir("%s-release-" % repo.name)
+    workdir = __setup_workdir(repo.name + "-release-")
 
     srpms = [
         RO.build_release_srpm(repo, workdir),

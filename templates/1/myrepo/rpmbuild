@@ -13,9 +13,9 @@ pmaker -n #{pkgname} \
 -w #{workdir} \
 --stepto sbuild \
 --license MIT \
---group #{group} \
+--group "#{group}" \
 --url #{baseurl} \
---summary #{summary} \
+--summary "#{summary}" \
 --packager "#{fullname}" \
 --email "#{email}" \
 --pversion #{distversion}  \
