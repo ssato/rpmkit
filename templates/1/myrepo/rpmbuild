@@ -1,0 +1,26 @@
+<?py
+reponame = _context.get("name", "unknown")
+
+if "mock" in pkgname:
+    group = "Development/Tools"
+    summary = "Mock cfg files of yum repo " + reponame
+else:
+    group = "System Environment/Base"
+    summary = "Yum repo files for " + reponame
+#endif
+?>
+pmaker -n #{pkgname} \
+-w #{workdir} \
+--stepto sbuild \
+--license MIT \
+--group #{group} \
+--url #{baseurl} \
+--summary #{summary} \
+--packager "#{fullname}" \
+--email "#{email}" \
+--pversion #{distversion}  \
+--no-rpmdb \
+--ignore-owner \
+#{logopt} \
+--destdir #{workdir} \
+#{listfile}
