@@ -94,8 +94,13 @@ class ThreadedCommand(object):
 
             logging.info("Run: " + self.cmd_str)
             self.proc = subprocess.Popen(
-                self.cmd, bufsize=4096, shell=True, cwd=self.workdir,
-                stdout=stdout, stderr=sys.stderr,
+                self.cmd,
+                bufsize=4096,
+                shell=True,
+                cwd=self.workdir,
+                stdin=open("/dev/null", "r"),
+                stdout=stdout,
+                stderr=sys.stderr,
             )
             self.result = self.proc.wait()
             logging.debug("Finished: %s" % self.cmd_str)
