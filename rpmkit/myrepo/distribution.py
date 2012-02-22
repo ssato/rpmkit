@@ -40,11 +40,15 @@ def __mockcfg_file_to_obj(mockcfg, cfg=collections.OrderedDict()):
         return cfg
 
     except KeyError, e:
-        cfg[str(e)] = collections.OrderedDict()
-        return __mockcfg_file_to_obj(mockcfg, cfg)  # run recursively
+        ## Make it constructs a dict recursively:
+        #cfg[str(e)] = collections.OrderedDict()
+        #return __mockcfg_file_to_obj(mockcfg, cfg)  # run recursively
+        #
+        ## or just make it raising an exception (current choice):
+        raise RuntimeError(str(e))
 
 
-def _buildroot(mockcfg_opts, bdist_label=None):
+def _buildroot(mockcfg_opts, bdist=None):
     """
 
     >>> bdist = "fedora-16-x86_64"
@@ -52,7 +56,7 @@ def _buildroot(mockcfg_opts, bdist_label=None):
     >>> _buildroot(cfg) == _buildroot({}, bdist)
     True
     """
-    return mockcfg_opts.get("root", bdist_label)
+    return mockcfg_opts.get("root", bdist)
 
 
 @M.memoize
@@ -66,12 +70,16 @@ def mockcfg_opts(bdist):
     cfg = collections.OrderedDict()
     cfg["config_opts"] = collections.OrderedDict()
 
+    # see also: setup_default_config_opts() in /usr/sbin/mock.
+    for k in ["macros", "plugin_conf"]:
+        cfg["config_opts"][k] = collections.OrderedDict()
+
     cfg = __mockcfg_file_to_obj(__mockcfg_path(bdist), cfg)
 
     return cfg["config_opts"]
 
 
-def build_cmd(bdist_label, srpm):
+def build_cmd(bdist, srpm):
     """
     NOTE: mock will print log messages to stderr (not stdout).
     """
@@ -81,36 +89,35 @@ def build_cmd(bdist_label, srpm):
     else:
         logc = ""
 
-    return ' '.join(("mock -r", bdist_label, srpm, logc))
+    return ' '.join(("mock -r", bdist, srpm, logc))
 
 
 class Distribution(object):
 
-    def __init__(self, dname, dver, arch="x86_64", bdist_label=None):
+    def __init__(self, dname, dver, arch="x86_64", bdist=None):
         """
         :param dname:  Distribution name, e.g. "fedora", "rhel"
         :param dver:   Distribution version, e.g. "16", "6"
         :param arch:   Architecture, e.g. "i386", "x86_64"
-        :param bdist_label:  Build target distribution, e.g. "fedora-14-i386"
+        :param bdist:  Build target distribution, e.g. "fedora-14-i386"
         """
         self.name = dname
         self.version = dver
         self.arch = arch
 
         self.label = '-'.join((dname, dver, arch))
-        self.bdist_label = self.label if bdist_label is None else bdist_label
+        self.bdist = self.label if bdist is None else bdist
         self.arch_pattern = "i*86" if arch == "i386" else self.arch
-        self._mockcfg_opts = mockcfg_opts(self.bdist_label)
 
     def mockcfg_opts(self):
-        return self._mockcfg_opts
+        return mockcfg_opts(self.bdist)
 
     def mockdir(self):
         return "/var/lib/mock/%s/result" % \
-            _buildroot(self.mockcfg_opts(), self.bdist_label)
+            _buildroot(self.mockcfg_opts(), self.bdist)
 
     def build_cmd(self, srpm):
-        return build_cmd(self.bdist_label, srpm)
+        return build_cmd(self.bdist, srpm)
 
 
 # vim:sw=4 ts=4 et:
