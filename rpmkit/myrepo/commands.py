@@ -125,11 +125,14 @@ def init(repo):
         repo.user, repo.server,
         timeout=repo.timeout
     )
+    
+    if repo.genconf and rc == 0:
+        rc = genconf(repo)
 
     return rc
 
 
-def gen_conf_rpms(repo):
+def genconf(repo):
     workdir = __setup_workdir("myrepo_" + repo.name + "-release-")
 
     srpms = [

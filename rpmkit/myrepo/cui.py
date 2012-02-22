@@ -69,6 +69,7 @@ def create_repos_from_dists_option_g(config):
                 bdist,
                 config["metadata_expire"],
                 config["timeout"],
+                config["genconf"],
             )
 
 
@@ -78,7 +79,7 @@ def opt_parser():
 
     p = optparse.OptionParser("""%prog COMMAND [OPTION ...] [ARGS]
 
-Commands: i[init], b[uild], d[eploy], u[pdate], gen_conf_rpms
+Commands: i[init], b[uild], d[eploy], u[pdate], genc[onf]
 
 Examples:
   # initialize your yum repos:
@@ -132,6 +133,8 @@ Examples:
         help="Repository base URL or its format string [%default]")
     iog.add_option('', "--signkey",
         help="GPG key ID if signing RPMs to deploy")
+    iog.add_option('', "--genconf",
+        help="Run genconf command automatically after initialization finished")
     p.add_option_group(iog)
 
     return p
@@ -172,7 +175,7 @@ def do_command(cmd, repos, srpm=None):
 
 def main(argv=sys.argv):
     (CMD_INIT, CMD_UPDATE, CMD_BUILD, CMD_DEPLOY, CMD_GEN_CONF_RPMS) = \
-        ("init", "update", "build", "deploy", "gen_conf_rpms")
+        ("init", "update", "build", "deploy", "genconf")
 
     logformat = "%(asctime)s [%(levelname)-4s] myrepo: %(message)s"
     logdatefmt = "%H:%M:%S"  # too much? "%a, %d %b %Y %H:%M:%S"
@@ -212,7 +215,7 @@ def main(argv=sys.argv):
         assert len(args) >= 2, \
             "'%s' command requires an argument to specify srpm[s]" % cmd
 
-    elif a0 == "gen_conf_rpms":
+    elif a0.startswith("genc"):
         cmd = CMD_GEN_CONF_RPMS
     else:
         logging.error(" Unknown command '%s'" % a0)

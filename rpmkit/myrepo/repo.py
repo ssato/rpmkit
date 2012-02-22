@@ -38,7 +38,7 @@ class Repo(object):
     def __init__(self, server, user, email, fullname, dname, dver, archs,
             name=None, subdir=None, topdir=None, baseurl=None, signkey=None,
             bdist_label=None, metadata_expire=None, timeout=None,
-            *args, **kwargs):
+            genconf=False, *args, **kwargs):
         """
         @server    server's hostname to provide this yum repo
         @user      username on the server
@@ -69,6 +69,7 @@ class Repo(object):
         self.primary_arch = "x86_64" if self.multiarch else self.archs[0]
 
         self.bdist_label = bdist_label
+        self.genconf = genconf
 
         self.distname = dname
         self.distversion = dver
