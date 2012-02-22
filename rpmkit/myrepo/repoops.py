@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.shell as SH
 import rpmkit.myrepo.utils as U
 import rpmkit.memoize as M
@@ -24,10 +25,6 @@ import glob
 import logging
 import os
 import os.path
-
-
-# timeouts:
-(BUILD_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 5)  # [sec]
 
 
 def dists_by_srpm(repo, srpm):
@@ -153,7 +150,7 @@ def build_mock_cfg_srpm(repo, workdir):
     rc = SH.run(
         rpm_build_cmd(repo, workdir, listfile, pname),
         repo.user,
-        timeout=BUILD_TIMEOUT
+        timeout=G.BUILD_TIMEOUT
     )
     if rc != 0:
         raise RuntimeError("Failed to create mock.cfg rpm")
@@ -184,7 +181,7 @@ def build_release_srpm(repo, workdir):
         rc = SH.run(
             "gpg --export --armor %s > ./%s" % (repo.signkey, repo.keyfile),
             workdir=workdir,
-            timeout=MIN_TIMEOUT,
+            timeout=G.MIN_TIMEOUT,
         )
         c += workdir + repo.keyfile + "\n"
 
@@ -196,7 +193,7 @@ def build_release_srpm(repo, workdir):
     rc = SH.run(
         rpm_build_cmd(repo, workdir, listfile, pname),
         repo.user,
-        timeout=BUILD_TIMEOUT
+        timeout=G.BUILD_TIMEOUT
     )
 
     pattern = "%s/%s-release-%s/%s-release*.src.rpm" % \
