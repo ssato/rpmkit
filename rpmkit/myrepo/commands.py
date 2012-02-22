@@ -118,7 +118,7 @@ def init(repo):
 
 
 def gen_conf_rpms(repo):
-    workdir = RO.settup_workdir("%s-release-" % repo.name)
+    workdir = RO.setup_workdir("%s-release-" % repo.name)
 
     srpms = [
         RO.build_release_srpm(repo, workdir),

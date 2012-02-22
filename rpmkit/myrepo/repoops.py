@@ -129,7 +129,7 @@ def build_cmds(repo, srpm):
     ]
 
 
-def settup_workdir(prefix, topdir="/tmp"):
+def setup_workdir(prefix, topdir="/tmp"):
     return tempfile.mkdtemp(dir=topdir, prefix=prefix)
 
 
