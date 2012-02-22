@@ -1,6 +1,6 @@
 [#{name}]
-name=Custom yum repository on #{server} by #{user} (\$basearch)
-baseurl=#{baseurl}/\$basearch/
+name=Custom yum repository on #{server} by #{user}
+baseurl=#{baseurl}/$basearch/
 metadata_expire=#{metadata_expire}
 enabled=1
 <?py 
