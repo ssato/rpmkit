@@ -21,6 +21,9 @@ import rpmkit.myrepo.repoops as RO
 import os.path
 
 
+is_noarch = RO.is_noarch
+
+
 class Repo(object):
     """Yum repository.
     """

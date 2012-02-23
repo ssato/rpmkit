@@ -27,11 +27,16 @@ import os
 import os.path
 
 
-def dists_by_srpm(repo, srpm):
-    is_noarch = RU.is_noarch(srpm)
-    logging.info("srpm=%s, noarch=%s" % (srpm, is_noarch))
+@M.memoize
+def is_noarch(srpm):
+    return RU.is_noarch(srpm)
 
-    return repo.dists[:1] if is_noarch else repo.dists
+
+def dists_by_srpm(repo, srpm):
+    _is_noarch = is_noarch(srpm)
+    logging.info("srpm=%s, noarch=%s" % (srpm, _is_noarch))
+
+    return repo.dists[:1] if _is_noarch else repo.dists
 
 
 @M.memoize
