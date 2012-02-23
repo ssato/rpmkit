@@ -43,7 +43,10 @@ def is_valid_timeout(timeout):
     >>> is_valid_timeout("10")
     False
     """
-    return timeout is None or isinstance(timeout, int) and timeout >= 0
+    if timeout is None:
+        return True
+    else:
+        return isinstance(timeout, int) and timeout >= 0
 
 
 class ThreadedCommand(object):
@@ -58,8 +61,8 @@ class ThreadedCommand(object):
         :param cmd: Command string
         :param user: User to run command
         :param host: Host to run command
-        :param workdir: Working directory
-        :param timeout: Time out in sec
+        :param workdir: Working directory in which command runs
+        :param timeout: Time out in seconds
         """
         assert is_valid_timeout(timeout), "Invalid timeout: " + str(timeout)
 
@@ -119,7 +122,7 @@ class ThreadedCommand(object):
 
             # avoid creating zonbie.
             try:
-                (_pid, _rc) = os.waitpid(self.proc.pid,  os.WNOHANG)
+                (_pid, _rc) = os.waitpid(self.proc.pid, os.WNOHANG)
             except OSError:
                 pass
 
