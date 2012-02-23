@@ -83,7 +83,7 @@ def deploy(repo, srpm, build_=True):
     rpms_to_sign = []
 
     for d in RO.dists_by_srpm(repo, srpm):
-        rpmdir = d.mockdir()
+        rpmdir = d.rpmdir()
 
         srpms_to_copy = glob.glob(rpmdir + "/*.src.rpm")
         assert srpms_to_copy, "Could not find src.rpm in " + rpmdir

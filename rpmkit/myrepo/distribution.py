@@ -22,19 +22,23 @@ import logging
 import os.path
 
 
-def __mockcfg_path(bdist, topdir="/etc/mock"):
+def _get_mockcfg_path(bdist, topdir="/etc/mock"):
     """
-    >>> __mockcfg_path("fedora-16-x86_64")
+    :param bdist: Build target distribution name, e.g. fedora-16-x86_64
+    :param topdir: Mock's top dir to build srpms
+
+    >>> _get_mockcfg_path("fedora-16-x86_64")
     '/etc/mock/fedora-16-x86_64.cfg'
     """
     return os.path.join(topdir, bdist + ".cfg")
 
 
-def __mockcfg_file_to_obj(mockcfg, cfg=collections.OrderedDict()):
+def _load_mockcfg_config(bdist, cfg=collections.OrderedDict()):
     """
     FIXME: This is very naive and frail. It may be better to implement in
     similar manner as setup_default_config_opts() does in /usr/sbin/mock.
     """
+    mockcfg = _get_mockcfg_path(bdist)
     try:
         execfile(mockcfg, cfg)
         return cfg
@@ -42,25 +46,13 @@ def __mockcfg_file_to_obj(mockcfg, cfg=collections.OrderedDict()):
     except KeyError, e:
         ## Make it constructs a dict recursively:
         #cfg[str(e)] = collections.OrderedDict()
-        #return __mockcfg_file_to_obj(mockcfg, cfg)  # run recursively
+        #return _load_mockcfg_config(mockcfg, cfg)  # run recursively
         #
         ## or just make it raising an exception (current choice):
         raise RuntimeError(str(e))
 
 
-def _buildroot(mockcfg_opts, bdist=None):
-    """
-
-    >>> bdist = "fedora-16-x86_64"
-    >>> cfg = {"root": bdist}
-    >>> _buildroot(cfg) == _buildroot({}, bdist)
-    True
-    """
-    return mockcfg_opts.get("root", bdist)
-
-
-@M.memoize
-def mockcfg_opts(bdist):
+def _load_mockcfg_config_opts(bdist):
     """
     Load mock config file and returns $mock_config["config_opts"] as a
     dict (collections.OrderedDict).
@@ -74,9 +66,14 @@ def mockcfg_opts(bdist):
     for k in ["macros", "plugin_conf"]:
         cfg["config_opts"][k] = collections.OrderedDict()
 
-    cfg = __mockcfg_file_to_obj(__mockcfg_path(bdist), cfg)
+    cfg = _load_mockcfg_config(bdist, cfg)
 
     return cfg["config_opts"]
+
+
+@M.memoize
+def load_mockcfg_config_opts(bdist):
+    return _load_mockcfg_config_opts(bdist)
 
 
 def build_cmd(bdist, srpm):
@@ -107,15 +104,14 @@ class Distribution(object):
 
         self.label = '-'.join((dname, dver, arch))
         self.bdist = self.label if bdist is None else bdist
-        self.arch_pattern = "i*86" if arch == "i386" else self.arch
 
-    def mockcfg_opts(self):
-        return mockcfg_opts(self.bdist)
+    def load_mockcfg_config_opts(self):
+        return load_mockcfg_config_opts(self.bdist)
 
-    def mockdir(self):
-        #bdist = _buildroot(self.mockcfg_opts(), self.bdist)
-        bdist = self.bdist
-        return "/var/lib/mock/%s/result" % bdist
+    def rpmdir(self):
+        """Dir to save built RPMs.
+        """
+        return "/var/lib/mock/%s/result" % self.bdist
 
     def build_cmd(self, srpm):
         return build_cmd(self.bdist, srpm)
