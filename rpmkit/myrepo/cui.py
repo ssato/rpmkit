@@ -1,7 +1,7 @@
 #
 # cui module
 #
-# Copyright (C) 2011 Red Hat, Inc.
+# Copyright (C) 2011, 2012 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -74,7 +74,7 @@ def create_repos_from_dists_option_g(config):
 
 
 def opt_parser():
-    defaults = C.init_defaults()
+    defaults = C.init()
     distribution_choices = defaults["distribution_choices"]
 
     p = optparse.OptionParser("""%prog COMMAND [OPTION ...] [ARGS]
@@ -222,7 +222,7 @@ def main(argv=sys.argv):
         sys.exit(1)
 
     if options.config:
-        params = C.init_defaults(options.config)
+        params = C.init(options.config)
 
         p.set_defaults(**params)
 
