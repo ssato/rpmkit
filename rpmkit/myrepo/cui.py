@@ -24,7 +24,7 @@ import rpmkit.myrepo.parser as P
 import rpmkit.myrepo.repo as R
 import rpmkit.Bunch as B
 
-import itertools as IT
+import itertools
 import logging
 import operator
 import optparse
@@ -40,13 +40,16 @@ def create_repos_from_dists_option_g(config):
     see also: rpmkit.myrepo.parser.parse_dists_option
     """
     dists_s = config.dists
+    logging.debug("config.dists=" + dists_s)
 
     # dabs :: [(dist_name, dist_ver, dist_arch, bdist)]
     dabs = P.parse_dists_option(dists_s)
+    logging.debug("dabs=" + str(dabs))
+
     key_f = operator.itemgetter(0, 1)  # dab :: (n, v, a, bd) -> (n, v)
 
     # grouping distributions by (dist_name, dist_ver):
-    for dist, dists in IT.groupby(dabs, key_f):
+    for dist, dists in itertools.groupby(dabs, key_f):
         dists = list(dists)  # It's a generator and must be converted.
 
         (dname, dver) = dist
