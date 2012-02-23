@@ -127,11 +127,34 @@ def rpm_build_cmd(repo, workdir, listfile, pname):
     return U.compile_template("rpmbuild", context)
 
 
-def build_cmds(repo, srpm):
-    return [
+def build(repo, srpm):
+    return SH.prun([
         SH.ThreadedCommand(d.build_cmd(srpm), timeout=repo.timeout) \
             for d in dists_by_srpm(repo, srpm)
-    ]
+    ])
+
+
+def update_metadata(repo):
+    """
+    'createrepo --update ...', etc.
+    """
+    destdir = repo.destdir()
+
+    # hack: degenerate noarch rpms
+    if repo.multiarch:
+        c = "for d in %s; do (cd $d && ln -sf ../%s/*.noarch.rpm ./); done"
+        c = c % (" ".join(repo.archs[1:]), repo.primary_arch)
+
+        SH.run(c, repo.user, repo.server, repo.destdir(), repo.timeout, True)
+
+    c = "test -d repodata"
+    c += " && createrepo --update --deltas --oldpackagedirs . --database ."
+    c += " || createrepo --deltas --oldpackagedirs . --database ."
+
+    return SH.prun([
+        SH.ThreadedCommand(c, repo.user, repo.server, d, timeout=repo.timeout)
+            for d in repo.rpmdirs()
+    ])
 
 
 def build_mock_cfg_srpm(repo, workdir):

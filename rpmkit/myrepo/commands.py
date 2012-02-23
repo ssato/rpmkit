@@ -17,6 +17,7 @@
 #
 import rpmkit.myrepo.repoops as RO
 import rpmkit.myrepo.shell as SH
+import rpmkit.myrepo.utils as U
 
 import glob
 import logging
@@ -26,49 +27,18 @@ import subprocess
 import tempfile
 
 
-def __snd(x, y):
-    """
-    >>> __snd(1, 2)
-    2
-    """
-    return y
-
-
-def __rpmdirs(repo, destdir=None):
-    f = __snd if destdir is None else os.path.join
-    return [f(destdir, d) for d in ["sources"] + repo.archs]
-
-
 def __setup_workdir(prefix, topdir="/tmp"):
     return tempfile.mkdtemp(dir=topdir, prefix=prefix)
 
 
 def build(repo, srpm):
-    return SH.prun(repo.build_cmds(srpm))
+    return RO.build(repo, srpm)
 
 
 def update(repo):
-    """'createrepo --update ...', etc.
+    """Update and synchronize repository's metadata.
     """
-    destdir = repo.destdir()
-
-    # hack: degenerate noarch rpms
-    if repo.multiarch:
-        c = "for d in %s; do (cd $d && ln -sf ../%s/*.noarch.rpm ./); done"
-        c = c % (" ".join(repo.archs[1:]), repo.primary_arch)
-
-        SH.run(c, repo.user, repo.server, destdir, timeout=repo.timeout)
-
-    c = "test -d repodata"
-    c += " && createrepo --update --deltas --oldpackagedirs . --database ."
-    c += " || createrepo --deltas --oldpackagedirs . --database ."
-
-    cs = [
-        SH.ThreadedCommand(c, repo.user, repo.server, d, timeout=repo.timeout)
-            for d in __rpmdirs(repo, destdir)
-    ]
-
-    return SH.prun(cs)
+    return repo.update_metadata()
 
 
 def deploy(repo, srpm, build_=True):
@@ -121,9 +91,8 @@ def init(repo):
     """Initialize yum repository.
     """
     rc = SH.run(
-        "mkdir -p " + " ".join(__rpmdirs(repo, repo.destdir())),
-        repo.user, repo.server,
-        timeout=repo.timeout
+        "mkdir -p " + " ".join(repo.rpmdirs()), repo.user, repo.server,
+        timeout=repo.timeout,
     )
     
     if repo.genconf and rc == 0:

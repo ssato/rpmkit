@@ -122,8 +122,13 @@ class Repo(object):
     def destdir(self):
         return os.path.join(self.topdir, self.distdir)
 
-    def build_cmds(self, srpm):
-        return RO.build_cmds(self, srpm)
- 
+    def rpmdirs(self):
+        return [
+            os.path.join(self.destdir(), d) for d in ["sources"] + self.archs
+        ]
+
+    def update_metadata(self):
+        return RO.update_metadata(self)
+
 
 # vim:sw=4 ts=4 et:
