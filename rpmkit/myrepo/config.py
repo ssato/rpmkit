@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Red Hat, Inc.
+# Copyright (C) 2011, 2012 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,8 +18,8 @@
 import rpmkit.myrepo.environ as E
 import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.parser as P
-import rpmkit.myrepo.repo as R
 import rpmkit.myrepo.utils as U
+import rpmkit.Bunch as B
 
 import ConfigParser as cp
 import glob
@@ -29,39 +29,47 @@ import os
 import os.path
 
 
-def init_defaults_0():
+def get_timeout(config):
+    """
+    :param config: Configuration object :: B.Bunch
+    """
+    U.typecheck(config, B.Bunch)
+
+    timeo = config.get("timeout", None)
+    if timeo:
+        return timeo
+    else:
+        if U.is_local(config.server):
+            return G.LOCAL_TIMEOUT
+        else:
+            return G.REMOTE_TIMEOUT
+
+
+def _init_by_defaults():
     archs = E.list_archs()
     distributions_full = E.list_dists()
     dists = ["%s-%s" % E.get_distribution()]
     distributions = ["%s-%s" % da for da in IT.product(dists, archs)]
 
-    defaults = {
+    defaults = G.REPO_DEFAULT
+
+    defaults.update({
         "server": E.hostname(),
         "user": E.get_username(),
         "email":  E.get_email(),
         "fullname": E.get_fullname(),
         "dists_full": ",".join(distributions_full),
         "dists": ",".join(distributions),
-        "name": R.Repo.name,
-        "subdir": R.Repo.subdir,
-        "topdir": R.Repo.topdir,
-        "baseurl": R.Repo.baseurl,
-        "signkey": R.Repo.signkey,
-        "metadata_expire": R.Repo.metadata_expire,
         "genconf": False,
-    }
+    })
 
-    if U.is_local(defaults["server"]):
-        timeout = G.LOCAL_TIMEOUT
-    else:
-        timeout = G.REMOTE_TIMEOUT
-
-    defaults["timeout"] = timeout
+    defaults["distribution_choices"] = defaults["dists_full"]  # save it.
+    defaults["timeout"] = get_timeout(defaults)
 
     return defaults
 
 
-def init_defaults_by_conffile(config=None, profile=None):
+def _init_by_config_file(config=None, profile=None):
     """
     Initialize default values for options by loading config files.
     """
@@ -80,7 +88,7 @@ def init_defaults_by_conffile(config=None, profile=None):
 
     for c in confs:
         if os.path.exists(c):
-            logging.info("Loading config: %s" % c)
+            logging.info("Loading config: " + c)
             cparser.read(c)
             loaded = True
 
@@ -89,16 +97,14 @@ def init_defaults_by_conffile(config=None, profile=None):
 
     d = cparser.items(profile) if profile else cparser.defaults().iteritems()
 
-    return dict((k, P.parse_conf_value(v)) for k, v in d)
+    return B.Bunch((k, P.parse_conf_value(v)) for k, v in d)
 
 
-def init_defaults(config=None):
-    defaults = init_defaults_0()
-    defaults["distribution_choices"] = defaults["dists_full"]  # save it.
+def init(config=None):
+    config = _init_by_defaults()
+    config.update(_init_by_config_file(config))
 
-    defaults.update(init_defaults_by_conffile(config))
-
-    return defaults
+    return config
 
 
 # vim:sw=4 ts=4 et:
