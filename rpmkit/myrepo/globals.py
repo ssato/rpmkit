@@ -18,7 +18,8 @@
 # import ...
 #
 # timeouts [sec]:
-(REMOTE_TIMEOUT, LOCAL_TIMEOUT, MIN_TIMEOUT) = (60 * 10, 60 * 5, 5)
-
+(REMOTE_TIMEOUT, BUILD_TIMEOUT, LOCAL_TIMEOUT, MIN_TIMEOUT) = (
+    60 * 10, 60 * 10, 60 * 5, 5
+)
 
 # vim:sw=4 ts=4 et:
