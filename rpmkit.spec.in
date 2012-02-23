@@ -15,7 +15,7 @@ Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python
-Requires:       python-cheetah, rpm-python, rpm-build
+Requires:       rpm-python, rpm-build
 Requires:       sqlite, autoconf, automake, packagemaker
 Requires:       createrepo, mock
 Requires:       python-BeautifulSoup
@@ -56,6 +56,11 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Feb 22 2012 Satoru SATOH <ssato@redhat.com> - 0.2.5-1
+- New upstream
+- Modularized myrepo and added some testing code for it
+- Switched template engine from Cheetah to Tenjin (built-in)
+
 * Thu Nov 17 2011 Satoru SATOH <ssato@redhat.com> - 0.2.4-1
 - New upstream
 - swapi: started to adding experimental virtual rpcs (swapi.cve.getCvss)
