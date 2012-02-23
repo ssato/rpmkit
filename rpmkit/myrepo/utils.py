@@ -22,6 +22,19 @@ import rpmkit.tenjinwrapper as T
 import os.path
 
 
+def typecheck(obj, expected_type_or_class):
+    """Type checker.
+
+    :param obj: Target object to check type
+    :param expected_type_or_class: Expected type or class of $obj
+    """
+    if not isinstance(obj, expected_type_or_class):
+        m = "Expected %s but got %s type. obj=%s" % (
+            repr(expected_type_or_class), type(obj), str(obj),
+        )
+        raise TypeError(m)
+
+
 def compile_template(tmpl, context={}):
     """
     :param tmpl: Template file name or (abs or rel) path

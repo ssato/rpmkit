@@ -22,10 +22,23 @@ import unittest
 
 class Test_00(unittest.TestCase):
 
-    def test_00_compile_template(self):
+    def test_00_typecheck(self):
+        U.typecheck("aaa", str)
+        U.typecheck(1, int)
+        U.typecheck({}, dict)
+
+        class A(object):
+            pass
+
+        U.typecheck(A(), A)
+
+        with self.assertRaises(TypeError) as cm:
+            U.typecheck(A(), str)
+
+    def test_10_compile_template(self):
         pass
 
-    def test_10_is_local(self):
+    def test_20_is_local(self):
         self.assertTrue(U.is_local("localhost"))
         self.assertTrue(U.is_local("localhost.localdomain"))
 
