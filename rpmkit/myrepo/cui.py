@@ -22,6 +22,7 @@ import rpmkit.myrepo.config as C
 import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.parser as P
 import rpmkit.myrepo.repo as R
+import rpmkit.Bunch as B
 
 import itertools as IT
 import logging
@@ -34,42 +35,42 @@ import time
 
 def create_repos_from_dists_option_g(config):
     """
-    :param config:  Configuration parameters :: dict
+    :param config:  Configuration parameters :: B.Bunch
 
     see also: rpmkit.myrepo.parser.parse_dists_option
     """
-    dists_s = config["dists"]
+    dists_s = config.dists
 
-    # dabs :: [(dist_name, dist_ver, dist_arch, bdist_label)]
+    # dabs :: [(dist_name, dist_ver, dist_arch, bdist)]
     dabs = P.parse_dists_option(dists_s)
     key_f = operator.itemgetter(0, 1)  # dab :: (n, v, a, bd) -> (n, v)
 
     # grouping distributions by (dist_name, dist_ver):
     for dist, dists in IT.groupby(dabs, key_f):
-        dists = list(dists)  # It's a generator and should be converted.
+        dists = list(dists)  # It's a generator and must be converted.
 
         (dname, dver) = dist
         archs = [d[2] for d in dists]  # d[2]: arch (see the type of dabs).
-        bdists = [d[3] for d in dists]  # d[3]: bdist_label
+        bdists = [d[3] for d in dists]  # d[3]: bdist
 
         for bdist in bdists:
             yield R.Repo(
-                config["server"],
-                config["user"],
-                config["email"],
-                config["fullname"],
+                config.server,
+                config.user,
+                config.email,
+                config.fullname,
                 dname,
                 dver,
                 archs,
-                config["name"],
-                config["subdir"],
-                config["topdir"],
-                config["baseurl"],
-                config["signkey"],
+                config.name,
+                config.subdir,
+                config.topdir,
+                config.baseurl,
+                config.signkey,
                 bdist,
-                config["metadata_expire"],
-                config["timeout"],
-                config["genconf"],
+                config.metadata_expire,
+                config.timeout,
+                config.genconf,
             )
 
 
@@ -135,15 +136,17 @@ Examples:
         help="GPG key ID if signing RPMs to deploy")
     iog.add_option('', "--genconf", action="store_true",
         help="Run genconf command automatically after initialization finished")
+    iog.add_option('', "--no-genconf", action="store_false", dest="genconf",
+        help="Do not run genconf command after initialization finished")
     p.add_option_group(iog)
 
     return p
 
 
-def do_command(cmd, repos, srpm=None):
+def do_command(cmd, repos_g, srpm=None):
     """
     :param cmd: sub command name :: str
-    :param repos: Repository objects (generator)
+    :param repos_g: Repository objects (generator)
     :param srpm: path to the target src.rpm :: str
     """
     f = getattr(CMD, cmd)
@@ -152,8 +155,8 @@ def do_command(cmd, repos, srpm=None):
     if srpm is not None:
         R.is_noarch(srpm)  # make a result cache
 
-    for repo in repos:
-        args = srpm is None and (repo, ) or (repo, srpm)
+    for repo in repos_g:
+        args = (repo, ) if srpm is None else (repo, srpm)
 
         thread = threading.Thread(target=f, args=args)
         thread.start()
@@ -229,16 +232,16 @@ def main(argv=sys.argv):
         # re-parse to overwrite configurations with given options.
         (options, args) = p.parse_args()
 
-    config = options.__dict__.copy()
+    config = B.Bunch(options.__dict__.copy())
 
     srpms = args[1:]
-    repos = create_repos_from_dists_option_g(config)
+    repos_g = create_repos_from_dists_option_g(config)
 
     if srpms:
         for srpm in srpms:
-            do_command(cmd, repos, srpm)
+            do_command(cmd, repos_g, srpm)
     else:
-        do_command(cmd, repos)
+        do_command(cmd, repos_g)
 
     sys.exit()
 
