@@ -54,6 +54,10 @@ def create_repos_from_dists_option_g(config):
         bdists = [d[3] for d in dists]  # d[3]: bdist
 
         for bdist in bdists:
+            logging.debug(
+                "Creating repo: dname=%s, dver=%s, archs=%s, bdist=%s" % \
+                    (dname, dver, archs, bdist)
+            )
             yield R.Repo(
                 config.server,
                 config.user,
