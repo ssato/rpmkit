@@ -72,6 +72,9 @@ def _init_by_defaults():
 def _init_by_config_file(config=None, profile=None):
     """
     Initialize default values for options by loading config files.
+
+    :param config: Config file's path :: str
+    :param profile: Custom profile as needed :: str
     """
     if config is None:
         # Is there case that $HOME is empty?
@@ -100,11 +103,11 @@ def _init_by_config_file(config=None, profile=None):
     return B.Bunch((k, P.parse_conf_value(v)) for k, v in d)
 
 
-def init(config=None):
-    config = _init_by_defaults()
-    config.update(_init_by_config_file(config))
+def init(config_path=None):
+    cfg = _init_by_defaults()
+    cfg.update(_init_by_config_file(config_path))
 
-    return config
+    return cfg
 
 
 # vim:sw=4 ts=4 et:
