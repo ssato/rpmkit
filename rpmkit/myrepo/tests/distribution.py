@@ -47,37 +47,15 @@ def sample_base_dist():
 class Test_00(unittest.TestCase):
 
     # NOTE: Effectful computation.
-    def test_00_mockcfg_opts(self):
+    def test_00__load_mockcfg_config_opts(self):
         bdist = sample_dist()
-        self.assertTrue(isinstance(D.mockcfg_opts(bdist), dict))
+        self.assertTrue(isinstance(D._load_mockcfg_config_opts(bdist), dict))
 
     def test_10_build_cmd(self):
         bdist = sample_dist()
         c = D.build_cmd(bdist, "foo-x.y.z.src.rpm")
         self.assertTrue(isinstance(c, str))
         self.assertNotEquals(c, "")
-
-
-"""
-FIXME: 
-Test_10_Distribution.test_01__init__w_arch sometimes fails.
-
-======================================================================
-ERROR: test_01__init__w_arch (rpmkit.myrepo.tests.distribution.Test_10_Distribution)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/ssato/repos/public/github.com/ssato/rpmkit.git/rpmkit/myrepo/tests/distribution.py", line 71, in test_01__init__w_arch
-    d = D.Distribution(n, v, a)
-  File "/home/ssato/repos/public/github.com/ssato/rpmkit.git/rpmkit/myrepo/distribution.py", line 77, in __init__
-    self.mockcfg_opts = mockcfg_opts(self.bdist_label)
-  File "/home/ssato/repos/public/github.com/ssato/rpmkit.git/rpmkit/memoize.py", line 25, in wrapped
-    cache[key] = fn(*args, **kwargs)
-  File "/home/ssato/repos/public/github.com/ssato/rpmkit.git/rpmkit/myrepo/distribution.py", line 43, in mockcfg_opts
-    execfile(__mockcfg_path(bdist), cfg)
-  File "/etc/mock/epel-5-ppc.cfg", line 6, in <module>
-    config_opts['macros']['%__arch_install_post'] = '%{nil}'
-KeyError: 'macros'
-"""
 
 
 class Test_10_Distribution(unittest.TestCase):
@@ -107,17 +85,17 @@ class Test_10_Distribution(unittest.TestCase):
 
         self.assertTrue(isinstance(d, D.Distribution))
 
-    def test_10_mockcfg_opts__w_min_args(self):
+    def test_10_load_mockcfg_config_opts__w_min_args(self):
         (n, v, _a) = sample_base_dist().split("-")
         d = D.Distribution(n, v)
 
-        self.assertTrue(isinstance(d.mockcfg_opts(), dict))
+        self.assertTrue(isinstance(d.load_mockcfg_config_opts(), dict))
 
-    def test_20_mockdir__w_min_args(self):
+    def test_20_rpmdir__w_min_args(self):
         (n, v, _a) = sample_base_dist().split("-")
         d = D.Distribution(n, v)
 
-        self.assertNotEquals(d.mockdir(), "")
+        self.assertNotEquals(d.rpmdir(), "")
 
     def test_30_build_cmd__w_min_args(self):
         (n, v, _a) = sample_base_dist().split("-")
