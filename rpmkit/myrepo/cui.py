@@ -281,7 +281,7 @@ def main(argv=sys.argv):
         repos_g = create_repos_from_dists_option_g(config, R.is_noarch(srpm))
         do_command(cmd, repos_g, srpm)
     else:
-        repos_g = create_repos_from_dists_option_g(config)
+        repos_g = create_repos_from_dists_option_g(config, True)
         do_command(cmd, repos_g)
 
     sys.exit()
