@@ -241,25 +241,33 @@ def main(argv=sys.argv):
         p.print_usage()
         sys.exit(1)
 
+    def assert_no_arg(args):
+        assert len(args) < 2, "'%s' command requires no arguments" % cmd
+
+    def assert_arg(args):
+        assert len(args) >= 2, \
+            "'%s' command requires an argument to specify srpm[s]" % cmd
+
     a0 = args[0]
     if a0.startswith('i'):
         cmd = CMD_INIT
+        assert_no_arg(args)
 
     elif a0.startswith('u'):
         cmd = CMD_UPDATE
+        assert_no_arg(args)
 
     elif a0.startswith('b'):
         cmd = CMD_BUILD
-        assert len(args) >= 2, \
-            "'%s' command requires an argument to specify srpm[s]" % cmd
+        assert_arg
 
     elif a0.startswith('d'):
         cmd = CMD_DEPLOY
-        assert len(args) >= 2, \
-            "'%s' command requires an argument to specify srpm[s]" % cmd
+        assert_arg
 
     elif a0.startswith("genc"):
         cmd = CMD_GEN_CONF_RPMS
+        assert_no_arg(args)
     else:
         logging.error(" Unknown command '%s'" % a0)
         sys.exit(1)
