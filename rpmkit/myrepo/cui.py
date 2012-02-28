@@ -33,59 +33,97 @@ import threading
 import time
 
 
-def create_repos_from_dists_option_g(config):
+def _listify_arch(dname, dver, darch, bdist):
+    """
+    >>> _listify_arch('fedora', '16', 'x86_64', 'fedora-16')
+    ['fedora', '16', ['x86_64'], 'fedora-16']
+    """
+    return [dname, dver, [darch], bdist]
+
+
+def _degenerate_dists_g(dists):
+    """
+    Degenerate dists by bdist. (It is needed to avoid building noarch srpms
+    multiple times.)
+
+    >>> d0 = ('fedora', '16', 'x86_64', 'fedora-16')
+    >>> d1 = ('fedora', '16', 'i386', 'fedora-16')
+    >>> d2 = ('rhel', '6', 'x86_64', 'rhel-6')
+    >>> list(_degenerate_dists_g([d0, d1]))
+    [('fedora', '16', ['x86_64', 'i386'], 'fedora-16')]
+    >>> ds2 = [
+    ...    ('fedora', '16', ['x86_64', 'i386'], 'fedora-16'),
+    ...    ('rhel', '6', ['x86_64'], 'rhel-6')
+    ... ]
+    >>> list(_degenerate_dists_g([d0, d1, d2])) == ds2
+    True
+    """
+    key_f = operator.itemgetter(3)  # to extract bdist from dist.
+    bds = [(bdist, list(ds)) for bdist, ds in itertools.groupby(dists, key_f)]
+
+    for bd in bds:
+        bdist = bd[0]
+        dists = bd[1]
+
+        dist0 = dists[0]
+        archs = [d[2] for d in dists]
+
+        (dname, dver) = dist0[:2]
+
+        yield (dname, dver, archs, bdist)
+
+
+def create_repos_from_dists_option_g(config, degenerate=False):
     """
     :param config:  Configuration parameters :: B.Bunch
+    :param degenerate:  Is the dists to be degenerated?
 
     see also: rpmkit.myrepo.parser.parse_dists_option
     """
     dists_s = config.dists
     logging.debug("config.dists=" + dists_s)
 
-    # dabs :: [(dist_name, dist_ver, dist_arch, bdist)]
-    dabs = P.parse_dists_option(dists_s)
-    logging.debug("dabs=" + str(dabs))
+    # dists :: [(dist_name, dist_ver, dist_arch, bdist)]
+    dists = P.parse_dists_option(dists_s)
+    logging.debug("dists: " + str(dists))
 
-    key_f = operator.itemgetter(0, 1)  # dab :: (n, v, a, bd) -> (n, v)
+    if degenerate:
+        dists = _degenerate_dists_g(dists)
+    else:
+        dists = (_listify_arch(*d) for d in dists)
 
-    # grouping distributions by (dist_name, dist_ver):
-    for dist, dists in itertools.groupby(dabs, key_f):
-        dists = list(dists)  # It's a generator and must be converted.
+    for dist in dists:
+        (dname, dver, archs, bdist) = dist
 
-        (dname, dver) = dist
-        archs = [d[2] for d in dists]  # d[2]: arch (see the type of dabs).
-        bdists = [d[3] for d in dists]  # d[3]: bdist
-
-        for bdist in bdists:
-            logging.debug(
-                "Creating repo: dname=%s, dver=%s, archs=%s, bdist=%s" % \
-                    (dname, dver, archs, bdist)
-            )
-            yield R.Repo(
-                config.server,
-                config.user,
-                config.email,
-                config.fullname,
-                dname,
-                dver,
-                archs,
-                config.name,
-                config.subdir,
-                config.topdir,
-                config.baseurl,
-                config.signkey,
-                bdist,
-                config.metadata_expire,
-                config.timeout,
-                config.genconf,
-            )
+        logging.debug(
+            "Creating repo: dname=%s, dver=%s, archs=%s, bdist=%s" % \
+                (dname, dver, archs, bdist)
+        )
+        yield R.Repo(
+            config.server,
+            config.user,
+            config.email,
+            config.fullname,
+            dname,
+            dver,
+            archs,
+            config.name,
+            config.subdir,
+            config.topdir,
+            config.baseurl,
+            config.signkey,
+            bdist,
+            config.metadata_expire,
+            config.timeout,
+            config.genconf,
+        )
 
 
 def opt_parser():
     defaults = C.init()
     distribution_choices = defaults["distribution_choices"]
 
-    p = optparse.OptionParser("""%prog COMMAND [OPTION ...] [ARGS]
+    p = optparse.OptionParser("""%prog COMMAND [OPTION ...] [SRPM]
 
 Commands: i[init], b[uild], d[eploy], u[pdate], genc[onf]
 
@@ -158,9 +196,6 @@ def do_command(cmd, repos_g, srpm=None):
     """
     f = getattr(CMD, cmd)
     threads = []
-
-    if srpm is not None:
-        R.is_noarch(srpm)  # make a result cache
 
     for repo in repos_g:
         args = (repo, ) if srpm is None else (repo, srpm)
@@ -241,13 +276,12 @@ def main(argv=sys.argv):
 
     config = B.Bunch(options.__dict__.copy())
 
-    srpms = args[1:]
-    repos_g = create_repos_from_dists_option_g(config)
-
-    if srpms:
-        for srpm in srpms:
-            do_command(cmd, repos_g, srpm)
+    if args[1:]:
+        srpm = args[1]
+        repos_g = create_repos_from_dists_option_g(config, R.is_noarch(srpm))
+        do_command(cmd, repos_g, srpm)
     else:
+        repos_g = create_repos_from_dists_option_g(config)
         do_command(cmd, repos_g)
 
     sys.exit()
