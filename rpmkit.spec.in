@@ -56,6 +56,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6-1
+- New upstream
+- Fixed a bug that remote command is not used
+
 * Wed Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.5-1
 - New upstream
 - Modularized myrepo and added some testing code for it
