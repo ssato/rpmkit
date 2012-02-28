@@ -22,13 +22,23 @@ import re
 def parse_conf_value(s):
     """Simple and naive parser to parse value expressions in config files.
 
-    >>> assert 0 == parse_conf_value("0")
-    >>> assert 123 == parse_conf_value("123")
-    >>> assert True == parse_conf_value("True")
-    >>> assert [1,2,3] == parse_conf_value("[1,2,3]")
-    >>> assert "a string" == parse_conf_value("a string")
-    >>> assert "0.1" == parse_conf_value("0.1")
+    >>> parse_conf_value("0")
+    0
+    >>> parse_conf_value("123")
+    123
+    >>> parse_conf_value("True")
+    True
+    >>> parse_conf_value("false")
+    False
+    >>> parse_conf_value("[1,2,3]")
+    [1, 2, 3]
+    >>> parse_conf_value("a string")
+    'a string'
+    >>> parse_conf_value("0.1")
+    '0.1'
     """
+    s = s.strip()  # strip white spaces.
+
     intp = re.compile(r"^([0-9]|([1-9][0-9]+))$")
     boolp = re.compile(r"^(true|false)$", re.I)
     listp = re.compile(r"^(\[\s*((\S+),?)*\s*\])$")
@@ -41,7 +51,7 @@ def parse_conf_value(s):
         return ""
 
     if matched(boolp, s):
-        return bool(s)
+        return bool(re.match(s, 'true', re.I))
 
     if matched(intp, s):
         return int(s)
@@ -61,14 +71,18 @@ def parse_dist_option(dist, sep=":"):
     ...     parse_dist_option("invalid_dist_label.i386")
     ... except AssertionError:
     ...     pass
+    >>> try:
+    ...     parse_dist_option("feodra-16-x86_64:no-arch-dist")
+    ... except AssertionError:
+    ...     pass
+    >>> try:
+    ...     parse_dist_option("feodra-16-x86_64:invalid-arch-dist-i386")
+    ... except AssertionError:
+    ...     pass
     >>> parse_dist_option("fedora-16-i386")
-    ('fedora', '16', 'i386', 'fedora-16-i386')
+    ('fedora', '16', 'i386', 'fedora-16', 'i386')
     >>> parse_dist_option("fedora-16-i386:fedora-extras-16-i386")
-    ('fedora', '16', 'i386', 'fedora-extras-16-i386')
-    >>> parse_dist_option("fedora-16-i386:fedora-extras-16-x86_64")
-    ('fedora', '16', 'i386', 'fedora-extras-16-x86_64')
-    >>> parse_dist_option("fedora-16-i386:fedora-extras")
-    ('fedora', '16', 'i386', 'fedora-extras')
+    ('fedora', '16', 'i386', 'fedora-extras-16', 'i386')
     """
     emh = "Invalid distribution label '%s'. " % dist
 
@@ -81,20 +95,29 @@ def parse_dist_option(dist, sep=":"):
         (name, ver, arch) = label.split("-")
     except ValueError:
         raise RuntimeError(
-            emh + "Its format should be <name>-<ver>-<arch>: " + label
+            emh + "Its format must be <name>-<ver>-<arch>: " + label
         )
 
     if len(tpl) < 2:
-        bdist_label = label
+        bdist = name + '-' + ver
+        barch = arch
     else:
-        bdist_label = tpl[1]
+        blabel = tpl[1]
+        try:
+            (bdist, barch) = blabel.rsplit('-', 1)
+            assert barch == arch, "Build arch and dist's arch not match"
+        except ValueError:
+            raise RuntimeError(
+                emh + "Build dist's format must be <distname>-<arch>: " \
+                    + blabel
+            )
 
         if len(tpl) > 2:
             logging.warn(
-                emh + "Too many separator '-' found. Ignore the rest."
+                emh + "Too many separator '%s' found. Ignore the rest." % sep
             )
 
-    return (name, ver, arch, bdist_label)
+    return (name, ver, arch, bdist, barch)
 
 
 def parse_dists_option(dists, sep=","):
@@ -104,13 +127,13 @@ def parse_dists_option(dists, sep=","):
     #archs = [l.split("-")[-1] for l in labels]
 
     >>> parse_dists_option("fedora-16-i386")
-    [('fedora', '16', 'i386', 'fedora-16-i386')]
+    [('fedora', '16', 'i386', 'fedora-16', 'i386')]
     >>> parse_dists_option("fedora-16-i386:fedora-extras-16-i386")
-    [('fedora', '16', 'i386', 'fedora-extras-16-i386')]
+    [('fedora', '16', 'i386', 'fedora-extras-16', 'i386')]
     >>> ss = ["fedora-16-i386:fedora-extras-16-i386"]
     >>> ss += ["rhel-6-i386:rhel-extras-6-i386"]
-    >>> r = [('fedora', '16', 'i386', 'fedora-extras-16-i386')]
-    >>> r += [('rhel', '6', 'i386', 'rhel-extras-6-i386')]
+    >>> r = [('fedora', '16', 'i386', 'fedora-extras-16', 'i386')]
+    >>> r += [('rhel', '6', 'i386', 'rhel-extras-6', 'i386')]
     >>> assert r == parse_dists_option(",".join(ss))
     """
     return [parse_dist_option(dist) for dist in dists.split(sep)]

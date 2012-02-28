@@ -47,7 +47,7 @@ class Test_00_parse_conf_value(unittest.TestCase):
         self.assertEquals(P.parse_conf_value("false"), False)
 
     def test_20_list(self):
-        self.assertEquals(P.parse_conf_value("[1,2,3]"), [1,2,3])
+        self.assertEquals(P.parse_conf_value("[1,2,3]"), [1, 2, 3])
 
     def test_30_string(self):
         self.assertEquals(P.parse_conf_value("a string"), "a string")
@@ -62,28 +62,38 @@ class Test_10_parse_dist_option(unittest.TestCase):
         with self.assertRaises(AssertionError) as cm:
             P.parse_dist_option("invalid_dist_label.i386")
 
+    def test_01_no_arch_dist(self):
+        with self.assertRaises(AssertionError) as cm:
+            P.parse_dist_option("feodra-16-x86_64:no-arch-dist")
+
+    def test_02_invalid_arch_dist(self):
+        with self.assertRaises(AssertionError) as cm:
+            P.parse_dist_option("feodra-16-x86_64:invalid-arch-dist-i386")
+
     def test_10_single_dist(self):
         self.assertEquals(
             P.parse_dist_option("fedora-16-i386"),
-            ('fedora', '16', 'i386', 'fedora-16-i386')
+            ('fedora', '16', 'i386', 'fedora-16', 'i386')
         )
 
     def test_20_single_dist_w_bdist(self):
         self.assertEquals(
             P.parse_dist_option("fedora-16-i386:fedora-extras-16-i386"),
-            ('fedora', '16', 'i386', 'fedora-extras-16-i386')
+            ('fedora', '16', 'i386', 'fedora-extras-16', 'i386')
         )
 
     def test_21_single_dist_w_bdist_w_custom_sep(self):
         self.assertEquals(
             P.parse_dist_option("fedora-16-i386|fedora-extras-16-i386", "|"),
-            ('fedora', '16', 'i386', 'fedora-extras-16-i386')
+            ('fedora', '16', 'i386', 'fedora-extras-16', 'i386')
         )
 
     def test_30_single_dist_w_bdists(self):
         self.assertEquals(
-            P.parse_dist_option("fedora-16-i386:fedora-extras-16-i386:fedora-foo-bar"),
-            ('fedora', '16', 'i386', 'fedora-extras-16-i386')
+            P.parse_dist_option(
+                "fedora-16-i386:fedora-extras-16-i386:fedora-foo-bar"
+            ),
+            ('fedora', '16', 'i386', 'fedora-extras-16', 'i386')
         )
 
 
@@ -92,22 +102,24 @@ class Test_20_parse_dists_option(unittest.TestCase):
     def test_00_single_dist(self):
         self.assertEquals(
             P.parse_dists_option("fedora-16-i386"),
-            [('fedora', '16', 'i386', 'fedora-16-i386')]
+            [('fedora', '16', 'i386', 'fedora-16', 'i386')]
         )
 
     def test_10_single_dist_w_bdist(self):
         self.assertEquals(
             P.parse_dists_option("fedora-16-i386:fedora-extras-16-i386"),
-            [('fedora', '16', 'i386', 'fedora-extras-16-i386')]
+            [('fedora', '16', 'i386', 'fedora-extras-16', 'i386')]
         )
 
     def test_20_multi_dists_w_bdist(self):
-        ds = "fedora-16-i386:fedora-extras-16-i386,rhel-6-i386:rhel-extras-6-i386"
+        ds = "fedora-16-i386:fedora-extras-16-i386"
+        ds += ",rhel-6-i386:rhel-extras-6-i386"
+
         self.assertEquals(
             P.parse_dists_option(ds),
             [
-                ('fedora', '16', 'i386', 'fedora-extras-16-i386'),
-                ('rhel', '6', 'i386', 'rhel-extras-6-i386')
+                ('fedora', '16', 'i386', 'fedora-extras-16', 'i386'),
+                ('rhel', '6', 'i386', 'rhel-extras-6', 'i386')
             ]
         )
 
