@@ -66,19 +66,21 @@ class ThreadedCommand(object):
         """
         assert is_valid_timeout(timeout), "Invalid timeout: " + str(timeout)
 
-        self.cmd = cmd
         self.user = E.get_username() if user is None else user
         self.host = host
         self.timeout = timeout
 
         if U.is_local(host):
+            logging.debug("host %s is local" % host)
             if "~" in workdir:
                 workdir = os.path.expanduser(workdir)
         else:
             cmd = "ssh -o ConnectTimeout=%d %s@%s 'cd %s && %s'" % \
                 (MIN_TIMEOUT, user, host, workdir, cmd)
+            logging.debug("host %s is remote. Rewrite cmd to " + cmd)
             workdir = os.curdir
 
+        self.cmd = cmd
         self.workdir = workdir
         self.cmd_str = "%s [%s]" % (self.cmd, self.workdir)
         self.thread = None
