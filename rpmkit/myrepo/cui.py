@@ -179,8 +179,6 @@ Examples:
         help="Repository base URL or its format string [%default]")
     iog.add_option('', "--signkey",
         help="GPG key ID if signing RPMs to deploy")
-    iog.add_option('', "--genconf", action="store_true",
-        help="Run genconf command automatically after initialization finished")
     iog.add_option('', "--no-genconf", action="store_false", dest="genconf",
         help="Do not run genconf command after initialization finished")
     p.add_option_group(iog)

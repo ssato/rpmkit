@@ -60,7 +60,7 @@ def _init_by_defaults():
         "fullname": E.get_fullname(),
         "dists_full": ",".join(distributions_full),
         "dists": ",".join(distributions),
-        "genconf": False,
+        "genconf": True,
     })
 
     defaults["distribution_choices"] = defaults["dists_full"]  # save it.
