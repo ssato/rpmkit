@@ -73,19 +73,19 @@ class Test_10_parse_dist_option(unittest.TestCase):
     def test_10_single_dist(self):
         self.assertEquals(
             P.parse_dist_option("fedora-16-i386"),
-            ('fedora', '16', 'i386', 'fedora-16', 'i386')
+            ('fedora', '16', 'i386', 'fedora-16')
         )
 
     def test_20_single_dist_w_bdist(self):
         self.assertEquals(
             P.parse_dist_option("fedora-16-i386:fedora-extras-16-i386"),
-            ('fedora', '16', 'i386', 'fedora-extras-16', 'i386')
+            ('fedora', '16', 'i386', 'fedora-extras-16')
         )
 
     def test_21_single_dist_w_bdist_w_custom_sep(self):
         self.assertEquals(
             P.parse_dist_option("fedora-16-i386|fedora-extras-16-i386", "|"),
-            ('fedora', '16', 'i386', 'fedora-extras-16', 'i386')
+            ('fedora', '16', 'i386', 'fedora-extras-16')
         )
 
     def test_30_single_dist_w_bdists(self):
@@ -93,7 +93,7 @@ class Test_10_parse_dist_option(unittest.TestCase):
             P.parse_dist_option(
                 "fedora-16-i386:fedora-extras-16-i386:fedora-foo-bar"
             ),
-            ('fedora', '16', 'i386', 'fedora-extras-16', 'i386')
+            ('fedora', '16', 'i386', 'fedora-extras-16')
         )
 
 
@@ -102,13 +102,13 @@ class Test_20_parse_dists_option(unittest.TestCase):
     def test_00_single_dist(self):
         self.assertEquals(
             P.parse_dists_option("fedora-16-i386"),
-            [('fedora', '16', 'i386', 'fedora-16', 'i386')]
+            [('fedora', '16', 'i386', 'fedora-16')]
         )
 
     def test_10_single_dist_w_bdist(self):
         self.assertEquals(
             P.parse_dists_option("fedora-16-i386:fedora-extras-16-i386"),
-            [('fedora', '16', 'i386', 'fedora-extras-16', 'i386')]
+            [('fedora', '16', 'i386', 'fedora-extras-16')]
         )
 
     def test_20_multi_dists_w_bdist(self):
@@ -118,8 +118,8 @@ class Test_20_parse_dists_option(unittest.TestCase):
         self.assertEquals(
             P.parse_dists_option(ds),
             [
-                ('fedora', '16', 'i386', 'fedora-extras-16', 'i386'),
-                ('rhel', '6', 'i386', 'rhel-extras-6', 'i386')
+                ('fedora', '16', 'i386', 'fedora-extras-16'),
+                ('rhel', '6', 'i386', 'rhel-extras-6')
             ]
         )
 

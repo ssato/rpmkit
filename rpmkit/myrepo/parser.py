@@ -80,9 +80,9 @@ def parse_dist_option(dist, sep=":"):
     ... except AssertionError:
     ...     pass
     >>> parse_dist_option("fedora-16-i386")
-    ('fedora', '16', 'i386', 'fedora-16', 'i386')
+    ('fedora', '16', 'i386', 'fedora-16')
     >>> parse_dist_option("fedora-16-i386:fedora-extras-16-i386")
-    ('fedora', '16', 'i386', 'fedora-extras-16', 'i386')
+    ('fedora', '16', 'i386', 'fedora-extras-16')
     """
     emh = "Invalid distribution label '%s'. " % dist
 
@@ -100,7 +100,6 @@ def parse_dist_option(dist, sep=":"):
 
     if len(tpl) < 2:
         bdist = name + '-' + ver
-        barch = arch
     else:
         blabel = tpl[1]
         try:
@@ -117,7 +116,7 @@ def parse_dist_option(dist, sep=":"):
                 emh + "Too many separator '%s' found. Ignore the rest." % sep
             )
 
-    return (name, ver, arch, bdist, barch)
+    return (name, ver, arch, bdist)
 
 
 def parse_dists_option(dists, sep=","):
@@ -127,13 +126,13 @@ def parse_dists_option(dists, sep=","):
     #archs = [l.split("-")[-1] for l in labels]
 
     >>> parse_dists_option("fedora-16-i386")
-    [('fedora', '16', 'i386', 'fedora-16', 'i386')]
+    [('fedora', '16', 'i386', 'fedora-16')]
     >>> parse_dists_option("fedora-16-i386:fedora-extras-16-i386")
-    [('fedora', '16', 'i386', 'fedora-extras-16', 'i386')]
+    [('fedora', '16', 'i386', 'fedora-extras-16')]
     >>> ss = ["fedora-16-i386:fedora-extras-16-i386"]
     >>> ss += ["rhel-6-i386:rhel-extras-6-i386"]
-    >>> r = [('fedora', '16', 'i386', 'fedora-extras-16', 'i386')]
-    >>> r += [('rhel', '6', 'i386', 'rhel-extras-6', 'i386')]
+    >>> r = [('fedora', '16', 'i386', 'fedora-extras-16')]
+    >>> r += [('rhel', '6', 'i386', 'rhel-extras-6')]
     >>> assert r == parse_dists_option(",".join(ss))
     """
     return [parse_dist_option(dist) for dist in dists.split(sep)]
