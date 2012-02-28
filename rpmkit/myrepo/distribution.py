@@ -22,23 +22,23 @@ import logging
 import os.path
 
 
-def _get_mockcfg_path(bdist, topdir="/etc/mock"):
+def _get_mockcfg_path(blabel, topdir="/etc/mock"):
     """
-    :param bdist: Build target distribution name, e.g. fedora-16-x86_64
+    :param blabel: Build target distribution label, e.g. fedora-16-x86_64
     :param topdir: Mock's top dir to build srpms
 
     >>> _get_mockcfg_path("fedora-16-x86_64")
     '/etc/mock/fedora-16-x86_64.cfg'
     """
-    return os.path.join(topdir, bdist + ".cfg")
+    return os.path.join(topdir, blabel + ".cfg")
 
 
-def _load_mockcfg_config(bdist, cfg=collections.OrderedDict()):
+def _load_mockcfg_config(blabel, cfg=collections.OrderedDict()):
     """
     FIXME: This is very naive and frail. It may be better to implement in
     similar manner as setup_default_config_opts() does in /usr/sbin/mock.
     """
-    mockcfg = _get_mockcfg_path(bdist)
+    mockcfg = _get_mockcfg_path(blabel)
     try:
         execfile(mockcfg, cfg)
         return cfg
@@ -52,12 +52,12 @@ def _load_mockcfg_config(bdist, cfg=collections.OrderedDict()):
         raise RuntimeError(str(e))
 
 
-def _load_mockcfg_config_opts(bdist):
+def _load_mockcfg_config_opts(blabel):
     """
     Load mock config file and returns $mock_config["config_opts"] as a
     dict (collections.OrderedDict).
 
-    :param bdist: Build target distribution label, e.g. fedora-addon-16-x86_64
+    :param blabel: Build target distribution label, e.g. fedora-addon-16-x86_64
     """
     cfg = collections.OrderedDict()
     cfg["config_opts"] = collections.OrderedDict()
@@ -66,18 +66,20 @@ def _load_mockcfg_config_opts(bdist):
     for k in ["macros", "plugin_conf"]:
         cfg["config_opts"][k] = collections.OrderedDict()
 
-    cfg = _load_mockcfg_config(bdist, cfg)
+    cfg = _load_mockcfg_config(blabel, cfg)
 
     return cfg["config_opts"]
 
 
 @M.memoize
-def load_mockcfg_config_opts(bdist):
-    return _load_mockcfg_config_opts(bdist)
+def load_mockcfg_config_opts(blabel):
+    return _load_mockcfg_config_opts(blabel)
 
 
-def build_cmd(bdist, srpm):
+def build_cmd(blabel, srpm):
     """
+    :param blabel: Build target distribution label, e.g. fedora-16-x86_64
+
     NOTE: mock will print log messages to stderr (not stdout).
     """
     # suppress log messages from mock in accordance with log level:
@@ -86,7 +88,7 @@ def build_cmd(bdist, srpm):
     else:
         logc = ""
 
-    return ' '.join(("mock -r", bdist, srpm, logc))
+    return ' '.join(("mock -r", blabel, srpm, logc))
 
 
 class Distribution(object):
@@ -96,25 +98,31 @@ class Distribution(object):
         :param dname:  Distribution name, e.g. "fedora", "rhel"
         :param dver:   Distribution version, e.g. "16", "6"
         :param arch:   Architecture, e.g. "i386", "x86_64"
-        :param bdist:  Build target distribution, e.g. "fedora-14-i386"
+        :param bdist:  Build target distribution, e.g. "fedora-14"
         """
         self.name = dname
         self.version = dver
         self.arch = arch
+        self.dist = dname + '-' + dver
 
         self.label = '-'.join((dname, dver, arch))
-        self.bdist = self.label if bdist is None else bdist
+
+        self.bdist = self.dist if bdist is None else bdist
+        self.blabel = self.bdist + '-' + arch
 
     def load_mockcfg_config_opts(self):
-        return load_mockcfg_config_opts(self.bdist)
+        return load_mockcfg_config_opts(self.blabel)
 
     def rpmdir(self):
         """Dir to save built RPMs.
         """
-        return "/var/lib/mock/%s/result" % self.bdist
+        return "/var/lib/mock/%s/result" % self.blabel
 
     def build_cmd(self, srpm):
-        return build_cmd(self.bdist, srpm)
+        return build_cmd(self.blabel, srpm)
+
+    def same(self, other):
+        return self.dist == other.dist and self.bdist == other.bdist
 
 
 # vim:sw=4 ts=4 et:

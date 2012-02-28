@@ -79,9 +79,9 @@ class Test_10_Distribution(unittest.TestCase):
         """
         return
 
-        (n, v, a) = sample_base_dist().split("-")
-        bdist = "%s-extra-packages-%s-%s-%s" % (n, n, v, a)
-        d = D.Distribution(n, v, bdist_label=bdist)
+        (n, v, _a) = sample_base_dist().split("-")
+        bdist = "%s-extra-packages-%s-%s" % (n, n, v)
+        d = D.Distribution(n, v, bdist=bdist)
 
         self.assertTrue(isinstance(d, D.Distribution))
 
