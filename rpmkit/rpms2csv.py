@@ -6,6 +6,7 @@
 import rpmkit.rpm2json as RJ
 
 import glob
+import operator
 import optparse
 import os
 import os.path
@@ -58,7 +59,12 @@ def main(args):
         print >> output, ", ".join(s.title() for s in tags)
         format = "%(" + ")s,%(".join(tags) + ")s"
 
-        for x in rpms_g(options.rpmsdir):
+        rpms = sorted(
+            rpms_g(options.rpmsdir),
+            key=operator.itemgetter("name"),
+        )
+
+        for x in rpms:
             print >> output, format % x
 
 
