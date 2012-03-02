@@ -1,0 +1,8 @@
+#! /usr/bin/python
+#
+import rpmkit.rpms2csv
+import sys
+
+rpmkit.rpms2csv.main(sys.argv)
+
+# vim:sw=4 ts=4 et:
