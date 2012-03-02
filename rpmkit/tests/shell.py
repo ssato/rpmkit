@@ -44,14 +44,21 @@ class Test_00_ThreadedCommand(unittest.TestCase):
     def test_run__10_workdir(self):
         self.assertEquals(SH.ThreadedCommand("true", workdir="/tmp").run(), 0)
 
-    def test_run__11_workdir(self):
+    def test_run__11_workdir__exceptions(self):
         if os.getuid() == 0:
             print("Skip this test because you're root.")
             return
 
-        self.assertNotEquals(
+        with self.assertRaises(OSError) as cm:
             SH.ThreadedCommand("true", workdir="/root").run(), 0
-        )
+
+    def test_run__12_workdir__no_exceptions(self):
+        if os.getuid() == 0:
+            print("Skip this test because you're root.")
+            return
+
+        rc = SH.ThreadedCommand("true", workdir="/root", nofail=True).run()
+        self.assertNotEquals(rc, 0, "rc=" + str(rc))
 
     def test_run__30_timeout(self):
         rc = SH.ThreadedCommand("sleep 10", timeout=1).run()
