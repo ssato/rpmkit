@@ -16,10 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.myrepo.globals as G
-import rpmkit.myrepo.shell as SH
 import rpmkit.myrepo.utils as U
 import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
+import rpmkit.shell as SH
 
 import glob
 import logging
