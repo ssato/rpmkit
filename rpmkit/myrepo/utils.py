@@ -17,44 +17,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+import rpmkit.globals as G
 import rpmkit.tenjinwrapper as T
-
+import rpmkit.utils as U
 import os.path
 
 
-def typecheck(obj, expected_type_or_class):
-    """Type checker.
-
-    :param obj: Target object to check type
-    :param expected_type_or_class: Expected type or class of $obj
-    """
-    if not isinstance(obj, expected_type_or_class):
-        m = "Expected %s but got %s type. obj=%s" % (
-            repr(expected_type_or_class), type(obj), str(obj),
-        )
-        raise TypeError(m)
+# Aliases:
+typecheck = U.typecheck
+is_local = U.is_local
 
 
-def compile_template(tmpl, context={}):
+def compile_template(tmpl, context={}, spaths=[G.RPMKIT_TEMPLATE_PATH]):
     """
     :param tmpl: Template file name or (abs or rel) path
     :param context: Context parameters to instantiate the template :: dict
     """
-    return T.template_compile(os.path.join("1/myrepo", tmpl), context)
-
-
-def is_local(fqdn_or_hostname):
-    """
-    >>> is_local("localhost")
-    True
-    >>> is_local("localhost.localdomain")
-    True
-    >>> is_local("repo-server.example.com")
-    False
-    >>> is_local("127.0.0.1")  # special case:
-    False
-    """
-    return fqdn_or_hostname.startswith("localhost")
+    return T.template_compile(os.path.join("1/myrepo", tmpl), context, spaths)
 
 
 # vim:sw=4 ts=4 et:
