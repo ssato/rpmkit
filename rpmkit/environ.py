@@ -73,7 +73,7 @@ def hostname():
 def get_username():
     """Get username.
     """
-    return os.environ.get("M.ER", os.getlogin())
+    return os.environ.get("USER", os.getlogin())
 
 
 @M.memoize
