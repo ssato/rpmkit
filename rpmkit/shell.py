@@ -15,14 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.myrepo.environ as E
-import rpmkit.myrepo.utils as U
+import rpmkit.environ as E
+import rpmkit.utils as U
 
 import logging
 import os
 import os.path
-import subprocess
 import sys
+import subprocess
+import tempfile
 import threading
 import time
 
@@ -30,23 +31,63 @@ import time
 MIN_TIMEOUT = 5  # [sec]
 
 
-def is_valid_timeout(timeout):
+def _debug_mode():
+    return logging.getLogger().level < logging.INFO  # logging.DEBUG
+
+
+def _is_valid_timeout(timeout):
     """
-    >>> is_valid_timeout(None)
+    >>> _is_valid_timeout(None)
     True
-    >>> is_valid_timeout(0)
+    >>> _is_valid_timeout(0)
     True
-    >>> is_valid_timeout(10)
+    >>> _is_valid_timeout(10)
     True
-    >>> is_valid_timeout(-1)
+    >>> _is_valid_timeout(-1)
     False
-    >>> is_valid_timeout("10")
+    >>> _is_valid_timeout("10")
     False
     """
     if timeout is None:
         return True
     else:
         return isinstance(timeout, int) and timeout >= 0
+
+
+def _flush_tempfile(f, dst=sys.stdout):
+    f.seek(0)
+    out = f.read()
+    if out:
+        print >> dst, out
+
+
+def _terminate(proc):
+    """
+    Force terminating the given proc :: subprocess.Popen
+
+    :return:  status code of proc
+    """
+    U.typecheck(proc, subprocess.Popen)
+
+    if proc.returncode is not None:  # It's finished already.
+        return proc.returncode
+
+    # First, try sending SIGTERM to stop it.
+    proc.terminate()
+    rc = proc.poll()
+
+    if rc is None:
+        proc.kill()  # Second, try sending SIGKILL to kill it.
+    else:
+        return rc
+
+    # Avoid creating zonbie.
+    try:
+        (_pid, _rc) = os.waitpid(proc.pid, os.WNOHANG)
+    except OSError:
+        pass
+
+    return -1
 
 
 class ThreadedCommand(object):
@@ -64,7 +105,7 @@ class ThreadedCommand(object):
         :param workdir: Working directory in which command runs
         :param timeout: Time out in seconds
         """
-        assert is_valid_timeout(timeout), "Invalid timeout: " + str(timeout)
+        assert _is_valid_timeout(timeout), "Invalid timeout: " + str(timeout)
 
         self.user = E.get_username() if user is None else user
         self.host = host
@@ -77,12 +118,14 @@ class ThreadedCommand(object):
         else:
             cmd = "ssh -o ConnectTimeout=%d %s@%s 'cd %s && %s'" % \
                 (MIN_TIMEOUT, user, host, workdir, cmd)
-            logging.debug("host %s is remote. Rewrite cmd to " + cmd)
+            logging.debug(
+                "'%s' is remote host. Rewrite cmd to %s" % (host, cmd)
+            )
             workdir = os.curdir
 
         self.cmd = cmd
         self.workdir = workdir
-        self.cmd_str = "%s [%s]" % (self.cmd, self.workdir)
+        self.cmd_str = "%s [%s]" % (cmd, workdir)
         self.thread = None
         self.proc = None
         self.result = None
@@ -91,44 +134,39 @@ class ThreadedCommand(object):
         return self.cmd_str
 
     def run_async(self):
+        """
+        FIXME: Avoid deadlock in subprocesses. See also http://goo.gl/xpYeE
+        """
         def func():
-            if logging.getLogger().level < logging.INFO:  # logging.DEBUG
-                stdout = sys.stdout
-            else:
-                stdout = open(getattr(os, "devnull", "/dev/null"), "w")
-
             logging.info("Run: " + self.cmd_str)
+            stdin = open(os.devnull, "r")
+            stdout = tempfile.TemporaryFile()
+            stderr = tempfile.TemporaryFile()
+
             self.proc = subprocess.Popen(
                 self.cmd,
                 bufsize=4096,
                 shell=True,
                 cwd=self.workdir,
-                stdin=open("/dev/null", "r"),
+                stdin=stdin,
                 stdout=stdout,
-                stderr=sys.stderr,
+                stderr=stderr,
             )
-            self.result = self.proc.wait()
-            logging.debug("Finished: %s" % self.cmd_str)
+            timer = threading.Timer(self.timeout, _terminate, [self.proc])
+            timer.start()
 
-        self.thread = threading.Thread(target=func)
+            while self.result is None:
+                self.result = self.proc.poll()
+
+            if _debug_mode():
+                _flush_tempfile(stdout)
+            _flush_tempfile(stderr, sys.stderr)
+
+            timer.cancel()
+            logging.debug("Finished: " + self.cmd_str)
+
+        self.thread = threading.Thread(name=self.cmd_str[:20], target=func)
         self.thread.start()
-
-    def terminate(self):
-        if self.proc and self.result is None:
-            logging.warn("Terminating: " + self.cmd_str)
-            self.proc.terminate()
-
-            rc = self.proc.poll()
-            if rc is None:
-                self.proc.kill()
-
-            # avoid creating zonbie.
-            try:
-                (_pid, _rc) = os.waitpid(self.proc.pid, os.WNOHANG)
-            except OSError:
-                pass
-
-            self.result = -1
 
     def get_result(self):
         if self.thread is None:
@@ -139,11 +177,12 @@ class ThreadedCommand(object):
             return -1
 
         # it may block.
-        self.thread.join(self.timeout)
+        self.thread.join()
 
         # NOTE: It seems there is a case that thread is not alive but process
         # spawned from that thread is still alive.
-        self.terminate()
+        if self.proc and self.proc.returncode is None:
+            self.result = _terminate(self.proc)
 
         if self.thread.isAlive():
             self.thread.join()
