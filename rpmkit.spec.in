@@ -56,6 +56,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6-2
+- Fixed a myrepo bug that default template search path list is not set
+- Moved some common parts from rpmkit.myrepo.* to rpmkit.{globals,utils}
+
 * Wed Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6-1
 - New upstream
 - Fixed a bug that remote command is not used
