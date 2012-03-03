@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.myrepo.repoops as RO
-import rpmkit.shell as SH
+import rpmkit.shell2 as SH
 
 import glob
 import logging
@@ -75,13 +75,16 @@ def deploy(repo, srpm, build_=True):
         c = sign_rpms_cmd(repo.signkey, rpms_to_sign)
         subprocess.check_call(c, shell=True)
 
-    cs = [
-        SH.ThreadedCommand(
+    tasks = [
+        SH.Task(
             RO.copy_cmd(repo, rpm, dest), timeout=repo.timeout
         ) for rpm, dest in rpms_to_deploy
     ]
-    assert all(rc == 0 for rc in SH.prun(cs))
-    assert all(rc == 0 for rc in update(repo))
+    rcs = SH.prun(tasks)
+    assert all(rc == 0 for rc in rcs), "results=" + str(rcs)
+
+    rcs = update(repo)
+    assert all(rc == 0 for rc in rcs), "results=" + str(rcs)
 
     return 0
 

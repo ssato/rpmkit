@@ -19,7 +19,7 @@ import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.utils as U
 import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
-import rpmkit.shell as SH
+import rpmkit.shell2 as SH
 
 import glob
 import logging
@@ -133,10 +133,12 @@ def rpm_build_cmd(repo, workdir, listfile, pname):
 
 
 def build(repo, srpm):
-    return SH.prun([
-        SH.ThreadedCommand(d.build_cmd(srpm), timeout=repo.timeout) \
-            for d in dists_by_srpm(repo, srpm)
-    ])
+    tasks = [
+        SH.Task(
+            d.build_cmd(srpm), timeout=repo.timeout
+        ) for d in dists_by_srpm(repo, srpm)
+    ]
+    return SH.prun(tasks)
 
 
 def update_metadata(repo):
@@ -156,10 +158,12 @@ def update_metadata(repo):
     c += " && createrepo --update --deltas --oldpackagedirs . --database ."
     c += " || createrepo --deltas --oldpackagedirs . --database ."
 
-    return SH.prun([
-        SH.ThreadedCommand(c, repo.user, repo.server, d, timeout=repo.timeout)
-            for d in repo.rpmdirs()
-    ])
+    tasks = [
+        SH.Task(
+            c, repo.user, repo.server, d, timeout=repo.timeout
+        ) for d in repo.rpmdirs()
+    ]
+    return SH.prun(tasks)
 
 
 def build_mock_cfg_srpm(repo, workdir):
