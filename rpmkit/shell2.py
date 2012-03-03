@@ -147,6 +147,7 @@ def do_task(task, stop_on_error=True):
     stdout = sys.stdout if _debug_mode() else open(os.devnull, "w")
 
     try:
+        logging.info("Run: " + str(task))
         task.proc = subprocess.Popen(
             task.cmd,
             bufsize=4096,
