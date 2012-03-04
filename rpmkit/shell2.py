@@ -164,12 +164,15 @@ def do_task(task, stop_on_error=True):
         logging.warn(str(e))
         return -1
 
-    timer = threading.Timer(task.timeout, _terminate, [task.proc])
-    timer.start()
+    if task.timeout is not None:
+        timer = threading.Timer(task.timeout, _terminate, [task.proc])
+        timer.start()
 
     task.returncode = task.proc.wait()  # may block forever.
 
-    timer.cancel()
+    if task.timeout is not None:
+        timer.cancel()
+
     sys.stdout.flush()
     sys.stderr.flush()
 
