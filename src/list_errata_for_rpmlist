@@ -1,8 +1,0 @@
-#! /usr/bin/python
-#
-import rpmkit.list_errata_for_rpmlist
-import sys
-
-sys.exit(rpmkit.list_errata_for_rpmlist.main(sys.argv))
-
-# vim: set sw=4 ts=4 expandtab:
