@@ -1,15 +1,28 @@
 About
 =======================
 
-Here are some rpm related scripts distributed under GPLv3+/GPLv2+.
+This is a collection of some rpm related tools distributed under
+GPLv3+/GPLv2+/MIT.
 
-* README: this file
 * list-requires-by-package-name.sh: list required rpms by package name
 * list-srpmnames-by-file.sh: list names of src.rpms by file
 * rpm2json.py: dump json expression of rpm metadata
 * rpms2sqldb.py: scan rpm files and generated metadata database (sqlite)
 * swapi.py: cui tool to call Spacewalk/RHN RPC API from command line
 
+
+* identrpm: Identify given rpm and print info
+* list-requires-by-package-name.sh: List requirements for given rpm name[s],
+  gotten from the sqlite database built by rpms2sqldb.
+* list-srpmnames-by-file.sh: List srpmnames List source rpm names for given
+  files, gotten from the sqlite database built by rpms2sqldb.
+* myrepo: A tool to manage custom yum repositories: Initialize your custom yum
+  repositories, update meta data of yum repositories, build and deploy source
+  rpms to yum repositories, etc.
+* rpm2json: Dump rpm metadata in JSON format
+* rpms2csv: Dump metadata of given rpms in CSV format
+* rpms2sqldb: Create SQLite database of given rpms metadata
+* swapi: Query RHN/Satellite
 
 
 Build
