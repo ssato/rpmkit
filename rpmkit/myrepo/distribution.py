@@ -86,7 +86,7 @@ def build_cmd(blabel, srpm):
     if logging.getLogger().level >= logging.WARNING:
         logc = "> /dev/null 2> /dev/null"
     else:
-        logc = ""
+        logc = "-v" if logging.getLogger().level < logging.INFO else ""
 
     return ' '.join(("mock -r", blabel, srpm, logc))
 
