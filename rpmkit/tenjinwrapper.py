@@ -61,8 +61,11 @@ def find_template(path_or_name, search_paths=[], env_var="RPMKIT_TEMPLATE_PATH")
     :param env_var: Environment variable name to set template search path
     """
     if not search_paths:
-        p = os.environ.get(env_var, False)
-        search_paths = [p, os.curdir] if p else [os.curdir]
+        search_paths = [os.curdir]
+
+    p = os.environ.get(env_var, False)
+    if p:
+        search_paths = [p] + search_paths
 
     # Try $path_or_name at first:
     if os.path.exists(path_or_name):
