@@ -26,10 +26,10 @@ import rpmkit.Bunch as B
 
 import itertools
 import logging
+import multiprocessing
 import operator
 import optparse
 import sys
-import threading
 import time
 
 
@@ -186,6 +186,10 @@ Examples:
     return p
 
 
+def _action(func, args):
+    func(*args)
+
+
 def do_command(cmd, repos_g, srpm=None):
     """
     :param cmd: sub command name :: str
@@ -193,27 +197,28 @@ def do_command(cmd, repos_g, srpm=None):
     :param srpm: path to the target src.rpm :: str
     """
     f = getattr(CMD, cmd)
-    threads = []
+    jobs = []
 
     for repo in repos_g:
-        args = (repo, ) if srpm is None else (repo, srpm)
+        rest_args = (repo, ) if srpm is None else (repo, srpm)
 
-        thread = threading.Thread(target=f, args=args)
-        thread.start()
+        proc = multiprocessing.Process(target=_action, args=(f, rest_args))
+        proc.start()
 
-        threads.append(thread)
+        jobs.append(proc)
 
     time.sleep(G.MIN_TIMEOUT)
 
-    for thread in threads:
+    for proc in jobs:
         # it will block.
-        thread.join()
+        proc.join(G.BUILD_TIMEOUT)
 
         # Is there any possibility thread still live?
-        if thread.is_alive():
-            logging.info("Terminating the thread")
+        if proc.is_alive():
+            logging.info("Terminating the proc: " + str(proc.pid))
 
-            thread.join()
+            proc.join(G.BUILD_TIMEOUT)  # one more wait
+            proc.terminate()
 
 
 def main(argv=sys.argv):
