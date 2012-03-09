@@ -57,11 +57,14 @@ def _is_valid_timeout(timeout):
         return isinstance(timeout, int) and timeout >= 0
 
 
-def _flush_out(f, dst=sys.stdout):
-    f.seek(0)
-    out = f.read()
-    if out:
-        print >> dst, out
+def _cleanup_process(pid):
+    """
+    Cleanups to avoid creating zonbie.
+    """
+    try:
+        (_pid, _rc) = os.waitpid(pid, os.WNOHANG)
+    except OSError:
+        pass
 
 
 def _terminate(proc):
@@ -72,91 +75,48 @@ def _terminate(proc):
     """
     U.typecheck(proc, subprocess.Popen)
 
-    if proc.returncode is not None:  # It's finished already.
-        return proc.returncode
-
-    # First, try sending SIGTERM to stop it.
-    proc.terminate()
     rc = proc.poll()
-
-    if rc is None:
-        proc.kill()  # Second, try sending SIGKILL to kill it.
-    else:
+    if rc is not None:  # It's finished already.
         return rc
 
-    # Avoid creating zonbie.
-    try:
-        (_pid, _rc) = os.waitpid(proc.pid, os.WNOHANG)
-    except OSError:
-        pass
+    proc.terminate()
+    time.sleep(1)
+    rc = proc.poll()
+
+    if rc is not None:
+        return rc
+
+    proc.kill()
+    _cleanup_process(proc.pid)
 
     return -1
 
 
-def worker(task):
-    """
-    :param task: Task object
-    """
-    stdin = open(os.devnull, "r")
-    stdout = tempfile.TemporaryFile()
-    stderr = tempfile.TemporaryFile()
-
-    try:
-        task.proc = subprocess.Popen(
-            task.cmd,
-            bufsize=4096,
-            shell=True,
-            cwd=task.workdir,
-            stdin=None,
-            stdout=stdout,
-            stderr=stderr,
-        )
-    except Exception, e:
-        if task.nofail:
-            logging.warn(str(e))
-            task.result = -1
-            return task.result
-        else:
-            raise
-
-    timer = threading.Timer(task.timeout, _terminate, [task.proc])
-    timer.start()
-
-    task.result = task.proc.wait()  # may block forever.
-
-    timer.cancel()
-
-    if _debug_mode():
-        _flush_out(stdout)
-    _flush_out(stderr, sys.stderr)
-
-    sys.stdout.flush()
-    sys.stderr.flush()
-
-    return task.result
+def init(loglevel=logging.INFO):
+    multiprocessing.log_to_stderr()
+    multiprocessing.get_logger().setLevel(loglevel)
+    results = multiprocessing.Queue()
+    return results
 
 
-class Task(B.Bunch):
+class Task(object):
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
-            timeout=MAX_TIMEOUT, nofail=False):
+            timeout=MAX_TIMEOUT):
         """
         :param cmd: Command string
         :param user: User to run command
         :param host: Host to run command
         :param workdir: Working directory in which command runs
         :param timeout: Time out in seconds
-        :param nofail: Capture exceptions and never fails
         """
         assert _is_valid_timeout(timeout), "Invalid timeout: " + str(timeout)
 
         self.user = E.get_username() if user is None else user
         self.host = host
         self.timeout = timeout
-        self.nofail = nofail
 
         if U.is_local(host):
-            #logging.debug("host %s is local" % host)
             if "~" in workdir:
                 workdir = os.path.expanduser(workdir)
         else:
@@ -168,125 +128,95 @@ class Task(B.Bunch):
         self.cmd = cmd
         self.workdir = workdir
         self.cmd_str = "%s [%s]" % (cmd, workdir)
-        self.thread = None
         self.proc = None
-        self.result = None
-
-    def description(self):
-        return self.cmd_str
+        self.returncode = None
 
     def __str__(self):
         return self.cmd_str
 
     def finished(self):
-        return not self.result is None
-
-    def returncode(self):
-        return self.result
+        return not self.returncode() is None
 
 
-class ThreadedCommand(object):
+def do_task(task, stop_on_error=True):
     """
-    Based on the idea found at
-    http://stackoverflow.com/questions/1191374/subprocess-with-timeout
+    :param task: Task object
+    :param stop_on_error: Stop task when any error occurs if True
     """
+    stdin = open(os.devnull, "r")
+    stdout = sys.stdout if _debug_mode() else open(os.devnull, "w")
 
-    def __init__(self, task, *args, **kwargs):
-        """
-        :param task: Task object or cmd
-        """
-        if not isinstance(task, Task):
-            task = Task(task, *args, **kwargs)
-
-        self.task = task
-
-    def __str__(self):
-        return self.task.description()
-
-    def timeout(self):
-        return self.task.timeout
-
-    def run_async(self):
-        """
-        FIXME: Avoid deadlock in subprocesses. See also http://goo.gl/xpYeE
-        """
-        logging.info("Run: " + self.task.description())
-
-        self.thread = threading.Thread(
-            name=self.task.description()[:20],
-            target=worker,
-            args=(self.task, ),
+    try:
+        logging.info("Run: " + str(task))
+        task.proc = subprocess.Popen(
+            task.cmd,
+            bufsize=4096,
+            shell=True,
+            cwd=task.workdir,
+            stdin=stdin,
+            stdout=stdout,
+            stderr=sys.stderr,
         )
-        self.thread.start()
+    except Exception, e:
+        if stop_on_error:
+            raise
 
-        logging.debug("Finished: " + self.task.description())
+        logging.warn(str(e))
+        return -1
 
-    def get_result(self):
-        if self.thread is None:
-            logging.warn(
-                "Thread does not exist. Did you call %s.run_async() ?" % \
-                    self.__class__.__name__
-            )
-            return -1
+    if task.timeout is not None:
+        timer = threading.Timer(task.timeout, _terminate, [task.proc])
+        timer.start()
 
-        # it may block.
-        self.thread.join()
+    task.returncode = task.proc.wait()  # may block forever.
 
-        # NOTE: It seems there is a case that thread is not alive but process
-        # spawned from that thread is still alive.
-        if not self.task.finished():
-            self.task.result = _terminate(self.task.proc)
+    if task.timeout is not None:
+        timer.cancel()
 
-        if self.thread.isAlive():
-            self.thread.join()
+    sys.stdout.flush()
+    sys.stderr.flush()
 
-        return self.task.result
-
-    def run(self):
-        self.run_async()
-        return self.get_result()
+    return task.returncode
 
 
 def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
         stop_on_error=False):
     """
-    :param stop_on_error: Whether to raise exception if any errors occurred.
+    :param stop_on_error: Do not catch exceptions of errors if true
     """
     task = Task(cmd, user, host, workdir, timeout)
-    rc = ThreadedCommand(task).run()
+    proc = multiprocessing.Process(target=do_task, args=(task, stop_on_error))
 
-    if rc != 0:
-        emsg = "Failed: %s, rc=%d" % (str(task), rc)
+    proc.start()
+    proc.join(timeout)
 
-        if stop_on_error:
-            raise RuntimeError(emsg)
-        else:
-            logging.warn(emsg)
+    if proc.is_alive():
+        proc.terminate()
+        proc.join()
 
-    return rc
+        _cleanup_process(proc.pid)
+
+    # TODO: set exit code to subprocess' return code:
+    return proc.exitcode
 
 
-def prun(cs):
+def prun(tasks):
     """
-    :param cs: A list of ThreadedCommand objects
+    :param tasks: Task objects
     """
-    cs_w_t = sorted(
-        (c for c in cs if c.timeout() is not None), key=lambda c: c.timeout()
-    )
-    cs_wo_t = [c for c in cs if c.timeout() is None]
+    def pool_initializer():
+        logging.info("Starting: " + multiprocessing.current_process().name)
 
-    for c in reversed(cs_w_t):
-        c.run_async()
+    pool = multiprocessing.Pool(initializer=pool_initializer)
+    results = pool.map(do_task, tasks)
+    pool.close()
+    pool.join()
 
-    for c in cs_wo_t:
-        c.run_async()
+    return results
 
-    # no timeouts suggests these should finish jobs immedicately.
-    rcs = [c.get_result() for c in cs_wo_t]
 
-    rcs += [c.get_result() for c in cs_w_t]
-
-    return rcs
+if __name__ == '__main__':
+    results = init()
 
 
 # vim:sw=4 ts=4 et:

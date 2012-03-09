@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.myrepo.repoops as RO
-import rpmkit.shell2 as SH
+import rpmkit.shell as SH
 
 import glob
 import logging
