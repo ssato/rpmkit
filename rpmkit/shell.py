@@ -99,6 +99,15 @@ def init(loglevel=logging.INFO):
     return results
 
 
+class TaskError(Exception):
+
+    def __init__(self, rc=-1):
+        self._rc = rc
+
+    def __str__(self):
+        return "rc=" + str(self._rc)
+
+
 class Task(object):
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
@@ -135,7 +144,10 @@ class Task(object):
         return self.cmd_str
 
     def finished(self):
-        return not self.returncode() is None
+        return not self.rc() is None
+
+    def rc(self):
+        return self.returncode
 
 
 def do_task(task, stop_on_error=True):
@@ -157,7 +169,7 @@ def do_task(task, stop_on_error=True):
             stdout=stdout,
             stderr=sys.stderr,
         )
-    except Exception, e:
+    except Exception as e:
         if stop_on_error:
             raise
 
@@ -176,7 +188,10 @@ def do_task(task, stop_on_error=True):
     sys.stdout.flush()
     sys.stderr.flush()
 
-    return task.returncode
+    if task.rc() != 0 and stop_on_error:
+        raise TaskError(task.rc())
+
+    return task.rc()
 
 
 def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
@@ -196,8 +211,7 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
 
         _cleanup_process(proc.pid)
 
-    # TODO: set exit code to subprocess' return code:
-    return proc.exitcode
+    return task.rc()
 
 
 def prun(tasks):

@@ -105,6 +105,16 @@ class Test_20_do_task(unittest.TestCase):
         task = SH.Task("true", timeout=10)
         self.assertEquals(SH.do_task(task), 0)
 
+    def test_01_do_task__no_errors_but_not_return_0_and_exception_raised(self):
+        task = SH.Task("false", timeout=10)
+
+        with self.assertRaises(SH.TaskError) as cm:
+            SH.do_task(task)
+
+    def test_02_do_task__no_errors_but_not_return_0(self):
+        task = SH.Task("false", timeout=10)
+        self.assertNotEquals(SH.do_task(task, stop_on_error=False), 0)
+
     def test_10_do_task__w_permission_denied_error(self):
         if os.getuid() == 0:
             print("Skip this test because you're root.")
@@ -125,7 +135,14 @@ class Test_20_do_task(unittest.TestCase):
 
     def test_30_do_task__timeout(self):
         task = SH.Task("sleep 10", timeout=1)
-        self.assertNotEquals(SH.do_task(task), 0)
+
+        with self.assertRaises(SH.TaskError) as cm:
+            SH.do_task(task)
+
+    def test_31_do_task__timeout__w_rc(self):
+        task = SH.Task("sleep 10", timeout=1)
+
+        self.assertNotEquals(SH.do_task(task, stop_on_error=False), 0)
 
 
 class Test_30_run(unittest.TestCase):
@@ -141,9 +158,8 @@ class Test_30_run(unittest.TestCase):
             print("Skip this test because you're root.")
             return
 
-        # TODO:
-        #self.assertEquals(SH.run("ls /root", stop_on_error=True), -1)
-        self.assertEquals(SH.run("ls /root", stop_on_error=True), 0)
+        with self.assertRaises(SH.TaskError) as cm:
+            SH.run("ls /root", stop_on_error=True)
 
     def test_30_run__ignore_permission_denied_error(self):
         if os.getuid() == 0:
