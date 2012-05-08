@@ -420,6 +420,58 @@ API_CACHE_EXPIRATIONS = {
 
 VIRTUAL_APIS = dict()
 
+# @see http://www.first.org/cvss/cvss-guide.html
+CVSSS_METRICS_MAP = dict(
+    AV=dict(
+        label="Access Vector",
+        metrics=dict(  # Larger values cause higher risk.
+            L=1,  # Local
+            A=2,  # Adjacent Network, e.g. LAN
+            N=3   # Network
+        ),
+    ),
+    AC=dict(
+        label="Access Complexity",
+        metrics=dict(
+            H=1,  # High
+            M=2,  # Medium
+            L=3,  # Low
+        ),
+    ),
+    Au=dict(
+        label="Authentication",
+        metrics=dict(
+            M=1,  # Multiple
+            S=2,  # Single
+            N=3,  # None
+        ),
+    ),
+    C=dict(
+        label="Confidentiality Impact",
+        metrics=dict(
+            N=1,  # None
+            P=2,  # Partial
+            C=3,  # Complete
+        ),
+    ),
+    I=dict(
+        label="Integrity Impact",
+        metrics=dict(
+            N=1,  # None
+            P=2,  # Partial
+            C=3,  # Complete
+        ),
+    ),
+    A=dict(
+        label="Availability Impact",
+        metrics=dict(
+            N=1,  # None
+            P=2,  # Partial
+            C=3,  # Complete
+        ),
+    ),
+)
+
 
 def str_to_id(s):
     return md5(s).hexdigest()
@@ -538,6 +590,13 @@ def cve2url(cve):
     return "https://www.redhat.com/security/data/cve/%s.html" % cve
 
 
+def cvss_from_vector(cvss_vector):
+    """
+    cvss_from_vector("AV:N/AC:M/Au:N/C:P/I:P/A:P")
+    """
+    pass
+
+
 def __cvss_data(cve, data):
     """
     normalize and extend cvss data.
@@ -579,35 +638,28 @@ def get_cvss_for_cve(cve):
     Get CVSS data for given cve from the Red Hat www site.
 
     :param cve: CVE name, e.g. "CVE-2010-1585" :: str
+    :return:  {"metrics": base_metric :: str, "score": base_score :: str}
 
     See the HTML source of CVE www page for its format, e.g.
     https://www.redhat.com/security/data/cve/CVE-2010-1585.html.
     """
-    marker = "Base Score"
+    def has_cvss_link(tag):
+        return tag.get("href", "").startswith("http://nvd.nist.gov/cvss.cfm")
 
-    def pairs_g(xss):
-        for xs in xss:
-            assert len(xs) > 3, str(xs)
-            yield (xs[0], xs[1])
-            yield (xs[2], xs[3])
+    def is_base_score(tag):
+        return tag.string == "Base Score:"
 
     try:
         data = urlread(cve2url(cve))
         soup = BeautifulSoup.BeautifulSoup(data)
 
-        table = [
-            t for t in soup.findAll("table") if marker in t.tr.td.b.text
-        ][-1]
-        tds = [
-            [td.text for td in tr.findAll("td")] for tr in table.findAll("tr")
-        ]
+        cvss_base_metrics = soup.findAll(has_cvss_link)[0].string
+        cvss_base_score = soup.findAll(is_base_score)[0].parent.td.string
 
-        # e.g. {"Base Score": "6.8", ..., "Access Vector": "Network", ...}
-        d = dict((k.strip(":"), v) for k, v in pairs_g(tds))
-        logging.debug("d=" + str(d))
-
-        if d is not None:
-            return __cvss_data(cve, d)
+        return {
+            "metrics": cvss_base_metrics,
+            "score": cvss_base_score,
+        }
 
     except Exception, e:
         logging.warn(" Could not get CVSS data: err=" + str(e))
@@ -954,8 +1006,10 @@ class JSONEncoder(json.JSONEncoder):
 def results_to_json_str(results, indent=2):
     """
     >>> assert results_to_json_str("abc") == '"abc"'
-    >>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
-    '[123, "abc", {"x": "yz"}]'
+
+    #>>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
+    #'[123, "abc", {"x": "yz"}]'
+
     >>> results_to_json_str([123, 'abc', {'x':'yz'}])
     '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
     """
