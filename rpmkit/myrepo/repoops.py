@@ -19,7 +19,7 @@ import rpmkit.myrepo.globals as G
 import rpmkit.myrepo.utils as U
 import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
-import rpmkit.shell2 as SH
+import rpmkit.shell as SH
 
 import glob
 import logging
