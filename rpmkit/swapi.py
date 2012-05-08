@@ -590,13 +590,6 @@ def cve2url(cve):
     return "https://www.redhat.com/security/data/cve/%s.html" % cve
 
 
-def cvss_from_vector(cvss_vector):
-    """
-    cvss_from_vector("AV:N/AC:M/Au:N/C:P/I:P/A:P")
-    """
-    pass
-
-
 def __cvss_data(cve, data):
     """
     normalize and extend cvss data.
@@ -649,6 +642,8 @@ def get_cvss_for_cve(cve):
     def is_base_score(tag):
         return tag.string == "Base Score:"
 
+    url_fmt = "http://nvd.nist.gov/cvss.cfm?version=2&name=%s&vector=(%s)"
+
     try:
         data = urlread(cve2url(cve))
         soup = BeautifulSoup.BeautifulSoup(data)
@@ -657,8 +652,10 @@ def get_cvss_for_cve(cve):
         cvss_base_score = soup.findAll(is_base_score)[0].parent.td.string
 
         return {
+            "cve": cve,
             "metrics": cvss_base_metrics,
             "score": cvss_base_score,
+            "url": url_fmt % (cve, cvss_base_metrics),
         }
 
     except Exception, e:
