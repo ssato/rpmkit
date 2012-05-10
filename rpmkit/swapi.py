@@ -753,7 +753,7 @@ class Cache(object):
             return False
 
         if not os.path.exists(self.path(obj)):
-            logging.info(" Cache file does not found for " + str(obj))
+            logging.info(" Cache file not found for " + str(obj))
             return True
 
         try:
