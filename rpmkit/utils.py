@@ -24,6 +24,11 @@ import operator
 import os.path
 
 try:
+    from functools import reduce as foldl
+except ImportError:
+    foldl = reduce
+
+try:
     chain_from_iterable = itertools.chain.from_iterable
 except AttributeError:
     # Borrowed from library doc, 9.7.1 Itertools functions:
@@ -81,50 +86,80 @@ def is_foldable(xs):
     return isinstance(xs, (list, tuple)) or callable(getattr(xs, "next", None))
 
 
-def concat(xss):
+def _concat(xss):
     """
-    >>> concat([[]])
+    >>> _concat([[]])
     []
-    >>> concat((()))
+    >>> _concat((()))
     []
-    >>> concat([[1,2,3],[4,5]])
+    >>> _concat([[1,2,3],[4,5]])
     [1, 2, 3, 4, 5]
-    >>> concat([[1,2,3],[4,5,[6,7]]])
+    >>> _concat([[1,2,3],[4,5,[6,7]]])
     [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat(((1,2,3),(4,5,[6,7])))
+    >>> _concat(((1,2,3),(4,5,[6,7])))
     [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat(((1,2,3),(4,5,[6,7])))
+    >>> _concat(((1,2,3),(4,5,[6,7])))
     [1, 2, 3, 4, 5, [6, 7]]
-    >>> concat((i, i*2) for i in range(3))
+    >>> _concat((i, i*2) for i in range(3))
     [0, 0, 1, 2, 2, 4]
     """
     return list(chain_from_iterable(xs for xs in xss))
 
 
-@memoize
-def flatten(xss):
+def _flatten(xss):
     """
-    >>> flatten([])
+    >>> _flatten([])
     []
-    >>> flatten([[1,2,3],[4,5]])
+    >>> _flatten([[1,2,3],[4,5]])
     [1, 2, 3, 4, 5]
-    >>> flatten([[1,2,[3]],[4,[5,6]]])
+    >>> _flatten([[1,2,[3]],[4,[5,6]]])
     [1, 2, 3, 4, 5, 6]
 
     tuple:
 
-    >>> flatten([(1,2,3),(4,5)])
+    >>> _flatten([(1,2,3),(4,5)])
     [1, 2, 3, 4, 5]
 
     generator expression:
 
-    >>> flatten((i, i * 2) for i in range(0,5))
+    >>> _flatten((i, i * 2) for i in range(0,5))
     [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
     """
     if is_foldable(xss):
-        return foldl(operator.add, (flatten(xs) for xs in xss), [])
+        return foldl(operator.add, (_flatten(xs) for xs in xss), [])
     else:
         return [xss]
+
+
+def _unique(xs, cmp=cmp, key=None):
+    """Returns new sorted list of no duplicated items.
+
+    >>> _unique([])
+    []
+    >>> _unique([0, 3, 1, 2, 1, 0, 4, 5])
+    [0, 1, 2, 3, 4, 5]
+    """
+    if xs == []:
+        return xs
+
+    ys = sorted(xs, cmp=cmp, key=key)
+
+    if ys == []:
+        return ys
+
+    ret = [ys[0]]
+
+    for y in ys[1:]:
+        if y == ret[-1]:
+            continue
+        ret.append(y)
+
+    return ret
+
+
+concat = memoize(_concat)
+flatten = memoize(_flatten)
+unique = memoize(_unique)
 
 
 # vim:sw=4:ts=4:et:
