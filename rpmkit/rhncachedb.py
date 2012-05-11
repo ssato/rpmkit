@@ -20,7 +20,7 @@
 # Requirements: python-sqlalchemy, swapi
 #
 from sqlalchemy.ext.declarative import declarative_base
-from rpmkit import swapi
+from rpmkit import swapi, Bunch as B
 from operator import itemgetter
 
 import logging
@@ -131,24 +131,6 @@ class PackageErrata(DeclBase):
         self.eid = eid
 
 
-class Bunch(dict):
-    """
-    Simple class implements 'Bunch Pattern'.
-
-    @see http://ruslanspivak.com/2011/06/12/the-bunch-pattern/
-    """
-
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-    def __getstate__(self):
-        return self.copy()
-
-    def __setstate__(self, dic):
-        self.__dict__ = dic
-
-
 def get_engine(db_path=DB_PATH):
     return S.create_engine("sqlite:///" + db_path)
 
@@ -207,7 +189,7 @@ def get_errata_for_package(pid, verb=""):
 
 
 def make_data(verbosity=0):
-    data = Bunch()
+    data = B.Bunch()
     verb = " -v " if verbosity > 0 else " "
 
     data.channels = get_channels(verb)
