@@ -17,7 +17,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+from rpmkit.memoize  import memoize
+
+import itertools
+import operator
 import os.path
+
+try:
+    chain_from_iterable = itertools.chain.from_iterable
+except AttributeError:
+    # Borrowed from library doc, 9.7.1 Itertools functions:
+    def _from_iterable(iterables):
+        for it in iterables:
+            for element in it:
+                yield element
+
+    chain_from_iterable = _from_iterable
 
 
 def typecheck(obj, expected_type_or_class):
@@ -47,4 +62,69 @@ def is_local(fqdn_or_hostname):
     return fqdn_or_hostname.startswith("localhost")
 
 
-# vim:sw=4 ts=4 et:
+def is_foldable(xs):
+    """@see http://www.haskell.org/haskellwiki/Foldable_and_Traversable
+
+    >>> is_foldable([])
+    True
+    >>> is_foldable(())
+    True
+    >>> is_foldable(x for x in range(3))
+    True
+    >>> is_foldable(None)
+    False
+    >>> is_foldable(True)
+    False
+    >>> is_foldable(1)
+    False
+    """
+    return isinstance(xs, (list, tuple)) or callable(getattr(xs, "next", None))
+
+
+def concat(xss):
+    """
+    >>> concat([[]])
+    []
+    >>> concat((()))
+    []
+    >>> concat([[1,2,3],[4,5]])
+    [1, 2, 3, 4, 5]
+    >>> concat([[1,2,3],[4,5,[6,7]]])
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat(((1,2,3),(4,5,[6,7])))
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat(((1,2,3),(4,5,[6,7])))
+    [1, 2, 3, 4, 5, [6, 7]]
+    >>> concat((i, i*2) for i in range(3))
+    [0, 0, 1, 2, 2, 4]
+    """
+    return list(chain_from_iterable(xs for xs in xss))
+
+
+@memoize
+def flatten(xss):
+    """
+    >>> flatten([])
+    []
+    >>> flatten([[1,2,3],[4,5]])
+    [1, 2, 3, 4, 5]
+    >>> flatten([[1,2,[3]],[4,[5,6]]])
+    [1, 2, 3, 4, 5, 6]
+
+    tuple:
+
+    >>> flatten([(1,2,3),(4,5)])
+    [1, 2, 3, 4, 5]
+
+    generator expression:
+
+    >>> flatten((i, i * 2) for i in range(0,5))
+    [0, 0, 1, 2, 2, 4, 3, 6, 4, 8]
+    """
+    if is_foldable(xss):
+        return foldl(operator.add, (flatten(xs) for xs in xss), [])
+    else:
+        return [xss]
+
+
+# vim:sw=4:ts=4:et:
