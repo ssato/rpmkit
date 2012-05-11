@@ -15,10 +15,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import os.path
+import tempfile
 
 
 def selfdir():
     return os.path.dirname(__file__)
+
+
+def setup_workdir():
+    return tempfile.mkdtemp(dir="/tmp", prefix="rpmkit-tests")
+
+
+def cleanup_workdir(workdir):
+    """
+    FIXME: Danger!
+    """
+    os.system("rm -rf " + workdir)
 
 
 # vim:sw=4 ts=4 et:
