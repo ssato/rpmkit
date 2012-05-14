@@ -1,5 +1,5 @@
 #
-# rpmdb.datasrc.rhn - Retrieve from RHN w/ swapi
+# rpmdb.datasrc.rhn - Retrieve data from RHN w/ swapi
 #
 # Copyright (C) 2012 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-
 import rpmkit.rpmdb.datasources.base as Base
 import rpmkit.rpmdb.models.packages as MP
 import rpmkit.swapi as SW
@@ -78,6 +77,15 @@ def get_package_files(name, version, release, epoch="", arch="x86_64"):
     return get_xs("-A %s packages.listFiles" % pid, MP.PackageFile, ("path", ))
 
 
+def get_package_errata(name, version, release, epoch="", arch="x86_64"):
+    pid = get_package_id(name, version, release, epoch, arch)[-1]
+    return get_xs(
+        "-A %s packages.listProvidingErrata" % pid,
+        MP.PackageErrata,
+        ("advisory", )
+    )
+
+
 def get_package_dependencies(name, version, release, epoch="", arch="x86_64"):
     pid = get_package_id(name, version, release, epoch, arch)[-1]
     return [
@@ -86,13 +94,16 @@ def get_package_dependencies(name, version, release, epoch="", arch="x86_64"):
     ]
 
 
-def get_package_requires(name, version, release, epoch="", arch="x86_64"):
-    #return [cls(*operator.itemgetter(*keys)(x)) for x in rpc(cmd)]
+def get_dependencies(nvrea, cls, dtype, keys):
+    """
+    :param nvrea: tuple (name, version, release, epoch, arch)
+    :param cls: Class to instantiate from given data
+    :parram dtype: dependency type
+    :param keys: keys to get data :: (str, ...)
+    """
     return [
-        MP.PackageRequires(x["dependency"], x["modifier"]) for x in
-            (d for d in get_package_dependencies(
-                name, version, release, epoch, arch
-            ) if d["type"] == "requires")
+        cls(*[x[k] for k in keys]) for x in
+            get_package_dependencies(*nvrea) if x["type"] == dtype
     ]
 
 
@@ -104,17 +115,21 @@ class Swapi(Base):
     def get_errata(self, repo):
         return get_errata(repo)
 
-    def get_package_files(self, name, version, release, epoch, arch):
-        return get_package_files(name, version, release, epoch, arch)
+    def get_package_files(self, nvrea):
+        return get_package_files(*nvrea)
 
-    def get_package_requires(self, *args, **kwargs):
-        pass
+    def get_package_requires(self, nvrea):
+        return get_dependencies(
+            nvrea, MP.PackageRequires, "requires", ("name", "version")
+        )
 
-    def get_package_provides(self, *args, **kwargs):
-        pass
+    def get_package_provides(self, nvrea):
+        return get_dependencies(
+            nvrea, MP.PackageProvides, "provides", ("name", )
+        )
 
     def get_package_errata(self, *args, **kwargs):
-        pass
+        return get_package_errata(*nvrea)
 
     def get_errata_cves(self, advisory):
         return get_cves(advisory)
