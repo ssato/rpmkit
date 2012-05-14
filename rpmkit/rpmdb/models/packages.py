@@ -36,18 +36,6 @@ class Package(DeclBase, DeclMixin):
     epoch = S.Column(S.String(16))  # rhnPackageEVR.epoch
     arch = S.Column(S.String(64))  # rhnPackageArch.label
 
-    summary = S.Column(S.String(4000))  # rhnPackage.summary
-    description = S.Column(S.String(4000))  # rhnPackage.description
-    build_host = S.Column(S.String(256))  # rhnPackageName.build_host
-
-
-class Repository(DeclBase, DeclMixin):
-    """
-    @see spacewalk.git/schema/spacewalk/common/tables/rhnChannel.sql
-    """
-    label = S.Column(S.String(128))  # rhnChannel.label
-    name = S.Column(S.String(256))  # rhnChannel.name
-
 
 class Errata(DeclBase, DeclMixin):
     """
@@ -67,6 +55,15 @@ class CVE(DeclBase, DeclMixin):
 
 
 # Relations:
+class PackageDetails(DeclBase, DeclMixin):
+    pid = S.Column(S.Integer, S.ForeignKey("package.id"), nullable=False)
+    package = SO.relationship(Package, backref="packagedetails")
+
+    summary = S.Column(S.String(4000))  # rhnPackage.summary
+    description = S.Column(S.String(4000))  # rhnPackage.description
+    build_host = S.Column(S.String(256))  # rhnPackageName.build_host
+
+
 class PackageFile(DeclBase, DeclMixin):
     """file vs. package
 
