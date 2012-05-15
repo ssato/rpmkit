@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.rpmdb.datasrc.rhn as R
+import rpmkit.rpmdb.models.packages as P
 import random
 import unittest
 
@@ -37,9 +38,64 @@ class TestFunctions(unittest.TestCase):
         global CHANNELS
 
         chan = random.choice(CHANNELS)
-        ps = R.get_packages(chan["label"])
+        xs = R.get_packages(chan["label"])
 
-        self.assertTrue(bool(ps))
+        self.assertTrue(bool(xs))
+
+    def test_20_get_errata(self):
+        global CHANNELS
+
+        chan = random.choice(CHANNELS)
+        xs = R.get_errata(chan["label"])
+
+        self.assertTrue(bool(xs))
+
+    def test_30_get_package_id(self):
+        global CHANNELS
+
+        chan = random.choice(CHANNELS)
+        xs = R.get_packages(chan["label"])
+        x = random.choice(xs)
+
+        ys = R.get_package_id(x.name, x.version, x.release, x.epoch, x.arch)
+        self.assertTrue(bool(ys))
+
+    def test_40_get_package_files(self):
+        global CHANNELS
+
+        chan = random.choice(CHANNELS)
+        xs = R.get_packages(chan["label"])
+        x = random.choice(xs)
+
+        ys = R.get_package_files(x.name, x.version, x.release, x.epoch, x.arch)
+        self.assertTrue(bool(ys))
+
+    def test_40_get_package_errata(self):
+        global CHANNELS
+
+        chan = random.choice(CHANNELS)
+        xs = R.get_packages(chan["label"])
+        x = random.choice(xs)
+
+        ys = R.get_package_errata(x.name, x.version, x.release, x.epoch, x.arch)
+        self.assertTrue(bool(ys))
+
+    def test_40_get_cves(self):
+        global CHANNELS
+
+        xs = []
+
+        while not xs:
+            chan = random.choice(CHANNELS)
+            xs = [
+                x for x in R.get_errata(chan["label"]) \
+                    if P.is_security_errata(x)
+            ]
+
+        x = random.choice(xs)
+
+        ys = R.get_cves(x.advisory)
+        self.assertTrue(bool(ys))
 
 
 # vim:sw=4:ts=4:et:

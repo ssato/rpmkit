@@ -45,6 +45,22 @@ class Package(DeclBase, DeclMixin):
         self.arch = arch
 
 
+(RHSA, RHBA, RHEA) = (0, 1, 2)
+ERRATA_TYPE_MAP = {
+    "S": RHSA,
+    "B": RHBA,
+    "E": RHEA,
+}
+
+
+def errata_type(e):
+    return ERRATA_TYPE_MAP.get(e.advisory[2], None)
+
+
+def is_security_errata(e):
+    return errata_type(e) == RHSA
+
+
 class Errata(DeclBase, DeclMixin):
     """
     @see spacewalk.git/schema/spacewalk/common/tables/rhnErrata.sql
@@ -68,8 +84,7 @@ class CVE(DeclBase, DeclMixin):
     """
     name = S.Column(S.String(13))  # rhnCVE.name
 
-    def __init__(self, id, name):
-        self.id = id
+    def __init__(self, name):
         self.name = name
 
 

@@ -30,13 +30,16 @@ def rpc(cmd):
     return SW.main(shlex.split(cmd))[0]
 
 
-def get_xs(cmd, cls, keys):
+def get_xs(cmd, cls, keys=[]):
     """
     :param cmd: command string passed to swapi.main :: str
     :param cls: Class to instantiate data and will be imported into database
     :param keys: keys to get data :: (str, ...)
     """
-    return [cls(*operator.itemgetter(*keys)(x)) for x in rpc(cmd)]
+    if keys:
+        return [cls(*operator.itemgetter(*keys)(x)) for x in rpc(cmd)]
+    else:
+        return [cls(x) for x in rpc(cmd)]
 
 
 def get_packages(repo):
@@ -52,15 +55,18 @@ def get_packages(repo):
 
 def get_errata(repo):
     return get_xs(
-        "-A %s channel.software.listErrata" % channel,
+        "-A %s channel.software.listErrata" % repo,
         MP.Errata,
         ("id", "advisory_name", "advisory_name", "advisory_synopsis", "date"),
     )
 
 
-def get_package_id(name, version, release, epoch="", arch="x86_64"):
+def get_package_id(name, version, release, epoch=" ", arch="x86_64"):
+    if not epoch:
+        epoch = ' '
+
     return get_xs(
-        "-A %s,%s,%s,%s,%s packages.findByNvrea" % (
+        "-A \"%s,%s,%s,%s,%s\" packages.findByNvrea" % (
             name, version, release, epoch, arch
         ),
         MP.Package,
@@ -69,7 +75,7 @@ def get_package_id(name, version, release, epoch="", arch="x86_64"):
 
 
 def get_cves(advisory):
-    return get_xs("-A %s errata.listCves" % advisory, MP.CVE, ("name", ))
+    return get_xs("-A %s errata.listCves" % advisory, MP.CVE)
 
 
 def get_package_files(name, version, release, epoch="", arch="x86_64"):
