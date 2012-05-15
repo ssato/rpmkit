@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.memoize as M
+import unittest
 
 
 class TestMemoize(unittest.TestCase):
@@ -29,4 +30,4 @@ class TestMemoize(unittest.TestCase):
         self.assertEquals(f(0), f(1))
 
 
-# vim:sw=4 ts=4 et:
+# vim:sw=4:ts=4:et:
