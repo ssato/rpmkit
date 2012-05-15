@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.rpmdb.datasources.base as Base
+import rpmkit.rpmdb.datasrc.base as B
 import rpmkit.rpmdb.models.packages as MP
 import rpmkit.swapi as SW
 
@@ -111,7 +111,7 @@ def package_to_nvrea(p):
     return (p.name, p.version, p.release, p.epoch, p.arch)
 
 
-class Swapi(Base):
+class Swapi(B.Base):
 
     def _init_packages(self):
         self.packages = get_packages(self.repo)
