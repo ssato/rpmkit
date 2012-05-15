@@ -36,6 +36,14 @@ class Package(DeclBase, DeclMixin):
     epoch = S.Column(S.String(16))  # rhnPackageEVR.epoch
     arch = S.Column(S.String(64))  # rhnPackageArch.label
 
+    def __init__(self, id, name, version, release, epoch, arch):
+        self.id = id
+        self.name = name
+        self.version = version
+        self.release = release
+        self.epoch = epoch
+        self.arch = arch
+
 
 class Errata(DeclBase, DeclMixin):
     """
@@ -46,12 +54,23 @@ class Errata(DeclBase, DeclMixin):
     synopsis = S.Column(S.String(4000))  # rhnErrata.synopsis
     issue_date = S.Column(S.String(256))  # rhnErrata.issue_date
 
+    def __init__(self, id, advisory, name, synopsis, issue_date):
+        self.id = id
+        self.advisory = advisory
+        self.name = name
+        self.synopsis = synopsis
+        self.issue_date = issue_date
+
 
 class CVE(DeclBase, DeclMixin):
     """
     @see spacewalk.git/schema/spacewalk/common/tables/rhnCVE.sql
     """
     name = S.Column(S.String(13))  # rhnCVE.name
+
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
 
 
 # Relations:
@@ -62,6 +81,12 @@ class PackageDetails(DeclBase, DeclMixin):
     summary = S.Column(S.String(4000))  # rhnPackage.summary
     description = S.Column(S.String(4000))  # rhnPackage.description
     build_host = S.Column(S.String(256))  # rhnPackageName.build_host
+
+    def __init__(self, pid, summary, description, build_host):
+        self.pid = pid
+        self.summary = summary
+        self.description = description
+        self.build_host = build_host
 
 
 class PackageFile(DeclBase, DeclMixin):
@@ -76,6 +101,10 @@ class PackageFile(DeclBase, DeclMixin):
 
     package = SO.relationship(Package, backref="files")
 
+    def __init__(self, pid, path):
+        self.pid = pid
+        self.path = path
+
 
 class PackageRequires(DeclBase, DeclMixin):
     """package vs. requires
@@ -88,6 +117,11 @@ class PackageRequires(DeclBase, DeclMixin):
 
     package = SO.relationship(Package, backref="requires")
 
+    def __init__(self, pid, name, version):
+        self.pid = pid
+        self.name = name
+        self.version = version
+
 
 class PackageProvides(DeclBase, DeclMixin):
     """package vs. provides
@@ -99,6 +133,10 @@ class PackageProvides(DeclBase, DeclMixin):
 
     package = SO.relationship(Package, backref="provides")
 
+    def __init__(self, pid, name):
+        self.pid = pid
+        self.name = name
+
 
 class PackageErrata(DeclBase, DeclMixin):
     """package vs. errata
@@ -108,6 +146,10 @@ class PackageErrata(DeclBase, DeclMixin):
 
     package = SO.relationship(Package, backref="packageerrata")
     errata = SO.relationship(Errata, backref="packageerrata")
+
+    def __init__(self, pid, eid):
+        self.pid = pid
+        self.eid = eid
 
 
 # vim:sw=4:ts=4:et:
