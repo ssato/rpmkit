@@ -17,25 +17,36 @@
 #
 class Base(object):
 
-    def get_packages(self, repo):
+    def __inti__(self, repo):
+        self.repo = repo
+        self._init_packages()
+        self._init_errata()
+
+    def _init_packages(self):
+        self.packages = []
+
+    def _init_errata(self):
+        self.errata = []
+
+    def get_packages(self):
         pass
 
-    def get_errata(self, repo):
+    def get_errata(self):
         pass
 
-    def get_package_files(self, nvrea):
+    def get_package_files(self):
         pass
 
-    def get_package_requires(self, nvrea):
+    def get_package_requires(self):
         pass
 
-    def get_package_provides(self, nvrea):
+    def get_package_provides(self):
         pass
 
-    def get_package_errata(self, nvrea):
+    def get_package_errata(self):
         pass
 
-    def get_errata_cves(self, advisory):
+    def get_errata_cves(self):
         pass
 
 

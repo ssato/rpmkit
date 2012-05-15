@@ -107,32 +107,54 @@ def get_dependencies(nvrea, cls, dtype, keys):
     ]
 
 
+def package_to_nvrea(p):
+    return (p.name, p.version, p.release, p.epoch, p.arch)
+
+
 class Swapi(Base):
 
-    def get_packages(self, repo):
-        return get_packages(repo)
+    def _init_packages(self):
+        self.packages = get_packages(self.repo)
 
-    def get_errata(self, repo):
-        return get_errata(repo)
+    def _init_errata(self):
+        self.errata = get_errata(self.repo)
 
-    def get_package_files(self, nvrea):
-        return get_package_files(*nvrea)
+    def get_packages(self):
+        return self.packages
 
-    def get_package_requires(self, nvrea):
-        return get_dependencies(
-            nvrea, MP.PackageRequires, "requires", ("name", "version")
-        )
+    def get_errata(self):
+        return self.errata
 
-    def get_package_provides(self, nvrea):
-        return get_dependencies(
-            nvrea, MP.PackageProvides, "provides", ("name", )
-        )
+    def get_package_files(self):
+        return [
+            get_package_files(package_to_nvrea(p)) for p in
+                self.get_packages()
+        ]
 
-    def get_package_errata(self, *args, **kwargs):
-        return get_package_errata(*nvrea)
+    def get_package_requires(self):
+        return [
+            get_dependencies(
+                package_to_nvrea(p), MP.PackageRequires, "requires",
+                ("name", "version")
+            ) for p in self.get_packages()
+        ]
+
+    def get_package_provides(self):
+        return [
+            get_dependencies(
+                package_to_nvrea(p), MP.PackageProvides, "provides",
+                ("name", )
+            ) for p in self.get_packages()
+        ]
+
+    def get_package_errata(self):
+        return [
+            get_package_errata(*package_to_nvrea(p)) for p in
+                self.get_packages()
+        ]
 
     def get_errata_cves(self, advisory):
-        return get_cves(advisory)
+        return [get_cves(e.name) for e in self.get_errata()]
 
 
 # vim:sw=4:ts=4:et:
