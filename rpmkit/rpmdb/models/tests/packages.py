@@ -20,12 +20,67 @@ import random
 import unittest
 
 
+def _id():
+    return random.randint(0, 100000)
+
+
 class Test_10_Packages(unittest.TestCase):
 
     def test__init__(self):
-        _id = random.randint(0, 100000)
-        p = P.Package(_id, "foo", "0.0.1", "1", "0", "x86_64")
-        self.assertTrue(bool(p))
+        x = P.Package(_id(), "foo", "0.0.1", "1", "0", "x86_64")
+        self.assertTrue(bool(x))
+
+
+class Test_20_Errata(unittest.TestCase):
+
+    def test__init__(self):
+        x = P.Errata(_id(), "RHSA-2012:0546", "RHSA-2012:0546-1",
+            "Critical: php security update", "2012-05-07")
+        self.assertTrue(bool(x))
+
+
+class Test_30_CVE(unittest.TestCase):
+
+    def test__init__(self):
+        x = P.CVE(_id(), "CVE-2012-1823")
+        self.assertTrue(bool(x))
+
+
+class Test_10_PackageDetails(unittest.TestCase):
+
+    def test__init__(self):
+        #x = P.PackageDetails(_id(), ...)
+        #self.assertTrue(bool(x))
+        pass
+
+
+class Test_10_PackageFile(unittest.TestCase):
+
+    def test__init__(self):
+        x = P.PackageFile(_id(), "/bin/bash")
+        self.assertTrue(bool(x))
+
+
+class Test_40_PackageRequires(unittest.TestCase):
+
+    def test__init__(self):
+        #x = P.PackageRequires(_id(), ...)
+        #self.assertTrue(bool(x))
+        pass
+
+
+class Test_40_PackageProvides(unittest.TestCase):
+
+    def test__init__(self):
+        x = P.PackageProvides(_id(), "webserver") 
+        self.assertTrue(bool(x))
+
+
+class Test_40_PackageErrata(unittest.TestCase):
+
+    def test__init__(self):
+        x = P.PackageErrata(_id(), _id()) 
+        self.assertTrue(bool(x))
 
 
 # vim:sw=4:ts=4:et:
