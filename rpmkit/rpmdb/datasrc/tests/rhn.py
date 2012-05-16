@@ -142,7 +142,11 @@ class Test_10_Swapi(unittest.TestCase):
         self.assertTrue(bool(s.get_errata()))
 
     def test_00_get_package_files(self):
-        s = R.Swapi(random.choice(self.channels))
+        while True:
+            s = R.Swapi(random.choice(self.channels))
+            if len(s.get_packages()) < 20:
+                break
+
         self.assertTrue(bool(s.get_package_files()))
 
     def test_10_get_package_requires(self):
