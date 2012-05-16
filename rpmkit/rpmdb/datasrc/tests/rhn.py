@@ -24,7 +24,7 @@ import unittest
 CHANNELS = []
 
 
-class TestFunctions(unittest.TestCase):
+class Test_00_functions(unittest.TestCase):
 
     def test_00_rpc(self):
         global CHANNELS
@@ -125,6 +125,41 @@ class TestFunctions(unittest.TestCase):
 
         ys = R.get_cves(x.advisory)
         self.assertTrue(bool(ys))
+
+
+class Test_10_Swapi(unittest.TestCase):
+
+    def setUp(self):
+        self.channels = [
+            c["label"] for c in R.rpc("channel.listSoftwareChannels")
+        ]
+
+    def test_00__init__(self):
+        s = R.Swapi(random.choice(self.channels))
+        self.assertTrue(isinstance(s, R.Swapi))
+
+        self.assertTrue(bool(s.get_packages()))
+        self.assertTrue(bool(s.get_errata()))
+
+    def test_00_get_package_files(self):
+        s = R.Swapi(random.choice(self.channels))
+        self.assertTrue(bool(s.get_package_files()))
+
+    def test_10_get_package_requires(self):
+        s = R.Swapi(random.choice(self.channels))
+        self.assertTrue(bool(s.get_package_requires()))
+
+    def test_10_get_package_provides(self):
+        s = R.Swapi(random.choice(self.channels))
+        self.assertTrue(bool(s.get_package_provides()))
+
+    def test_20_get_package_errata(self):
+        s = R.Swapi(random.choice(self.channels))
+        self.assertTrue(bool(s.get_package_errata()))
+
+    def test_30_get_errata_cves(self):
+        s = R.Swapi(random.choice(self.channels))
+        self.assertTrue(bool(s.get_errata_cves()))
 
 
 # vim:sw=4:ts=4:et:

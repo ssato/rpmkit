@@ -85,7 +85,7 @@ def get_package_files(name, version, release, epoch="", arch="x86_64"):
 
     pid = ps[0]["id"]
     return [
-        MP.PackageFile(pid, f["path"]) for f in
+        MP.PackageFile(pid, f.path) for f in
             get_xs("-A %s packages.listFiles" % pid)
     ]
 
@@ -97,7 +97,7 @@ def get_package_errata(name, version, release, epoch="", arch="x86_64"):
 
     pid = ps[0]["id"]
     return [
-        MP.PackageErrata(pid, e["advisory"]) for e in
+        MP.PackageErrata(pid, e.advisory) for e in
             get_xs("-A %s packages.listProvidingErrata" % pid)
     ]
 
@@ -116,7 +116,10 @@ def get_package_dependencies(name, version, release, epoch="", arch="x86_64"):
 def get_package_dependencies_by_type(nvrea, dtype):
     """
     :param nvrea: tuple (name, version, release, epoch, arch)
-    :parram dtype: dependency type
+    :parram dtype: dependency type ::
+        "requires" | "conflicts" | "obsoletes" | "provides"
+
+    :return: [Bunch(dependency, dependency_type, dependency_modifier)]
     """
     return [
         x for x in get_package_dependencies(*nvrea) \
@@ -144,24 +147,27 @@ class Swapi(B.Base):
 
     def get_package_files(self):
         return [
-            get_package_files(package_to_nvrea(p)) for p in
+            get_package_files(*package_to_nvrea(p)) for p in
                 self.get_packages()
         ]
 
     def get_package_requires(self):
         return [
-            get_dependencies(
-                package_to_nvrea(p), MP.PackageRequires, "requires",
-                ("name", "version")
-            ) for p in self.get_packages()
+            MP.PackageRequires(p.id, x.dependency, x.dependency_modifier) \
+                for x in
+                    get_package_dependencies_by_type(
+                        package_to_nvrea(p), "requires"
+                    ) for p in
+                        self.get_packages()
         ]
 
     def get_package_provides(self):
         return [
-            get_dependencies(
-                package_to_nvrea(p), MP.PackageProvides, "provides",
-                ("name", )
-            ) for p in self.get_packages()
+            MP.PackageProvides(p.id, x.dependency) for x in
+                    get_package_dependencies_by_type(
+                        package_to_nvrea(p), "provides"
+                    ) for p in
+                        self.get_packages()
         ]
 
     def get_package_errata(self):
