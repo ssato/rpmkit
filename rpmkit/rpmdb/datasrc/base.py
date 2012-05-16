@@ -17,7 +17,7 @@
 #
 class Base(object):
 
-    def __inti__(self, repo):
+    def __init__(self, repo):
         self.repo = repo
         self._init_packages()
         self._init_errata()
