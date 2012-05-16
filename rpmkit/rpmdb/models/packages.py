@@ -128,14 +128,14 @@ class PackageRequires(DeclBase, DeclMixin):
     """
     pid = S.Column(S.Integer, S.ForeignKey("package.id"), nullable=False)
     name = S.Column(S.String(4000))  # rhnPackageCapability.name
-    version = S.Column(S.String(64))  # rhnPackageCapability.version
+    modifier = S.Column(S.String(64))  # rhnPackageCapability.version
 
     package = SO.relationship(Package, backref="requires")
 
-    def __init__(self, pid, name, version):
+    def __init__(self, pid, name, modifier):
         self.pid = pid
         self.name = name
-        self.version = version
+        self.modifier = modifier
 
 
 class PackageProvides(DeclBase, DeclMixin):
@@ -157,14 +157,14 @@ class PackageErrata(DeclBase, DeclMixin):
     """package vs. errata
     """
     pid = S.Column(S.Integer, S.ForeignKey("package.id"))
-    eid = S.Column(S.Integer, S.ForeignKey("errata.id"))
+    advisory = S.Column(S.String(100), S.ForeignKey("errata.advisory"))
 
     package = SO.relationship(Package, backref="packageerrata")
     errata = SO.relationship(Errata, backref="packageerrata")
 
-    def __init__(self, pid, eid):
+    def __init__(self, pid, advisory):
         self.pid = pid
-        self.eid = eid
+        self.advisory = advisory
 
 
 # vim:sw=4:ts=4:et:
