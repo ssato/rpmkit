@@ -50,14 +50,16 @@ class TestFunctions(unittest.TestCase):
 
         self.assertTrue(bool(xs))
 
-    def test_30_get_package_id(self):
+    def test_30_find_packages_by_nvrea(self):
         global CHANNELS
 
         chan = random.choice(CHANNELS)
         xs = R.get_packages(chan["label"])
         x = random.choice(xs)
 
-        ys = R.get_package_id(x.name, x.version, x.release, x.epoch, x.arch)
+        ys = R.find_packages_by_nvrea(
+            x.name, x.version, x.release, x.epoch, x.arch
+        )
         self.assertTrue(bool(ys))
 
     def test_40_get_package_files(self):
@@ -77,7 +79,9 @@ class TestFunctions(unittest.TestCase):
         xs = R.get_packages(chan["label"])
         x = random.choice(xs)
 
-        ys = R.get_package_errata(x.name, x.version, x.release, x.epoch, x.arch)
+        ys = R.get_package_errata(
+            x.name, x.version, x.release, x.epoch, x.arch
+        )
         self.assertTrue(bool(ys))
 
     def test_40_get_package_dependencies(self):
@@ -91,6 +95,19 @@ class TestFunctions(unittest.TestCase):
             x.name, x.version, x.release, x.epoch, x.arch
         )
         self.assertTrue(bool(ys))
+
+    def test_50_get_package_dependencies_by_type(self):
+        global CHANNELS
+
+        chan = random.choice(CHANNELS)
+        xs = R.get_packages(chan["label"])
+        x = random.choice(xs)
+
+        nvrea = R.package_to_nvrea(x)
+
+        for dtype in ("requires", "conflicts", "obsoletes", "provides"):
+            ys = R.get_package_dependencies_by_type(nvrea, dtype)
+            #self.assertTrue(bool(ys))  # may be empty
 
     def test_50_get_cves(self):
         global CHANNELS

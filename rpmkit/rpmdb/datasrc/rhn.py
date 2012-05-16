@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+from rpmkit.Bunch import Bunch
+
 import rpmkit.rpmdb.datasrc.base as B
 import rpmkit.rpmdb.models.packages as MP
 import rpmkit.swapi as SW
@@ -30,7 +32,7 @@ def rpc(cmd):
     return SW.main(shlex.split(cmd))[0]
 
 
-def get_xs(cmd, cls, keys=[]):
+def get_xs(cmd, cls=Bunch, keys=[]):
     """
     :param cmd: command string passed to swapi.main :: str
     :param cls: Class to instantiate data and will be imported into database
@@ -61,16 +63,14 @@ def get_errata(repo):
     )
 
 
-def get_package_id(name, version, release, epoch=" ", arch="x86_64"):
+def find_packages_by_nvrea(name, version, release, epoch=" ", arch="x86_64"):
     if not epoch:
         epoch = ' '
 
     return get_xs(
         "-A \"%s,%s,%s,%s,%s\" packages.findByNvrea" % (
             name, version, release, epoch, arch
-        ),
-        MP.Package,
-        ("id", "name", "version", "release", "epoch", "arch_label"),
+        )
     )
 
 
@@ -79,37 +79,48 @@ def get_cves(advisory):
 
 
 def get_package_files(name, version, release, epoch="", arch="x86_64"):
-    pid = get_package_id(name, version, release, epoch, arch)[-1]
-    return get_xs("-A %s packages.listFiles" % pid, MP.PackageFile, ("path", ))
+    ps = find_packages_by_nvrea(name, version, release, epoch, arch)
+    if not ps:
+        return []
 
-
-def get_package_errata(name, version, release, epoch="", arch="x86_64"):
-    pid = get_package_id(name, version, release, epoch, arch)[-1]
-    return get_xs(
-        "-A %s packages.listProvidingErrata" % pid,
-        MP.PackageErrata,
-        ("advisory", )
-    )
-
-
-def get_package_dependencies(name, version, release, epoch="", arch="x86_64"):
-    pid = get_package_id(name, version, release, epoch, arch)[-1]
+    pid = ps[0]["id"]
     return [
-        dict(zip(("dependency", "type", "modifier"), *x)) for x in
-            rpc("-A %s packages.listDependencies" % pid)
+        MP.PackageFile(pid, f["path"]) for f in
+            get_xs("-A %s packages.listFiles" % pid)
     ]
 
 
-def get_dependencies(nvrea, cls, dtype, keys):
+def get_package_errata(name, version, release, epoch="", arch="x86_64"):
+    ps = find_packages_by_nvrea(name, version, release, epoch, arch)
+    if not ps:
+        return []
+
+    pid = ps[0]["id"]
+    return [
+        MP.PackageErrata(pid, e["advisory"]) for e in
+            get_xs("-A %s packages.listProvidingErrata" % pid)
+    ]
+
+
+def get_package_dependencies(name, version, release, epoch="", arch="x86_64"):
+    """
+    :return: [Bunch(dependency, dependency_type, dependency_modifier)]
+    """
+    ps = find_packages_by_nvrea(name, version, release, epoch, arch)
+    if not ps:
+        return []
+
+    return get_xs("-A %s packages.listDependencies" % ps[0]["id"])
+
+
+def get_package_dependencies_by_type(nvrea, dtype):
     """
     :param nvrea: tuple (name, version, release, epoch, arch)
-    :param cls: Class to instantiate from given data
     :parram dtype: dependency type
-    :param keys: keys to get data :: (str, ...)
     """
     return [
-        cls(*[x[k] for k in keys]) for x in
-            get_package_dependencies(*nvrea) if x["type"] == dtype
+        x for x in get_package_dependencies(*nvrea) \
+                if x["dependency_type"] == dtype
     ]
 
 
