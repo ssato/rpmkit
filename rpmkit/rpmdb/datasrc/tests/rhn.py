@@ -80,7 +80,19 @@ class TestFunctions(unittest.TestCase):
         ys = R.get_package_errata(x.name, x.version, x.release, x.epoch, x.arch)
         self.assertTrue(bool(ys))
 
-    def test_40_get_cves(self):
+    def test_40_get_package_dependencies(self):
+        global CHANNELS
+
+        chan = random.choice(CHANNELS)
+        xs = R.get_packages(chan["label"])
+        x = random.choice(xs)
+
+        ys = R.get_package_dependencies(
+            x.name, x.version, x.release, x.epoch, x.arch
+        )
+        self.assertTrue(bool(ys))
+
+    def test_50_get_cves(self):
         global CHANNELS
 
         xs = []
