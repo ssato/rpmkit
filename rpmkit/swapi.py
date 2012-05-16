@@ -814,12 +814,23 @@ class RpcApi(object):
         self.logout()
 
     def login(self):
-        self.server = xmlrpclib.ServerProxy(
-            self.url, verbose=self.debug, use_datetime=True,
-        )
-        self.sid = self.server.auth.login(
-            self.userid, self.passwd, self.timeout,
-        )
+        try:
+            self.server = xmlrpclib.ServerProxy(
+                self.url, verbose=self.debug, use_datetime=True,
+            )
+        except:
+            logging.error("Failed to connect: url=" + self.url)
+            raise
+
+        try:
+            self.sid = self.server.auth.login(
+                self.userid, self.passwd, self.timeout,
+            )
+        except:
+            logging.error("Failed to auth: url=%s, userid=%s" % \
+                (self.url, self.userid)
+            )
+            raise
 
     def logout(self):
         if self.sid is None:
@@ -1142,6 +1153,7 @@ def option_parser(prog="swapi"):
         select="",
         deselect="",
         short_keys=True,
+        profile=os.environ.get("SWAPI_PROFILE", ""),
     )
 
     p = optparse.OptionParser("""%(cmd)s [OPTION ...] RPC_API_STRING
@@ -1377,4 +1389,4 @@ if __name__ == '__main__':
     sys.exit(realmain(sys.argv))
 
 
-# vim:sw=4 ts=4 et:
+# vim:sw=4:ts=4:et:
