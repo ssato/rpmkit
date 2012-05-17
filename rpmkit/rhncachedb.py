@@ -288,7 +288,7 @@ def getDependencyModifier(version, sense):
         if sense & 8 > 0:
             op += "="
 
-        return " ".join(op, str(version))
+        return "%s %s" % (op, str(version))
     else:
         return "- " + str(version)
 
