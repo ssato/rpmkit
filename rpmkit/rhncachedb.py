@@ -205,8 +205,11 @@ errata_cves = {
 )
 
 
-def ts2d(tuple, keys):
-    return dict(zip(tuple, keys))
+def ts2d(tuple, keys, dic=False):
+    if dic:
+        return dict(zip(tuple, keys))
+    else:
+        return tuple
 
 
 def get_packages(conn, repo):
