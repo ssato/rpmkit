@@ -52,20 +52,26 @@ $ ./sqlminus.py sql "SELECT DISTINCT D.NAME,B.NAME FROM RHNPACKAGEFILE A, RHNPAC
 ('libgcrypt', '/usr/lib64/libgcrypt.so.11')
 """
 
-import cx_Oracle
+try:
+    import cx_Oracle
+except ImportError:
+    print >> sys.stderr, \
+        "This module depends on cx_Oracle module available from " + \
+        "http://cx-oracle.sourceforge.net"
+    raise
+
 import optparse
 import os
 import pprint
 import subprocess
 import sys
 
-__version__ = '0.1.1'
 
-
+# Default DSN to access RHN Satellite database:
 DSN = 'rhnsat/rhnsat@rhnsat'
 
 
-def connect(dsn):
+def connect(dsn=DSN):
     return cx_Oracle.connect(dsn)
 
 
