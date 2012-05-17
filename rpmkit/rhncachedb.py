@@ -18,6 +18,7 @@
 # http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
 #
 import rpmkit.sqlminus as SQ
+import collections as C
 import logging
 import optparse
 import os.path
@@ -119,11 +120,13 @@ FROM
 WHERE C.label = '%s' AND ECVE.cve_id = CVE.id
 """
 
+OUT_STATEMENTS = C.OrderedDict(
+
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageName.sql
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageEVR.sql
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageArch.sql
-PACKAGES_CREATE = """
-CREATE TABLE packages IF NOT EXISTS (
+packages = {
+"create": """CREATE TABLE IF NOT EXISTS packages(
     id INTEGER PRIMARY KEY,
     name VARCHAR(256) NOT NULL,
     version VARCHAR(512) NOT NULL,
@@ -131,69 +134,76 @@ CREATE TABLE packages IF NOT EXISTS (
     epoch VARCHAR(16),
     arch VARCHAR(64) NOT NULL
 )
-"""
-PACKAGES_INS = "INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?)"
-
+""",
+"insert": "INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?)",
+},
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageFile.sql
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
-PACKAGE_FILES_CREATE = """
-CREATE TABLE package_files IF NOT EXISTS (
+package_files = {
+"create": """CREATE TABLE IF NOT EXISTS package_files(
     package_id INTEGER CONSTRAINT pf_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL
 )
-"""
-PACKAGE_FILES_INS = "INSERT INTO package_files VALUES (?, ?)"
+""",
+"insert": "INSERT INTO package_files VALUES (?, ?)",
+},
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageRequires.sql
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
-PACKAGE_REQUIRES_CREATE = """
-CREATE TABLE package_requires IF NOT EXISTS (
+package_requires = {
+"create": """CREATE TABLE IF NOT EXISTS package_requires(
     package_id INTEGER CONSTRAINT pr_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
     modifier VARCHAR(100) NOT NULL
 )
-"""
-PACKAGE_REQUIRES_INS = "INSERT INTO package_requires VALUES (?, ?, ?)"
+""",
+"insert": "INSERT INTO package_requires VALUES (?, ?, ?)",
+},
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageProvides.sql
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
-PACKAGE_PROVIDES_CREATE = """
-CREATE TABLE package_provides IF NOT EXISTS (
+package_provides = {
+"create": """CREATE TABLE IF NOT EXISTS package_provides(
     package_id INTEGER CONSTRAINT pp_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
     modifier VARCHAR(100) NOT NULL
 )
-"""
-PACKAGE_PROVIDES_INS = "INSERT INTO package_provides VALUES (?, ?, ?)"
+""",
+"insert": "INSERT INTO package_provides VALUES (?, ?, ?)",
+},
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnErrata.sql
-ERRATA_CREATE = """
-CREATE TABLE errata IF NOT EXISTS (
+errata = {
+"create": """CREATE TABLE IF NOT EXISTS errata(
     id INTEGER PRIMARY KEY,
     advisory VARCHAR(100) NOT NULL,
     name VARCHAR(100) NOT NULL,
     synopsis VARCHAR(4000) NOT NULL,
     issue_date VARCHAR(100) NOT NULL
 )
-"""
-ERRATA_INS = "INSERT INTO errata VALUES (?, ?, ?, ?, ?)"
+""",
+"insert": "INSERT INTO errata VALUES (?, ?, ?, ?, ?)",
+},
 
-PACKAGE_ERRATA_CREATE = """
-CREATE TABLE package_errata IF NOT EXISTS (
+package_errata = {
+"create": """CREATE TABLE IF NOT EXISTS package_errata(
     package_id INTEGER CONSTRAINT pe_ps REFERENCES packages(id) ON DELETE CASCADE,
     errata_id INTEGER CONSTRAINT pe2_ps REFERENCES errata(id) ON DELETE CASCADE
 )
-"""
-PACKAGE_ERRATA_INS = "INSERT INTO package_errata VALUES (?, ?)"
+""",
+"insert": "INSERT INTO package_errata VALUES (?, ?)",
+},
 
-ERRATA_CVES_CREATE = """
-CREATE TABLE errata_cves IF NOT EXISTS (
+errata_cves = {
+"create": """CREATE TABLE IF NOT EXISTS errata_cves(
     errata_id INTEGER CONSTRAINT ec_ps REFERENCES errata(id) ON DELETE CASCADE,
     name VARCHAR(13)
 )
-"""
-ERRATA_CVES_INS = "INSERT INTO errata_cves VALUES (?, ?)"
+""",
+"insert": "INSERT INTO errata_cves VALUES (?, ?)",
+},
+}
 
 
 def ts2d(tuple, keys):
@@ -352,32 +362,37 @@ def collect_and_dump_data(dsn, repo, output):
     oconn = sqlite3.connect(output)
     cur = conn.cursor()
 
+    for st in OUT_STATEMENTS.iteritems():
+        cur.execute(st["create"])
+
+    ins_dml = lambda table: OUT_STATEMENTS[table]["insert"]
+
     packages = get_packages(iconn, repo)
-    cur.executemany(PACKAGES_INS, packages)
+    cur.executemany(ins_dml("packages"), packages)
     oconn.commit()
 
     errata = get_errata(iconn, repo)
-    cur.executemany(ERRATA_INS, errata)
+    cur.executemany(ins_dml("errata"), errata)
     oconn.commit()
 
     package_files = get_packages_files(iconn, repo)
-    cur.executemany(PACKAGE_FILES_INS, package_files)
+    cur.executemany(ins_dml("package_files"), package_files)
     oconn.commit()
 
     package_errata = get_packages_errata(iconn, repo)
-    cur.executemany(PACKAGE_ERRATA_INS, package_errata)
+    cur.executemany(ins_dml("package_errata"), package_errata)
     oconn.commit()
 
     package_requires = get_packages_requires(iconn, repo)
-    cur.executemany(PACKAGE_REQUIRES_INS, package_requires)
+    cur.executemany(ins_dml("package_requires"), package_requires)
     oconn.commit()
 
     package_provides = get_packages_provides(iconn, repo)
-    cur.executemany(PACKAGE_PROVIDES_INS, package_provides)
+    cur.executemany(ins_dml("package_provides"), package_provides)
     oconn.commit()
 
     errata_cves = get_errata_cves(iconn, repo)
-    cur.executemany(ERRATA_CVES_INS, errata_cves)
+    cur.executemany(ins_dml("errata_cves"), errata_cves)
     oconn.commit()
 
     cur.close()
