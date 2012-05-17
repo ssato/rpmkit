@@ -1,13 +1,12 @@
 #
-# rhncachedb.py - RHN Caching database
+# rpmkit.rhncachedb - Create cache database from RHN Satellite database
 #
-# Copyright (C) 2011, 2012 Red Hat, Inc.
+# Copyright (C) 2012 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# the Free Software Foundation, either version 2 of the License.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,307 +14,241 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see
+# http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
 #
-# Requirements: python-sqlalchemy, swapi
-#
-from sqlalchemy.ext.declarative import declarative_base
-from rpmkit import swapi, Bunch as B
-from operator import itemgetter
-
-import logging
-import optparse
-import shlex
-import sqlalchemy as S
-import sqlalchemy.orm as SO
-import sys
+import rpmkit.sqlminus as SQ
 
 
-DB_PATH = "rhncache.sqlite"
+# all_packages_in_channel in 
+# packages_in_channel in
+#   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
+# all_channel_tree in 
+#   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Channel_queries.xml
+all_packages_in_channel_sql = """\
+SELECT DISTINCT P.id, PN.name, PE.version, PE.release, PE.epoch, PA.label
+FROM rhnPackageArch PA, rhnPackageName PN, rhnPackageEVR PE,
+     rhnPackage P, rhnChannelPackage CP, rhnChannel C
+WHERE CP.channel_id = C.id
+      AND C.label = '%s'
+      AND CP.package_id = P.id
+      AND P.name_id = PN.id
+      AND P.evr_id = PE.id
+      AND PA.id = P.package_arch_id
+ORDER BY UPPER(PN.name), P.id
+"""
+
+# in_channel in
+# http://git.fedorahosted.org/git/?p=spacewalk.git;a=blob;f=java/code/src/com/redhat/rhn/common/db/datasource/xml/Errata_queries.xml
+all_errata_in_channel_sql = """\
+SELECT DISTINCT E.id, E.advisory, E.advisory_name, E.synopsis,
+                TO_CHAR(E.issue_date, 'YYYY-MM-DD HH24:MI:SS')
+FROM rhnErrata E, rhnChannelErrata CE, rhnChannel C
+WHERE CE.channel_id = C.id AND C.label = '%s' AND CE.errata_id = E.id
+"""
+
+# package_files in
+# http://git.fedorahosted.org/git/?p=spacewalk.git;a=blob;f=java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
+all_files_in_packages_in_channel_sql = """\
+SELECT DISTINCT F.package_id, PC.name
+FROM
+  rhnPackageCapability PC,
+  rhnPackageFile F
+  INNER JOIN (rhnChannelPackage CP
+    INNER JOIN rhnChannel C
+    ON CP.channel_id = C.id)
+  ON F.package_id = CP.package_id
+WHERE F.capability_id = PC.id
+      AND C.label = '%s'
+ORDER BY UPPER(PC.name)
+"""
+
+# package_requires in .../Package_queries.xml
+all_requires_in_packages_in_channel_sql = """\
+SELECT DISTINCT PR.package_id, PC.name, PC.version, PR.sense
+FROM
+  rhnPackageCapability PC,
+  rhnPackageRequires PR
+  INNER JOIN (rhnChannelPackage CP
+    INNER JOIN rhnChannel C
+    ON CP.channel_id = C.id)
+  ON PR.package_id = CP.package_id
+WHERE C.label = '%s' AND PR.capability_id = PC.id
+"""
+
+# package_provides in .../Package_queries.xml
+all_provides_in_packages_in_channel_sql = """\
+SELECT DISTINCT PP.package_id, PC.name, PC.version, PP.sense
+FROM
+  rhnPackageCapability PC,
+  rhnPackageProvides PP
+  INNER JOIN (rhnChannelPackage CP
+    INNER JOIN rhnChannel C
+    ON CP.channel_id = C.id)
+  ON PP.package_id = CP.package_id
+WHERE C.label = '%s' AND PP.capability_id = PC.id
+"""
+
+# packages_in_errata in .../Package_queries.xml
+all_errata_in_packages_in_channel_sql = """\
+SELECT DISTINCT EP.package_id, EP.errata_id
+FROM
+  rhnErrataPackage EP
+  INNER JOIN (rhnChannelPackage CP
+    INNER JOIN rhnChannel C
+    ON CP.channel_id = C.id)
+  ON EP.package_id = CP.package_id
+WHERE C.label = '%s'
+"""
+
+# cves_for_errata in .../Errata_querys.xml
+all_cves_in_errata_in_channel_sql = """
+SELECT DISTINCT ECVE.errata_id, CVE.name
+FROM
+  rhnCVE CVE,
+  rhnErrataCVE ECVE
+  INNER JOIN (rhnChannelErrata CE
+    INNER JOIN rhnChannel C
+    ON CE.channel_id = C.id)
+  ON ECVE.errata_id = CE.errata_id
+WHERE C.label = '%s' AND ECVE.cve_id = CVE.id
+"""
 
 
-DeclBase = declarative_base()
+def ts2d(tuple, keys):
+    return dict(zip(tuple, keys))
 
 
-class Package(DeclBase):
+def get_packages(conn, repo):
     """
-    @see spacewalk.git/schema/spacewalk/common/tables/rhnPackageName.sql
+    Get all packages in given repo (software channel).
+
+    :param conn: cx_Oracle Connection object
+    :param repo: Repository (Software channel) label
     """
+    sql = all_packages_in_channel_sql % repo
+    rs = SQ.execute(conn, sql)
+    keys = ("id", "name", "version", "release", "epoch", "arch")
 
-    __tablename__ = "packages"
-
-    id = S.Column(S.Integer, primary_key=True)
-    name = S.Column(S.String(256))
-    version = S.Column(S.String(512))
-    release = S.Column(S.String(512))
-    epoch = S.Column(S.String(16))
-    arcch = S.Column(S.String(64))
-
-    def __init__(self, id, name, version, release, epoch, arch):
-        self.id = id
-        self.name = name
-        self.version = version
-        self.release = release
-        self.epoch = epoch
-        self.arch = arch
-
-    def __repr__(self):
-        return "<Package('%(name)s', '%(version)s', '%(release)s', " + \
-            "'%(epoch)s', '%(arch)s'>" % self.__dict__
+    return [ts2d(r, keys) for r in rs]
 
 
-class SoftwareChannel(DeclBase):
-
-    __tablename__ = "softwarechannels"
-
-    id = S.Column(S.Integer, primary_key=True)
-    label = S.Column(S.String(128))
-    name = S.Column(S.String(256))
-
-    def __init__(self, id, label, name):
-        self.id = id
-        self.label = label
-        self.name = name
-
-
-class Errata(DeclBase):
-
-    __tablename__ = "errata"
-
-    id = S.Column(S.Integer, primary_key=True)
-    name = S.Column(S.String(256))
-    type = S.Column(S.String(32))
-    synopsis = S.Column(S.String(4000))
-    date = S.Column(S.String(256))
-
-    def __init__(self, id, name, type, synopsis, date):
-        self.id = id
-        self.name = name
-        self.type = type
-        self.synopsis = synopsis
-        self.date = date
-
-
-class ChannelPackages(DeclBase):
-
-    __tablename__ = "channelpackages"
-
-    id = S.Column(S.Integer, primary_key=True)
-    cid = S.Column(S.Integer, S.ForeignKey("softwarechannels.id"))
-    pid = S.Column(S.Integer, S.ForeignKey("packages.id"))
-
-    softwarechannel = SO.relationship(SoftwareChannel, backref="channelpackages")
-    package = SO.relationship(Package, backref="channelpackages")
-
-    def __init__(self, cid, pid):
-        self.cid = cid
-        self.pid = pid
-
-
-class PackageErrata(DeclBase):
+def get_errata(conn, repo):
     """
-    package -> [errata]
+    Get all errata in given repo (software channel).
+
+    :param conn: cx_Oracle Connection object
+    :param repo: Repository (Software channel) label
     """
+    sql = all_errata_in_channel_sql % repo
+    rs = SQ.execute(conn, sql)
+    keys = ("id", "advisory", "name", "synopsis", "issue_date")
 
-    __tablename__ = "packageerrata"
-
-    id = S.Column(S.Integer, primary_key=True)
-    pid = S.Column(S.Integer, S.ForeignKey("packages.id"))
-    eid = S.Column(S.Integer, S.ForeignKey("errata.id"))
-
-    package = SO.relationship(Package, backref="packageerrata")
-    errata = SO.relationship(Errata, backref="packageerrata")
-
-    def __init__(self, pid, eid):
-        self.pid = pid
-        self.eid = eid
+    return [ts2d(r, keys) for r in rs]
 
 
-def get_engine(db_path=DB_PATH):
-    return S.create_engine("sqlite:///" + db_path)
-
-
-def rpc(cmd):
-    return swapi.main(shlex.split(cmd))[0]
-
-
-def get_xs(cmd, cls, keys):
+def get_packages_files(conn, repo):
     """
-    :param cmd: command string passed to swapi.main :: str
-    :param cls: Class to instantiate data and will be imported into database
-    :param keys: keys to get data :: (str, ...)
+    Get all files in packages in given repo (software channel).
+
+    :param conn: cx_Oracle Connection object
+    :param repo: Repository (Software channel) label
     """
-    return [cls(*itemgetter(*keys)(x)) for x in rpc(cmd)]
+    sql = all_files_in_packages_in_channel_sql % repo
+    rs = SQ.execute(conn, sql)
+    keys = ("package_id", "filepath")
+
+    return [ts2d(r, keys) for r in rs]
 
 
-def get_channels(verb=""):
+def get_packages_errata(conn, repo):
     """
-    @see http://docs.redhat.com/docs/en-US/Red_Hat_Network_Satellite/5.4.1/html/API_Overview/handlers/ChannelHandler.html
+    Get all errata in packages in given repo (software channel).
+
+    :param conn: cx_Oracle Connection object
+    :param repo: Repository (Software channel) label
     """
-    return get_xs(
-        verb + "channel.listAllChannels",
-        SoftwareChannel,
-        ("id", "label", "name"),
-    )
+    sql = all_errata_in_packages_in_channel_sql % repo
+    rs = SQ.execute(conn, sql)
+    keys = ("package_id", "errata_id")
+
+    return [ts2d(r, keys) for r in rs]
 
 
-def get_packages(channel, verb=""):
+def getDependencyModifier(sense, version):
     """
-    :param channel: Software channel label
+    see also: getDependencyModifier in
+    spacewalk.git/java/code/src/com/redhat/rhn/frontend/xmlrpc/packages/PackagesHandler.java
+
+    (spacewalk's code is distributed under GPLv2)
     """
-    return get_xs(
-        verb + "-A %s channel.software.listAllPackages" % channel,
-        Package,
-        ("id", "name", "version", "release", "epoch", "arch_label"),
-    )
+    if not version:
+        return None
 
+    if sense:
+        op = ""
+        if sense & 4 > 0:
+            op = ">"
+        elif sense & 2 > 0:
+            op = "<"
 
-def get_errata(channel, verb=""):
-    return get_xs(
-        verb + "-A %s channel.software.listErrata" % channel,
-        Errata,
-        ("id", "advisory_name", "advisory_type", "advisory_synopsis", "date"),
-    )
+        if sense & 8 > 0:
+            op += "="
 
-def get_errata_for_package(pid, verb=""):
-    """
-    :param pid: Package ID
-    """
-    return get_xs(
-        verb + "-A %s packages.listProvidingErrata" % pid,
-        PackageErrata,
-        ("advisory", ),
-    )
-
-
-def make_data(verbosity=0):
-    data = B.Bunch()
-    verb = " -v " if verbosity > 0 else " "
-
-    data.channels = get_channels(verb)
-
-    data.packages = []
-    data.channelpackages = []
-    data.errata = []
-    data.packageerrata = []
-
-    for c in data.channels:
-        ps = get_packages(c.label, verb)
-
-        for p in ps:
-            data.channelpackages.append(ChannelPackages(c.id, p.id))
-
-            if p not in data.packages:
-                data.packages.append(p)
-
-                es = get_errata_for_package(p.id, verb)
-                data.packageerrata.extend(es)
-
-    for c in data.channels:
-        es = get_errata(c.label, verb)
-
-        for e in es:
-            if e not in data.errata:
-                data.errata.append(e)
-
-    return data
-
-
-def init_database(db_path=DB_PATH):
-    engine = get_engine(db_path)
-
-    DeclBase.metadata.create_all(engine)
-
-
-def import_data(db_path=DB_PATH, verbosity=0):
-    engine = get_engine(db_path)
-
-    session = SO.sessionmaker(bind=engine)
-    data = make_data(verbosity)
-
-    session.add_all(data.channels)
-    session.add_all(data.packages)
-    session.add_all(data.channelpackages)
-    session.add_all(data.errata)
-    session.add_all(data.packageerrata)
-
-    session.commit()
-
-
-def do_init(db_path=DB_PATH, verbosity=0):
-    init_database(db_path)
-    import_data(db_path, verbosity)
-
-
-def do_update(db_path=DB_PATH):
-    print "Not implemented yet!"
-
-
-def opt_parser():
-    defaults = dict(
-        verbosity=0,
-        dbpath=DB_PATH,
-    )
-
-    p = optparse.OptionParser("""%prog COMMAND [OPTION ...]
-
-    Commands: i[init], u[pdate]
-
-    Examples:
-
-    # initialize database
-    %prog init -u foo -p rhns_pass
-
-    # update database
-    %prog update -v
-    """)
-
-    p.set_defaults(**defaults)
-
-    p.add_option("-d", "--dbpath", help="Database path")
-    p.add_option("-v", "--verbose", action="count", dest="verbosity",
-        help="Verbose mode")
-
-    return p
-
-
-def main(argv=sys.argv):
-    logformat = "%(asctime)s [%(levelname)-4s] rhncachedb: %(message)s"
-    logdatefmt = "%H:%M:%S"  # too much? "%a, %d %b %Y %H:%M:%S"
-
-    logging.basicConfig(format=logformat, datefmt=logdatefmt)
-
-    p = opt_parser()
-    (options, args) = p.parse_args(argv[1:])
-
-    try:
-        loglevel = [
-            logging.WARN, logging.INFO, logging.DEBUG
-        ][options.verbosity]
-    except IndexError:
-        loglevel = logging.WARN
-
-    logging.getLogger().setLevel(loglevel)
-
-    if not args:
-        p.print_usage()
-        sys.exit(1)
-
-    a0 = args[0]
-
-    if a0.startswith('i'):
-        do_init(options.dbpath, options.verbosity)
-
-    elif a0.startswith('u'):
-        do_update(options.dbpath, options.verbosity)
-
+        return " ".join(op, version)
     else:
-        logging.error(" Unknown command '%s'" % a0)
-        sys.exit(1)
+        return "- " + version
 
 
-if __name__ == '__main__':
-    main(sys.argv)
+def get_packages_requires(conn, repo):
+    """
+    Get all requires of packages in given repo (software channel).
+
+    :param conn: cx_Oracle Connection object
+    :param repo: Repository (Software channel) label
+    """
+    sql = all_requires_in_packages_in_channel_sql % repo
+
+    # [(package_id, cabability_name, capability_version, requires_sense)]
+    rs = SQ.execute(conn, sql)
+    keys = ("package_id", "name", "modifier")
+
+    return [
+        ts2d((r[0], r[1], getDependencyModifier(r[2], r[3])), keys) for r in rs
+    ]
+
+
+def get_packages_provides(conn, repo):
+    """
+    Get all provides of packages in given repo (software channel).
+
+    :param conn: cx_Oracle Connection object
+    :param repo: Repository (Software channel) label
+    """
+    sql = all_provides_in_packages_in_channel_sql % repo
+
+    # [(package_id, cabability_name, capability_version, provides_sense)]
+    rs = SQ.execute(conn, sql)
+    keys = ("package_id", "name", "modifier")
+
+    return [
+        ts2d((r[0], r[1], getDependencyModifier(r[2], r[3])), keys) for r in rs
+    ]
+
+
+def get_errata_cves(conn, repo):
+    """
+    Get all cves of errata in given repo (software channel).
+
+    :param conn: cx_Oracle Connection object
+    :param repo: Repository (Software channel) label
+    :return: [(errata_id, cve)]
+    """
+    sql = all_cves_in_errata_in_channel_sql % repo
+    rs = SQ.execute(conn, sql)
+    keys = ("errata_id", "name")
+
+    return [ts2d(r, keys) for r in rs]
 
 
 # vim:sw=4:ts=4:et:
