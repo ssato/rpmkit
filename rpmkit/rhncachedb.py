@@ -345,10 +345,12 @@ def collect_and_dump_data(dsn, repo, output):
     iconn = SQ.connect(dsn)
 
     oconn = sqlite3.connect(output)
-    cur = conn.cursor()
+    cur = oconn.cursor()
 
-    for st in OUT_STATEMENTS.iteritems():
-        cur.execute(st["create"])
+    for tbl, sts in OUT_STATEMENTS.iteritems():
+        create_ddl = sts["create"]
+        logging.info("Creating table: " + tbl)
+        cur.execute(create_ddl)
 
     ins_dml = lambda table: OUT_STATEMENTS[table]["insert"]
 
