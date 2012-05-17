@@ -18,7 +18,6 @@
 # http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
 #
 import rpmkit.sqlminus as SQ
-import collections as C
 import logging
 import optparse
 import os.path
@@ -120,7 +119,7 @@ FROM
 WHERE C.label = '%s' AND ECVE.cve_id = CVE.id
 """
 
-OUT_STATEMENTS = C.OrderedDict(
+OUT_STATEMENTS = dict(
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageName.sql
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageEVR.sql
@@ -203,7 +202,7 @@ errata_cves = {
 """,
 "insert": "INSERT INTO errata_cves VALUES (?, ?)",
 },
-}
+)
 
 
 def ts2d(tuple, keys):
@@ -342,20 +341,6 @@ def get_errata_cves(conn, repo):
     return [ts2d(r, keys) for r in rs]
 
 
-def create_db(output):
-    conn = sqlite3.connect(output)
-    cur = conn.cursor()
-
-    for ddl in (PACKAGES_CREATE, PACKAGE_FILES_CREATE, PACKAGE_REQUIRES_CREATE,
-            PACKAGE_PROVIDES_CREATE, ERRATA_CREATE, PACKAGE_ERRATA_CREATE,
-            ERRATA_CVES_CREATE):
-        cur.execute(ddl)
-
-    conn.commit()
-    cur.close()
-
-
-
 def collect_and_dump_data(dsn, repo, output):
     iconn = SQ.connect(dsn)
 
@@ -431,8 +416,6 @@ def main(argv=sys.argv):
 
     if not options.output:
         options.output = chan + ".db"
-
-    create_db(options.output)
 
     collect_and_dump_data(options.dsn, chan, options.output)
 
