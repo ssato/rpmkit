@@ -144,27 +144,29 @@ class PackageProvides(DeclBase, DeclMixin):
     @see spacewalk.git/schema/spacewalk/common/tables/rhnPackageProvides.sql
     """
     pid = S.Column(S.Integer, S.ForeignKey("package.id"), nullable=False)
-    name = S.Column(S.String(4000))  # rhnPackageCapability.name
+    name = S.Column(S.String(4000))
+    modifier = S.Column(S.String(64))
 
     package = SO.relationship(Package, backref="provides")
 
-    def __init__(self, pid, name):
+    def __init__(self, pid, name, modifier):
         self.pid = pid
         self.name = name
+        self.modifier = modifier
 
 
 class PackageErrata(DeclBase, DeclMixin):
     """package vs. errata
     """
     pid = S.Column(S.Integer, S.ForeignKey("package.id"))
-    advisory = S.Column(S.String(100), S.ForeignKey("errata.advisory"))
+    eid = S.Column(S.Integer, S.ForeignKey("errata.id"))
 
     package = SO.relationship(Package, backref="packageerrata")
     errata = SO.relationship(Errata, backref="packageerrata")
 
-    def __init__(self, pid, advisory):
+    def __init__(self, pid, eid):
         self.pid = pid
-        self.advisory = advisory
+        self.eid = eid
 
 
 # vim:sw=4:ts=4:et:
