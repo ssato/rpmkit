@@ -288,9 +288,9 @@ def getDependencyModifier(sense, version):
         if sense & 8 > 0:
             op += "="
 
-        return " ".join(op, version)
+        return " ".join(op, str(version))
     else:
-        return "- " + version
+        return "- " + str(version)
 
 
 def get_packages_requires(conn, repo):
