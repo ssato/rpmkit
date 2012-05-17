@@ -134,7 +134,7 @@ packages = {
     arch VARCHAR(64) NOT NULL
 )
 """,
-"insert": "INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?)",
+"insert": "INSERT OR REPLACE INTO packages VALUES (?, ?, ?, ?, ?, ?)",
 },
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageFile.sql
@@ -145,7 +145,7 @@ package_files = {
     name VARCHAR(4000) NOT NULL
 )
 """,
-"insert": "INSERT INTO package_files VALUES (?, ?)",
+"insert": "INSERT OR REPLACE INTO package_files VALUES (?, ?)",
 },
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageRequires.sql
@@ -157,7 +157,7 @@ package_requires = {
     modifier VARCHAR(100)
 )
 """,
-"insert": "INSERT INTO package_requires VALUES (?, ?, ?)",
+"insert": "INSERT OR REPLACE INTO package_requires VALUES (?, ?, ?)",
 },
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageProvides.sql
@@ -169,7 +169,7 @@ package_provides = {
     modifier VARCHAR(100)
 )
 """,
-"insert": "INSERT INTO package_provides VALUES (?, ?, ?)",
+"insert": "INSERT OR REPLACE INTO package_provides VALUES (?, ?, ?)",
 },
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnErrata.sql
@@ -182,7 +182,7 @@ errata = {
     issue_date VARCHAR(100) NOT NULL
 )
 """,
-"insert": "INSERT INTO errata VALUES (?, ?, ?, ?, ?)",
+"insert": "INSERT OR REPLACE INTO errata VALUES (?, ?, ?, ?, ?)",
 },
 
 package_errata = {
@@ -191,7 +191,7 @@ package_errata = {
     errata_id INTEGER CONSTRAINT pe2_ps REFERENCES errata(id) ON DELETE CASCADE
 )
 """,
-"insert": "INSERT INTO package_errata VALUES (?, ?)",
+"insert": "INSERT OR REPLACE INTO package_errata VALUES (?, ?)",
 },
 
 errata_cves = {
@@ -200,7 +200,7 @@ errata_cves = {
     name VARCHAR(13)
 )
 """,
-"insert": "INSERT INTO errata_cves VALUES (?, ?)",
+"insert": "INSERT OR REPLACE INTO errata_cves VALUES (?, ?)",
 },
 )
 
