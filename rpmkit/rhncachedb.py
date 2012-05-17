@@ -357,31 +357,45 @@ def collect_and_dump_data(dsn, repo, output):
 
     ins_dml = lambda table: OUT_STATEMENTS[table]["insert"]
 
+    logging.info("Collecting packages data")
     packages = get_packages(iconn, repo)
+    logging.info("Inserting packages data")
     cur.executemany(ins_dml("packages"), packages)
     oconn.commit()
 
+    logging.info("Collecting errata data")
     errata = get_errata(iconn, repo)
+    logging.info("Inserting errata data")
     cur.executemany(ins_dml("errata"), errata)
     oconn.commit()
 
+    logging.info("Collecting package_files data")
     package_files = get_packages_files(iconn, repo)
+    logging.info("Inserting package_files data")
     cur.executemany(ins_dml("package_files"), package_files)
     oconn.commit()
 
+    logging.info("Collecting package_errata data")
     package_errata = get_packages_errata(iconn, repo)
+    logging.info("Inserting package_errata data")
     cur.executemany(ins_dml("package_errata"), package_errata)
     oconn.commit()
 
+    logging.info("Collecting package_requires data")
     package_requires = get_packages_requires(iconn, repo)
+    logging.info("Inserting package_requires data")
     cur.executemany(ins_dml("package_requires"), package_requires)
     oconn.commit()
 
+    logging.info("Collecting package_provides data")
     package_provides = get_packages_provides(iconn, repo)
+    logging.info("Inserting package_provides data")
     cur.executemany(ins_dml("package_provides"), package_provides)
     oconn.commit()
 
+    logging.info("Collecting errata_cves data")
     errata_cves = get_errata_cves(iconn, repo)
+    logging.info("Inserting errata_cves data")
     cur.executemany(ins_dml("errata_cves"), errata_cves)
     oconn.commit()
 
