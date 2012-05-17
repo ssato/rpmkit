@@ -154,7 +154,7 @@ package_requires = {
 "create": """CREATE TABLE IF NOT EXISTS package_requires(
     package_id INTEGER CONSTRAINT pr_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
-    modifier VARCHAR(100) NOT NULL
+    modifier VARCHAR(100)
 )
 """,
 "insert": "INSERT INTO package_requires VALUES (?, ?, ?)",
@@ -166,7 +166,7 @@ package_provides = {
 "create": """CREATE TABLE IF NOT EXISTS package_provides(
     package_id INTEGER CONSTRAINT pp_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
-    modifier VARCHAR(100) NOT NULL
+    modifier VARCHAR(100)
 )
 """,
 "insert": "INSERT INTO package_provides VALUES (?, ?, ?)",
@@ -268,7 +268,7 @@ def get_packages_errata(conn, repo):
     return [ts2d(r, keys) for r in rs]
 
 
-def getDependencyModifier(sense, version):
+def getDependencyModifier(version, sense):
     """
     see also: getDependencyModifier in
     spacewalk.git/java/code/src/com/redhat/rhn/frontend/xmlrpc/packages/PackagesHandler.java
