@@ -317,7 +317,7 @@ def main(argv=sys.argv):
 
     logging.info(
         "finished at %s [%f sec]" % (
-            datetime.datetime.now(), time() - start_time
+            datetime.datetime.now(), time.time() - start_time
         )
     )
 
