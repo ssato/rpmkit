@@ -9,10 +9,10 @@ curdir = os.getcwd()
 sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
-VERSION = "0.2.7"
+VERSION = "0.2.8"
 
 # daily snapshots:
-VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
+#VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
 data_files = [
@@ -93,4 +93,5 @@ setup(name=PACKAGE,
     },
 )
 
-# vim:sw=4 ts=4 et:
+
+# vim:sw=4:ts=4:et:
