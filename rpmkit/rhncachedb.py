@@ -79,7 +79,7 @@ ORDER BY UPPER(PC.name)
     create = """CREATE TABLE IF NOT EXISTS package_files(
     package_id INTEGER CONSTRAINT pf_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
-    basename VARCHAR(4000) NOT NULL,
+    basename VARCHAR(4000) NOT NULL
 )
 """,
     import_ = "INSERT OR IGNORE INTO package_files VALUES (?, ?, ?)",
@@ -261,7 +261,11 @@ def collect_and_dump_data(dsn, repo, output, sqls=SQLS):
     for tbl, sts in sqls.iteritems():
         create_ddl = sts["create"]
         logging.info("Creating table: " + tbl)
-        cur.execute(create_ddl)
+        try:
+            cur.execute(create_ddl)
+        except:
+            logging.error("create_ddl was:\n" + create_ddl)
+            raise
 
     for target in ("packages", "errata", "package_files",
             "package_requires", "package_provides", "package_errata",
