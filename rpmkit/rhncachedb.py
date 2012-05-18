@@ -56,7 +56,7 @@ ORDER BY UPPER(PN.name), P.id
     arch VARCHAR(64) NOT NULL
 )
 """,
-    import_ = "INSERT OR REPLACE INTO packages VALUES (?, ?, ?, ?, ?, ?)",
+    import_ = "INSERT OR IGNORE INTO packages VALUES (?, ?, ?, ?, ?, ?)",
 ),
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageFile.sql
@@ -81,7 +81,7 @@ ORDER BY UPPER(PC.name)
     name VARCHAR(4000) NOT NULL
 )
 """,
-    import_ = "INSERT OR REPLACE INTO package_files VALUES (?, ?)",
+    import_ = "INSERT OR IGNORE INTO package_files VALUES (?, ?)",
 ),
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageRequires.sql
@@ -104,7 +104,7 @@ WHERE C.label = '%s' AND PR.capability_id = PC.id
     modifier VARCHAR(100)
 )
 """,
-    import_ = "INSERT OR REPLACE INTO package_requires VALUES (?, ?, ?)",
+    import_ = "INSERT OR IGNORE INTO package_requires VALUES (?, ?, ?)",
 ),
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageProvides.sql
@@ -127,7 +127,7 @@ WHERE C.label = '%s' AND PP.capability_id = PC.id
     modifier VARCHAR(100)
 )
 """,
-    import_ = "INSERT OR REPLACE INTO package_provides VALUES (?, ?, ?)",
+    import_ = "INSERT OR IGNORE INTO package_provides VALUES (?, ?, ?)",
 ),
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnErrata.sql
@@ -147,7 +147,7 @@ WHERE CE.channel_id = C.id AND C.label = '%s' AND CE.errata_id = E.id
     issue_date VARCHAR(100) NOT NULL
 )
 """,
-    import_ = "INSERT OR REPLACE INTO errata VALUES (?, ?, ?, ?, ?)",
+    import_ = "INSERT OR IGNORE INTO errata VALUES (?, ?, ?, ?, ?)",
 ),
 
 package_errata = dict(
@@ -167,7 +167,7 @@ WHERE C.label = '%s'
     errata_id INTEGER CONSTRAINT pe2_ps REFERENCES errata(id) ON DELETE CASCADE
 )
 """,
-    import_ = "INSERT OR REPLACE INTO package_errata VALUES (?, ?)",
+    import_ = "INSERT OR IGNORE INTO package_errata VALUES (?, ?)",
 ),
 
 errata_cves = dict(
@@ -187,7 +187,7 @@ WHERE C.label = '%s' AND ECVE.cve_id = CVE.id
     name VARCHAR(13)
 )
 """,
-    import_ = "INSERT OR REPLACE INTO errata_cves VALUES (?, ?)",
+    import_ = "INSERT OR IGNORE INTO errata_cves VALUES (?, ?)",
 ),
 )
 
