@@ -25,12 +25,17 @@ import sqlite3
 import sys
 
 
-# all_packages_in_channel in 
-# packages_in_channel in
-#   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
-# all_channel_tree in 
-#   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Channel_queries.xml
-all_packages_in_channel_sql = """\
+SQLS = dict(
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageName.sql
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageEVR.sql
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageArch.sql
+packages = dict(
+    # all_packages_in_channel in
+    # packages_in_channel in
+    #   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
+    # all_channel_tree in
+    #   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Channel_queries.xml
+    export = """\
 SELECT DISTINCT P.id, PN.name, PE.version, PE.release, PE.epoch, PA.label
 FROM rhnPackageArch PA, rhnPackageName PN, rhnPackageEVR PE,
      rhnPackage P, rhnChannelPackage CP, rhnChannel C
@@ -41,21 +46,25 @@ WHERE CP.channel_id = C.id
       AND P.evr_id = PE.id
       AND PA.id = P.package_arch_id
 ORDER BY UPPER(PN.name), P.id
-"""
+""",
+    create = """CREATE TABLE IF NOT EXISTS packages(
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(256) NOT NULL,
+    version VARCHAR(512) NOT NULL,
+    release VARCHAR(512) NOT NULL,
+    epoch VARCHAR(16),
+    arch VARCHAR(64) NOT NULL
+)
+""",
+    import_ = "INSERT OR REPLACE INTO packages VALUES (?, ?, ?, ?, ?, ?)",
+),
 
-# in_channel in
-# http://git.fedorahosted.org/git/?p=spacewalk.git;a=blob;f=java/code/src/com/redhat/rhn/common/db/datasource/xml/Errata_queries.xml
-all_errata_in_channel_sql = """\
-SELECT DISTINCT E.id, E.advisory, E.advisory_name, E.synopsis,
-                TO_CHAR(E.issue_date, 'YYYY-MM-DD HH24:MI:SS')
-FROM rhnErrata E, rhnChannelErrata CE, rhnChannel C
-WHERE CE.channel_id = C.id AND C.label = '%s' AND CE.errata_id = E.id
-"""
-
-# package_files in
-# http://git.fedorahosted.org/git/?p=spacewalk.git;a=blob;f=java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
-all_files_in_packages_in_channel_sql = """\
-SELECT DISTINCT F.package_id, PC.name
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageFile.sql
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
+package_files = dict(
+    # package_files in
+    # http://git.fedorahosted.org/git/?p=spacewalk.git;a=blob;f=java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
+    export = """SELECT DISTINCT F.package_id, PC.name
 FROM
   rhnPackageCapability PC,
   rhnPackageFile F
@@ -66,11 +75,20 @@ FROM
 WHERE F.capability_id = PC.id
       AND C.label = '%s'
 ORDER BY UPPER(PC.name)
-"""
+""",
+    create = """CREATE TABLE IF NOT EXISTS package_files(
+    package_id INTEGER CONSTRAINT pf_ps REFERENCES packages(id) ON DELETE CASCADE,
+    name VARCHAR(4000) NOT NULL
+)
+""",
+    import_ = "INSERT OR REPLACE INTO package_files VALUES (?, ?)",
+),
 
-# package_requires in .../Package_queries.xml
-all_requires_in_packages_in_channel_sql = """\
-SELECT DISTINCT PR.package_id, PC.name, PC.version, PR.sense
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageRequires.sql
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
+package_requires = dict(
+    # package_requires in .../Package_queries.xml
+    export = """SELECT DISTINCT PR.package_id, PC.name, PC.version, PR.sense
 FROM
   rhnPackageCapability PC,
   rhnPackageRequires PR
@@ -79,11 +97,21 @@ FROM
     ON CP.channel_id = C.id)
   ON PR.package_id = CP.package_id
 WHERE C.label = '%s' AND PR.capability_id = PC.id
-"""
+""",
+    create = """CREATE TABLE IF NOT EXISTS package_requires(
+    package_id INTEGER CONSTRAINT pr_ps REFERENCES packages(id) ON DELETE CASCADE,
+    name VARCHAR(4000) NOT NULL,
+    modifier VARCHAR(100)
+)
+""",
+    import_ = "INSERT OR REPLACE INTO package_requires VALUES (?, ?, ?)",
+),
 
-# package_provides in .../Package_queries.xml
-all_provides_in_packages_in_channel_sql = """\
-SELECT DISTINCT PP.package_id, PC.name, PC.version, PP.sense
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageProvides.sql
+# spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
+package_provides = dict(
+    # package_provides in .../Package_queries.xml
+    export = """SELECT DISTINCT PP.package_id, PC.name, PC.version, PP.sense
 FROM
   rhnPackageCapability PC,
   rhnPackageProvides PP
@@ -92,10 +120,39 @@ FROM
     ON CP.channel_id = C.id)
   ON PP.package_id = CP.package_id
 WHERE C.label = '%s' AND PP.capability_id = PC.id
-"""
+""",
+    create = """CREATE TABLE IF NOT EXISTS package_provides(
+    package_id INTEGER CONSTRAINT pp_ps REFERENCES packages(id) ON DELETE CASCADE,
+    name VARCHAR(4000) NOT NULL,
+    modifier VARCHAR(100)
+)
+""",
+    import_ = "INSERT OR REPLACE INTO package_provides VALUES (?, ?, ?)",
+),
 
-# packages_in_errata in .../Package_queries.xml
-all_errata_in_packages_in_channel_sql = """\
+# spacewalk.git/schema/spacewalk/common/tables/rhnErrata.sql
+errata = dict(
+    # in_channel in
+    # http://git.fedorahosted.org/git/?p=spacewalk.git;a=blob;f=java/code/src/com/redhat/rhn/common/db/datasource/xml/Errata_queries.xml
+    export = """SELECT DISTINCT E.id, E.advisory, E.advisory_name, E.synopsis,
+                TO_CHAR(E.issue_date, 'YYYY-MM-DD HH24:MI:SS')
+FROM rhnErrata E, rhnChannelErrata CE, rhnChannel C
+WHERE CE.channel_id = C.id AND C.label = '%s' AND CE.errata_id = E.id
+""",
+    create = """CREATE TABLE IF NOT EXISTS errata(
+    id INTEGER PRIMARY KEY,
+    advisory VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    synopsis VARCHAR(4000) NOT NULL,
+    issue_date VARCHAR(100) NOT NULL
+)
+""",
+    import_ = "INSERT OR REPLACE INTO errata VALUES (?, ?, ?, ?, ?)",
+),
+
+package_errata = dict(
+    # packages_in_errata in .../Package_queries.xml
+    export = """\
 SELECT DISTINCT EP.package_id, EP.errata_id
 FROM
   rhnErrataPackage EP
@@ -104,11 +161,18 @@ FROM
     ON CP.channel_id = C.id)
   ON EP.package_id = CP.package_id
 WHERE C.label = '%s'
-"""
+""",
+    create = """CREATE TABLE IF NOT EXISTS package_errata(
+    package_id INTEGER CONSTRAINT pe_ps REFERENCES packages(id) ON DELETE CASCADE,
+    errata_id INTEGER CONSTRAINT pe2_ps REFERENCES errata(id) ON DELETE CASCADE
+)
+""",
+    import_ = "INSERT OR REPLACE INTO package_errata VALUES (?, ?)",
+),
 
-# cves_for_errata in .../Errata_querys.xml
-all_cves_in_errata_in_channel_sql = """
-SELECT DISTINCT ECVE.errata_id, CVE.name
+errata_cves = dict(
+    # cves_for_errata in .../Errata_querys.xml
+    export = """SELECT DISTINCT ECVE.errata_id, CVE.name
 FROM
   rhnCVE CVE,
   rhnErrataCVE ECVE
@@ -117,155 +181,15 @@ FROM
     ON CE.channel_id = C.id)
   ON ECVE.errata_id = CE.errata_id
 WHERE C.label = '%s' AND ECVE.cve_id = CVE.id
-"""
-
-OUT_STATEMENTS = dict(
-
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageName.sql
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageEVR.sql
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageArch.sql
-packages = {
-"create": """CREATE TABLE IF NOT EXISTS packages(
-    id INTEGER PRIMARY KEY,
-    name VARCHAR(256) NOT NULL,
-    version VARCHAR(512) NOT NULL,
-    release VARCHAR(512) NOT NULL,
-    epoch VARCHAR(16),
-    arch VARCHAR(64) NOT NULL
-)
 """,
-"insert": "INSERT OR REPLACE INTO packages VALUES (?, ?, ?, ?, ?, ?)",
-},
-
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageFile.sql
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
-package_files = {
-"create": """CREATE TABLE IF NOT EXISTS package_files(
-    package_id INTEGER CONSTRAINT pf_ps REFERENCES packages(id) ON DELETE CASCADE,
-    name VARCHAR(4000) NOT NULL
-)
-""",
-"insert": "INSERT OR REPLACE INTO package_files VALUES (?, ?)",
-},
-
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageRequires.sql
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
-package_requires = {
-"create": """CREATE TABLE IF NOT EXISTS package_requires(
-    package_id INTEGER CONSTRAINT pr_ps REFERENCES packages(id) ON DELETE CASCADE,
-    name VARCHAR(4000) NOT NULL,
-    modifier VARCHAR(100)
-)
-""",
-"insert": "INSERT OR REPLACE INTO package_requires VALUES (?, ?, ?)",
-},
-
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageProvides.sql
-# spacewalk.git/schema/spacewalk/common/tables/rhnPackageCapability.sql
-package_provides = {
-"create": """CREATE TABLE IF NOT EXISTS package_provides(
-    package_id INTEGER CONSTRAINT pp_ps REFERENCES packages(id) ON DELETE CASCADE,
-    name VARCHAR(4000) NOT NULL,
-    modifier VARCHAR(100)
-)
-""",
-"insert": "INSERT OR REPLACE INTO package_provides VALUES (?, ?, ?)",
-},
-
-# spacewalk.git/schema/spacewalk/common/tables/rhnErrata.sql
-errata = {
-"create": """CREATE TABLE IF NOT EXISTS errata(
-    id INTEGER PRIMARY KEY,
-    advisory VARCHAR(100) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    synopsis VARCHAR(4000) NOT NULL,
-    issue_date VARCHAR(100) NOT NULL
-)
-""",
-"insert": "INSERT OR REPLACE INTO errata VALUES (?, ?, ?, ?, ?)",
-},
-
-package_errata = {
-"create": """CREATE TABLE IF NOT EXISTS package_errata(
-    package_id INTEGER CONSTRAINT pe_ps REFERENCES packages(id) ON DELETE CASCADE,
-    errata_id INTEGER CONSTRAINT pe2_ps REFERENCES errata(id) ON DELETE CASCADE
-)
-""",
-"insert": "INSERT OR REPLACE INTO package_errata VALUES (?, ?)",
-},
-
-errata_cves = {
-"create": """CREATE TABLE IF NOT EXISTS errata_cves(
+    create = """CREATE TABLE IF NOT EXISTS errata_cves(
     errata_id INTEGER CONSTRAINT ec_ps REFERENCES errata(id) ON DELETE CASCADE,
     name VARCHAR(13)
 )
 """,
-"insert": "INSERT OR REPLACE INTO errata_cves VALUES (?, ?)",
-},
+    import_ = "INSERT OR REPLACE INTO errata_cves VALUES (?, ?)",
+),
 )
-
-
-def ts2d(tuple, keys, dic=False):
-    if dic:
-        return dict(zip(tuple, keys))
-    else:
-        return tuple
-
-
-def get_packages(conn, repo):
-    """
-    Get all packages in given repo (software channel).
-
-    :param conn: cx_Oracle Connection object
-    :param repo: Repository (Software channel) label
-    """
-    sql = all_packages_in_channel_sql % repo
-    rs = SQ.execute(conn, sql)
-    keys = ("id", "name", "version", "release", "epoch", "arch")
-
-    return [ts2d(r, keys) for r in rs]
-
-
-def get_errata(conn, repo):
-    """
-    Get all errata in given repo (software channel).
-
-    :param conn: cx_Oracle Connection object
-    :param repo: Repository (Software channel) label
-    """
-    sql = all_errata_in_channel_sql % repo
-    rs = SQ.execute(conn, sql)
-    keys = ("id", "advisory", "name", "synopsis", "issue_date")
-
-    return [ts2d(r, keys) for r in rs]
-
-
-def get_packages_files(conn, repo):
-    """
-    Get all files in packages in given repo (software channel).
-
-    :param conn: cx_Oracle Connection object
-    :param repo: Repository (Software channel) label
-    """
-    sql = all_files_in_packages_in_channel_sql % repo
-    rs = SQ.execute(conn, sql)
-    keys = ("package_id", "filepath")
-
-    return [ts2d(r, keys) for r in rs]
-
-
-def get_packages_errata(conn, repo):
-    """
-    Get all errata in packages in given repo (software channel).
-
-    :param conn: cx_Oracle Connection object
-    :param repo: Repository (Software channel) label
-    """
-    sql = all_errata_in_packages_in_channel_sql % repo
-    rs = SQ.execute(conn, sql)
-    keys = ("package_id", "errata_id")
-
-    return [ts2d(r, keys) for r in rs]
 
 
 def getDependencyModifier(version, sense):
@@ -293,111 +217,54 @@ def getDependencyModifier(version, sense):
         return "- " + str(version)
 
 
-def get_packages_requires(conn, repo):
-    """
-    Get all requires of packages in given repo (software channel).
+def get_xs(target, conn, repo, sqls=SQLS):
+    """Get xs in given repo (software channel).
 
     :param conn: cx_Oracle Connection object
     :param repo: Repository (Software channel) label
     """
-    sql = all_requires_in_packages_in_channel_sql % repo
-
-    # [(package_id, cabability_name, capability_version, requires_sense)]
+    sql = sqls[target]["export"] % repo
     rs = SQ.execute(conn, sql)
-    keys = ("package_id", "name", "modifier")
 
-    return [
-        ts2d((r[0], r[1], getDependencyModifier(r[2], r[3])), keys) for r in rs
-    ]
-
-
-def get_packages_provides(conn, repo):
-    """
-    Get all provides of packages in given repo (software channel).
-
-    :param conn: cx_Oracle Connection object
-    :param repo: Repository (Software channel) label
-    """
-    sql = all_provides_in_packages_in_channel_sql % repo
-
-    # [(package_id, cabability_name, capability_version, provides_sense)]
-    rs = SQ.execute(conn, sql)
-    keys = ("package_id", "name", "modifier")
-
-    return [
-        ts2d((r[0], r[1], getDependencyModifier(r[2], r[3])), keys) for r in rs
-    ]
+    if target in ("package_requires", "package_provides"):
+	return [(r[0], r[1], getDependencyModifier(r[2], r[3])) for r in rs]
+    else:
+        return rs
 
 
-def get_errata_cves(conn, repo):
-    """
-    Get all cves of errata in given repo (software channel).
+def export(target, iconn, repo, sqls=SQLS):
+    logging.info("Collecting %s data..." % target)
+    rs = get_xs(target, iconn, repo, sqls)
+    logging.info("...Done")
+    logging.debug(" rs[0]=" + str(rs[0]))
 
-    :param conn: cx_Oracle Connection object
-    :param repo: Repository (Software channel) label
-    :return: [(errata_id, cve)]
-    """
-    sql = all_cves_in_errata_in_channel_sql % repo
-    rs = SQ.execute(conn, sql)
-    keys = ("errata_id", "name")
-
-    return [ts2d(r, keys) for r in rs]
+    return rs
 
 
-def collect_and_dump_data(dsn, repo, output):
+def import_(target, oconn, ocur, rs, sqls=SQLS):
+    logging.info("Importing %s data [%d] ..." % (target, len(rs)))
+    import_dml = sqls[target]["import_"]
+    ocur.executemany(import_dml, rs)
+    oconn.commit()
+    logging.info("...Done")
+
+
+def collect_and_dump_data(dsn, repo, output, sqls=SQLS):
     iconn = SQ.connect(dsn)
 
     oconn = sqlite3.connect(output)
     cur = oconn.cursor()
 
-    for tbl, sts in OUT_STATEMENTS.iteritems():
+    for tbl, sts in sqls.iteritems():
         create_ddl = sts["create"]
         logging.info("Creating table: " + tbl)
         cur.execute(create_ddl)
 
-    ins_dml = lambda table: OUT_STATEMENTS[table]["insert"]
-
-    logging.info("Collecting packages data")
-    packages = get_packages(iconn, repo)
-    logging.info("Inserting packages data")
-    cur.executemany(ins_dml("packages"), packages)
-    oconn.commit()
-
-    logging.info("Collecting errata data")
-    errata = get_errata(iconn, repo)
-    logging.info("Inserting errata data")
-    cur.executemany(ins_dml("errata"), errata)
-    oconn.commit()
-
-    logging.info("Collecting package_files data")
-    package_files = get_packages_files(iconn, repo)
-    logging.info("Inserting package_files data")
-    cur.executemany(ins_dml("package_files"), package_files)
-    oconn.commit()
-
-    logging.info("Collecting package_errata data")
-    package_errata = get_packages_errata(iconn, repo)
-    logging.info("Inserting package_errata data")
-    cur.executemany(ins_dml("package_errata"), package_errata)
-    oconn.commit()
-
-    logging.info("Collecting package_requires data")
-    package_requires = get_packages_requires(iconn, repo)
-    logging.info("Inserting package_requires data")
-    cur.executemany(ins_dml("package_requires"), package_requires)
-    oconn.commit()
-
-    logging.info("Collecting package_provides data")
-    package_provides = get_packages_provides(iconn, repo)
-    logging.info("Inserting package_provides data")
-    cur.executemany(ins_dml("package_provides"), package_provides)
-    oconn.commit()
-
-    logging.info("Collecting errata_cves data")
-    errata_cves = get_errata_cves(iconn, repo)
-    logging.info("Inserting errata_cves data")
-    cur.executemany(ins_dml("errata_cves"), errata_cves)
-    oconn.commit()
+    for target in ("packages", "errata", "package_files",
+            "package_requires", "package_provides", "package_errata",
+            "errata_cves"):
+        rs = export(target, iconn, repo)
+        import_(target, oconn, cur, rs)
 
     cur.close()
 
