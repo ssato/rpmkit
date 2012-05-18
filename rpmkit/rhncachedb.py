@@ -22,6 +22,7 @@ import datetime
 import logging
 import optparse
 import os.path
+import os
 import sqlite3
 import sys
 import time
@@ -262,29 +263,31 @@ def export(target, iconn, repo, sqls=SQLS, since=None):
 
 def import_(target, oconn, ocur, rs, sqls=SQLS):
     logging.info("Importing %s data [%d] ..." % (target, len(rs)))
-    import_dml = sqls[target]["import_"]
-    ocur.executemany(import_dml, rs)
+    ocur.executemany(sqls[target]["import_"], rs)
     oconn.commit()
 
 
-def collect_and_dump_data(dsn, repo, output, sqls=SQLS, since=None):
+def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None):
     iconn = SQ.connect(dsn)
 
     oconn = sqlite3.connect(output)
     cur = oconn.cursor()
 
-    for tbl, sts in sqls.iteritems():
-        create_ddl = sts["create"]
-        logging.info("Creating table: " + tbl)
+    targets = (
+        "packages", "errata", "package_files", "package_requires",
+        "package_provides", "package_errata", "errata_cves",
+    )
+
+    for target in targets:
+        logging.info("Creating table: " + target)
+        create_ddl = sqls[target]["create"]
         try:
             cur.execute(create_ddl)
         except:
             logging.error("create_ddl was:\n" + create_ddl)
             raise
 
-    for target in ("packages", "errata", "package_files",
-            "package_requires", "package_provides", "package_errata",
-            "errata_cves"):
+    for target in targets:
         rs = export(target, iconn, repo, sqls, since)
         import_(target, oconn, cur, rs)
 
@@ -294,14 +297,21 @@ def collect_and_dump_data(dsn, repo, output, sqls=SQLS, since=None):
 def option_parser(prog="swapi"):
     defaults = dict(
         output=None,
+        outdir=os.curdir,
         dsn="rhnsat/rhnsat@rhnsat",
         since=None,
         debug=False,
     )
-    p = optparse.OptionParser("%prog [OPTION ...] CHANNEL_LABEL")
+    p = optparse.OptionParser(
+        "%prog [OPTION ...] CHANNEL_LABEL_0 [CHANNEL_LABEL_1 ...]"
+    )
     p.set_defaults(**defaults)
 
-    p.add_option("-o", "--output", help="Output filename [<channel_label>.db]")
+    p.add_option("-o", "--output",
+        help="Output filename [<channel_label>.db]. " + \
+            "Ignored if multiple channels given."
+    )
+    p.add_option("-O", "--outdir", help="Output directory. [%default]")
     p.add_option("", "--dsn", help="Data source name [%default]")
     p.add_option("-S", "--since",
         help="Collect data since this date given in the form of \"yyyy-mm-dd\""
@@ -309,6 +319,20 @@ def option_parser(prog="swapi"):
     p.add_option("-D", "--debug", action="store_true", help="Debug mode")
 
     return p
+
+
+def run(dsn, chan, output, since, sqls=SQLS):
+    start_time = time.time()
+    logging.info("start at %s: channel=%s" % (datetime.datetime.now(), chan))
+    logging.debug(
+        "dsn=%s, chan=%s, output=%s, since=%s" % (dsn, chan, output, since)
+    )
+    collect_and_import_data(dsn, chan, output, sqls, since)
+    logging.info(
+        "finished at %s [%f sec]" % (
+            datetime.datetime.now(), time.time() - start_time
+        )
+    )
 
 
 def main(argv=sys.argv):
@@ -324,23 +348,17 @@ def main(argv=sys.argv):
     if options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    chan = args[0]
+    if len(args) == 1:
+        chan = args[0]
 
-    if not options.output:
-        options.output = chan + ".db"
+        if not options.output:
+            options.output = os.path.join(options.outdir, chan + ".db")
 
-    start_time = time.time()
-    logging.info("start at: %s" % datetime.datetime.now())
-
-    collect_and_dump_data(
-        options.dsn, chan, options.output, SQLS, options.since
-    )
-
-    logging.info(
-        "finished at %s [%f sec]" % (
-            datetime.datetime.now(), time.time() - start_time
-        )
-    )
+        run(options.dsn, chan, options.output, options.since)
+    else:
+        for chan in args:
+            output = os.path.join(options.outdir, chan + ".db")
+            run(options.dsn, chan, output, options.since)
 
 
 if __name__ == '__main__':
