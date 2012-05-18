@@ -32,13 +32,11 @@ SQLS = dict(
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageEVR.sql
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageArch.sql
 packages = dict(
-    # all_packages_in_channel in
-    # packages_in_channel in
+    # all_packages_in_channel and all_packages_in_channel_after, packages_in_channel in
     #   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
     # all_channel_tree in
     #   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Channel_queries.xml
-    export = """\
-SELECT DISTINCT P.id, PN.name, PE.version, PE.release, PE.epoch, PA.label
+    export = """SELECT DISTINCT P.id, PN.name, PE.version, PE.release, PE.epoch, PA.label
 FROM rhnPackageArch PA, rhnPackageName PN, rhnPackageEVR PE,
      rhnPackage P, rhnChannelPackage CP, rhnChannel C
 WHERE CP.channel_id = C.id
@@ -46,9 +44,10 @@ WHERE CP.channel_id = C.id
       AND CP.package_id = P.id
       AND P.name_id = PN.id
       AND P.evr_id = PE.id
-      AND PA.id = P.package_arch_id
+      AND PA.id = P.package_arch_id %s
 ORDER BY UPPER(PN.name), P.id
 """,
+    export_since = "AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS packages(
     id INTEGER PRIMARY KEY,
     name VARCHAR(256) NOT NULL,
@@ -69,15 +68,17 @@ package_files = dict(
     export = """SELECT DISTINCT F.package_id, PC.name
 FROM
   rhnPackageCapability PC,
+  rhnPackage P,
   rhnPackageFile F
   INNER JOIN (rhnChannelPackage CP
     INNER JOIN rhnChannel C
     ON CP.channel_id = C.id)
   ON F.package_id = CP.package_id
 WHERE F.capability_id = PC.id
-      AND C.label = '%s'
+      AND C.label = '%s' %s
 ORDER BY UPPER(PC.name)
 """,
+    export_since = "AND F.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_files(
     package_id INTEGER CONSTRAINT pf_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
@@ -93,14 +94,16 @@ package_requires = dict(
     # package_requires in .../Package_queries.xml
     export = """SELECT DISTINCT PR.package_id, PC.name, PC.version, PR.sense
 FROM
+  rhnPackage P,
   rhnPackageCapability PC,
   rhnPackageRequires PR
   INNER JOIN (rhnChannelPackage CP
     INNER JOIN rhnChannel C
     ON CP.channel_id = C.id)
   ON PR.package_id = CP.package_id
-WHERE C.label = '%s' AND PR.capability_id = PC.id
+WHERE C.label = '%s' AND PR.capability_id = PC.id %s
 """,
+    export_since = "AND P.id = PR.package_id and P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_requires(
     package_id INTEGER CONSTRAINT pr_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
@@ -116,14 +119,16 @@ package_provides = dict(
     # package_provides in .../Package_queries.xml
     export = """SELECT DISTINCT PP.package_id, PC.name, PC.version, PP.sense
 FROM
+  rhnPackage P,
   rhnPackageCapability PC,
   rhnPackageProvides PP
   INNER JOIN (rhnChannelPackage CP
     INNER JOIN rhnChannel C
     ON CP.channel_id = C.id)
   ON PP.package_id = CP.package_id
-WHERE C.label = '%s' AND PP.capability_id = PC.id
+WHERE C.label = '%s' AND PP.capability_id = PC.id %s
 """,
+    export_since = "AND PP.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_provides(
     package_id INTEGER CONSTRAINT pp_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
@@ -140,8 +145,9 @@ errata = dict(
     export = """SELECT DISTINCT E.id, E.advisory, E.advisory_name, E.synopsis,
                 TO_CHAR(E.issue_date, 'YYYY-MM-DD HH24:MI:SS')
 FROM rhnErrata E, rhnChannelErrata CE, rhnChannel C
-WHERE CE.channel_id = C.id AND C.label = '%s' AND CE.errata_id = E.id
+WHERE CE.channel_id = C.id AND C.label = '%s' AND CE.errata_id = E.id %s
 """,
+    export_since = "AND E.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS errata(
     id INTEGER PRIMARY KEY,
     advisory VARCHAR(100) NOT NULL,
@@ -158,13 +164,15 @@ package_errata = dict(
     export = """\
 SELECT DISTINCT EP.package_id, EP.errata_id
 FROM
+  rhnPackage P,
   rhnErrataPackage EP
   INNER JOIN (rhnChannelPackage CP
     INNER JOIN rhnChannel C
     ON CP.channel_id = C.id)
   ON EP.package_id = CP.package_id
-WHERE C.label = '%s'
+WHERE C.label = '%s' %s
 """,
+    export_since = "AND EP.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_errata(
     package_id INTEGER CONSTRAINT pe_ps REFERENCES packages(id) ON DELETE CASCADE,
     errata_id INTEGER CONSTRAINT pe2_ps REFERENCES errata(id) ON DELETE CASCADE
@@ -177,14 +185,16 @@ errata_cves = dict(
     # cves_for_errata in .../Errata_querys.xml
     export = """SELECT DISTINCT ECVE.errata_id, CVE.name
 FROM
+  rhnErrata E,
   rhnCVE CVE,
   rhnErrataCVE ECVE
   INNER JOIN (rhnChannelErrata CE
     INNER JOIN rhnChannel C
     ON CE.channel_id = C.id)
   ON ECVE.errata_id = CE.errata_id
-WHERE C.label = '%s' AND ECVE.cve_id = CVE.id
+WHERE C.label = '%s' AND ECVE.cve_id = CVE.id %s
 """,
+    export_since = "AND ECVE.errata_id = E.id AND E.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS errata_cves(
     errata_id INTEGER CONSTRAINT ec_ps REFERENCES errata(id) ON DELETE CASCADE,
     name VARCHAR(13)
@@ -220,13 +230,17 @@ def getDependencyModifier(version, sense):
         return "- " + str(version)
 
 
-def get_xs(target, conn, repo, sqls=SQLS):
+def get_xs(target, conn, repo, sqls=SQLS, since=None):
     """Get xs in given repo (software channel).
 
     :param conn: cx_Oracle Connection object
     :param repo: Repository (Software channel) label
+    :param sqls: SQL statements map
+    :param since: date (YY-MM-DD) denotes "since ..."
     """
-    sql = sqls[target]["export"] % repo
+    since_ = sqls[target]["export_since"] % since if since else ""
+    sql = sqls[target]["export"] % (repo, since_)
+
     rs = SQ.execute(conn, sql)
 
     if target in ("package_requires", "package_provides"):
@@ -237,10 +251,11 @@ def get_xs(target, conn, repo, sqls=SQLS):
         return rs
 
 
-def export(target, iconn, repo, sqls=SQLS):
+def export(target, iconn, repo, sqls=SQLS, since=None):
     logging.info("Collecting %s data..." % target)
-    rs = get_xs(target, iconn, repo, sqls)
-    logging.debug(" rs[0]=" + str(rs[0]))
+    rs = get_xs(target, iconn, repo, sqls, since)
+    if rs:
+        logging.debug(" rs[0]=" + str(rs[0]))
 
     return rs
 
@@ -252,7 +267,7 @@ def import_(target, oconn, ocur, rs, sqls=SQLS):
     oconn.commit()
 
 
-def collect_and_dump_data(dsn, repo, output, sqls=SQLS):
+def collect_and_dump_data(dsn, repo, output, sqls=SQLS, since=None):
     iconn = SQ.connect(dsn)
 
     oconn = sqlite3.connect(output)
@@ -270,7 +285,7 @@ def collect_and_dump_data(dsn, repo, output, sqls=SQLS):
     for target in ("packages", "errata", "package_files",
             "package_requires", "package_provides", "package_errata",
             "errata_cves"):
-        rs = export(target, iconn, repo)
+        rs = export(target, iconn, repo, sqls, since)
         import_(target, oconn, cur, rs)
 
     cur.close()
@@ -280,6 +295,7 @@ def option_parser(prog="swapi"):
     defaults = dict(
         output=None,
         dsn="rhnsat/rhnsat@rhnsat",
+        since=None,
         debug=False,
     )
     p = optparse.OptionParser("%prog [OPTION ...] CHANNEL_LABEL")
@@ -287,6 +303,9 @@ def option_parser(prog="swapi"):
 
     p.add_option("-o", "--output", help="Output filename [<channel_label>.db]")
     p.add_option("", "--dsn", help="Data source name [%default]")
+    p.add_option("-S", "--since",
+        help="Collect data since this date given in the form of \"yyyy-mm-dd\""
+    )
     p.add_option("-D", "--debug", action="store_true", help="Debug mode")
 
     return p
@@ -313,7 +332,9 @@ def main(argv=sys.argv):
     start_time = time.time()
     logging.info("start at: %s" % datetime.datetime.now())
 
-    collect_and_dump_data(options.dsn, chan, options.output)
+    collect_and_dump_data(
+        options.dsn, chan, options.output, SQLS, options.since
+    )
 
     logging.info(
         "finished at %s [%f sec]" % (
