@@ -95,7 +95,13 @@ def execute(conn, sql, noresult=False, **params):
     sql = sql % params
 
     cur = conn.cursor()
-    cur.execute(sql)
+
+    try:
+        cur.execute(sql)
+    except:
+        print >> sys.stderr, "sql: " + sql
+        raise
+
     if noresult:
         cur.close()
         return
