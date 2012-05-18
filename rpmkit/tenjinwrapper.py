@@ -91,4 +91,4 @@ def template_compile(path_or_name, context={}, search_paths=[]):
     return template_compile_0(tmpl, context)
 
 
-# vim:sw=4 ts=4 et:
+# vim:sw=4:ts=4:et:

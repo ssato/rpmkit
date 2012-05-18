@@ -232,4 +232,4 @@ if __name__ == '__main__':
     results = init()
 
 
-# vim:sw=4 ts=4 et:
+# vim:sw=4:ts=4:et:

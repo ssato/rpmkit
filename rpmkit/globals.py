@@ -18,4 +18,4 @@
 RPMKIT_TEMPLATE_PATH = "/usr/share/rpmkit/templates"
 
 
-# vim:sw=4 ts=4 et:
+# vim:sw=4:ts=4:et:

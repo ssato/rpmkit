@@ -263,4 +263,5 @@ autoconf: A GNU tool for automatically configuring source code.
 if __name__ == '__main__':
     main(sys.argv)
 
-# vim: sw=4 ts=4 et:
+
+# vim:sw=4:ts=4:et:

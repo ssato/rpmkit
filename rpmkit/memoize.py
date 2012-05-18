@@ -29,4 +29,4 @@ def memoize(fn):
     return wrapped
 
 
-# vim:sw=4 ts=4 et:
+# vim:sw=4:ts=4:et:

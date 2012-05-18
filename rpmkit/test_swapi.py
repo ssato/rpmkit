@@ -68,4 +68,4 @@ def test_api_w_args_as_list():
     )
 
 
-# vim:sw=4 ts=4 et:
+# vim:sw=4:ts=4:et:
