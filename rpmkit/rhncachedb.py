@@ -311,7 +311,7 @@ def main(argv=sys.argv):
         options.output = chan + ".db"
 
     start_time = time.time()
-    logging.info("start at: " + datetime.datetime.now())
+    logging.info("start at: %s" % datetime.datetime.now())
 
     collect_and_dump_data(options.dsn, chan, options.output)
 
