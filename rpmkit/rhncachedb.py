@@ -238,7 +238,6 @@ def get_xs(target, conn, repo, sqls=SQLS):
 def export(target, iconn, repo, sqls=SQLS):
     logging.info("Collecting %s data..." % target)
     rs = get_xs(target, iconn, repo, sqls)
-    logging.info("...Done")
     logging.debug(" rs[0]=" + str(rs[0]))
 
     return rs
@@ -249,7 +248,6 @@ def import_(target, oconn, ocur, rs, sqls=SQLS):
     import_dml = sqls[target]["import_"]
     ocur.executemany(import_dml, rs)
     oconn.commit()
-    logging.info("...Done")
 
 
 def collect_and_dump_data(dsn, repo, output, sqls=SQLS):
