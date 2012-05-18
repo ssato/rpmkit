@@ -78,10 +78,11 @@ ORDER BY UPPER(PC.name)
 """,
     create = """CREATE TABLE IF NOT EXISTS package_files(
     package_id INTEGER CONSTRAINT pf_ps REFERENCES packages(id) ON DELETE CASCADE,
-    name VARCHAR(4000) NOT NULL
+    name VARCHAR(4000) NOT NULL,
+    basename VARCHAR(4000) NOT NULL,
 )
 """,
-    import_ = "INSERT OR IGNORE INTO package_files VALUES (?, ?)",
+    import_ = "INSERT OR IGNORE INTO package_files VALUES (?, ?, ?)",
 ),
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageRequires.sql
@@ -227,7 +228,9 @@ def get_xs(target, conn, repo, sqls=SQLS):
     rs = SQ.execute(conn, sql)
 
     if target in ("package_requires", "package_provides"):
-	return [(r[0], r[1], getDependencyModifier(r[2], r[3])) for r in rs]
+        return [(r[0], r[1], getDependencyModifier(r[2], r[3])) for r in rs]
+    elif target == "package_files":
+        return [(r[0], r[1], os.path.basename(r[1])) for r in rs]
     else:
         return rs
 
