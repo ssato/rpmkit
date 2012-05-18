@@ -26,4 +26,4 @@ import sys
 
 sys.exit(M.main(sys.argv))
 
-# vim:sw=4 ts=4 et:
+# vim:sw=4:ts=4:et:
