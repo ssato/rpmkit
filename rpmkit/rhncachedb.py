@@ -18,11 +18,13 @@
 # http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
 #
 import rpmkit.sqlminus as SQ
+import datetime
 import logging
 import optparse
 import os.path
 import sqlite3
 import sys
+import time
 
 
 SQLS = dict(
@@ -308,7 +310,16 @@ def main(argv=sys.argv):
     if not options.output:
         options.output = chan + ".db"
 
+    start_time = time.time()
+    logging.info("start at: " + datetime.datetime.now())
+
     collect_and_dump_data(options.dsn, chan, options.output)
+
+    logging.info(
+        "finished at %s [%f sec]" % (
+            datetime.datetime.now(), time() - start_time
+        )
+    )
 
 
 if __name__ == '__main__':
