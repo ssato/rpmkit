@@ -33,12 +33,28 @@ def rpm_header_from_rpmfile(rpmfile):
     return rpm.TransactionSet().hdrFromFdno(open(rpmfile, "rb"))
 
 
-@M.memoize
-def is_noarch(srpm):
+def _is_noarch(srpm):
     """
     Detect if given srpm is for noarch (arch-independent) package.
     """
     return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
+
+
+is_noarch = M.memoize(_is_noarch)
+
+
+def normalize_arch(arch):
+    """
+    Normalize given package's arch.
+
+    NOTE: $arch maybe '(none)', 'gpg-pubkey' for example.
+
+    >>> normalize_arch("(none)")
+    'noarch'
+    >>> normalize_arch("x86_64")
+    'x86_64'
+    """
+    return "noarch" if arch == "(none)" else arch
 
 
 def normalize_epoch(epoch):
@@ -64,6 +80,15 @@ def normalize_epoch(epoch):
         return epoch  # int?
 
 
+def normalize(p):
+    """
+    :param p: dict(name, version, release, epoch, arch)
+    """
+    p["arch"] = normalize_arch(p["arch"])
+    p["epoch"] = normalize_epoch(p["epoch"])
+    return p
+
+
 def pcmp(p1, p2):
     """Compare packages by NVRAEs.
 
@@ -71,13 +96,16 @@ def pcmp(p1, p2):
 
     TODO: Make it fallback to rpm.versionCompare if yum is not available?
 
-    >>> p1 = dict(name="gpg-pubkey", version="069c8460", release="4d5067bf",
+    >>> p1 = dict(name="gpg-pubkey", version="00a4d52b", release="4cb9dd70",
     ...           arch="noarch", epoch=0,
     ... )
-    >>> p2 = dict(name="gpg-pubkey", version="00a4d52b", release="4cb9dd70",
+    >>> p2 = dict(name="gpg-pubkey", version="069c8460", release="4d5067bf",
     ...           arch="noarch", epoch=0,
     ... )
-    >>> assert pcmp(p1, p2) > 0
+    >>> pcmp(p1, p1) == 0
+    True
+    >>> pcmp(p1, p2) < 0
+    True
 
     >>> p3 = dict(name="kernel", version="2.6.38.8", release="32",
     ...           arch="x86_64", epoch=0,
@@ -85,7 +113,8 @@ def pcmp(p1, p2):
     >>> p4 = dict(name="kernel", version="2.6.38.8", release="35",
     ...           arch="x86_64", epoch=0,
     ... )
-    >>> assert pcmp(p3, p4) < 0
+    >>> pcmp(p3, p4) < 0
+    True
 
     >>> p5 = dict(name="rsync", version="2.6.8", release="3.1",
     ...           arch="x86_64", epoch=0,
@@ -93,7 +122,8 @@ def pcmp(p1, p2):
     >>> p6 = dict(name="rsync", version="3.0.6", release="4.el5",
     ...           arch="x86_64", epoch=0,
     ... )
-    >>> assert pcmp(p3, p4) < 0
+    >>> pcmp(p3, p4) < 0
+    True
     """
     p2evr = lambda p: (p["epoch"], p["version"], p["release"])
 
@@ -102,19 +132,10 @@ def pcmp(p1, p2):
 
 
 def find_latest(packages):
-    """Find the latest one from same (name) packages with different versions.
-
-    >>> def gen_p(r):
-    ...     return dict(
-    ...         name="foo", version="0.1", release=str(r),
-    ...         arch="x86_64", epoch="(none)",
-    ...     )
-    >>> ps = [gen_p(r) for r in range(10)]
-    >>> random.shuffle(ps)
-    >>> p = find_latest(ps)
-    >>> p["release"] == "9"
-    True
+    """Find the latest one from given packages have same name but with
+    different versions.
     """
+    assert packages, "Empty list was given!"
     return sorted(packages, cmp=pcmp)[-1]
 
 
@@ -125,7 +146,7 @@ def sort_by_names(xs):
     return sorted(xs, key=operator.itemgetter("name"))
 
 
-def group_by_names(xs):
+def group_by_names_g(xs):
     """
 
     >>> xs = [
@@ -133,38 +154,31 @@ def group_by_names(xs):
     ...   {"name": "c", "val": 3},
     ...   {"name": "a", "val": 4}, {"name": "b", "val": 5}
     ... ]
-    >>> ys = [
+    >>> zs = [
     ...   ('a', [{'name': 'a', 'val': 1}, {'name': 'a', 'val': 4}]),
     ...   ('b', [{'name': 'b', 'val': 2}, {'name': 'b', 'val': 5}]),
     ...   ('c', [{'name': 'c', 'val': 3}])
     ... ]
-    >>> [(n, list(g)) for n, g in group_by_names(xs)] == ys
+    >>> [(n, ys) for n, ys in group_by_names_g(xs)] == zs
     True
     """
     f = operator.itemgetter("name")
     for name, g in itertools.groupby(sort_by_names(xs), f):
-        yield (name, g)
+        yield (name, list(g))
 
 
-def find_latests_g(packages):
+def find_latests(packages):
     """Find the latest packages from given packages.
 
-    It's similar to find_latest but given packages are different.
+    It's similar to find_latest() but given packages may have different names.
     """
-    for _k, g in group_by_names(packages):
-        for ps in list(g):
-            yield find_latest(ps) if len(ps) > 1 else ps[0]
-
-
-def packages_keyed_by_names(packages):
-    """
-    :param packages: [dict(name, version, release, epoch, arch)]
-    """
-    return dict((name, list(g)) for name, g in group_by_names(packages))
+    return [find_latest(ps) for _n, ps in group_by_names_g(packages)]
 
 
 def p2s(package):
     """Returns string representation of a package dict.
+
+    :param package: (normalized) dict(name, version, release, arch)
 
     >>> p1 = dict(name="gpg-pubkey", version="069c8460", release="4d5067bf",
     ...           arch="noarch", epoch=0,
@@ -199,23 +213,25 @@ def ps2s(packages, with_name=False):
     return name + evrs if with_name else evrs
 
 
+def list_to_dict_keyed_by_names(xs):
+    """
+    :param xs: [dict(name, ...)]
+    """
+    return dict((name, ys) for name, ys in group_by_names_g(xs))
+
+
 def find_updates_g(all_packages, packages):
-    """Find all updates for given (installed) packages.
+    """Find all updates relevant to given (installed) packages.
 
     :param all_packages: all packages including latest updates
-    :param packages: installed packages
+    :param packages: (installed) packages
 
-    Packages are given as list of dict(name, version, release, epoch, arch).
+    Both types are same [dict(name, version, release, epoch, arch)].
     """
     def is_newer(p1, p2):
         return pcmp(p1, p2) > 0  # p1 is newer than p2.
 
-    def normalize(p):
-        p["epoch"] = normalize_epoch(p["epoch"])
-
-        return p
-
-    ref_packages = packages_keyed_by_names(all_packages)
+    ref_packages = list_to_dict_keyed_by_names(all_packages)
 
     for p in find_latests(packages):  # filter out older ones.
         candidates = ref_packages.get(p["name"], [])
@@ -232,7 +248,7 @@ def find_updates_g(all_packages, packages):
                 logging.debug(
                     " updates for %s: %s" % (p2s(p), ps2s(updates))
                 )
-                yield updates
+                yield sorted(updates)
 
 
 # vim:sw=4:ts=4:et:
