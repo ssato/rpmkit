@@ -56,6 +56,11 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Sun May 20 2012 Satoru SATOH <ssato@redhat.com> - 0.2.9-1
+- New upstream
+- some updates and fixes in rpmkit.rhncachedb
+- fixed some bugs in newly introduced utility routines in rpmkit.rpmutils
+
 * Fri May 18 2012 Satoru SATOH <ssato@redhat.com> - 0.2.8-1
 - New upstream
 - new module and command, rhncachedb to create cache database of RHN
