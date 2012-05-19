@@ -37,7 +37,8 @@ packages = dict(
     #   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
     # all_channel_tree in
     #   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Channel_queries.xml
-    export = """SELECT DISTINCT P.id, PN.name, PE.version, PE.release, PE.epoch, PA.label
+    export = """
+SELECT DISTINCT P.id, PN.name, PE.version, PE.release, PE.epoch, PA.label, P.summary
 FROM rhnPackageArch PA, rhnPackageName PN, rhnPackageEVR PE,
      rhnPackage P, rhnChannelPackage CP, rhnChannel C
 WHERE CP.channel_id = C.id
@@ -55,10 +56,11 @@ ORDER BY UPPER(PN.name), P.id
     version VARCHAR(512) NOT NULL,
     release VARCHAR(512) NOT NULL,
     epoch VARCHAR(16),
-    arch VARCHAR(64) NOT NULL
+    arch VARCHAR(64) NOT NULL,
+    summary VARCHAR(4000) NOT NULL
 )
 """,
-    import_ = "INSERT OR IGNORE INTO packages VALUES (?, ?, ?, ?, ?, ?)",
+    import_ = "INSERT OR IGNORE INTO packages VALUES (?, ?, ?, ?, ?, ?, ?)",
 ),
 
 # spacewalk.git/schema/spacewalk/common/tables/rhnPackageFile.sql
@@ -274,8 +276,8 @@ def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None):
     cur = oconn.cursor()
 
     targets = (
-        "packages", "errata", "package_files", "package_requires",
-        "package_provides", "package_errata", "errata_cves",
+        "packages", "errata", "errata_cves", "package_requires",
+        "package_provides", "package_errata", "package_files",
     )
 
     for target in targets:
