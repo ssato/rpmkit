@@ -245,7 +245,16 @@ def getDependencyModifier(version, sense):
         return "- " + str(version)
 
 
-def get_xs(target, conn, repo, sqls=SQLS, since=None):
+def process_row(row, target):
+    if target in ("package_requires", "package_provides"):
+        return (row[0], row[1], getDependencyModifier(row[2], row[3]))
+    elif target == "package_files":
+        return (row[0], row[1], os.path.basename(row[1]))
+    else:
+        return row  # Do nothing.
+
+
+def get_xs_g(target, conn, repo, sqls=SQLS, since=None):
     """Get xs in given repo (software channel).
 
     :param conn: cx_Oracle Connection object
@@ -263,42 +272,44 @@ def get_xs(target, conn, repo, sqls=SQLS, since=None):
         params = dict(repo=repo, since_tables="", since_cond="")
 
     sql = sqls[target]["export"] % params
-    rs = SQ.execute(conn, sql)
 
-    if target in ("package_requires", "package_provides"):
-        return [(r[0], r[1], getDependencyModifier(r[2], r[3])) for r in rs]
-    elif target == "package_files":
-        return [(r[0], r[1], os.path.basename(r[1])) for r in rs]
-    else:
-        return rs
+    for row in SQ.execute_g(conn, sql):
+        yield process_row(row, target)
 
 
-def export(target, iconn, repo, sqls=SQLS, since=None):
+def export_g(target, iconn, repo, sqls=SQLS, since=None):
     logging.info("Collecting data of " + target)
     try:
-        rs = get_xs(target, iconn, repo, sqls, since)
+        for row in get_xs_g(target, iconn, repo, sqls, since):
+            yield row
     except:
         logging.error("target=%s, repo=%s" % (target, repo))
         raise
 
-    if rs:
-        logging.debug(" rs[0]=" + str(rs[0]))
 
-    return rs
+def export_and_import(target, iconn, oconn, sqls=SQLS, since=None):
+    logging.info("Importing data from: " + target)
+    cur = oconn.cursor()
+
+    for row in export_g(target, iconn, repo, sqls, since):
+        cur.execute(sqls[target]["import_"], row)
+
+    cur.close()
+    oconn.commit()
 
 
-def import_(target, oconn, ocur, rs, sqls=SQLS):
+def import_(target, oconn, rs, sqls=SQLS):
     logging.info("Importing %s data [%d] ..." % (target, len(rs)))
-    ocur.executemany(sqls[target]["import_"], rs)
+    cur = oconn.cursor()
+    cur.executemany(sqls[target]["import_"], rs)
+    cur.close()
     oconn.commit()
 
 
 def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None,
         extra=False):
     iconn = SQ.connect(dsn)
-
     oconn = sqlite3.connect(output)
-    cur = oconn.cursor()
 
     targets = [
         "packages", "errata", "errata_cves", "package_requires",
@@ -312,16 +323,19 @@ def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None,
         logging.info("Creating table: " + target)
         create_ddl = sqls[target]["create"]
         try:
+            cur = oconn.cursor()
             cur.execute(create_ddl)
+            cur.close()
         except:
             logging.error("create_ddl was:\n" + create_ddl)
             raise
 
     for target in targets:
-        rs = export(target, iconn, repo, sqls, since)
-        import_(target, oconn, cur, rs)
-
-    cur.close()
+        if target == "package_files":
+            export_and_import(target, iconn, oconn, sqls, since)
+        else:
+            rs = [r for r in export_g(target, iconn, repo, sqls, since)]
+            import_(target, oconn, rs, sqls)
 
 
 def option_parser(prog="swapi"):
