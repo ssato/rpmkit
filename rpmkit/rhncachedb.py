@@ -39,17 +39,24 @@ packages = dict(
     #   spacewalk.git/java/code/src/com/redhat/rhn/common/db/datasource/xml/Channel_queries.xml
     export = """
 SELECT DISTINCT P.id, PN.name, PE.version, PE.release, PE.epoch, PA.label, P.summary
-FROM rhnPackageArch PA, rhnPackageName PN, rhnPackageEVR PE,
-     rhnPackage P, rhnChannelPackage CP, rhnChannel C
-WHERE CP.channel_id = C.id
-      AND C.label = '%s'
-      AND CP.package_id = P.id
-      AND P.name_id = PN.id
-      AND P.evr_id = PE.id
-      AND PA.id = P.package_arch_id %s
-ORDER BY UPPER(PN.name), P.id
+FROM
+  rhnPackageArch PA,
+  rhnPackageName PN,
+  rhnPackageEVR PE,
+  rhnPackage P, %(since_tables)s
+  rhnChannelPackage CP
+    INNER JOIN rhnChannel C
+    ON CP.channel_id = C.id
+WHERE
+  C.label = '%(repo)s'
+  AND CP.package_id = P.id
+  AND PN.id = P.name_id
+  AND PE.id = P.evr_id
+  AND PA.id = P.package_arch_id %(since_cond)s
+ORDER BY PN.name, P.id
 """,
-    export_since = "AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
+    export_since_tables = "",
+    export_since_cond = "AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS packages(
     id INTEGER PRIMARY KEY,
     name VARCHAR(256) NOT NULL,
@@ -70,18 +77,18 @@ package_files = dict(
     # http://git.fedorahosted.org/git/?p=spacewalk.git;a=blob;f=java/code/src/com/redhat/rhn/common/db/datasource/xml/Package_queries.xml
     export = """SELECT DISTINCT F.package_id, PC.name
 FROM
-  rhnPackageCapability PC,
-  rhnPackage P,
+  rhnPackageCapability PC, %(since_tables)s
   rhnPackageFile F
   INNER JOIN (rhnChannelPackage CP
     INNER JOIN rhnChannel C
     ON CP.channel_id = C.id)
   ON F.package_id = CP.package_id
 WHERE F.capability_id = PC.id
-      AND C.label = '%s' %s
-ORDER BY UPPER(PC.name)
+      AND C.label = '%(repo)s' %(since_cond)s
+ORDER BY PC.name
 """,
-    export_since = "AND F.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
+    export_since_tables = "rhnPackage P, ",
+    export_since_cond = "AND F.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_files(
     package_id INTEGER CONSTRAINT pf_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
@@ -97,16 +104,17 @@ package_requires = dict(
     # package_requires in .../Package_queries.xml
     export = """SELECT DISTINCT PR.package_id, PC.name, PC.version, PR.sense
 FROM
-  rhnPackage P,
-  rhnPackageCapability PC,
+  rhnPackageCapability PC, %(since_tables)s
   rhnPackageRequires PR
   INNER JOIN (rhnChannelPackage CP
     INNER JOIN rhnChannel C
     ON CP.channel_id = C.id)
   ON PR.package_id = CP.package_id
-WHERE C.label = '%s' AND PR.capability_id = PC.id %s
+WHERE C.label = '%(repo)s'
+      AND PR.capability_id = PC.id %(since_cond)s
 """,
-    export_since = "AND P.id = PR.package_id and P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
+    export_since_tables = "rhnPackage P, ",
+    export_since_cond = "AND P.id = PR.package_id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_requires(
     package_id INTEGER CONSTRAINT pr_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
@@ -122,15 +130,16 @@ package_provides = dict(
     # package_provides in .../Package_queries.xml
     export = """SELECT DISTINCT PP.package_id, PC.name, PC.version, PP.sense
 FROM
-  rhnPackage P,
-  rhnPackageCapability PC,
+  rhnPackageCapability PC, %(since_tables)s
   rhnPackageProvides PP
   INNER JOIN (rhnChannelPackage CP
     INNER JOIN rhnChannel C
     ON CP.channel_id = C.id)
   ON PP.package_id = CP.package_id
-WHERE C.label = '%s' AND PP.capability_id = PC.id %s
+WHERE C.label = '%(repo)s'
+      AND PP.capability_id = PC.id %(since_cond)s
 """,
+    export_since_tables = "rhnPackage P, ",
     export_since = "AND PP.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_provides(
     package_id INTEGER CONSTRAINT pp_ps REFERENCES packages(id) ON DELETE CASCADE,
@@ -147,10 +156,15 @@ errata = dict(
     # http://git.fedorahosted.org/git/?p=spacewalk.git;a=blob;f=java/code/src/com/redhat/rhn/common/db/datasource/xml/Errata_queries.xml
     export = """SELECT DISTINCT E.id, E.advisory, E.advisory_name, E.synopsis,
                 TO_CHAR(E.issue_date, 'YYYY-MM-DD HH24:MI:SS')
-FROM rhnErrata E, rhnChannelErrata CE, rhnChannel C
-WHERE CE.channel_id = C.id AND C.label = '%s' AND CE.errata_id = E.id %s
+FROM
+  rhnErrata E, %(since_tables)s
+  rhnChannelErrata CE
+    INNER JOIN rhnChannel C
+    ON CE.channel_id = C.id
+WHERE C.label = '%(repo)s' AND CE.errata_id = E.id %(since_cond)s
 """,
-    export_since = "AND E.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
+    export_since_tables = "",
+    export_since_cond = "AND E.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS errata(
     id INTEGER PRIMARY KEY,
     advisory VARCHAR(100) NOT NULL,
@@ -164,18 +178,16 @@ WHERE CE.channel_id = C.id AND C.label = '%s' AND CE.errata_id = E.id %s
 
 package_errata = dict(
     # packages_in_errata in .../Package_queries.xml
-    export = """\
-SELECT DISTINCT EP.package_id, EP.errata_id
+    export = """SELECT DISTINCT EP.package_id, EP.errata_id
 FROM
-  rhnPackage P,
-  rhnErrataPackage EP
-  INNER JOIN (rhnChannelPackage CP
+  rhnErrataPackage EP, %(since_tables)s
+  rhnChannelPackage CP
     INNER JOIN rhnChannel C
-    ON CP.channel_id = C.id)
-  ON EP.package_id = CP.package_id
-WHERE C.label = '%s' %s
+    ON CP.channel_id = C.id
+WHERE C.label = '%(repo)s' AND CP.package_id = EP.package_id %(since_cond)s
 """,
-    export_since = "AND EP.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
+    export_since_tables = "rhnErrata E, ",
+    export_since_cond = "AND EP.errata_id = E.id AND E.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_errata(
     package_id INTEGER CONSTRAINT pe_ps REFERENCES packages(id) ON DELETE CASCADE,
     errata_id INTEGER CONSTRAINT pe2_ps REFERENCES errata(id) ON DELETE CASCADE
@@ -188,16 +200,16 @@ errata_cves = dict(
     # cves_for_errata in .../Errata_querys.xml
     export = """SELECT DISTINCT ECVE.errata_id, CVE.name
 FROM
-  rhnErrata E,
-  rhnCVE CVE,
+  rhnCVE CVE, %(since_tables)s
   rhnErrataCVE ECVE
   INNER JOIN (rhnChannelErrata CE
     INNER JOIN rhnChannel C
     ON CE.channel_id = C.id)
   ON ECVE.errata_id = CE.errata_id
-WHERE C.label = '%s' AND ECVE.cve_id = CVE.id %s
+WHERE C.label = '%(repo)s' AND ECVE.cve_id = CVE.id %(since_cond)s
 """,
-    export_since = "AND ECVE.errata_id = E.id AND E.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
+    export_since_tables = "rhnErrata E, ",
+    export_since_cond = "AND ECVE.errata_id = E.id AND E.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS errata_cves(
     errata_id INTEGER CONSTRAINT ec_ps REFERENCES errata(id) ON DELETE CASCADE,
     name VARCHAR(13)
@@ -241,9 +253,16 @@ def get_xs(target, conn, repo, sqls=SQLS, since=None):
     :param sqls: SQL statements map
     :param since: date (YY-MM-DD) denotes "since ..."
     """
-    since_ = sqls[target]["export_since"] % since if since else ""
-    sql = sqls[target]["export"] % (repo, since_)
+    if since:
+        params = dict(
+            repo=repo,
+            since_tables=sqls[target]["export_since_tables"],
+            since_cond=sqls[target]["export_since_cond"] % since,
+        )
+    else:
+        params = dict(repo=repo, since_tables="", since_cond="")
 
+    sql = sqls[target]["export"] % params
     rs = SQ.execute(conn, sql)
 
     if target in ("package_requires", "package_provides"):
@@ -255,7 +274,7 @@ def get_xs(target, conn, repo, sqls=SQLS, since=None):
 
 
 def export(target, iconn, repo, sqls=SQLS, since=None):
-    logging.info("Collecting %s data..." % target)
+    logging.info("Collecting data of " + target)
     rs = get_xs(target, iconn, repo, sqls, since)
     if rs:
         logging.debug(" rs[0]=" + str(rs[0]))
@@ -323,13 +342,11 @@ def option_parser(prog="swapi"):
     return p
 
 
-def run(dsn, chan, output, since, sqls=SQLS):
+def run(dsn, repo, output, since, sqls=SQLS):
     start_time = time.time()
-    logging.info("start at %s: channel=%s" % (datetime.datetime.now(), chan))
-    logging.debug(
-        "dsn=%s, chan=%s, output=%s, since=%s" % (dsn, chan, output, since)
-    )
-    collect_and_import_data(dsn, chan, output, sqls, since)
+    logging.info("start at %s: repo=%s" % (datetime.datetime.now(), repo))
+    logging.debug("repo=%s, output=%s, since=%s" % (repo, output, since))
+    collect_and_import_data(dsn, repo, output, sqls, since)
     logging.info(
         "finished at %s [%f sec]" % (
             datetime.datetime.now(), time.time() - start_time
