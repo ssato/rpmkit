@@ -91,9 +91,26 @@ EOF
     sys.exit(os.waitpid(p.pid, 0)[1])
 
 
+def execute_g(conn, sql, **params):
+    sql = sql % params
+    cur = conn.cursor()
+
+    try:
+        cur.execute(sql)
+        cur.arraysize = 1000
+    except:
+        print >> sys.stderr, "sql: " + sql
+        cur.close()
+        raise
+
+    for row in cur:
+        yield row
+
+    cur.close()
+
+
 def execute(conn, sql, noresult=False, **params):
     sql = sql % params
-
     cur = conn.cursor()
 
     try:
