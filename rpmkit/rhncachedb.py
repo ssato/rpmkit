@@ -384,11 +384,11 @@ def main(argv=sys.argv):
         if not options.output:
             options.output = os.path.join(options.outdir, chan + ".db")
 
-        run(options.dsn, chan, options.output, SQLS, options.since, options.extra)
+        run(options.dsn, chan, options.output, options.since, SQLS, options.extra)
     else:
         for chan in args:
             output = os.path.join(options.outdir, chan + ".db")
-            run(options.dsn, chan, output, SQLS, options.since, options.extra)
+            run(options.dsn, chan, output, options.since, SQLS, options.extra)
 
 
 if __name__ == '__main__':
