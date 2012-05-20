@@ -140,7 +140,7 @@ WHERE C.label = '%(repo)s'
       AND PP.capability_id = PC.id %(since_cond)s
 """,
     export_since_tables = "rhnPackage P, ",
-    export_since = "AND PP.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
+    export_since_cond = "AND PP.package_id = P.id AND P.last_modified > TO_DATE('%s', 'YYYY-MM-DD')",
     create = """CREATE TABLE IF NOT EXISTS package_provides(
     package_id INTEGER CONSTRAINT pp_ps REFERENCES packages(id) ON DELETE CASCADE,
     name VARCHAR(4000) NOT NULL,
