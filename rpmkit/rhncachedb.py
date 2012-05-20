@@ -275,7 +275,12 @@ def get_xs(target, conn, repo, sqls=SQLS, since=None):
 
 def export(target, iconn, repo, sqls=SQLS, since=None):
     logging.info("Collecting data of " + target)
-    rs = get_xs(target, iconn, repo, sqls, since)
+    try:
+        rs = get_xs(target, iconn, repo, sqls, since)
+    except:
+        logging.error("target=%s, repo=%s" % (target, repo))
+        raise
+
     if rs:
         logging.debug(" rs[0]=" + str(rs[0]))
 
