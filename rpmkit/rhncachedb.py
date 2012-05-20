@@ -384,7 +384,7 @@ def main(argv=sys.argv):
         if not options.output:
             options.output = os.path.join(options.outdir, chan + ".db")
 
-        run(options.dsn, chan, options.output, options.since, optios.extra)
+        run(options.dsn, chan, options.output, options.since, options.extra)
     else:
         for chan in args:
             output = os.path.join(options.outdir, chan + ".db")
