@@ -293,16 +293,20 @@ def import_(target, oconn, ocur, rs, sqls=SQLS):
     oconn.commit()
 
 
-def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None):
+def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None,
+        extra=False):
     iconn = SQ.connect(dsn)
 
     oconn = sqlite3.connect(output)
     cur = oconn.cursor()
 
-    targets = (
+    targets = [
         "packages", "errata", "errata_cves", "package_requires",
-        "package_provides", "package_errata", "package_files",
-    )
+        "package_provides", "package_errata",
+    ]
+
+    if extra:
+        targets.append("package_files")
 
     for target in targets:
         logging.info("Creating table: " + target)
@@ -326,6 +330,7 @@ def option_parser(prog="swapi"):
         outdir=os.curdir,
         dsn="rhnsat/rhnsat@rhnsat",
         since=None,
+        extra=False,
         debug=False,
     )
     p = optparse.OptionParser(
@@ -339,6 +344,7 @@ def option_parser(prog="swapi"):
     )
     p.add_option("-O", "--outdir", help="Output directory. [%default]")
     p.add_option("", "--dsn", help="Data source name [%default]")
+    p.add_option("-E", "--extra", help="Get extra detailed data")
     p.add_option("-S", "--since",
         help="Collect data since this date given in the form of \"yyyy-mm-dd\""
     )
@@ -347,11 +353,11 @@ def option_parser(prog="swapi"):
     return p
 
 
-def run(dsn, repo, output, since, sqls=SQLS):
+def run(dsn, repo, output, since, sqls=SQLS, extra=False):
     start_time = time.time()
     logging.info("start at %s: repo=%s" % (datetime.datetime.now(), repo))
     logging.debug("repo=%s, output=%s, since=%s" % (repo, output, since))
-    collect_and_import_data(dsn, repo, output, sqls, since)
+    collect_and_import_data(dsn, repo, output, sqls, since, extra)
     logging.info(
         "finished at %s [%f sec]" % (
             datetime.datetime.now(), time.time() - start_time
@@ -378,11 +384,11 @@ def main(argv=sys.argv):
         if not options.output:
             options.output = os.path.join(options.outdir, chan + ".db")
 
-        run(options.dsn, chan, options.output, options.since)
+        run(options.dsn, chan, options.output, options.since, optios.extra)
     else:
         for chan in args:
             output = os.path.join(options.outdir, chan + ".db")
-            run(options.dsn, chan, output, options.since)
+            run(options.dsn, chan, output, options.since, options.extra)
 
 
 if __name__ == '__main__':
