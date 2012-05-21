@@ -287,7 +287,7 @@ def export_g(target, iconn, repo, sqls=SQLS, since=None):
         raise
 
 
-def export_and_import(target, iconn, oconn, sqls=SQLS, since=None):
+def export_and_import(target, iconn, oconn, repo, sqls=SQLS, since=None):
     logging.info("Importing data from: " + target)
     cur = oconn.cursor()
 
@@ -332,7 +332,7 @@ def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None,
 
     for target in targets:
         if target == "package_files":
-            export_and_import(target, iconn, oconn, sqls, since)
+            export_and_import(target, iconn, oconn, repo, sqls, since)
         else:
             rs = [r for r in export_g(target, iconn, repo, sqls, since)]
             import_(target, oconn, rs, sqls)
