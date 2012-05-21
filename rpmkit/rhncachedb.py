@@ -358,7 +358,8 @@ def option_parser(prog="swapi"):
     )
     p.add_option("-O", "--outdir", help="Output directory. [%default]")
     p.add_option("", "--dsn", help="Data source name [%default]")
-    p.add_option("-E", "--extra", help="Get extra detailed data")
+    p.add_option("-E", "--extra", action="store_true",
+        help="Get extra detailed data")
     p.add_option("-S", "--since",
         help="Collect data since this date given in the form of \"yyyy-mm-dd\""
     )
