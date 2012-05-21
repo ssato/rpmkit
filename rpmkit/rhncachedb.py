@@ -278,7 +278,6 @@ def get_xs_g(target, conn, repo, sqls=SQLS, since=None):
 
 
 def export_g(target, iconn, repo, sqls=SQLS, since=None):
-    logging.info("Collecting data of " + target)
     try:
         for row in get_xs_g(target, iconn, repo, sqls, since):
             yield row
@@ -288,7 +287,7 @@ def export_g(target, iconn, repo, sqls=SQLS, since=None):
 
 
 def export_and_import(target, iconn, oconn, repo, sqls=SQLS, since=None):
-    logging.info("Importing data from: " + target)
+    logging.info("Collecting and importing data from: " + target)
     cur = oconn.cursor()
 
     for row in export_g(target, iconn, repo, sqls, since):
@@ -334,6 +333,7 @@ def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None,
         if target == "package_files":
             export_and_import(target, iconn, oconn, repo, sqls, since)
         else:
+            logging.info("Collecting data of " + target)
             rs = [r for r in export_g(target, iconn, repo, sqls, since)]
             import_(target, oconn, rs, sqls)
 
