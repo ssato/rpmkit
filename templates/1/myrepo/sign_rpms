@@ -1,2 +1,0 @@
-<?py rpms_s = " ".join(rpms) ?>
-rpm --resign --define \"_signature gpg\" --define \"_gpg_name #{keyid}\" #{rpms_s}

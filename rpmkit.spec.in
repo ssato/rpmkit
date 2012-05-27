@@ -15,9 +15,8 @@ Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python
-Requires:       rpm-python, rpm-build
-Requires:       sqlite, autoconf, automake, packagemaker
-Requires:       createrepo, mock
+Requires:       rpm-python
+Requires:       sqlite
 Requires:       python-BeautifulSoup
 
 
@@ -36,7 +35,6 @@ RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 %install
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/myrepo.d
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
 
 
@@ -47,15 +45,16 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %doc README
-%doc tests
 %{_bindir}/*
 %{python_sitelib}/*
-%{_sysconfdir}/myrepo.d
 %{_localstatedir}/cache/swapi
-%{_datadir}/rpmkit/templates/1
 
 
 %changelog
+* Sun May 28 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10-1
+- New upstream
+- Exported myrepo to another package to reduce extra dependencies
+
 * Sun May 20 2012 Satoru SATOH <ssato@redhat.com> - 0.2.9-1
 - New upstream
 - some updates and fixes in rpmkit.rhncachedb

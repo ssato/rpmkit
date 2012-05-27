@@ -9,16 +9,13 @@ curdir = os.getcwd()
 sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
-VERSION = "0.2.9"
+VERSION = "0.2.10"
 
 # daily snapshots:
-VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
+#VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
-data_files = [
-    # see rpmkit/myrepo/globals.py:
-    ("share/rpmkit/templates/1/myrepo", glob.glob("templates/1/myrepo/*")),
-]
+data_files = []
 
 
 class SrpmCommand(Command):
@@ -81,8 +78,6 @@ setup(name=PACKAGE,
     packages=[
         "rpmkit",
         "rpmkit.imported",
-        "rpmkit.myrepo",
-        "rpmkit.myrepo.tests",
         "rpmkit.rhncachedb",
         "rpmkit.tests",
     ],
