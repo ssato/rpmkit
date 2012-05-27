@@ -51,6 +51,7 @@ $ ./sqlminus.py sql "SELECT DISTINCT D.NAME,B.NAME FROM RHNPACKAGEFILE A, RHNPAC
 ('libgcrypt', '/usr/lib/libgcrypt.so.11')
 ('libgcrypt', '/usr/lib64/libgcrypt.so.11')
 """
+import sys
 
 try:
     import cx_Oracle
@@ -64,7 +65,6 @@ import optparse
 import os
 import pprint
 import subprocess
-import sys
 
 
 # Default DSN to access RHN Satellite database:
