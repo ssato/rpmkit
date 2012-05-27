@@ -19,6 +19,7 @@ import rpmkit.memoize as M
 import rpmkit.utils as U
 
 import logging
+import operator
 import os
 import re
 import rpm
@@ -26,18 +27,13 @@ import sqlite3
 import yum
 
 
-SYSTEM_RHNCACHEDB_DIR = "/var/lib/rhncachedb"
-
-
 class PackageDB(object):
 
-    def __init__(self, dist, dbdir=SYSTEM_RHNCACHEDB_DIR):
+    def __init__(self, dbpath):
         """
-        :param dist: Distribution or channel label, e.g. rhel-x86_64-server-5.db
-        :param dbdir: Database File topdir
+        :param dbpath: Path to database file,
+            e.g. /var/lib/rhncachedb/rhel-x86_64-server-5.db
         """
-        dbpath = os.path.join(dbdir, dist + ".db")
-
         if not os.path.exists(dbpath):
             raise RuntimeError("DB file not found: " + dbpath)
 
@@ -97,12 +93,12 @@ def package_id(nvrea, db):
         return pids[0]
 
 
-def _requires_to_packages(req_name, db, req_modifier=None):
+def _requires_to_packages(req_name, dbs, req_modifier=None):
     """Get package provides given requires.
 
     :param req_name: requires' name
     :param req_modifier: requires' modifier
-    :param db: PackageDB instance
+    :param dbs: [PackageDB instance]
 
     :return: [dict(name, version, release, epoch, arch)]
     """
@@ -110,42 +106,85 @@ def _requires_to_packages(req_name, db, req_modifier=None):
     if re.match(r"config(.+)", req_name):
         return []
 
+    # e.g. 'rpmlib(CompressedFileNames)'. none provides it.
+    elif req_name.startswith("rpmlib"):
+        return []
+
     elif req_name.startswith("/"):  # it should be a file path.
         sql = """SELECT p.name, p.version, p.release, p.epoch, p.arch
 FROM packages p INNER JOIN package_files pf ON p.id = pf.package_id
 WHERE pf.name = ?
 """
-        return db.query(sql, (req_name,))
-
     else:  # search from provides
         sql = """SELECT p.name, p.version, p.release, p.epoch, p.arch
 FROM packages p INNER JOIN package_provides pp ON p.id = pp.package_id
 WHERE pp.name = ?
 """
-        return db.query(sql, (req_name,))
+
+    for db in dbs:
+        ps = db.query(sql, (req_name,))
+        if ps:
+            return ps
+
+    logging.info("No package provides " + req_name)
+    return []
 
 
 requires_to_packages = M.memoize(_requires_to_packages)
 
 
-def _package_requires(nvrea, db):
+def _package_requires(nvrea, dbs):
     """
     :param nvrea: package(name, version, release, epoch, arch)
-    :param db: PackageDB instance
+    :param dbs: [PackageDB instance]
 
     TODO: Handle pr.modifier.
     """
-    sql = """SELECT DISTINCT pr.name, pr.modifier
+    for db in dbs:
+        sql = """SELECT DISTINCT pr.name, pr.modifier
 FROM packages p INNER JOIN package_requires pr ON p.id = pr.package_id
 WHERE %s""" % sql_package_p(*nvrea)
-    reqs = db.query(sql, sql_package(*nvrea))  # :: [(pr.name, pr.modifier)]
+        # reqs :: [(pr.name, pr.modifier)]
+        reqs = db.query(sql, sql_package(*nvrea))
+        if reqs:
+            break  # found.
 
     assert reqs, "should not be empty. sql=" + sql + ", nvrea=" + str(nvrea)
 
-    return U.unique(U.concat(requires_to_packages(r[0], db) for r in reqs))
+    return U.unique(U.concat(requires_to_packages(r[0], dbs) for r in reqs))
 
 
 package_requires = M.memoize(_package_requires)
+
+
+def package_names(nvreas):
+    return U.unique(p[0] for p in nvreas)
+
+
+def packages_requires_g(nvreas, dbs):
+    """
+    :param nvreas: [(name, version, release, epoch, arch)]
+    :param dbs: [PackageDB instance]
+
+    It yields (nvrea_required, nvrea, is_nvrea_required_found_in_nvreas_p).
+
+    TODO: Handle pr.modifier.
+    """
+    for nvrea in nvreas:
+        for r in package_requires(nvrea, dbs):
+            if r == nvrea:  # skip itself.
+                continue
+
+            yield (r, nvrea, r in nvreas)
+
+
+def packages_requires(nvreas, dbs, pred=operator.itemgetter(-1)):
+    """
+    :param pred: function (:: Bool) to filter results
+    """
+    reqs = [rnp for rnp in packages_requires_g(nvreas, dbs) if pred(rnp)]
+
+    return reqs
 
 
 # vim:sw=4:ts=4:et:
