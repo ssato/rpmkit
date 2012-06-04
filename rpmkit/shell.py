@@ -149,7 +149,7 @@ class Task(object):
         return self.returncode
 
 
-def do_task(task, stop_on_error=True):
+def do_task(task, stop_on_error=True, exitp=False):
     """
     :param task: Task object
     :param stop_on_error: Stop task when any error occurs if True
@@ -187,10 +187,13 @@ def do_task(task, stop_on_error=True):
     sys.stdout.flush()
     sys.stderr.flush()
 
-    if task.rc() != 0 and stop_on_error:
-        raise TaskError(task.rc())
+    if exitp:
+        sys.exit(task.rc())
+    else:
+        if task.returncode != 0 and stop_on_error:
+            raise TaskError(task.returncode)
 
-    return task.rc()
+        return task.rc()
 
 
 def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
@@ -199,10 +202,14 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
     :param stop_on_error: Do not catch exceptions of errors if true
     """
     task = Task(cmd, user, host, workdir, timeout)
-    proc = multiprocessing.Process(target=do_task, args=(task, stop_on_error))
+    proc = multiprocessing.Process(target=do_task, args=(task, stop_on_error, True))
 
     proc.start()
-    proc.join(timeout)
+
+    if timeout is None:
+        proc.join()
+    else:
+        proc.join(timeout)
 
     if proc.is_alive():
         proc.terminate()
@@ -210,7 +217,11 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
 
         _cleanup_process(proc.pid)
 
-    return task.rc()
+    rc = proc.exitcode
+    if rc != 0 and stop_on_error:
+        raise TaskError(rc)
+
+    return rc
 
 
 def prun(tasks):

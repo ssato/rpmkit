@@ -166,9 +166,7 @@ class Test_30_run(unittest.TestCase):
             print("Skip this test because you're root.")
             return
 
-        # TODO:
-        #self.assertNotEquals(SH.run("ls /root", stop_on_error=False), 0)
-        self.assertEquals(SH.run("ls /root", stop_on_error=False), 0)
+        self.assertNotEquals(SH.run("ls /root", stop_on_error=False), 0)
 
 
 PRUN_JOBS = 10
