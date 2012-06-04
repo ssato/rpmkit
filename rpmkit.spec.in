@@ -51,6 +51,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Jun  4 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.1-1
+- New upstream
+- Fixes and enhancements around rpmkit.shell.do_task by Masatake YAMATO <yamato@redhat.com>
+
 * Sun May 28 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10-1
 - New upstream
 - Exported myrepo to another package to reduce extra dependencies
