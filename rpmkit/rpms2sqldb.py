@@ -1,7 +1,7 @@
 #
 # rpms2sqldb.py - Dump rpm metadata from rpm files to sqlite database
 #
-# Copyright (C) 2010, 2011 Satoru SATOH <satoru.satoh@gmail.com>
+# Copyright (C) 2010 - 2012 Satoru SATOH <satoru.satoh@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 # SEE Also: https://fedorahosted.org/rq/wiki
 #           rq looks more feature rich and complete solution to qeury rpm data.
 #
+import rpmkit.utils as U
 
 import datetime
 import glob
@@ -112,70 +113,14 @@ def zip3(xs, ys, zs):
     return [(x,y,z) for (x,y),z in zip(zip(xs, ys), zs)]
 
 
-def concat(xss):
-    """
-    >>> concat([[1,2],[3,4,5]])
-    [1, 2, 3, 4, 5]
-    """
-    ys = []
-    for xs in xss:
-        if isinstance(xs, list):
-            ys += xs
-        else:
-            ys.append(xs)
-
-    return ys
-
-
-def unique(xs, cmp_f=cmp):
-    """Returns sorted list of no duplicated items.
-
-    @param xs:  list of object (x)
-    @param cmp_f:  comparison function for x
-
-    >>> unique([0, 3, 1, 2, 1, 0, 4, 5])
-    [0, 1, 2, 3, 4, 5]
-    """
-    if xs == []:
-        return xs
-
-    ys = sorted(xs, cmp=cmp_f)
-    if ys == []:
-        return ys
-
-    rs = [ys[0]]
-
-    for y in ys[1:]:
-        if y == rs[-1]:
-            continue
-        rs.append(y)
-
-    return rs
-
-
-def memoize(fn):
-    """memoization decorator.
-    """
-    cache = {}
-
-    def wrapped(*args, **kwargs):
-        key = repr(args) + repr(kwargs)
-        if not cache.has_key(key):
-            cache[key] = fn(*args, **kwargs)
-
-        return cache[key]
-
-    return wrapped
-
-
 def foreach_rpms(topdir='.'):
     """Equal to `find $topdir -name '*.rpm'`
     """
-    for f in concat([[os.path.join(dirpath, f) for f in fs if f.endswith('.rpm')] for dirpath, _dirs, fs in os.walk(topdir)]):
+    for f in U.concat([os.path.join(dirpath, f) for f in fs if f.endswith('.rpm')] for dirpath, _dirs, fs in os.walk(topdir)):
         yield f
 
 
-#@memoize
+#@U.memoize
 def resolve_req_pids(rn, files, packages, provides):
     """Resolve package ids of given package requirement.
 
@@ -210,7 +155,7 @@ def resolve_req_pids(rn, files, packages, provides):
             else:
                 logging.warn("'%s' NOT FOUND in files, provides and packages" % rn)
 
-    return unique(pids)
+    return U.unique(pids)
 
 
 def list_reqs_1(pid, reqs, files, packages, provides, distance=1):
@@ -225,7 +170,7 @@ def list_reqs_1(pid, reqs, files, packages, provides, distance=1):
 
     @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
     """
-    rs = concat((
+    rs = U.concat((
         [{'name':r['name'], 'flags':r['flags'], 'version':r['version'], 'pid':pid, 'distance':distance, 'rpid':rpid} \
             for rpid in resolve_req_pids(r['name'], files, packages, provides)] for r in reqs
     ))
@@ -420,8 +365,8 @@ class RpmDB(object):
             ps.append(p)
 
         ps2 = []
-        files = concat((p['files'] for p in ps))
-        provs = concat((p['provides'] for p in ps))
+        files = U.concat((p['files'] for p in ps))
+        provs = U.concat((p['provides'] for p in ps))
 
         for p in ps:
             prs = list_reqs_1(p['pid'], p['requires'], files, ps, provs, 1)
