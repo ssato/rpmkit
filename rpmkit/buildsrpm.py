@@ -30,13 +30,13 @@ def get_source0_url_from_rpmspec(rpmspec):
 
     # First, try SOURCE0:
     if re.match(r"(ftp|http|https)://", src0):
-        logging.info("URL=" + src0)
+        logging.debug("URL=" + src0)
         return (src0, os.path.basename(src0))
 
     base_url = spec.sourceHeader["URL"]
     assert base_url, "URL should not be empty!"
 
-    logging.info("Base URL=" + base_url + ", src0=" + src0)
+    logging.debug("Base URL=" + base_url + ", src0=" + src0)
     return (os.path.join(base_url, src0), src0)
 
 
