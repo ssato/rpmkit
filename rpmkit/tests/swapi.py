@@ -10,15 +10,12 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
 #
+import rpmkit.swapi as S
+
 import os.path
 import shlex
 import sys
 import unittest
-
-
-moddir = os.path.dirname(__file__)
-sys.path.append(moddir)
-import swapi as S
 
 
 def __helper(args):
