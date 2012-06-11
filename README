@@ -1,20 +1,23 @@
 About
 =======================
 
-This is a collection of some rpm related tools distributed under
-GPLv3+/GPLv2+/MIT.
+This is a collecTION OF SOME RPM RELATED TOOLS DISTRIBUTED UNDER
+GPL3+/GPLv2+/MIT.
 
+* buildsrpm: Build source rpm from given rpm spec file
 * identrpm: Identify given rpm and print info
-* list-requires-by-package-name.sh: List requirements for given rpm name[s],
-  gotten from the sqlite database built by rpms2sqldb.
-* list-srpmnames-by-file.sh: List srpmnames List source rpm names for given
-  files, gotten from the sqlite database built by rpms2sqldb.
-* myrepo: A tool to manage custom yum repositories: Initialize your custom yum
-  repositories, update meta data of yum repositories, build and deploy source
-  rpms to yum repositories, etc.
+
+* rpms2sqldb: Create SQLite database of given rpms metadata
+
+  * list-requires-by-package-name.sh: List requirements for given rpm name[s],
+    gotten from the sqlite database built by rpms2sqldb.
+
+  * list-srpmnames-by-file.sh: List srpmnames List source rpm names for given
+    files, gotten from the sqlite database built by rpms2sqldb.
+
 * rpm2json: Dump rpm metadata in JSON format
 * rpms2csv: Dump metadata of given rpms in CSV format
-* rpms2sqldb: Create SQLite database of given rpms metadata
+
 * swapi: Query RHN/Satellite
 
 
@@ -41,14 +44,8 @@ It's easier than the above but only possible to make a rpm for build host.
 TODO
 ========================
 
-* Write tests:
-
-  * myrepo:
-
-    * config.py
-    * cui.py
-    * repo.py
-    * repoops.py
+* Write tests
+* Fix PEP8 warnings and errors
 
 
 NOTES
@@ -64,8 +61,13 @@ NOTES
 
   https://github.com/ssato/packagemaker/
 
+* myrepo: Exported to another project:
+
+  https://github.com/ssato/python-myrepo/
+
 
 Author
 =======================
 
 Satoru SATOH <ssato@redhat.com>
+
