@@ -204,18 +204,23 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
     task = Task(cmd, user, host, workdir, timeout)
     proc = multiprocessing.Process(target=do_task, args=(task, stop_on_error, True))
 
-    proc.start()
+    try:
+        proc.start()
 
-    if timeout is None:
-        proc.join()
-    else:
-        proc.join(timeout)
+        if timeout is None:
+            proc.join()
+        else:
+            proc.join(timeout)
 
-    if proc.is_alive():
-        proc.terminate()
-        proc.join()
+    # TODO:
+    # except KeyboardInterrupt:
+    #   do_somthing ...
+    finally:
+        if proc.is_alive():
+            proc.terminate()
+            proc.join()
 
-        _cleanup_process(proc.pid)
+            _cleanup_process(proc.pid)
 
     rc = proc.exitcode
     if rc != 0 and stop_on_error:
