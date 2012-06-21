@@ -12,7 +12,7 @@ PACKAGE = "rpmkit"
 VERSION = "0.2.10.2"
 
 # daily snapshots:
-#VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
+VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
 data_files = []
