@@ -85,8 +85,8 @@ def main(argv=sys.argv):
     p.set_defaults(**defaults)
 
     p.add_option("-D", "--debug", action="store_true", help="Debug mode")
-    p.add_option("-w", "--wordir", help="Working dir to search source0")
-    
+    p.add_option("-w", "--workdir", help="Working dir to search source0")
+
     (options, args) = p.parse_args(argv[1:])
 
     if not args:
@@ -98,11 +98,13 @@ def main(argv=sys.argv):
     else:
         logging.basicConfig(level=logging.INFO)
 
-    rpmspec = args[0]
+    rpmspec = os.path.abspath(args[0])
+    logging.info("rpm spec is " + rpmspec)
 
-    if not options.workdir:
+    if options.workdir is None:
         options.workdir = os.path.dirname(rpmspec)
-        logging.info("Set workdir to " + options.workdir)
+
+    logging.info("Set workdir to " + options.workdir)
 
     (url, src0) = get_source0_url_from_rpmspec(rpmspec)
     out = os.path.join(options.workdir, src0)
