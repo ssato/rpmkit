@@ -84,8 +84,12 @@ def normalize(p):
     """
     :param p: dict(name, version, release, epoch, arch)
     """
-    p["arch"] = normalize_arch(p["arch"])
-    p["epoch"] = normalize_epoch(p["epoch"])
+    try:
+        p["arch"] = normalize_arch(p.get("arch", p.get("arch_label", False)))
+        p["epoch"] = normalize_epoch(p["epoch"])
+    except KeyError:
+        raise KeyError("p=" + str(p))
+
     return p
 
 
