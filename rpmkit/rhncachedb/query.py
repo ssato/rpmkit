@@ -64,19 +64,19 @@ class PackageDB(object):
 
 
 def sql_package_p(name, version, release, epoch, arch):
-    pred = "p.name = ? AND p.version = ? AND p.release = ? AND arch = ?"
+    pred = "p.name = :name AND p.version = :version AND p.release = :release"
 
     if epoch and epoch != '0':
-        pred += " AND epoch = ?"
+        pred += " AND epoch = :epoch"
+
+    pred += " AND arch = :arch"
 
     return pred
 
 
 def sql_package(name, version, release, epoch, arch):
-    if epoch and epoch != '0':
-        return (name, version, release, epoch, arch)
-    else:
-        return (name, version, release, arch)
+    return dict(name=name, version=version, release=release, epoch=epoch,
+        arch=arch)
 
 
 def package_id(nvrea, db):
@@ -180,9 +180,9 @@ def packages_requires_g(nvreas, dbs):
 
 def packages_requires(nvreas, dbs, pred=operator.itemgetter(-1)):
     """
-    :param pred: function (:: Bool) to filter results
+    :param pred: function to filter results; exclude itself by default.
     """
-    reqs = [rnp for rnp in packages_requires_g(nvreas, dbs) if pred(rnp)]
+    reqs = [r for r in packages_requires_g(nvreas, dbs) if not pred(r)]
 
     return reqs
 
