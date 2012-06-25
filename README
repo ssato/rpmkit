@@ -65,6 +65,10 @@ NOTES
 
   https://github.com/ssato/python-myrepo/
 
+* data/cve_dates.json:
+
+  https://www.redhat.com/security/data/metrics/cve_dates.txt
+
 
 Author
 =======================

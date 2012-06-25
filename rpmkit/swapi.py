@@ -416,6 +416,7 @@ API_CACHE_EXPIRATIONS = {
     # Virtual (extended) RPC APIs:
     #"swapi.errata.getCvss": 100,  # TODO: Implement this.
     "swapi.cve.getCvss": 100,
+    "swapi.cve.getAll": 1,
 }
 
 VIRTUAL_APIS = dict()
@@ -664,7 +665,68 @@ def get_cvss_for_cve(cve):
     return None
 
 
+def get_all_cve_g(raw=False):
+    """
+    Get CVE and CVSS data from Red Hat www site:
+      https://www.redhat.com/security/data/metrics/cve_dates.txt
+
+    :param raw: Get raw txt data if True [False]
+
+    It yields {"cve", "metrics" (cvss2 base metric), "score" (cvss2 score),
+    "url" (cve url), }.
+
+    cve_dates.txt format:
+
+    CVE-2000-0909 public=20000922
+    CVE-2000-0913 public=20000929,impact=important
+    ...
+    CVE-2008-1926 source=redhat,reported=20080419,public=20080421,impact=low
+    ...
+    CVE-2009-0778 ...,impact=important,cvss2=7.1/AV:N/AC:M/Au:N/C:N/I:N/A:C
+    CVE-2009-1302 ...,cvss2=6.8/AV:N/AC:M/Au:N/C:P/I:P/A:P
+    CVE-2009-1303 ...,cvss2=6.8/AV:N/AC:M/Au:N/C:P/I:P/A:P,impact...
+    """
+    cve_reg = r"^(?P<cve>CVE-\d+-\d+) .*"
+    cve_cvsss_reg = cve_reg + r"cvss2=(?P<score>[^/]+)/(?P<metrics>AV:[^,]+A:(?:N|P|C)).*"
+
+    cvss_marker = "cvss2="
+
+    url = "https://www.redhat.com/security/data/metrics/cve_dates.txt"
+
+    try:
+        data = urlread(url)
+
+        if raw:
+            for line in data.splitlines():
+                yield line
+        else:
+            for line in data.splitlines():
+                if not line or line.startswith("#"):
+                    continue
+
+                if cvss_marker in line:
+                    m = re.match(cve_cvsss_reg, line)
+                else:
+                    m = re.match(cve_reg, line)
+
+                if m:
+                    d = m.groupdict()
+                    d["url"] = cve2url(d["cve"])
+
+                    yield d
+                else:
+                    logging.warn("Not look a valid CVE line: " + line)
+
+    except Exception, e:
+        logging.warn(" Could not get CVE and CVSS data: err=" + str(e))
+
+
+def get_all_cve(raw=False):
+    return [r for r in get_all_cve_g(raw)]
+
+
 VIRTUAL_APIS["swapi.cve.getCvss"] = get_cvss_for_cve
+VIRTUAL_APIS["swapi.cve.getAll"] = get_all_cve
 
 
 def run(cmd_str):
