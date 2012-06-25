@@ -711,7 +711,7 @@ def get_all_cve_g(raw=False):
 
                 if m:
                     d = m.groupdict()
-                    d["url"] = cve2url(d["cve"])
+                    d["url"] = d["cve_url"] = cve2url(d["cve"])
 
                     yield d
                 else:
