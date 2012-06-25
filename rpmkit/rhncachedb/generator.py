@@ -17,6 +17,9 @@
 # along with this program.  If not, see
 # http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
 #
+# Refs:
+# * <python sitelib>/createrepo/yumbased.py
+#
 import rpmkit.sqlminus as SQ
 import datetime
 import logging
@@ -220,6 +223,30 @@ WHERE C.label = '%(repo)s' AND ECVE.cve_id = CVE.id %(since_cond)s
 )
 
 
+"""
+TODO: Yum-compatible SQLite database schema:
+
+CREATE TABLE packages ( pkgKey INTEGER PRIMARY KEY, pkgId TEXT, name TEXT, arch TEXT, version TEXT, epoch TEXT, release TEXT, summary TEXT, description TEXT, url TEXT, time_file INTEGER, time_build INTEGER, rpm_license TEXT, rpm_vendor TEXT, rpm_group TEXT, rpm_buildhost TEXT, rpm_sourcerpm TEXT, rpm_header_start INTEGER, rpm_header_end INTEGER, rpm_packager TEXT,  size_package INTEGER,  size_installed INTEGER,  size_archive INTEGER,  location_href TEXT,  location_base TEXT,  checksum_type TEXT);
+CREATE TABLE conflicts (  name TEXT,  flags TEXT,  epoch TEXT,  version TEXT,  release TEXT,  pkgKey INTEGER );
+CREATE TABLE db_info (dbversion INTEGER, checksum TEXT);
+CREATE TABLE files (  name TEXT,  type TEXT,  pkgKey INTEGER);
+CREATE TABLE obsoletes (  name TEXT,  flags TEXT,  epoch TEXT,  version TEXT,  release TEXT,  pkgKey INTEGER );
+CREATE TABLE provides (  name TEXT,  flags TEXT,  epoch TEXT,  version TEXT,  release TEXT,  pkgKey INTEGER );
+CREATE TABLE requires (  name TEXT,  flags TEXT,  epoch TEXT,  version TEXT,  release TEXT,  pkgKey INTEGER , pre BOOLEAN DEFAULT FALSE);
+CREATE INDEX filenames ON files (name);
+CREATE INDEX packageId ON packages (pkgId);
+CREATE INDEX packagename ON packages (name);
+CREATE INDEX pkgconflicts on conflicts (pkgKey);
+CREATE INDEX pkgfiles ON files (pkgKey);
+CREATE INDEX pkgobsoletes on obsoletes (pkgKey);
+CREATE INDEX pkgprovides on provides (pkgKey);
+CREATE INDEX pkgrequires on requires (pkgKey);
+CREATE INDEX providesname ON provides (name);
+CREATE INDEX requiresname ON requires (name);
+CREATE TRIGGER removals AFTER DELETE ON packages  BEGIN    DELETE FROM files WHERE pkgKey = old.pkgKey;    DELETE FROM requires WHERE pkgKey = old.pkgKey;    DELETE FROM provides WHERE pkgKey = old.pkgKey;    DELETE FROM conflicts WHERE pkgKey = old.pkgKey;    DELETE FROM obsoletes WHERE pkgKey = old.pkgKey;  END;
+"""
+
+
 def getDependencyModifier(version, sense):
     """
     see also: getDependencyModifier in
@@ -290,18 +317,24 @@ def export_and_import(target, iconn, oconn, repo, sqls=SQLS, since=None):
     logging.info("Collecting and importing data from: " + target)
     cur = oconn.cursor()
 
-    for row in export_g(target, iconn, repo, sqls, since):
-        cur.execute(sqls[target]["import_"], row)
+    try:
+        for row in export_g(target, iconn, repo, sqls, since):
+            cur.execute(sqls[target]["import_"], row)
+    finally:
+        cur.close()
 
-    cur.close()
     oconn.commit()
 
 
 def import_(target, oconn, rs, sqls=SQLS):
     logging.info("Importing %s data [%d] ..." % (target, len(rs)))
     cur = oconn.cursor()
-    cur.executemany(sqls[target]["import_"], rs)
-    cur.close()
+
+    try:
+        cur.executemany(sqls[target]["import_"], rs)
+    finally:
+        cur.close()
+
     oconn.commit()
 
 
@@ -309,6 +342,10 @@ def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None,
         extra=False):
     iconn = SQ.connect(dsn)
     oconn = sqlite3.connect(output)
+
+    init_ddl = "CREATE TABLE db_info (dbversion INTEGER, checksum TEXT)"
+    cur = oconn.cursor()
+    cur.execute(init_ddl)
 
     targets = [
         "packages", "errata", "errata_cves", "package_requires",
@@ -322,12 +359,15 @@ def collect_and_import_data(dsn, repo, output, sqls=SQLS, since=None,
         logging.info("Creating table: " + target)
         create_ddl = sqls[target]["create"]
         try:
-            cur = oconn.cursor()
             cur.execute(create_ddl)
-            cur.close()
         except:
             logging.error("create_ddl was:\n" + create_ddl)
             raise
+        finally:
+            cur.close()
+
+    init_sql = "INSERT INTO db_info (?, ?)"
+    cur.execute(init_sql, (1, "tbd"))
 
     for target in targets:
         if target == "package_files":
