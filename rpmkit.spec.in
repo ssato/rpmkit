@@ -51,8 +51,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Jun 25 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.3-1
+- Bug fix release
+- Handle cases if package don't have "arch" key but have "arch_label" key
+
 * Mon Jun  4 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.1-1
-- New upstream
+- Bug fix release
 - Fixes and enhancements around rpmkit.shell.do_task by Masatake YAMATO <yamato@redhat.com>
 
 * Sun May 28 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10-1
