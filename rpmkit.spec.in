@@ -51,6 +51,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Jun 26 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.4-1
+- Enhancement release
+- [swapi] new command 'swapi.errata.getAll' to get all errata and CVEs from access.redhat.com
+
 * Mon Jun 25 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.3-1
 - Bug fix and enhancement release
 - [swapi] new command 'swapi.cve.getAll' to get all CVE data from access.redhat.com
