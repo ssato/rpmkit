@@ -417,6 +417,7 @@ API_CACHE_EXPIRATIONS = {
     #"swapi.errata.getCvss": 100,  # TODO: Implement this.
     "swapi.cve.getCvss": 100,
     "swapi.cve.getAll": 1,
+    "swapi.errata.getAll": 1,
 }
 
 VIRTUAL_APIS = dict()
@@ -725,8 +726,59 @@ def get_all_cve(raw=False):
     return [r for r in get_all_cve_g(raw)]
 
 
+def get_all_errata_g(raw=False):
+    """
+    Get errata vs. CVEs data from Red Hat www site:
+      https://www.redhat.com/security/data/metrics/rhsamapcpe.txt
+
+    :param raw: Get raw txt data if True [False]
+
+    It return {errata_advisory: ["cve"]}
+
+    rhsamapcpe.txt format:
+
+    RHSA-2012:1023 CVE-2011-4605 cpe:/a:redhat:jboss_enterprise_web_platfor...
+    RHSA-2012:1022 CVE-2011-4605 cpe:/a:redhat:jboss_enterprise_application...
+    RHSA-2012:1019 CVE-2012-0551,CVE-2012-1711,...,CVE-2012-1726 cpe:/a:re:...
+    RHSA-2012:1014 CVE-2012-1167 cpe:/a:redhat:jboss_enterprise_web_platfor...
+    """
+    advisory_prefix = "RH"
+    cve_prefix = "CVE-"
+
+    url = "https://www.redhat.com/security/data/metrics/rhsamapcpe.txt"
+
+    try:
+        data = urlread(url)
+
+        if raw:
+            for line in data.splitlines():
+                yield line
+        else:
+            for line in data.splitlines():
+                if not line.startswith(advisory_prefix):
+                    continue
+
+                try:
+                    (adv, cves, cpe) = line.split()
+                    assert cves.startswith(cve_prefix)
+
+                    yield {"advisory": adv, "cves": cves.split(","), }
+
+                except (IndexError, AssertionError):
+                    logging.warn("Invalid line: " + line)
+                    continue
+
+    except Exception, e:
+        logging.warn(" Could not get Errata vs. CVEs data: err=" + str(e))
+
+
+def get_all_errata(raw=False):
+    return [r for r in get_all_errata_g(raw)]
+
+
 VIRTUAL_APIS["swapi.cve.getCvss"] = get_cvss_for_cve
 VIRTUAL_APIS["swapi.cve.getAll"] = get_all_cve
+VIRTUAL_APIS["swapi.errata.getAll"] = get_all_errata
 
 
 def run(cmd_str):
@@ -1216,6 +1268,7 @@ def option_parser(prog="swapi"):
         deselect="",
         short_keys=True,
         profile=os.environ.get("SWAPI_PROFILE", ""),
+        list=False,
     )
 
     p = optparse.OptionParser("""%(cmd)s [OPTION ...] RPC_API_STRING
@@ -1297,6 +1350,7 @@ password = secretpasswd
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
+    oog.add_option('-L', '--list', action="store_true", help="List APIs")
     oog.add_option('-F', '--format', help="Output format (non-json)")
     oog.add_option('-I', '--indent', type="int",
         help="Indent for JSON output. 0 means no indent. [%default]",
@@ -1362,6 +1416,10 @@ def main(argv):
     (options, args) = parser.parse_args(argv)
 
     init_log(options.verbose)
+
+    if options.list:
+        options.format = "%s"
+        return (sorted(API_CACHE_EXPIRATIONS.keys()), options)
 
     if options.no_cache and options.cacheonly:
         logging.error(
