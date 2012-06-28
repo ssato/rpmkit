@@ -25,7 +25,10 @@ def get_source0_url_from_rpmspec(rpmspec):
     """
     spec = rpm.spec(rpmspec)
 
-    src0 = spec.sources[0][0]
+    # looks rpmSourceFlags_e in <rpm/rpmspec.h>:
+    is_source = lambda t: t[-1] == 1 << 0
+
+    src0 = [s for s in spec.sources if is_source(s)][0][0]
     assert src0, "SOURCE0 should not be empty!"
 
     # First, try SOURCE0:
@@ -47,7 +50,7 @@ def download(url, out, data=None, headers={}):
     req = urllib2.Request(url=url, data=data, headers=headers)
     f = urllib2.urlopen(req)
 
-    with open(out, "w") as o:
+    with open(out, "wb") as o:
         o.write(f.read())
 
 
@@ -107,10 +110,10 @@ def main(argv=sys.argv):
     logging.info("Set workdir to " + options.workdir)
 
     (url, src0) = get_source0_url_from_rpmspec(rpmspec)
-    out = os.path.join(options.workdir, src0)
+    s0 = os.path.join(options.workdir, src0)
 
-    if not os.path.exists(out):
-        download_src0(rpmspec, url, out)
+    if not os.path.exists(s0):
+        download_src0(rpmspec, url, s0)
 
     do_buildsrpm(rpmspec, options.workdir)
 
