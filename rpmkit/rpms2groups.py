@@ -17,9 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# SEE ALSO: http://docs.fedoraproject.org/drafts/rpm-guide-en/ch-rpm-programming-python.html
-#
-
 """
 Note: Format of comps xml files
 
@@ -117,10 +114,10 @@ def find_groups_and_packages_map(gps, ps0):
     )
 
     # filter out groups having no packages found in ps0:
-    return [(g, fps, mps) for g, fps, mps in gps2 if fps]
+    return [(g, ps_f, ps_m) for g, ps_f, ps_m in gps2 if ps_f]
 
 
-def score(group, ps_found, ps_missing):
+def score(ps_found, ps_missing):
     """
     see `find_groups_and_packages_map` also.
     """
@@ -154,10 +151,54 @@ def find_comps_g(topdir="/var/cache/yum"):
                 yield os.path.join(root, f)
 
 
+_FORMAT_CHOICES = (_FORMAT_DEFAULT, _FORMAT_KS) = ("default", "ks")
+
+
+def dump(groups, packages, output, limit=0, type=_FORMAT_DEFAULT):
+    """
+    :param groups: Group and member packages
+    :param packages: Packages not in groups
+    :param output: Output file object
+    :param type: Format type
+    """
+    results = (
+        (g, ps_found, ps_missing) for g, ps_found, ps_missing in
+            groups if score(ps_found, ps_missing) > limit
+    )
+    packages_in_groups = concat(ps_found for _g, ps_found, _ps in groups)
+
+    if type == _FORMAT_DEFAULT:
+        print >> output, "# Package groups ----------------------------------"
+        for g, ps_found, ps_missing in results:
+            print >> output, "%s: ps_found=%s, ps_missing=%s, score=%d" % \
+                (g, ps_found, ps_missing, score(ps_found, ps_missing))
+
+        print >> output, "# Packages not in groups --------------------------"
+        print >> output, "[%s, ...]" % \
+            ", ".join(
+                [p for p in packages if p not in packages_in_groups][:10]
+            )
+    else:
+        print >> output, "# kickstart config style packages list:"
+        for g, ps_found, ps_missing in results:
+            print >> output, '@' + g  # e.g. '@perl-runtime'
+            print >> output, "# Member packages: %s" % ps_found
+
+            # Packages to excluded from this group explicitly:
+            for p in ps_missing:
+                print >> output, '-' + p
+
+        for p in packages:
+            if p not in packages_in_groups:
+                print >> output, p
+
+
 def option_parser():
     defaults = dict(
         comps=None,
         output=None,
+        limit=0,
+        format=_FORMAT_DEFAULT,
         parse=False,
         verbose=False,
     )
@@ -168,10 +209,15 @@ def option_parser():
         help="Comps file path to get package groups. "
             "If not given, searched from /var/cache/yum/"
     )
-    p.add_option("-P", "--parse",
+    p.add_option("-P", "--parse", action="store_true",
         help="Specify this if input is `rpm -qa` output and must be parsed."
     )
-    p.add_option("-o", "--output", help="output filename [stdout]")
+    p.add_option("-L", "--limit", help="Limit score to print [%default]")
+    p.add_option(
+        "-F", "--format", choices=_FORMAT_CHOICES,
+        help="Output format type [%default]"
+    )
+    p.add_option("-o", "--output", help="Output filename [stdout]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -190,18 +236,22 @@ def main():
     if not options.comps:
         options.comps = [f for f in find_comps_g()][0]  # Use the first one.
 
-    packages = get_packages_from_file(args[0], options.parse)
-    gps = find_groups_and_packages_map(groups_from_comps(options.comps), packages)
+    logging.info("Use comps.xml: " + options.comps)
+
+    rpmsfile = args[0]
+
+    packages = get_packages_from_file(rpmsfile, options.parse)
+    logging.info("Found %d packages in %s" % (len(packages), rpmsfile))
+
+    gs = groups_from_comps(options.comps)
+    logging.info("Found %d groups in %s" % (len(gs), options.comps))
+
+    gps = find_groups_and_packages_map(gs, packages)
+    logging.info("Found %d candidate groups" % len(gps))
 
     output = open(options.output, 'w') if options.output else sys.stdout
 
-    for g, ps_found, ps_missing in gps:
-        #if not ps_found:
-        #    continue
-
-        print >> output, "%s: ps_found=%s, ps_missing=%s, score=%d" % \
-            (g, ps_found, ps_missing, score(g, ps_found, ps_missing))
-
+    dump(gps, packages, output, options.limit, options.format)
     output.close()
 
 
