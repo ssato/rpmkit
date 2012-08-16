@@ -43,12 +43,17 @@ Note: Format of comps xml files
 """
 
 from rpmkit.utils import concat
+from rpmkit.identrpm import load_packages, parse_package_label
+
 from itertools import izip, repeat
+from logging import DEBUG, INFO
 
 import xml.etree.ElementTree as ET
 import gzip
+import logging
 import optparse
 import os
+import os.path
 import rpm
 import sys
 
@@ -67,11 +72,13 @@ def groups_from_comps(cpath, byid=True):
 
     kk = "./id" if byid else "./name"
     pk = "./packagelist/packagereq/[@type='default']"
-
-    return (
+    gps = (
         (g.find(kk).text, [p.text for p in g.findall(pk)]) for g in
             tree.findall("./group")
     )
+
+    # filter out groups having no packages:
+    return [(g, ps) for g, ps in gps if ps]
 
 
 def package_and_group_pairs(gps):
@@ -84,16 +91,6 @@ def package_and_group_pairs(gps):
     )
 
 
-def find_groups(name, pgs):
-    """
-    Find groups for package `name`
-
-    :param name: Package name
-    :param pgs: [(package_name, package_group)]
-    """
-    return [g for p, g in pgs if p == name]
-
-
 def find_missing_packages(group, ps, gps):
     """
     Find missing packages member of given package group `group` in given
@@ -101,67 +98,111 @@ def find_missing_packages(group, ps, gps):
 
     :param group: Group ID or name
     :param ps: [package]
-    :param gps: Group and Package pairs, [(group, [package])
+    :param gps: Group and Package pairs, [(group, [package])]
     """
     package_in_groups = concat((ps for g, ps in gps if g == group))
     return [p for p in package_in_groups if p not in ps]
 
 
-def main():
-    output = sys.stdout
-    tags = ['name','version','release','arch','epoch','sourcerpm']
+def find_groups_and_packages_map(gps, ps0):
+    """
+    :param gps: Group and Package pairs, [(group, [package])]
+    :param ps0: Target packages list, [package]
 
-    p = optparse.OptionParser("""%prog [OPTION ...] RPM_0 [RPM_1 ...]
-
-Examples:
-  %prog Server/cups-1.3.7-11.el5.i386.rpm 
-  %prog -T name,sourcerpm,rpmversion Server/*openjdk*.rpm
-  %prog --show-tags"""
+    :return: [(group, found_packages_in_group, missing_packages_in_group)]
+    """
+    gps2 = (
+        (g, [p for p in ps0 if p in ps], [p for p in ps if p not in ps0]) \
+            for g, ps in gps
     )
-    p.add_option('', '--show-tags', default=False, action='store_true',
-        help='Show all possible rpm tags')
-    p.add_option('-o', '--output', help='output filename [stdout]')
-    p.add_option('-T', '--tags', default=",".join(tags),
-        help='Comma separated rpm tag list to get or \"almost\" to get almost data dump (except for \"headerimmutable\"). [%default]')
-    p.add_option('', "--blacklist", default="headerimmutable",
-        help="Comma separated tags list not to get data [%default]")
-    p.add_option('-H', '--human-readable', default=False, action='store_true',
-        help='Output formatted results.')
+
+    # filter out groups having no packages found in ps0:
+    return [(g, fps, mps) for g, fps, mps in gps2 if fps]
+
+
+def score(group, ps_found, ps_missing):
+    """
+    see `find_groups_and_packages_map` also.
+    """
+    return len(ps_found) - len(ps_missing)
+
+
+def _id(x):
+    return x
+
+
+def get_packages_from_file(rpmlist, parse=True):
+    """
+    Get package names in given rpm list.
+
+    :param rpmlist: Rpm list file, maybe output of `rpm -qa`
+    :param parse: The list is package labels and must be parsed if True
+    """
+    l2n = lambda l: parse_package_label(l).get("name")
+    f = l2n if parse else _id
+
+    return [f(x) for x in load_packages(rpmlist)]
+
+
+def find_comps_g(topdir="/var/cache/yum"):
+    """
+    Find comps.xml under `topdir` and yield its path.
+    """
+    for root, dirs, files in os.walk(topdir):
+        for f in files:
+            if "comps" in f and "xml" in f:
+                yield os.path.join(root, f)
+
+
+def option_parser():
+    defaults = dict(
+        comps=None,
+        output=None,
+        parse=False,
+        verbose=False,
+    )
+    p = optparse.OptionParser("%prog [OPTION ...] RPMS_FILE")
+    p.set_defaults(**defaults)
+
+    p.add_option("-C", "--comps",
+        help="Comps file path to get package groups. "
+            "If not given, searched from /var/cache/yum/"
+    )
+    p.add_option("-P", "--parse",
+        help="Specify this if input is `rpm -qa` output and must be parsed."
+    )
+    p.add_option("-o", "--output", help="output filename [stdout]")
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+
+    return p
+
+
+def main():
+    p = option_parser()
     (options, args) = p.parse_args()
 
-    if options.show_tags:
-        show_all_tags()
-        sys.exit(0)
+    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
 
-    if len(args) < 1:
+    if not args:
         p.print_usage()
         sys.exit(1)
 
-    if options.output:
-        output = open(options.output, 'w')
+    if not options.comps:
+        options.comps = [f for f in find_comps_g()][0]  # Use the first one.
 
-    if options.blacklist:
-        blacklist = options.blacklist.split(",")
-    else:
-        blacklist = []
+    packages = get_packages_from_file(args[0], options.parse)
+    gps = find_groups_and_packages_map(groups_from_comps(options.comps), packages)
 
-    if options.tags:
-        if options.tags == "almost":
-            tags = [t for t in rpmtags() if t not in blacklist]
-        else:
-            tags = options.tags.split(',')
+    output = open(options.output, 'w') if options.output else sys.stdout
 
-    rpms = args
-    rpmdata = []
+    for g, ps_found, ps_missing in gps:
+        #if not ps_found:
+        #    continue
 
-    for r in rpms:
-        vs = rpm_tag_values(r, tags)
-        if vs:
-            rpmdata.append(vs)
+        print >> output, "%s: ps_found=%s, ps_missing=%s, score=%d" % \
+            (g, ps_found, ps_missing, score(g, ps_found, ps_missing))
 
-    x = json_dumps(rpmdata, options.human_readable)
-
-    print >> output, x
+    output.close()
 
 
 if __name__ == '__main__':
