@@ -16,11 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+from rpmkit.memoize import memoize
 from rpmkit.utils import concat, unique
+
+from operator import itemgetter
 
 import xml.etree.cElementTree as ET
 import gzip
 import os
+import re
 
 
 REPODATA_XMLS = \
@@ -44,14 +48,14 @@ def _find_xml_files_g(topdir="/var/cache/yum", rtype=REPODATA_COMPS):
                 yield os.path.join(root, f)
 
 
-def find_xml_file(topdir, rtype=REPODATA_COMPS):
+def _find_xml_file(topdir, rtype=REPODATA_COMPS):
     fs = [f for f in _find_xml_files_g(topdir, rtype)]
     assert fs, "No %s.xml[.gz] found under %s" % (rtype, topdir)
 
     return fs[0]
 
 
-def get_package_groups(xmlfile, byid=True):
+def _get_package_groups(xmlfile, byid=True):
     """
     Parse given comps file (`xmlfile`) and return a list of package group and
     packages pairs.
@@ -73,7 +77,7 @@ def get_package_groups(xmlfile, byid=True):
     return [(g, ps) for g, ps in gps if ps]
 
 
-def get_package_requires_and_provides(xmlfile):
+def _get_package_requires_and_provides(xmlfile):
     """
     Parse given primary.xml `xmlfile` and return a list of package, requires
     and provides tuples, [(package, [requires], [provides])].
@@ -100,7 +104,7 @@ def get_package_requires_and_provides(xmlfile):
     ]
 
 
-def get_package_files(xmlfile):
+def _get_package_files(xmlfile):
     """
     Parse given filelist.xml `xmlfile` and return a list of package and files
     pairs, [(package, [files])].
@@ -118,6 +122,47 @@ def get_package_files(xmlfile):
         (p.get("name"), [x.text for x in p.findall(fk)]) for p in
             _tree_from_xml(xmlfile).findall(pk)
     ]
+
+
+find_xml_file = memoize(_find_xml_file)
+get_package_groups = memoize(_get_package_groups)
+get_package_requires_and_provides = memoize(_get_package_requires_and_provides)
+get_package_files = memoize(_get_package_files)
+
+
+_SPECIAL_RE = re.compile(r"^(?:config|rpmlib|kernel([^)]+))")
+
+
+def _is_special(x):
+    """
+    'special' means that it's not file nor virtual package nor package name
+    such like 'config(setup)', 'rpmlib(PayloadFilesHavePrefix)',
+    'kernel(rhel5_net_netlink_ga)'.
+
+    :param x: filename or file path or provides or something like rpmlib(...)
+    """
+    return _SPECIAL_RE.match(x) is not None
+
+
+def _resolv_package(x, provides):
+    """
+    :param x: filename or file path or provides or something like rpmlib(...)
+    """
+    pass
+
+
+def _init_repodata(repodir):
+    files = dict((t, find_xml_file(repodir, t)) for t in REPODATA_XMLS)
+
+    groups = get_package_groups(files[REPODATA_COMPS])
+    requires_and_provides = \
+        get_package_requires_and_provides(files[REPODATA_PRIMARY])
+    filelists = get_package_files(files[REPODATA_FILELISTS])
+
+    requires = [itemgetter(0, 1)(t) for t in requires_and_provides]
+    provides = [itemgetter(0, 2)(t) for t in requires_and_provides]
+
+    pass
 
 
 def main():
