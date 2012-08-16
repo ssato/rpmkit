@@ -39,13 +39,13 @@ Note: Format of comps xml files
 </comps>
 """
 
-from rpmkit.utils import concat
+from rpmkit.utils import concat, unique
 from rpmkit.identrpm import load_packages, parse_package_label
 
 from itertools import izip, repeat
 from logging import DEBUG, INFO
 
-import xml.etree.ElementTree as ET
+import xml.etree.cElementTree as ET
 import gzip
 import logging
 import optparse
@@ -76,6 +76,29 @@ def groups_from_comps(cpath, byid=True):
 
     # filter out groups having no packages:
     return [(g, ps) for g, ps in gps if ps]
+
+
+def package_requires_and_provides_tuples(prixml):
+    """
+    Parse given primary.xml `prixml` and return list of package and requires
+    pairs, [(package, [requires], [provides])].
+    """
+    f = gzip.open(prixml) if prixml.endswith(".gz") else open(prixml)
+    tree = ET.parse(f)
+
+    ns0 = "http://linux.duke.edu/metadata/common"
+    ns1 = "http://linux.duke.edu/metadata/rpm"
+    pnk = "./{%s}name" % ns0  # package name
+    rqk = ".//{%s}requires/{%s}entry/[@name]" % (ns1, ns1)  # [requires]
+    prk = ".//{%s}provides/{%s}entry/[@name]" % (ns1, ns1)  # [provides]
+    pkk = ".//{%s}package" % ns0  # [package]
+
+    return [
+        (p.find(pnk).text,
+         unique(x.get("name") for x in p.findall(rqk)),
+         unique(x.get("name") for x in p.findall(prk)),
+        ) for p in tree.findall(pkk)
+    ]
 
 
 def package_and_group_pairs(gps):
