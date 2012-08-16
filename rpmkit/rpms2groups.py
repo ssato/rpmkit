@@ -182,7 +182,7 @@ def dump(groups, packages, output, limit=0, type=_FORMAT_DEFAULT):
         print >> output, "# kickstart config style packages list:"
         for g, ps_found, ps_missing in results:
             print >> output, '@' + g  # e.g. '@perl-runtime'
-            print >> output, "# Packages of the above group: %s" % ps_found
+            print >> output, "# Packages of this group: %s" % ps_found
 
             # Packages to excluded from this group explicitly:
             for p in ps_missing:
