@@ -46,7 +46,7 @@ def _find_xml_files_g(topdir="/var/cache/yum", rtype=REPODATA_COMPS):
 
 def find_xml_file(topdir, rtype=REPODATA_COMPS):
     fs = [f for f in _find_xml_files_g(topdir, rtype)]
-    assert fs, "No %s.xml.gz found under %s" % (rtype, topdir)
+    assert fs, "No %s.xml[.gz] found under %s" % (rtype, topdir)
 
     return fs[0]
 
