@@ -40,7 +40,7 @@ def _find_xml_files_g(topdir="/var/cache/yum", rtype=REPODATA_COMPS):
     """
     for root, dirs, files in os.walk(topdir):
         for f in files:
-            if rtype in f and f.endswith(".xml.gz"):
+            if rtype in f and (f.endswith(".xml.gz") or f.endswith(".xml")):
                 yield os.path.join(root, f)
 
 
