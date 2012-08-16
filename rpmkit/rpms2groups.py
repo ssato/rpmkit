@@ -1,8 +1,8 @@
 #
 # rpms2groups.py - Refer package groups in comps file and reconstruct list of
-# rpms and rpm groups.
+# rpms and rpm groups from packages list.
 #
-# Copyright (C) 2012 Satoru SATOH <satoru.satoh@gmail.com>
+# Copyright (C) 2012 Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ Note: Format of comps xml files
 """
 
 from rpmkit.utils import concat
-from itertools import repeat
+from itertools import izip, repeat
 
 import xml.etree.ElementTree as ET
 import gzip
@@ -65,11 +65,11 @@ def groups_from_comps(cpath, byid=True):
     comps = gzip.open(cpath) if cpath.endswith(".gz") else open(cpath)
     tree = ET.parse(comps)
 
-    pk = "./packagelist/packagereq/[@type='default']"
     kk = "./id" if byid else "./name"
+    pk = "./packagelist/packagereq/[@type='default']"
 
     return (
-        (g.find(kk).text, [p.text for p in g0.findall(pk)]) for g in
+        (g.find(kk).text, [p.text for p in g.findall(pk)]) for g in
             tree.findall("./group")
     )
 
@@ -79,7 +79,7 @@ def package_and_group_pairs(gps):
     :param gps: Group and Package pairs, [(group, [package])
     """
     return concat(
-        zip((p for p in ps), repeat(g)) for ps, g in
+        izip((p for p in ps), repeat(g)) for ps, g in
             ((ps, g) for g, ps in gps if ps)
     )
 
