@@ -31,6 +31,12 @@ REPODATA_XMLS = \
   (REPODATA_COMPS, REPODATA_FILELISTS, REPODATA_PRIMARY) = \
   ("comps", "filelists", "primary")
 
+_SPECIAL_RE = re.compile(r"^(?:config|rpmlib|kernel|rtld)([^)]+)")
+
+
+def _true(*args):
+    return True
+
 
 def _tree_from_xml(xmlfile):
     return ET.parse(
@@ -55,6 +61,17 @@ def _find_xml_file(topdir, rtype=REPODATA_COMPS):
     return fs[0]
 
 
+def _is_special(x):
+    """
+    'special' means that it's not file nor virtual package nor package name
+    such like 'config(setup)', 'rpmlib(PayloadFilesHavePrefix)',
+    'kernel(rhel5_net_netlink_ga)'.
+
+    :param x: filename or file path or provides or something like rpmlib(...)
+    """
+    return _SPECIAL_RE.match(x) is not None
+
+
 def _get_package_groups(xmlfile, byid=True):
     """
     Parse given comps file (`xmlfile`) and return a list of package group and
@@ -77,12 +94,14 @@ def _get_package_groups(xmlfile, byid=True):
     return [(g, ps) for g, ps in gps if ps]
 
 
-def _get_package_requires_and_provides(xmlfile):
+def _get_package_requires_and_provides(xmlfile, include_specials=False):
     """
     Parse given primary.xml `xmlfile` and return a list of package, requires
     and provides tuples, [(package, [requires], [provides])].
 
     :param xmlfile: primary.xml file path
+    :param include_specials: Do not ignore and include special objects,
+        neighther file nor package
 
     :return: [(package, [requires], [provides])]
     """
@@ -92,14 +111,16 @@ def _get_package_requires_and_provides(xmlfile):
     ns1 = "http://linux.duke.edu/metadata/rpm"
 
     pnk = "./{%s}name" % ns0  # package name
+    pkk = ".//{%s}package" % ns0  # [package]
     rqk = ".//{%s}requires/{%s}entry/[@name]" % (ns1, ns1)  # [requires]
     prk = ".//{%s}provides/{%s}entry/[@name]" % (ns1, ns1)  # [provides]
-    pkk = ".//{%s}package" % ns0  # [package]
+
+    pred = lambda x: include_specials or not _is_special(x.get("name"))
 
     return [
         (p.find(pnk).text,
-         unique(x.get("name") for x in p.findall(rqk)),
-         unique(x.get("name") for x in p.findall(prk)),
+         unique((x.get("name") for x in p.findall(rqk) if pred(x))),
+         unique((x.get("name") for x in p.findall(prk) if pred(x))),
         ) for p in _tree_from_xml(xmlfile).findall(pkk)
     ]
 
@@ -130,25 +151,32 @@ get_package_requires_and_provides = memoize(_get_package_requires_and_provides)
 get_package_files = memoize(_get_package_files)
 
 
-_SPECIAL_RE = re.compile(r"^(?:config|rpmlib|kernel([^)]+))")
+def _find_package_from_filelists(x, filelists, packages):
+    return [p for p, fs in filelists if x in fs and p in packages]
 
 
-def _is_special(x):
+def _find_package_from_provides(x, provides, packages):
+    #[p for p, fs in pfs if [f for f in fs if f.endswith(x)]]
+    return [p for p, prs in provides if x in prs and p in packages]
+
+
+find_package_from_provides = memoize(_find_package_from_provides)
+find_package_from_provides = memoize(_find_package_from_provides)
+
+
+def _resolv_package(x, provides, filelists, packages):
     """
-    'special' means that it's not file nor virtual package nor package name
-    such like 'config(setup)', 'rpmlib(PayloadFilesHavePrefix)',
-    'kernel(rhel5_net_netlink_ga)'.
-
     :param x: filename or file path or provides or something like rpmlib(...)
     """
-    return _SPECIAL_RE.match(x) is not None
-
-
-def _resolv_package(x, provides):
-    """
-    :param x: filename or file path or provides or something like rpmlib(...)
-    """
-    pass
+    if x.startswith("/"):  # file path
+        ps = find_package_from_provides(x, filelists, packages)
+        assert ps, "No package provides " + x
+        return ps[0]
+    else:
+        # 1. Try exact match in provides
+        ps = find_package_from_provides(x, provides, packages)
+        if ps:
+            return ps[0]
 
 
 def _init_repodata(repodir):
