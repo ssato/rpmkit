@@ -68,8 +68,26 @@ def _is_special(x):
     'kernel(rhel5_net_netlink_ga)'.
 
     :param x: filename or file path or provides or something like rpmlib(...)
+
+    >>> _is_special('config(samba)')
+    True
+    >>> _is_special('rpmlib(CompressedFileNames)')
+    True
+    >>> _is_special('rtld(GNU_HASH)')
+    True
     """
     return _SPECIAL_RE.match(x) is not None
+
+
+def _strip_x(x):
+    """
+
+    >>> _strip_x('libgstbase-0.10.so.0()(64bit)')
+    'libgstbase-0.10.so.0'
+    >>> _strip_x('libc.so.6(GLIBC_2.2.5)(64bit)')
+    'libc.so.6'
+    """
+    return x[:x.find('(')] if '(' in x and x.endswith(')') else x
 
 
 def _get_package_groups(xmlfile, byid=True):
@@ -115,12 +133,13 @@ def _get_package_requires_and_provides(xmlfile, include_specials=False):
     rqk = ".//{%s}requires/{%s}entry/[@name]" % (ns1, ns1)  # [requires]
     prk = ".//{%s}provides/{%s}entry/[@name]" % (ns1, ns1)  # [provides]
 
-    pred = lambda x: include_specials or not _is_special(x.get("name"))
+    pred = lambda y: include_specials or not _is_special(y.get("name"))
+    name = lambda z: _strip_x(z.get("name"))
 
     return [
         (p.find(pnk).text,
-         unique((x.get("name") for x in p.findall(rqk) if pred(x))),
-         unique((x.get("name") for x in p.findall(prk) if pred(x))),
+         unique((name(x) for x in p.findall(rqk) if pred(x))),
+         unique((name(x) for x in p.findall(prk) if pred(x))),
         ) for p in _tree_from_xml(xmlfile).findall(pkk)
     ]
 
