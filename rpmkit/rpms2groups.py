@@ -53,28 +53,58 @@ import rpm
 import sys
 
 
-def groups_from_comps(cpath):
+def groups_from_comps(cpath, byid=True):
     """
     Parse given comps file (`cpath`) and returns package groups.
 
-    :return: ((group_elem, [package_names])) (generator)
+    :param cpath: comps file path
+    :param byid: Identify package group by ID
+
+    :return: ((group_id_or_name, [package_names])) (generator)
     """
     comps = gzip.open(cpath) if cpath.endswith(".gz") else open(cpath)
     tree = ET.parse(comps)
 
     pk = "./packagelist/packagereq/[@type='default']"
+    kk = "./id" if byid else "./name"
 
     return (
-        (g, [p.text for p in g0.findall(pk)]) for g in tree.findall("./group")
+        (g.find(kk).text, [p.text for p in g0.findall(pk)]) for g in
+            tree.findall("./group")
     )
 
 
-def package_and_group_pairs(cpath, byid=True):
-    kk = "./id" if byid else "./name"
+def package_and_group_pairs(gps):
+    """
+    :param gps: Group and Package pairs, [(group, [package])
+    """
     return concat(
         zip((p for p in ps), repeat(g)) for ps, g in
-            ((ps, g.find(kk).text) for g, ps in groups_from_comps(cpath) if ps)
+            ((ps, g) for g, ps in gps if ps)
     )
+
+
+def find_groups(name, pgs):
+    """
+    Find groups for package `name`
+
+    :param name: Package name
+    :param pgs: [(package_name, package_group)]
+    """
+    return [g for p, g in pgs if p == name]
+
+
+def find_missing_packages(group, ps, gps):
+    """
+    Find missing packages member of given package group `group` in given
+    packages `ps`.
+
+    :param group: Group ID or name
+    :param ps: [package]
+    :param gps: Group and Package pairs, [(group, [package])
+    """
+    package_in_groups = concat((ps for g, ps in gps if g == group))
+    return [p for p in package_in_groups if p not in ps]
 
 
 def main():
