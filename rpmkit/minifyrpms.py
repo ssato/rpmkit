@@ -93,16 +93,6 @@ def get_packages_from_file(rpmlist, parse=True):
     return [f(x) for x in load_packages(rpmlist)]
 
 
-def find_comps_g(topdir="/var/cache/yum"):
-    """
-    Find comps.xml under `topdir` and yield its path.
-    """
-    for root, dirs, files in os.walk(topdir):
-        for f in files:
-            if "comps" in f and "xml" in f:
-                yield os.path.join(root, f)
-
-
 _FORMAT_CHOICES = (_FORMAT_DEFAULT, _FORMAT_KS) = ("default", "ks")
 
 
@@ -186,7 +176,7 @@ def main():
         sys.exit(1)
 
     if not options.comps:
-        options.comps = [f for f in find_comps_g()][0]  # Use the first one.
+        options.comps = RR.find_xml_file("/var/cache/yum", RR.REPODATA_COMPS)
 
     logging.info("Use comps.xml: " + options.comps)
 

@@ -20,12 +20,35 @@ from rpmkit.utils import concat, unique
 
 import xml.etree.cElementTree as ET
 import gzip
+import os
+
+
+REPODATA_XMLS = \
+  (REPODATA_COMPS, REPODATA_FILELISTS, REPODATA_PRIMARY) = \
+  ("comps", "filelists", "primary")
 
 
 def _tree_from_xml(xmlfile):
     return ET.parse(
         gzip.open(xmlfile) if xmlfile.endswith(".gz") else open(xmlfile)
     )
+
+
+def _find_xml_files_g(topdir="/var/cache/yum", rtype=REPODATA_COMPS):
+    """
+    Find {comps,filelists,primary}.xml under `topdir` and yield its path.
+    """
+    for root, dirs, files in os.walk(topdir):
+        for f in files:
+            if rtype in f and f.endswith(".xml.gz"):
+                yield os.path.join(root, f)
+
+
+def find_xml_file(topdir, rtype=REPODATA_COMPS):
+    fs = [f for f in _find_xml_files_g(topdir, rtype)]
+    assert fs, "No %s.xml.gz found under %s" % (rtype, topdir)
+
+    return fs[0]
 
 
 def get_package_groups(xmlfile, byid=True):
