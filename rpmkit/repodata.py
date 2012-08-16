@@ -1,5 +1,5 @@
 #
-# repodata.py - Parse repodata/*.xml.gz in rpm repositories.
+# repodata.py - Parse repodata/*.xml.gz in yum repositories.
 #
 # Copyright (C) 2012 Satoru SATOH <ssato@redhat.com>
 #
