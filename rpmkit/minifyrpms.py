@@ -1,6 +1,5 @@
 #
-# rpms2groups.py - Refer package groups in comps file and reconstruct list of
-# rpms and rpm groups from packages list.
+# minifyrpms.py - Minify given rpm list
 #
 # Copyright (C) 2012 Satoru SATOH <ssato@redhat.com>
 #
@@ -17,110 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-"""
-Note: Format of comps xml files
-
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE comps PUBLIC "-//Red Hat, Inc.//DTD Comps info//EN" "comps.dtd">
-<comps>
-  <group>
-     <id>admin-tools</id>
-     <name>Administration Tools</name>
-     ...
-     <packagelist>
-       <packagereq type="default">authconfig-gtk</packagereq>
-       ...
-       <packagereq type="optional">apper</packagereq>
-       ...
-       <packagereq type="optional">yumex</packagereq>
-     </packagelist>
-   </group>
-  ...
-</comps>
-"""
-
-from rpmkit.utils import concat, unique
 from rpmkit.identrpm import load_packages, parse_package_label
+from rpmkit.utils import concat, unique
 
 from itertools import izip, repeat
 from logging import DEBUG, INFO
 
-import xml.etree.cElementTree as ET
-import gzip
+import rpmkit.repodata as RR
 import logging
 import optparse
 import os
 import os.path
-import rpm
 import sys
-
-
-def groups_from_comps(cpath, byid=True):
-    """
-    Parse given comps file (`cpath`) and returns package groups.
-
-    :param cpath: comps file path
-    :param byid: Identify package group by ID
-
-    :return: ((group_id_or_name, [package_names])) (generator)
-    """
-    comps = gzip.open(cpath) if cpath.endswith(".gz") else open(cpath)
-    tree = ET.parse(comps)
-
-    kk = "./id" if byid else "./name"
-    pk = "./packagelist/packagereq/[@type='default']"
-    gps = (
-        (g.find(kk).text, [p.text for p in g.findall(pk)]) for g in
-            tree.findall("./group")
-    )
-
-    # filter out groups having no packages:
-    return [(g, ps) for g, ps in gps if ps]
-
-
-def package_requires_and_provides_tuples(prixml):
-    """
-    Parse given primary.xml `prixml` and return list of package, requires and
-    provides tuples, [(package, [requires], [provides])].
-    """
-    f = gzip.open(prixml) if prixml.endswith(".gz") else open(prixml)
-    tree = ET.parse(f)
-
-    # We need to take care of namespaces in elementtree library.
-    # SEE ALSO: http://effbot.org/zone/element-namespaces.htm
-    ns0 = "http://linux.duke.edu/metadata/common"
-    ns1 = "http://linux.duke.edu/metadata/rpm"
-
-    pnk = "./{%s}name" % ns0  # package name
-    rqk = ".//{%s}requires/{%s}entry/[@name]" % (ns1, ns1)  # [requires]
-    prk = ".//{%s}provides/{%s}entry/[@name]" % (ns1, ns1)  # [provides]
-    pkk = ".//{%s}package" % ns0  # [package]
-
-    return [
-        (p.find(pnk).text,
-         unique(x.get("name") for x in p.findall(rqk)),
-         unique(x.get("name") for x in p.findall(prk)),
-        ) for p in tree.findall(pkk)
-    ]
-
-
-def package_files(filesxml):
-    """
-    Parse given filelist.xml `filesxml` and return list of package and files
-    pairs, [(package, [files])].
-    """
-    f = gzip.open(filesxml) if filesxml.endswith(".gz") else open(filesxml)
-    tree = ET.parse(f)
-
-    ns = "http://linux.duke.edu/metadata/filelists"
-
-    pk = "./{%s}package" % ns  # package
-    fk = "./{%s}file" % ns  # file
-
-    return [
-        (p.get("name"), [x.text for x in p.findall(fk)]) for p in
-            tree.findall(pk)
-    ]
 
 
 def package_and_group_pairs(gps):
@@ -288,7 +195,7 @@ def main():
     packages = get_packages_from_file(rpmsfile, options.parse)
     logging.info("Found %d packages in %s" % (len(packages), rpmsfile))
 
-    gs = groups_from_comps(options.comps)
+    gs = RR.get_package_groups(options.comps)
     logging.info("Found %d groups in %s" % (len(gs), options.comps))
 
     gps = find_groups_and_packages_map(gs, packages)
