@@ -80,14 +80,17 @@ def groups_from_comps(cpath, byid=True):
 
 def package_requires_and_provides_tuples(prixml):
     """
-    Parse given primary.xml `prixml` and return list of package and requires
-    pairs, [(package, [requires], [provides])].
+    Parse given primary.xml `prixml` and return list of package, requires and
+    provides tuples, [(package, [requires], [provides])].
     """
     f = gzip.open(prixml) if prixml.endswith(".gz") else open(prixml)
     tree = ET.parse(f)
 
+    # We need to take care of namespaces in elementtree library.
+    # SEE ALSO: http://effbot.org/zone/element-namespaces.htm
     ns0 = "http://linux.duke.edu/metadata/common"
     ns1 = "http://linux.duke.edu/metadata/rpm"
+
     pnk = "./{%s}name" % ns0  # package name
     rqk = ".//{%s}requires/{%s}entry/[@name]" % (ns1, ns1)  # [requires]
     prk = ".//{%s}provides/{%s}entry/[@name]" % (ns1, ns1)  # [provides]
@@ -98,6 +101,25 @@ def package_requires_and_provides_tuples(prixml):
          unique(x.get("name") for x in p.findall(rqk)),
          unique(x.get("name") for x in p.findall(prk)),
         ) for p in tree.findall(pkk)
+    ]
+
+
+def package_files(filesxml):
+    """
+    Parse given filelist.xml `filesxml` and return list of package and files
+    pairs, [(package, [files])].
+    """
+    f = gzip.open(filesxml) if filesxml.endswith(".gz") else open(filesxml)
+    tree = ET.parse(f)
+
+    ns = "http://linux.duke.edu/metadata/filelists"
+
+    pk = "./{%s}package" % ns  # package
+    fk = "./{%s}file" % ns  # file
+
+    return [
+        (p.get("name"), [x.text for x in p.findall(fk)]) for p in
+            tree.findall(pk)
     ]
 
 
