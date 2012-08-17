@@ -244,9 +244,7 @@ def init_repodata(repodir, packages=[]):
 #            reqs]) for p, reqs in requires
 #    ]
 
-    requires_resolved = requires
-
-    return (groups, filelists, requires_resolved, provides)
+    return (groups, filelists, requires, provides)
 
 
 def main():
