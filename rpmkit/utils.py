@@ -157,9 +157,22 @@ def _unique(xs, cmp=cmp, key=None):
     return ret
 
 
+def _uniq(iterable, cmp=cmp, key=None):
+    """
+    Safer version of the above.
+    """
+    acc = []
+    for x in iterable:
+        if x not in acc:
+            acc.append(x)
+
+    return acc
+
+
 concat = memoize(_concat)
 flatten = memoize(_flatten)
 unique = memoize(_unique)
+uniq = memoize(_uniq)
 
 
 # vim:sw=4:ts=4:et:
