@@ -194,21 +194,27 @@ def _find_providing_packages(x, provides, filelists, packages):
     :param x: filename or file path or provides or something like rpmlib(...)
     """
     if x.startswith("/"):  # file path
-        ps = find_package_from_provides(x, filelists, packages)
-        assert ps, "No package provides " + x
+        ps = find_package_from_filelists(x, filelists, packages)
+        #assert ps, "No package provides " + x
 
         logging.debug("Packages provide %s (filelists): %s" % (x, ps))
         return ps
     else:
-        # 1. Try exact match in provides
+        # 1. Try exact match in packages:
+        ps = [p for p in packages if x == p]
+        if ps:
+            logging.debug("It's a package (packages): %s" % x)
+            return ps[0]  # should be an item in it.
+
+        # 2. Try exact match in provides:
         ps = find_package_from_provides(x, provides, packages)
         if ps:
             logging.debug("Packages provide %s (provides): %s" % (x, ps))
             return ps
 
-        # 2. Try fuzzy (! exact) match in filelists:
+        # 3. Try fuzzy (! exact) match in filelists:
         ps = find_package_from_filelists(x, filelists, packages, False)
-        assert ps, "No package provides " + x
+        #assert ps, "No package provides " + x
 
         logging.debug(
             "Packages provide %s (filelists, fuzzy match): %s" % (x, ps)
@@ -219,18 +225,28 @@ def _find_providing_packages(x, provides, filelists, packages):
 find_providing_packages = memoize(_find_providing_packages)
 
 
-def _init_repodata(repodir):
+def init_repodata(repodir, packages=[]):
     files = dict((t, find_xml_file(repodir, t)) for t in REPODATA_XMLS)
 
     groups = get_package_groups(files[REPODATA_COMPS])
-    requires_and_provides = \
-        get_package_requires_and_provides(files[REPODATA_PRIMARY])
+    reqs_and_provs = get_package_requires_and_provides(files[REPODATA_PRIMARY])
     filelists = get_package_files(files[REPODATA_FILELISTS])
 
-    requires = [itemgetter(0, 1)(t) for t in requires_and_provides]
-    provides = [itemgetter(0, 2)(t) for t in requires_and_provides]
+    if not packages:
+        packages = [p for p in filelists]
 
-    pass
+    requires = [itemgetter(0, 1)(t) for t in reqs_and_provs]
+    provides = [itemgetter(0, 2)(t) for t in reqs_and_provs]
+
+#    requires_resolved = [
+#        (p,
+#         [find_providing_packages(x, provides, filelists, packages)[0] for x in
+#            reqs]) for p, reqs in requires
+#    ]
+
+    requires_resolved = requires
+
+    return (groups, filelists, requires_resolved, provides)
 
 
 def main():
