@@ -178,7 +178,7 @@ def _find_package_from_filelists(x, filelists, packages, exact=True):
     pred = (lambda x, fs: x in fs) if exact else \
         (lambda x, fs: [f for f in fs if f.endswith(x)])
 
-    return uniq((p for p, fs in filelists if pred(x, fs) and p in packages))
+    return uniq([p for p, fs in filelists if pred(x, fs) and p in packages])
 
 
 def _find_package_from_provides(x, provides, packages):
@@ -233,7 +233,7 @@ def init_repodata(repodir, packages=[]):
     filelists = get_package_files(files[REPODATA_FILELISTS])
 
     if not packages:
-        packages = [p for p in filelists]
+        packages = uniq(p for p, _ in filelists)
 
     requires = [itemgetter(0, 1)(t) for t in reqs_and_provs]
     provides = [itemgetter(0, 2)(t) for t in reqs_and_provs]
