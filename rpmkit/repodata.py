@@ -17,12 +17,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.memoize import memoize
-from rpmkit.utils import concat, unique
+from rpmkit.utils import concat, uniq
 
 from operator import itemgetter
 
 import xml.etree.cElementTree as ET
 import gzip
+import logging
 import os
 import re
 
@@ -138,8 +139,8 @@ def _get_package_requires_and_provides(xmlfile, include_specials=False):
 
     return [
         (p.find(pnk).text,
-         unique((name(x) for x in p.findall(rqk) if pred(x))),
-         unique((name(x) for x in p.findall(prk) if pred(x))),
+         uniq([name(x) for x in p.findall(rqk) if pred(x)]),
+         uniq([name(y) for y in p.findall(prk) if pred(y)]),
         ) for p in _tree_from_xml(xmlfile).findall(pkk)
     ]
 
@@ -170,32 +171,52 @@ get_package_requires_and_provides = memoize(_get_package_requires_and_provides)
 get_package_files = memoize(_get_package_files)
 
 
-def _find_package_from_filelists(x, filelists, packages):
-    return [p for p, fs in filelists if x in fs and p in packages]
+def _find_package_from_filelists(x, filelists, packages, exact=True):
+    """
+    :param exact: Try exact match if True
+    """
+    pred = (lambda x, fs: x in fs) if exact else \
+        (lambda x, fs: [f for f in fs if f.endswith(x)])
+
+    return uniq((p for p, fs in filelists if pred(x, fs) and p in packages))
 
 
 def _find_package_from_provides(x, provides, packages):
-    #[p for p, fs in pfs if [f for f in fs if f.endswith(x)]]
-    return [p for p, prs in provides if x in prs and p in packages]
+    return uniq((p for p, prs in provides if x in prs and p in packages))
 
 
+find_package_from_filelists = memoize(_find_package_from_filelists)
 find_package_from_provides = memoize(_find_package_from_provides)
-find_package_from_provides = memoize(_find_package_from_provides)
 
 
-def _resolv_package(x, provides, filelists, packages):
+def _find_providing_packages(x, provides, filelists, packages):
     """
     :param x: filename or file path or provides or something like rpmlib(...)
     """
     if x.startswith("/"):  # file path
         ps = find_package_from_provides(x, filelists, packages)
         assert ps, "No package provides " + x
-        return ps[0]
+
+        logging.debug("Packages provide %s (filelists): %s" % (x, ps))
+        return ps
     else:
         # 1. Try exact match in provides
         ps = find_package_from_provides(x, provides, packages)
         if ps:
-            return ps[0]
+            logging.debug("Packages provide %s (provides): %s" % (x, ps))
+            return ps
+
+        # 2. Try fuzzy (! exact) match in filelists:
+        ps = find_package_from_filelists(x, filelists, packages, False)
+        assert ps, "No package provides " + x
+
+        logging.debug(
+            "Packages provide %s (filelists, fuzzy match): %s" % (x, ps)
+        )
+        return ps
+
+
+find_providing_packages = memoize(_find_providing_packages)
 
 
 def _init_repodata(repodir):
