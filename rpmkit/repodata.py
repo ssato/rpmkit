@@ -19,6 +19,7 @@
 from rpmkit.memoize import memoize
 from rpmkit.utils import concat, uniq
 
+from itertools import repeat, izip
 from operator import itemgetter
 
 import xml.etree.cElementTree as ET
@@ -152,37 +153,37 @@ def _get_package_files(xmlfile):
 
     :param xmlfile: filelist.xml file path
 
-    :return: [(package, [file])]
+    :return: [(package, file)]
     """
     ns = "http://linux.duke.edu/metadata/filelists"
 
     pk = "./{%s}package" % ns  # package
     fk = "./{%s}file" % ns  # file
 
-    return [
+    pfs = (
         (p.get("name"), [x.text for x in p.findall(fk)]) for p in
             _tree_from_xml(xmlfile).findall(pk)
-    ]
+    )
+    return concat((izip(repeat(p), fs) for p, fs in pfs if fs))
 
 
 find_xml_file = memoize(_find_xml_file)
-get_package_groups = memoize(_get_package_groups)
-get_package_requires_and_provides = memoize(_get_package_requires_and_provides)
-get_package_files = memoize(_get_package_files)
+get_package_groups = _get_package_groups
+get_package_requires_and_provides = _get_package_requires_and_provides
+get_package_files = _get_package_files
 
 
 def _find_package_from_filelists(x, filelists, packages, exact=True):
     """
     :param exact: Try exact match if True
     """
-    pred = (lambda x, fs: x in fs) if exact else \
-        (lambda x, fs: [f for f in fs if f.endswith(x)])
+    pred = (lambda x, f: x == f) if exact else (lambda x, f: f.endswith(x))
 
-    return uniq([p for p, fs in filelists if pred(x, fs) and p in packages])
+    return uniq((p for p, f in filelists if pred(x, f) and p in packages))
 
 
 def _find_package_from_provides(x, provides, packages):
-    return uniq((p for p, prs in provides if x in prs and p in packages))
+    return uniq((p for p, pr in provides if x == pr and p in packages))
 
 
 find_package_from_filelists = memoize(_find_package_from_filelists)
@@ -195,7 +196,7 @@ def _find_providing_packages(x, provides, filelists, packages):
     """
     if x.startswith("/"):  # file path
         ps = find_package_from_filelists(x, filelists, packages)
-        #assert ps, "No package provides " + x
+        assert ps, "No package provides " + x
 
         logging.debug("Packages provide %s (filelists): %s" % (x, ps))
         return ps
@@ -214,7 +215,7 @@ def _find_providing_packages(x, provides, filelists, packages):
 
         # 3. Try fuzzy (! exact) match in filelists:
         ps = find_package_from_filelists(x, filelists, packages, False)
-        #assert ps, "No package provides " + x
+        assert ps, "No package provides " + x
 
         logging.debug(
             "Packages provide %s (filelists, fuzzy match): %s" % (x, ps)
@@ -235,8 +236,14 @@ def init_repodata(repodir, packages=[]):
     if not packages:
         packages = uniq(p for p, _ in filelists)
 
-    requires = [itemgetter(0, 1)(t) for t in reqs_and_provs]
-    provides = [itemgetter(0, 2)(t) for t in reqs_and_provs]
+    requires = concat(
+        izip(repeat(p), rs) for p, rs in
+            (itemgetter(0, 1)(t) for t in reqs_and_provs)
+    )
+    provides = concat(
+        izip(repeat(p), prs) for p, prs in
+            (itemgetter(0, 2)(t) for t in reqs_and_provs)
+    )
 
 #    requires_resolved = [
 #        (p,
