@@ -152,7 +152,7 @@ def _get_package_requires_and_provides(xmlfile, include_specials=False):
     ]
 
 
-def _get_package_files(xmlfile):
+def _get_package_files(xmlfile, packages=[]):
     """
     Parse given filelist.xml `xmlfile` and return a list of package and files
     pairs, [(package, [files])].
@@ -162,15 +162,15 @@ def _get_package_files(xmlfile):
     :return: [(package, file)]
     """
     ns = "http://linux.duke.edu/metadata/filelists"
-
     pk = "./{%s}package" % ns  # package
     fk = "./{%s}file" % ns  # file
 
+    pred = (lambda p: p in packages) if packages else (lambda _: True)
     pfs = (
         (p.get("name"), [x.text for x in p.findall(fk)]) for p in
             _tree_from_xml(xmlfile).findall(pk)
     )
-    return concat((izip(repeat(p), fs) for p, fs in pfs if fs))
+    return concat((izip(repeat(p), fs) for p, fs in pfs if fs and pred(p)))
 
 
 find_xml_file = memoize(_find_xml_file)
@@ -245,15 +245,15 @@ def init_repodata(repodir, packages=[], resolve=False):
     filelists = get_package_files(files[REPODATA_FILELISTS])
 
     if not packages:
-        packages = uniq(p for p, _ in filelists)
+        packages = uniq(p for p, _r, _p in reqs_and_provs)
 
     requires = concat(
         izip(repeat(p), rs) for p, rs in
-            (itemgetter(0, 1)(t) for t in reqs_and_provs)
+            (itemgetter(0, 1)(t) for t in reqs_and_provs if t[0] in packages)
     )
     provides = concat(
         izip(repeat(p), prs) for p, prs in
-            (itemgetter(0, 2)(t) for t in reqs_and_provs)
+            (itemgetter(0, 2)(t) for t in reqs_and_provs if t[0] in packages)
     )
 
     if resolve:
