@@ -205,7 +205,7 @@ def _find_providing_packages(x, provides, filelists, packages):
         ps = [p for p in packages if x == p]
         if ps:
             logging.debug("It's a package (packages): %s" % x)
-            return ps[0]  # should be an item in it.
+            return ps
 
         # 2. Try exact match in provides:
         ps = find_package_from_provides(x, provides, packages)
@@ -226,7 +226,12 @@ def _find_providing_packages(x, provides, filelists, packages):
 find_providing_packages = memoize(_find_providing_packages)
 
 
-def init_repodata(repodir, packages=[]):
+def init_repodata(repodir, packages=[], resolve=False):
+    """
+    :param repodir: Repository dir holding repodata/
+    :param packages: Reference list of packages, e.g. install rpm names
+    :param resolv: Resolv object to package names if true
+    """
     files = dict((t, find_xml_file(repodir, t)) for t in REPODATA_XMLS)
 
     groups = get_package_groups(files[REPODATA_COMPS])
@@ -245,11 +250,11 @@ def init_repodata(repodir, packages=[]):
             (itemgetter(0, 2)(t) for t in reqs_and_provs)
     )
 
-#    requires_resolved = [
-#        (p,
-#         [find_providing_packages(x, provides, filelists, packages)[0] for x in
-#            reqs]) for p, reqs in requires
-#    ]
+    if resolve:
+        requires = [
+            (p, find_providing_packages(r, provides, filelists, packages)) \
+                for p, r in requires
+        ]
 
     return (groups, filelists, requires, provides)
 
