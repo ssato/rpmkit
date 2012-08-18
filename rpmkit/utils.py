@@ -158,7 +158,7 @@ def _unique(xs, cmp=cmp, key=None):
     return ret
 
 
-def _uniq(iterable, cmp=cmp, key=None):
+def uniq(iterable, cmp=cmp, key=None):
     """
     Safer version of the above.
     """
@@ -170,10 +170,11 @@ def _uniq(iterable, cmp=cmp, key=None):
     return acc
 
 
-concat = memoize(_concat)
-flatten = memoize(_flatten)
-unique = memoize(_unique)
-uniq = memoize(_uniq)
+# FIXME: Looks like bad effects if memoized. Not memoized for a while
+concat = _concat
+flatten = _flatten
+unique = _unique
+uniq = _unique
 
 
 def timeit(f, *args, **kwargs):
