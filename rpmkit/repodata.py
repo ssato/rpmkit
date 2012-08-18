@@ -20,13 +20,19 @@ from rpmkit.memoize import memoize
 from rpmkit.utils import concat, uniq
 
 from itertools import repeat, izip
+from logging import DEBUG, INFO
 from operator import itemgetter
 
 import xml.etree.cElementTree as ET
+import cPickle as pickle
+
 import gzip
 import logging
+import optparse
+import os.path
 import os
 import re
+import sys
 
 
 REPODATA_XMLS = \
@@ -259,11 +265,47 @@ def init_repodata(repodir, packages=[], resolve=False):
     return (groups, filelists, requires, provides)
 
 
+def option_parser():
+    defaults = dict(
+        outdir="results",
+        packages=None,
+        verbose=False,
+    )
+    p = optparse.OptionParser("%prog [OPTION ...] REPODIR")
+    p.set_defaults(**defaults)
+
+    p.add_option("-p", "--packages", help="Specify the rpm list")
+    p.add_option("-o", "--outdir", help="Output dir [%default]]")
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+
+    return p
+
+
 def main():
-    pass
+    p = option_parser()
+    (options, args) = p.parse_args()
+
+    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
+
+    if not args:
+        p.print_usage()
+        sys.exit(1)
+
+    repodir = args[0]
+
+    (groups, filelists, requires, provides) = \
+        init_repodata(repodir, resolve=True)
+
+    if not os.path.exists(options.outdir):
+        os.makedirs(options.outdir)
+
+    pickle.dump(groups, open(os.path.join(options.outdir, "groups.pkl"), 'w'))
+    pickle.dump(filelists, open(os.path.join(options.outdir, "filelists.pkl"), 'w'))
+    pickle.dump(requires, open(os.path.join(options.outdir, "requires.pkl"), 'w'))
+    pickle.dump(provides, open(os.path.join(options.outdir, "provides.pkl"), 'w'))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 # vim:sw=4:ts=4:et:
