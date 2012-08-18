@@ -69,6 +69,9 @@ def _find_xml_file(topdir, rtype=REPODATA_COMPS):
     return fs[0]
 
 
+find_xml_file = memoize(_find_xml_file)
+
+
 def _is_special(x):
     """
     'special' means that it's not file nor virtual package nor package name
@@ -98,7 +101,7 @@ def _strip_x(x):
     return x[:x.find('(')] if '(' in x and x.endswith(')') else x
 
 
-def _get_package_groups(xmlfile, byid=True):
+def get_package_groups(xmlfile, byid=True):
     """
     Parse given comps file (`xmlfile`) and return a list of package group and
     packages pairs.
@@ -120,7 +123,7 @@ def _get_package_groups(xmlfile, byid=True):
     return [(g, ps) for g, ps in gps if ps]
 
 
-def _get_package_requires_and_provides(xmlfile, include_specials=False):
+def get_package_requires_and_provides(xmlfile, include_specials=False):
     """
     Parse given primary.xml `xmlfile` and return a list of package, requires
     and provides tuples, [(package, [requires], [provides])].
@@ -136,10 +139,10 @@ def _get_package_requires_and_provides(xmlfile, include_specials=False):
     ns0 = "http://linux.duke.edu/metadata/common"
     ns1 = "http://linux.duke.edu/metadata/rpm"
 
+    pkk = "./{%s}package" % ns0  # [package]
     pnk = "./{%s}name" % ns0  # package name
-    pkk = ".//{%s}package" % ns0  # [package]
-    rqk = ".//{%s}requires/{%s}entry/[@name]" % (ns1, ns1)  # [requires]
-    prk = ".//{%s}provides/{%s}entry/[@name]" % (ns1, ns1)  # [provides]
+    rqk = ".//{%s}requires/{%s}entry" % (ns1, ns1)  # [requires]
+    prk = ".//{%s}provides/{%s}entry" % (ns1, ns1)  # [provides]
 
     pred = lambda y: include_specials or not _is_special(y.get("name"))
     name = lambda z: _strip_x(z.get("name"))
@@ -152,7 +155,7 @@ def _get_package_requires_and_provides(xmlfile, include_specials=False):
     ]
 
 
-def _get_package_files(xmlfile, packages=[]):
+def get_package_files(xmlfile, packages=[]):
     """
     Parse given filelist.xml `xmlfile` and return a list of package and files
     pairs, [(package, [files])].
@@ -167,16 +170,10 @@ def _get_package_files(xmlfile, packages=[]):
 
     pred = (lambda p: p in packages) if packages else (lambda _: True)
     pfs = (
-        (p.get("name"), [x.text for x in p.findall(fk)]) for p in
+        (p.get("name"), uniq(x.text for x in p.findall(fk))) for p in
             _tree_from_xml(xmlfile).findall(pk)
     )
     return concat((izip(repeat(p), fs) for p, fs in pfs if fs and pred(p)))
-
-
-find_xml_file = memoize(_find_xml_file)
-get_package_groups = _get_package_groups
-get_package_requires_and_provides = _get_package_requires_and_provides
-get_package_files = _get_package_files
 
 
 def _find_package_from_filelists(x, filelists, packages, exact=True):
@@ -192,8 +189,10 @@ def _find_package_from_provides(x, provides, packages):
     return uniq((p for p, pr in provides if x == pr and p in packages))
 
 
-find_package_from_filelists = memoize(_find_package_from_filelists)
-find_package_from_provides = memoize(_find_package_from_provides)
+#find_package_from_filelists = memoize(_find_package_from_filelists)
+#find_package_from_provides = memoize(_find_package_from_provides)
+find_package_from_filelists = _find_package_from_filelists
+find_package_from_provides = _find_package_from_provides
 
 
 def _find_providing_packages(x, provides, filelists, packages):
@@ -221,7 +220,9 @@ def _find_providing_packages(x, provides, filelists, packages):
 
         # 3. Try fuzzy (! exact) match in filelists:
         ps = find_package_from_filelists(x, filelists, packages, False)
-        assert ps, "No package provides " + x
+        if not ps:
+            logging.debug("No package provides " + x)
+            return [x]  # Threr are such cases, e.g. '/usr/sbin/sendmail'.
 
         logging.debug(
             "Packages provide %s (filelists, fuzzy match): %s" % (x, ps)
@@ -229,7 +230,8 @@ def _find_providing_packages(x, provides, filelists, packages):
         return ps
 
 
-find_providing_packages = memoize(_find_providing_packages)
+#find_providing_packages = memoize(_find_providing_packages)
+find_providing_packages = _find_providing_packages
 
 
 def init_repodata(repodir, packages=[], resolve=False):
@@ -249,11 +251,11 @@ def init_repodata(repodir, packages=[], resolve=False):
 
     requires = concat(
         izip(repeat(p), rs) for p, rs in
-            (itemgetter(0, 1)(t) for t in reqs_and_provs if t[0] in packages)
+            [itemgetter(0, 1)(t) for t in reqs_and_provs if t[0] in packages]
     )
     provides = concat(
         izip(repeat(p), prs) for p, prs in
-            (itemgetter(0, 2)(t) for t in reqs_and_provs if t[0] in packages)
+            [itemgetter(0, 2)(t) for t in reqs_and_provs if t[0] in packages]
     )
 
     if resolve:
