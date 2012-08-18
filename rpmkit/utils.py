@@ -19,6 +19,7 @@
 #
 from rpmkit.memoize  import memoize
 
+import datetime
 import itertools
 import operator
 import os.path
@@ -173,6 +174,13 @@ concat = memoize(_concat)
 flatten = memoize(_flatten)
 unique = memoize(_unique)
 uniq = memoize(_uniq)
+
+
+def timeit(f, *args, **kwargs):
+    start = datetime.datetime.now()
+    ret = f(*args, **kwargs)
+    end = datetime.datetime.now()
+    return (ret, end - start)
 
 
 # vim:sw=4:ts=4:et:
