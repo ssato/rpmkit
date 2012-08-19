@@ -286,6 +286,40 @@ def path_to_id(p):
     return md5(p).hexdigest()
 
 
+def _repooutdir(repodir, outdir):
+    repoid = path_to_id(os.path.abspath(repodir))
+    return os.path.join(os.path.abspath(os.path.normpath(outdir)), repoid)
+
+
+def pklpath(outdir, key):
+    return os.path.join(outdir, key + ".pkl")
+
+
+def parse_and_dump_repodata(repodir, outdir):
+    outdir = _repooutdir(repodir, outdir)
+    data = {}
+    keys = ("groups", "filelists", "requires", "provides")
+
+    data = dict(zip(keys, init_repodata(repodir, resolve=True)))
+
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
+    for k in keys:
+        data[k] = pickle.load(open(os.path.join(outdir, k + ".pkl"), "rb"))
+        pickle.dump(data[k], open(pklpath(outdir, k), "wb"))
+
+
+def load_dumped_repodata(repodir, workdir):
+    outdir = _repooutdir(repodir, outdir)
+    data = {}
+
+    for k in ("groups", "filelists", "requires", "provides"):
+        data[k] = pickle.load(open(pklpath(outdir, k), "rb"))
+
+    return data
+
+
 def option_parser():
     defaults = dict(
         outdir="results",
@@ -314,19 +348,7 @@ def main():
 
     repodir = args[0]
 
-    repoid = path_to_id(os.path.abspath(repodir))
-    outdir = os.path.abspath(os.path.join(options.outdir, repoid))
-
-    (groups, filelists, requires, provides) = \
-        init_repodata(repodir, resolve=True)
-
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-
-    pickle.dump(groups, open(os.path.join(outdir, "groups.pkl"), 'w'))
-    pickle.dump(filelists, open(os.path.join(outdir, "filelists.pkl"), 'w'))
-    pickle.dump(requires, open(os.path.join(outdir, "requires.pkl"), 'w'))
-    pickle.dump(provides, open(os.path.join(outdir, "provides.pkl"), 'w'))
+    parse_and_dump_repodata(repodir, options.outdir)
 
 
 if __name__ == "__main__":
