@@ -206,10 +206,13 @@ def _find_providing_packages(x, provides, filelists, packages):
     """
     if x.startswith("/"):  # file path
         ps = find_package_from_filelists(x, filelists, packages)
+        if ps:
+            logging.debug("Packages provide %s (filelists): %s" % (x, ps))
+            return ps
 
         # There are cases x not in filelists; '/usr/sbin/sendmail',
         # /usr/bin/lp for example. These should be found in provides.
-        if not ps:
+        else:
             ps = find_package_from_provides(x, provides, packages)
             if ps:
                 logging.debug("Packages provide %s (provides): %s" % (x, ps))
@@ -217,14 +220,11 @@ def _find_providing_packages(x, provides, filelists, packages):
             else:
                 logging.debug("No package provides " + x)
                 return [x]
-
-        logging.debug("Packages provide %s (filelists): %s" % (x, ps))
-        return ps
     else:
         # 1. Try exact match in packages:
         ps = [p for p in packages if x == p]
         if ps:
-            logging.debug("It's a package (packages): %s" % x)
+            logging.debug("It's package (packages): %s" % x)
             return ps
 
         # 2. Try exact match in provides:
