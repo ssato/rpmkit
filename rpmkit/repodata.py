@@ -34,6 +34,11 @@ import os
 import re
 import sys
 
+try:
+    from hashlib import md5  # python 2.5+
+except ImportError:
+    from md5 import md5
+
 
 REPODATA_XMLS = \
   (REPODATA_COMPS, REPODATA_FILELISTS, REPODATA_PRIMARY) = \
@@ -272,6 +277,10 @@ def init_repodata(repodir, packages=[], resolve=False):
     return (groups, filelists, requires, provides)
 
 
+def path_to_id(p):
+    return md5(p).hexdigest()
+
+
 def option_parser():
     defaults = dict(
         outdir="results",
@@ -300,16 +309,19 @@ def main():
 
     repodir = args[0]
 
+    repoid = path_to_id(os.path.abspath(repodir))
+    outdir = os.path.abspath(os.path.join(options.outdir, repoid))
+
     (groups, filelists, requires, provides) = \
         init_repodata(repodir, resolve=True)
 
-    if not os.path.exists(options.outdir):
-        os.makedirs(options.outdir)
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
 
-    pickle.dump(groups, open(os.path.join(options.outdir, "groups.pkl"), 'w'))
-    pickle.dump(filelists, open(os.path.join(options.outdir, "filelists.pkl"), 'w'))
-    pickle.dump(requires, open(os.path.join(options.outdir, "requires.pkl"), 'w'))
-    pickle.dump(provides, open(os.path.join(options.outdir, "provides.pkl"), 'w'))
+    pickle.dump(groups, open(os.path.join(outdir, "groups.pkl"), 'w'))
+    pickle.dump(filelists, open(os.path.join(outdir, "filelists.pkl"), 'w'))
+    pickle.dump(requires, open(os.path.join(outdir, "requires.pkl"), 'w'))
+    pickle.dump(provides, open(os.path.join(outdir, "provides.pkl"), 'w'))
 
 
 if __name__ == "__main__":
