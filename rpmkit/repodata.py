@@ -207,13 +207,16 @@ def _find_providing_packages(x, provides, filelists, packages):
     if x.startswith("/"):  # file path
         ps = find_package_from_filelists(x, filelists, packages)
 
-        # There are cases no package provides x. For example,
-        # '/usr/sbin/sendmail' will be created by alternatives and link sources
-        # are provided by sendmail ('/usr/sbin/sendmail.sendmail') and postfix
-        # ('/usr/sbin/sendmail.postfix').
+        # There are cases x not in filelists; '/usr/sbin/sendmail',
+        # /usr/bin/lp for example. These should be found in provides.
         if not ps:
-            logging.debug("No package provides " + x)
-            return [x]
+            ps = find_package_from_provides(x, provides, packages)
+            if ps:
+                logging.debug("Packages provide %s (provides): %s" % (x, ps))
+                return ps
+            else:
+                logging.debug("No package provides " + x)
+                return [x]
 
         logging.debug("Packages provide %s (filelists): %s" % (x, ps))
         return ps
