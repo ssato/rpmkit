@@ -320,6 +320,23 @@ def load_dumped_repodata(repodir, workdir):
     return data
 
 
+def find_requires(x, requires, packages, blacklist=[]):
+    return uniq(concat(
+        [r for r in rs if r != x and r in packages and r not in blacklist] \
+            for p, rs in requires if p == x
+    ))
+
+
+def resolve_requires(xs, requires, packages, acc=[]):
+    while True:
+        rs = concat(find_requires(x, requires, packages, acc) for x in xs)
+        if not rs:
+            return acc  # all requires found.
+
+        rs = xs = uniq(rs)
+        acc += rs
+
+
 def option_parser():
     defaults = dict(
         outdir="results",
