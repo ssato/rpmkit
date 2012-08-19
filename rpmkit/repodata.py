@@ -245,6 +245,7 @@ def _find_providing_packages(x, provides, filelists, packages):
         return ps
 
 
+## It eats RAM so that disabled until I think of another better impl.
 #find_providing_packages = memoize(_find_providing_packages)
 find_providing_packages = _find_providing_packages
 
