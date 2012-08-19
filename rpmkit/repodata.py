@@ -306,7 +306,6 @@ def parse_and_dump_repodata(repodir, outdir):
         os.makedirs(outdir)
 
     for k in keys:
-        data[k] = pickle.load(open(os.path.join(outdir, k + ".pkl"), "rb"))
         pickle.dump(data[k], open(pklpath(outdir, k), "wb"))
 
 
