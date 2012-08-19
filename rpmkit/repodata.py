@@ -206,7 +206,14 @@ def _find_providing_packages(x, provides, filelists, packages):
     """
     if x.startswith("/"):  # file path
         ps = find_package_from_filelists(x, filelists, packages)
-        assert ps, "No package provides " + x
+
+        # There are cases no package provides x. For example,
+        # '/usr/sbin/sendmail' will be created by alternatives and link sources
+        # are provided by sendmail ('/usr/sbin/sendmail.sendmail') and postfix
+        # ('/usr/sbin/sendmail.postfix').
+        if not ps:
+            logging.debug("No package provides " + x)
+            return [x]
 
         logging.debug("Packages provide %s (filelists): %s" % (x, ps))
         return ps
@@ -225,11 +232,6 @@ def _find_providing_packages(x, provides, filelists, packages):
 
         # 3. Try fuzzy (! exact) match in filelists:
         ps = find_package_from_filelists(x, filelists, packages, False)
-
-        # There are cases no package provides x. For example,
-        # '/usr/sbin/sendmail' will be created by alternatives and link sources
-        # are provided by sendmail ('/usr/sbin/sendmail.sendmail') and postfix
-        # ('/usr/sbin/sendmail.postfix').
         if not ps:
             logging.debug("No package provides " + x)
             return [x]
