@@ -17,10 +17,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.identrpm import load_packages, parse_package_label
-from rpmkit.utils import concat, unique
+from rpmkit.utils import concat, uniq
 
 from itertools import izip, repeat
 from logging import DEBUG, INFO
+from operator import itemgetter
 
 import rpmkit.repodata as RR
 import logging
@@ -53,20 +54,61 @@ def find_missing_packages(group, ps, gps):
     return [p for p in package_in_groups if p not in ps]
 
 
-def find_groups_and_packages_map(gps, ps0):
+def find_groups_and_packages_map_0(gps, ps0):
     """
     :param gps: Group and Package pairs, [(group, [package])]
     :param ps0: Target packages list, [package]
 
     :return: [(group, found_packages_in_group, missing_packages_in_group)]
     """
-    gps2 = (
+    gps = [
         (g, [p for p in ps0 if p in ps], [p for p in ps if p not in ps0]) \
             for g, ps in gps
-    )
+    ]
 
-    # filter out groups having no packages found in ps0:
-    return [(g, ps_f, ps_m) for g, ps_f, ps_m in gps2 if ps_f]
+    # filter out groups having no packages in ps0 (gpp[1] => ps_found):
+    return [gpp for gpp in gps if gpp[1]]
+
+
+def cmp_groups(g1, g2):
+    founds = len(g1[1]) - len(g2[1])
+    if founds != 0:
+        return founds
+    else:
+        return len(g2[2]) - len(g1[2])
+
+
+def find_groups_and_packages_map(gps, ps0, optimize=True):
+    """
+    :param gps: Group and Package pairs, [(group, [package])]
+    :param ps0: Target packages list, [package]
+    :param optimize: Optimize groups map
+
+    :return: [(group, found_packages_in_group, missing_packages_in_group)]
+    """
+    gps = find_groups_and_packages_map_0(gps, ps0)
+
+    if not optimize:
+        return gps
+
+    # Find groups having max packages in ps0 one by one:
+    gs = []
+    ps_ref = ps0
+
+    while True:
+        if not gps:
+            return gs
+
+        cgs = sorted(gps, cmp=cmp_groups)
+
+        g = cgs[0]
+        gs.append(g)
+
+        # rest of packages to search groups not in g:
+        ps_ref = [p for p in ps_ref if p not in uniq(g[1])]
+        gps = [(g, ps_f) for g, ps_f, _ps_m in cgs[1:]]
+
+        gps = find_groups_and_packages_map_0(gps, ps_ref)
 
 
 def score(ps_found, ps_missing):
@@ -93,6 +135,27 @@ def get_packages_from_file(rpmlist, parse=True):
     return [f(x) for x in load_packages(rpmlist)]
 
 
+def minify_packages(requires, packages):
+    """
+    Minify package list `packages` by skipping packages required by others.
+
+    :param requires: [(package, [required_package])]
+    :param packages: Target package list to minify
+    """
+    reqs = []  # packages in `packages` required by others.
+    for p in packages:
+        # find packages required by p, member of `packages` list, and not
+        # member of prs:
+        rs = uniq(concat((
+            [r for r in rs if r in packages and r not in reqs] \
+                for x, rs in requires if x == p
+        )))
+        if rs:
+            reqs += rs
+
+    return [p for p in packages if p not in uniq(reqs)]
+
+
 _FORMAT_CHOICES = (_FORMAT_DEFAULT, _FORMAT_KS) = ("default", "ks")
 
 
@@ -107,9 +170,8 @@ def dump(groups, packages, output, limit=0, type=_FORMAT_DEFAULT):
         (g, ps_found, ps_missing) for g, ps_found, ps_missing in
             groups if score(ps_found, ps_missing) > limit
     )
-    packages_in_groups = concat(ps_found for _g, ps_found, _ps in groups)
-
     if type == _FORMAT_DEFAULT:
+        packages_in_groups = concat(ps_found for _g, ps_found, _ps in groups)
         print >> output, "# Package groups ----------------------------------"
         for g, ps_found, ps_missing in results:
             print >> output, "%s: ps_found=%s, ps_missing=%s, score=%d" % \
@@ -121,17 +183,21 @@ def dump(groups, packages, output, limit=0, type=_FORMAT_DEFAULT):
                 [p for p in packages if p not in packages_in_groups][:10]
             )
     else:
+        ps_seen = concat(
+            ps_found + ps_missing for _g, ps_found, ps_missing in groups
+        )
         print >> output, "# kickstart config style packages list:"
         for g, ps_found, ps_missing in results:
             print >> output, '@' + g  # e.g. '@perl-runtime'
-            print >> output, "# Packages of this group: %s" % ps_found
+            print >> output, "# score = %d" % score(ps_found, ps_missing)
+            print >> output, "# Packages of this group: %s" % ", ".join(ps_found[:10]) + "..."
 
             # Packages to excluded from this group explicitly:
             for p in ps_missing:
                 print >> output, '-' + p
 
         for p in packages:
-            if p not in packages_in_groups:
+            if p not in ps_seen:
                 print >> output, p
 
 
@@ -189,13 +255,22 @@ def main():
     logging.info("Found %d packages in %s" % (len(packages), rpmsfile))
 
     data = RR.load_dumped_repodata(options.repodir, options.dir)
+
+    ps = minify_packages(data["requires"], packages)
+    logging.info("Minified packages: %d -> %d" % (len(packages), len(ps)))
+
+    output = open(options.output, 'w') if options.output else sys.stdout
+
+    for p in ps:
+        print >> output, p
+
+    return  # disabled the following code for a while.
+
     gs = data["groups"]
     logging.info("Found %d groups in %s" % (len(gs), options.repodir))
 
     gps = find_groups_and_packages_map(gs, packages)
     logging.info("Found %d candidate groups" % len(gps))
-
-    output = open(options.output, 'w') if options.output else sys.stdout
 
     dump(gps, packages, output, options.limit, options.format)
     output.close()
