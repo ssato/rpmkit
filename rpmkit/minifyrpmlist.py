@@ -54,30 +54,6 @@ def find_missing_packages(group, ps, gps):
     return [p for p in package_in_groups if p not in ps]
 
 
-def find_groups_and_packages_map_0(gps, ps0):
-    """
-    :param gps: Group and Package pairs, [(group, [package])]
-    :param ps0: Target packages list, [package]
-
-    :return: [(group, found_packages_in_group, missing_packages_in_group)]
-    """
-    gps = [
-        (g, [p for p in ps0 if p in ps], [p for p in ps if p not in ps0]) \
-            for g, ps in gps
-    ]
-
-    # filter out groups having no packages in ps0 (gpp[1] => ps_found):
-    return [gpp for gpp in gps if gpp[1]]
-
-
-def cmp_groups(g1, g2):
-    founds = len(g1[1]) - len(g2[1])
-    if founds != 0:
-        return founds
-    else:
-        return len(g2[2]) - len(g1[2])
-
-
 def find_groups_and_packages_map(gps, ps0, optimize=True):
     """
     :param gps: Group and Package pairs, [(group, [package])]
@@ -141,6 +117,8 @@ def minify_packages(requires, packages):
 
     :param requires: [(package, [required_package])]
     :param packages: Target package list to minify
+
+    :return: (minified_packages, excluded_packages_as_required)
     """
     reqs = []  # packages in `packages` required by others.
     for p in packages:
@@ -152,9 +130,91 @@ def minify_packages(requires, packages):
         )))
         if rs:
             reqs += rs
-            logging.debug("Excluded as required by %s: %s" % (p, rs))
+            #logging.debug("Excluded as required by %s: %s" % (p, rs))
 
-    return [p for p in packages if p not in uniq(reqs)]
+    reqs = uniq(reqs)
+    return ([p for p in packages if p not in reqs], reqs)
+
+
+def cmp_groups(g1, g2):
+    founds = len(g1[1]) - len(g2[1])
+    #return (len(g2[2]) - len(g1[2])) if founds == 0 else founds
+    return founds
+
+def key_group(g):
+    return len(g[1]) - len(g[2])
+
+
+def limitf(g, limit, mlimit):
+    nfound = len(g[1])
+    nmissings = len(g[2])
+    return (nfound - nmissings) > limit and nmissings > mlimit
+
+
+def find_groups_0(gps, ps_ref, ps_req, limit, mlimit):
+    """
+    Find groups of which members are in `ps_ref`.
+
+    :param gps: Group and package pairs, [(group, [package])]
+    :param ps_ref: Target packages to search for, [package]
+    :param ps_req: Packages required by packages in ps_ref
+    :param limit: Limit # of (ps_found - ps_missing) to drop groups
+    :param mlimit: Limit # of ps_missing to drop groups
+
+    :return: [(group, found_packages_in_group, missing_packages_in_group)]
+    """
+    ps_all = ps_ref + ps_req
+    gps = [(g, [x for x in ps_ref if x in ps],
+            [y for y in ps if y not in ps_all]) for g, ps in gps]
+
+    # filter out groups having no packages in ps_ref (t[1] => ps_found) and
+    # sorted by (number of ps_found - number of ps_missing):
+    return sorted((t for t in gps if t[1] and limitf(t, limit, mlimit)),
+                  key=key_group, reverse=True)
+
+
+def find_groups(gps, ps_ref, ps_req, limit, mlimit):
+    """
+    :param gps: Group and package pairs, [(group, [package])]
+    :param ps_ref: Target packages to search for, [package]
+    :param ps_req: Required packages by packages in ps_ref
+    :param limit: Limit of (ps_found - ps_missing) to drop groups
+    :param mlimit: Limit of ps_missing to drop groups
+
+    :return: [(group, found_packages_in_group, missing_packages_in_group)]
+    """
+    len0 = len(gps)
+    gps = find_groups_0(gps, ps_ref, ps_req, limit, mlimit)
+    logging.debug(
+        "Initial candidate groups reduced from %d to %d" % (len0, len(gps))
+    )
+
+    # Find groups having max packages in ps_ref one by one:
+    gs = []
+    while True:
+        if not gps:
+            return gs
+
+        candidates = sorted(gps, key=key_group, reverse=True)
+        logging.debug(" *** Candidates *** ")
+        for c in candidates:
+            logging.debug(
+                "Candidate group: %s, found=%d, missing=%d" % \
+                    (c[0], len(c[1]), len(c[2]))
+            )
+
+        g = candidates[0]
+        gs.append(g)
+        logging.debug(
+            "Candidate group: %s, found=%d, missing=%d" % \
+                (g[0], len(g[1]), len(g[2]))
+        )
+
+        # filter out packages in this group `g` from `ps_ref` and `gps`:
+        ps_ref = [p for p in ps_ref if p not in uniq(g[1])]
+        gps = find_groups_0(
+            [t[:2] for t in candidates[1:]], ps_ref, ps_req, limit, mlimit
+        )
 
 
 _FORMAT_CHOICES = (_FORMAT_DEFAULT, _FORMAT_KS) = ("default", "ks")
@@ -165,16 +225,17 @@ def dump(groups, packages, output, limit=0, type=_FORMAT_DEFAULT):
     :param groups: Group and member packages
     :param packages: Packages not in groups
     :param output: Output file object
+    :param limit: Parameter limitting gropus
     :param type: Format type
     """
-    results = (
+    gropus = (
         (g, ps_found, ps_missing) for g, ps_found, ps_missing in
-            groups if score(ps_found, ps_missing) > limit
+        groups if score(ps_found, ps_missing) > limit
     )
     if type == _FORMAT_DEFAULT:
         packages_in_groups = concat(ps_found for _g, ps_found, _ps in groups)
         print >> output, "# Package groups ----------------------------------"
-        for g, ps_found, ps_missing in results:
+        for g, ps_found, ps_missing in groups:
             print >> output, "%s: ps_found=%s, ps_missing=%s, score=%d" % \
                 (g, ps_found, ps_missing, score(ps_found, ps_missing))
 
@@ -188,7 +249,7 @@ def dump(groups, packages, output, limit=0, type=_FORMAT_DEFAULT):
             ps_found + ps_missing for _g, ps_found, ps_missing in groups
         )
         print >> output, "# kickstart config style packages list:"
-        for g, ps_found, ps_missing in results:
+        for g, ps_found, ps_missing in groups:
             print >> output, '@' + g  # e.g. '@perl-runtime'
             print >> output, "# score = %d" % score(ps_found, ps_missing)
             print >> output, "# Packages of this group: %s" % ", ".join(ps_found[:10]) + "..."
@@ -207,6 +268,7 @@ def option_parser():
         comps=None,
         output=None,
         limit=0,
+        mlimit=10,
         repodir=None,
         dir=None,
         format=_FORMAT_DEFAULT,
@@ -220,6 +282,9 @@ def option_parser():
         help="Specify this if input is `rpm -qa` output and must be parsed."
     )
     p.add_option("-L", "--limit", help="Limit score to print [%default]")
+    p.add_option("-M", "--mlimit",
+        help="Limit number of missing pakcages in groups[%default]"
+    )
     p.add_option("-r", "--repodir", help="Repo dir to refer package metadata")
     p.add_option("-d", "--dir", help="Dir where repodata cache was dumped")
     p.add_option(
@@ -257,23 +322,23 @@ def main():
 
     data = RR.load_dumped_repodata(options.repodir, options.dir)
 
-    ps = minify_packages(data["requires"], packages)
+    # 1. Minify packages list:
+    (ps, ps_required) = minify_packages(data["requires"], packages)
     logging.info("Minified packages: %d -> %d" % (len(packages), len(ps)))
 
     output = open(options.output, 'w') if options.output else sys.stdout
-
     for p in ps:
         print >> output, p
 
-    return  # disabled the following code for a while.
+    return 0  # disabled the following code until fixed logics.
 
-    gs = data["groups"]
-    logging.info("Found %d groups in %s" % (len(gs), options.repodir))
+    gps = find_groups(
+        data["groups"], ps, ps_required, options.limit, options.mlimit
+    )
+    logging.info("Found %d candidate groups applicable to" % len(gps))
 
-    gps = find_groups_and_packages_map(gs, packages)
-    logging.info("Found %d candidate groups" % len(gps))
-
-    dump(gps, packages, output, options.limit, options.format)
+    output = open(options.output, 'w') if options.output else sys.stdout
+    dump(gps, ps, output, options.limit, options.format)
     output.close()
 
 
