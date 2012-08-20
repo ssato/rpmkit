@@ -24,8 +24,6 @@ from logging import DEBUG, INFO
 from operator import itemgetter
 
 import xml.etree.cElementTree as ET
-import cPickle as pickle
-
 import gzip
 import logging
 import optparse
@@ -38,6 +36,11 @@ try:
     from hashlib import md5  # python 2.5+
 except ImportError:
     from md5 import md5
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
 
 
 REPODATA_SYS_TOPDIR = "/var/lib/rpmkit/repodata"
@@ -305,8 +308,8 @@ def _repooutdir(repodir, outdir):
     return os.path.join(os.path.abspath(os.path.normpath(outdir)), repoid)
 
 
-def datapath(outdir, key):
-    return os.path.join(outdir, key + ".pkl")
+def datapath(outdir, name="repodata.json"):
+    return os.path.join(outdir, name)
 
 
 def parse_and_dump_repodata(repodir, outdir=None):
@@ -322,8 +325,7 @@ def parse_and_dump_repodata(repodir, outdir=None):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    for k in keys:
-        pickle.dump(data[k], open(datapath(outdir, k), "wb"))
+    json.dump(data, open(datapath(outdir), "w"))
 
 
 def load_dumped_repodata(repodir, outdir=None):
@@ -331,16 +333,11 @@ def load_dumped_repodata(repodir, outdir=None):
         outdir = select_topdir()
 
     outdir = _repooutdir(repodir, outdir)
-    if not os.path.exists(outdir):
-        raise RuntimeError("Dir where data dumped not found: " + outdir)
+    datafile = datapath(outdir)
+    if not os.path.exists(datafile):
+        raise RuntimeError("Target data dumped not found: " + datafile)
 
-    data = {}
-    keys = REPODATA_NAMES
-
-    for k in keys:
-        data[k] = pickle.load(open(datapath(outdir, k), "rb"))
-
-    return data
+    return json.load(open(datafile))
 
 
 def find_requires(x, requires, packages, exceptions=[]):
