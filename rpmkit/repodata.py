@@ -316,8 +316,12 @@ def datapath(outdir, name="repodata.json"):
     return os.path.join(outdir, name)
 
 
+def uconcat(xss):
+    return uniq(concat(xss))
+
+
 def _find_requires(x, requires, packages, exceptions=[]):
-    return uniq(concat(
+    return uconcat(
         [r for r in rs if r != x and r in packages and r not in exceptions] \
             for p, rs in requires if p == x
     ))
@@ -329,11 +333,11 @@ find_requires = _find_requires
 
 def find_all_requires(xs, requires, packages, acc):
     while True:
-        rs = concat(find_requires(x, requires, packages, acc) for x in xs)
+        rs = uconcat(find_requires(x, requires, packages, acc) for x in xs)
         if not rs:
             return sorted(acc)  # all requires found.
 
-        rs = xs = uniq(rs)
+        xs = rs
         acc += rs
 
 
