@@ -140,6 +140,8 @@ def option_parser():
         comps=None,
         output=None,
         limit=0,
+        repodir=None,
+        dir=None,
         format=_FORMAT_DEFAULT,
         parse=False,
         verbose=False,
@@ -147,14 +149,12 @@ def option_parser():
     p = optparse.OptionParser("%prog [OPTION ...] RPMS_FILE")
     p.set_defaults(**defaults)
 
-    p.add_option("-C", "--comps",
-        help="Comps file path to get package groups. "
-            "If not given, searched from /var/cache/yum/"
-    )
     p.add_option("-P", "--parse", action="store_true",
         help="Specify this if input is `rpm -qa` output and must be parsed."
     )
     p.add_option("-L", "--limit", help="Limit score to print [%default]")
+    p.add_option("-r", "--repodir", help="Repo dir to refer package metadata")
+    p.add_option("-d", "--dir", help="Dir where repodata cache was dumped")
     p.add_option(
         "-F", "--format", choices=_FORMAT_CHOICES,
         help="Output format type [%default]"
@@ -175,18 +175,22 @@ def main():
         p.print_usage()
         sys.exit(1)
 
-    if not options.comps:
-        options.comps = RR.find_xml_file("/var/cache/yum", RR.REPODATA_COMPS)
+    if not options.repodir:
+        options.repodir = raw_input(
+            "Repository dir? e.g. '/contents/RHEL/6/3/x86_64/default/Server'"
+        )
 
-    logging.info("Use comps.xml: " + options.comps)
+    if not options.dir:
+        options.dir = RR.select_topdir()
 
     rpmsfile = args[0]
 
     packages = get_packages_from_file(rpmsfile, options.parse)
     logging.info("Found %d packages in %s" % (len(packages), rpmsfile))
 
-    gs = RR.get_package_groups(options.comps)
-    logging.info("Found %d groups in %s" % (len(gs), options.comps))
+    data = RR.load_dumped_repodata(options.repodir, options.dir)
+    gs = data["groups"]
+    logging.info("Found %d groups in %s" % (len(gs), options.repodir))
 
     gps = find_groups_and_packages_map(gs, packages)
     logging.info("Found %d candidate groups" % len(gps))
