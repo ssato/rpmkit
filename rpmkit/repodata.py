@@ -324,7 +324,7 @@ def _find_requires(x, requires, packages, exceptions=[]):
     return uconcat(
         [r for r in rs if r != x and r in packages and r not in exceptions] \
             for p, rs in requires if p == x
-    ))
+    )
 
 
 #find_requires = memoize(_find_requires)
