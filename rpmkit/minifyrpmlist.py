@@ -54,46 +54,6 @@ def find_missing_packages(group, ps, gps):
     return [p for p in package_in_groups if p not in ps]
 
 
-def find_groups_and_packages_map(gps, ps0, optimize=True):
-    """
-    :param gps: Group and Package pairs, [(group, [package])]
-    :param ps0: Target packages list, [package]
-    :param optimize: Optimize groups map
-
-    :return: [(group, found_packages_in_group, missing_packages_in_group)]
-    """
-    gps = find_groups_and_packages_map_0(gps, ps0)
-
-    if not optimize:
-        return gps
-
-    # Find groups having max packages in ps0 one by one:
-    gs = []
-    ps_ref = ps0
-
-    while True:
-        if not gps:
-            return gs
-
-        cgs = sorted(gps, cmp=cmp_groups)
-
-        g = cgs[0]
-        gs.append(g)
-
-        # rest of packages to search groups not in g:
-        ps_ref = [p for p in ps_ref if p not in uniq(g[1])]
-        gps = [(g, ps_f) for g, ps_f, _ps_m in cgs[1:]]
-
-        gps = find_groups_and_packages_map_0(gps, ps_ref)
-
-
-def score(ps_found, ps_missing):
-    """
-    see `find_groups_and_packages_map` also.
-    """
-    return len(ps_found) - len(ps_missing)
-
-
 def _id(x):
     return x
 
@@ -137,54 +97,59 @@ def minify_packages(requires, packages):
 
 
 def cmp_groups(g1, g2):
-    founds = len(g1[1]) - len(g2[1])
-    #return (len(g2[2]) - len(g1[2])) if founds == 0 else founds
-    return founds
-
-def key_group(g):
-    return len(g[1]) - len(g[2])
+    dfounds = len(g1[1]) - len(g2[1])
+    dmissings = len(g2[2]) - len(g1[2])
+    return dmissings if dfounds == 0 else dfounds
 
 
-def limitf(g, limit, mlimit):
-    nfound = len(g[1])
-    nmissings = len(g[2])
-    return (nfound - nmissings) > limit and nmissings > mlimit
+def key_group(g, weight=10):
+    """
+    :return: nfound - weight * nmissings
+    """
+    return len(g[1]) - weight * len(g[2])
 
 
-def find_groups_0(gps, ps_ref, ps_req, limit, mlimit):
+def fmt_group(g):
+    return "%s (%d/%d)" % (g[0], len(g[1]), len(g[2]))
+
+
+def find_groups_0(gps, ps_ref, ps_req):
     """
     Find groups of which members are in `ps_ref`.
 
     :param gps: Group and package pairs, [(group, [package])]
-    :param ps_ref: Target packages to search for, [package]
+    :param ps_ref: Packages to search groups for, [package]
     :param ps_req: Packages required by packages in ps_ref
-    :param limit: Limit # of (ps_found - ps_missing) to drop groups
-    :param mlimit: Limit # of ps_missing to drop groups
 
     :return: [(group, found_packages_in_group, missing_packages_in_group)]
     """
     ps_all = ps_ref + ps_req
-    gps = [(g, [x for x in ps_ref if x in ps],
-            [y for y in ps if y not in ps_all]) for g, ps in gps]
+    gps = [
+        (g,
+         [x for x in ps_all if x in ps],  # packages found in ps.
+         [y for y in ps if y not in ps_all]  # packages not found in 
+        ) for g, ps in gps                   # both ps_ref and ps_req.
+    ]
 
-    # filter out groups having no packages in ps_ref (t[1] => ps_found) and
-    # sorted by (number of ps_found - number of ps_missing):
-    return sorted((t for t in gps if t[1] and limitf(t, limit, mlimit)),
-                  key=key_group, reverse=True)
+    # filter out groups having no packages in ps_ref (t[1] => ps_found)
+    #return sorted((t for t in gps if t[1]), key=key_group, reverse=True)
+    gs = [t for t in gps if t[1]]
+    for g in gs:
+        logging.debug("Groups having packages in list: " + fmt_group(g))
+
+    return gs
 
 
-def find_groups(gps, ps_ref, ps_req, limit, mlimit):
+def find_groups(gps, ps_ref, ps_req):
     """
     :param gps: Group and package pairs, [(group, [package])]
     :param ps_ref: Target packages to search for, [package]
     :param ps_req: Required packages by packages in ps_ref
-    :param limit: Limit of (ps_found - ps_missing) to drop groups
-    :param mlimit: Limit of ps_missing to drop groups
 
     :return: [(group, found_packages_in_group, missing_packages_in_group)]
     """
     len0 = len(gps)
-    gps = find_groups_0(gps, ps_ref, ps_req, limit, mlimit)
+    gps = find_groups_0(gps, ps_ref, ps_req)
     logging.debug(
         "Initial candidate groups reduced from %d to %d" % (len0, len(gps))
     )
@@ -211,10 +176,8 @@ def find_groups(gps, ps_ref, ps_req, limit, mlimit):
         )
 
         # filter out packages in this group `g` from `ps_ref` and `gps`:
-        ps_ref = [p for p in ps_ref if p not in uniq(g[1])]
-        gps = find_groups_0(
-            [t[:2] for t in candidates[1:]], ps_ref, ps_req, limit, mlimit
-        )
+        ps_ref = [p for p in ps_ref if p not in g[1]]
+        gps = find_groups_0([t[:2] for t in candidates[1:]], ps_ref, ps_req)
 
 
 FORMATS = (KS_FMT, JSON_FMT) = ("ks", "json")
@@ -230,7 +193,8 @@ def dump(groups, packages, output, fmt=KS_FMT):
         print >> output, "# package groups and packages"
         for g, ps_found, ps_missing in groups:
             print >> output, '@' + g  # e.g. '@perl-runtime'
-            print >> output, "# found/missing = %d/%d" % (ps_found, ps_missing)
+            print >> output, "# found/missing = %d/%d" % \
+                (len(ps_found), len(ps_missing))
             print >> output, "# Packages of this group: %s" % \
                 ", ".join(sorted(ps_found)[:10]) + "..."
 
@@ -315,7 +279,9 @@ def main():
     (ps, ps_required) = minify_packages(data["requires"], packages)
     logging.info("Minified packages: %d -> %d" % (len(packages), len(ps)))
 
-    if not options.groups:
+    if options.groups:
+        gps = find_groups(data["groups"], ps, ps_required)
+    else:
         gps = []
 
     output = open(options.output, 'w') if options.output else sys.stdout
