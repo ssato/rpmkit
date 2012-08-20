@@ -266,11 +266,12 @@ def _find_providing_packages(x, provides, filelists, packages):
 find_providing_packages = _find_providing_packages
 
 
-def init_repodata(repodir, packages=[], resolve=False):
+def init_repodata(repodir, packages=[], resolve=False, expand=False):
     """
     :param repodir: Repository dir holding repodata/
     :param packages: Reference list of packages, e.g. install rpm names
     :param resolv: Resolv object to package names if true
+    :param expand: Expand packages list in groups by following dependencies
     """
     files = dict((t, find_xml_file(repodir, t)) for t in REPODATA_XMLS)
 
@@ -295,6 +296,8 @@ def init_repodata(repodir, packages=[], resolve=False):
             (p, find_providing_packages(r, provides, filelists, packages)) \
                 for p, r in requires
         ]
+
+    if expand:
         groups = [
             (g, find_all_requires(ps, requires, packages, [])) for g, ps in
                 groups
