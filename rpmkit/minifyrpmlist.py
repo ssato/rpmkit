@@ -152,6 +152,7 @@ def minify_packages(requires, packages):
         )))
         if rs:
             reqs += rs
+            logging.debug("Excluded as required by %s: %s" % (p, rs))
 
     return [p for p in packages if p not in uniq(reqs)]
 
