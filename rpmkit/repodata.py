@@ -331,6 +331,9 @@ def load_dumped_repodata(repodir, outdir=None):
         outdir = select_topdir()
 
     outdir = _repooutdir(repodir, outdir)
+    if not os.path.exists(outdir):
+        raise RuntimeError("Dir where data dumped not found: " + outdir)
+
     data = {}
     keys = REPODATA_NAMES
 
