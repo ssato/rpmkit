@@ -217,62 +217,49 @@ def find_groups(gps, ps_ref, ps_req, limit, mlimit):
         )
 
 
-_FORMAT_CHOICES = (_FORMAT_DEFAULT, _FORMAT_KS) = ("default", "ks")
+FORMATS = (KS_FMT, JSON_FMT) = ("ks", "json")
 
 
-def dump(groups, packages, output, limit=0, type=_FORMAT_DEFAULT):
+def dump(groups, packages, output, fmt=KS_FMT):
     """
     :param groups: Group and member packages
     :param packages: Packages not in groups
     :param output: Output file object
-    :param limit: Parameter limitting gropus
-    :param type: Format type
     """
-    gropus = (
-        (g, ps_found, ps_missing) for g, ps_found, ps_missing in
-        groups if score(ps_found, ps_missing) > limit
-    )
-    if type == _FORMAT_DEFAULT:
-        packages_in_groups = concat(ps_found for _g, ps_found, _ps in groups)
-        print >> output, "# Package groups ----------------------------------"
-        for g, ps_found, ps_missing in groups:
-            print >> output, "%s: ps_found=%s, ps_missing=%s, score=%d" % \
-                (g, ps_found, ps_missing, score(ps_found, ps_missing))
-
-        print >> output, "# Packages not in groups --------------------------"
-        print >> output, "[%s, ...]" % \
-            ", ".join(
-                [p for p in packages if p not in packages_in_groups][:10]
-            )
-    else:
-        ps_seen = concat(
-            ps_found + ps_missing for _g, ps_found, ps_missing in groups
-        )
-        print >> output, "# kickstart config style packages list:"
+    if fmt == KS_FMT:
+        print >> output, "# package groups and packages"
         for g, ps_found, ps_missing in groups:
             print >> output, '@' + g  # e.g. '@perl-runtime'
-            print >> output, "# score = %d" % score(ps_found, ps_missing)
-            print >> output, "# Packages of this group: %s" % ", ".join(ps_found[:10]) + "..."
+            print >> output, "# found/missing = %d/%d" % (ps_found, ps_missing)
+            print >> output, "# Packages of this group: %s" % \
+                ", ".join(sorted(ps_found)[:10]) + "..."
 
             # Packages to excluded from this group explicitly:
             for p in ps_missing:
                 print >> output, '-' + p
 
         for p in packages:
-            if p not in ps_seen:
-                print >> output, p
+            print >> output, p
+    else:
+        data = {}
+        data["groups"] = [
+            {"group": g, "found": ps_found, "missing": ps_missing} \
+                for g, ps_found, ps_missing in groups
+        ]
+        data["packages"] = packages
+        json.dump(data, output)
 
 
 def option_parser():
     defaults = dict(
-        comps=None,
-        output=None,
+        parse=False,
+        groups=False,
         limit=0,
         mlimit=10,
         repodir=None,
         dir=None,
-        format=_FORMAT_DEFAULT,
-        parse=False,
+        output=None,
+        fmt=KS_FMT,
         verbose=False,
     )
     p = optparse.OptionParser("%prog [OPTION ...] RPMS_FILE")
@@ -281,17 +268,19 @@ def option_parser():
     p.add_option("-P", "--parse", action="store_true",
         help="Specify this if input is `rpm -qa` output and must be parsed."
     )
+    p.add_option("-G", "--groups", action="store_true",
+        help="Use package groups data if True"
+    )
     p.add_option("-L", "--limit", help="Limit score to print [%default]")
     p.add_option("-M", "--mlimit",
-        help="Limit number of missing pakcages in groups[%default]"
+        help="Limit number of missing pakcages in groups [%default]"
     )
-    p.add_option("-r", "--repodir", help="Repo dir to refer package metadata")
-    p.add_option("-d", "--dir", help="Dir where repodata cache was dumped")
-    p.add_option(
-        "-F", "--format", choices=_FORMAT_CHOICES,
-        help="Output format type [%default]"
-    )
+    p.add_option("-r", "--repodir", help="Repo dir to get packages metadata")
+    p.add_option("-d", "--dir", help="Dir in which repodata cache was saved")
     p.add_option("-o", "--output", help="Output filename [stdout]")
+    p.add_option("-f", "--fmt", choices=FORMATS,
+        help="Output format [%default]"
+    )
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -326,19 +315,11 @@ def main():
     (ps, ps_required) = minify_packages(data["requires"], packages)
     logging.info("Minified packages: %d -> %d" % (len(packages), len(ps)))
 
-    output = open(options.output, 'w') if options.output else sys.stdout
-    for p in ps:
-        print >> output, p
-
-    return 0  # disabled the following code until fixed logics.
-
-    gps = find_groups(
-        data["groups"], ps, ps_required, options.limit, options.mlimit
-    )
-    logging.info("Found %d candidate groups applicable to" % len(gps))
+    if not options.groups:
+        gps = []
 
     output = open(options.output, 'w') if options.output else sys.stdout
-    dump(gps, ps, output, options.limit, options.format)
+    dump(gps, ps, output, options.fmt)
     output.close()
 
 
