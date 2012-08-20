@@ -40,6 +40,7 @@ except ImportError:
     from md5 import md5
 
 
+REPODATA_NAMES = ("groups", "filelists", "requires", "provides")
 REPODATA_XMLS = \
   (REPODATA_COMPS, REPODATA_FILELISTS, REPODATA_PRIMARY) = \
   ("comps", "filelists", "primary")
@@ -245,7 +246,8 @@ def _find_providing_packages(x, provides, filelists, packages):
         return ps
 
 
-## It eats RAM so that disabled until I think of another better impl.
+# It requires a lot of RAM if memoized, so disabled until I think of another
+# better implementations.
 #find_providing_packages = memoize(_find_providing_packages)
 find_providing_packages = _find_providing_packages
 
@@ -299,7 +301,7 @@ def pklpath(outdir, key):
 def parse_and_dump_repodata(repodir, outdir):
     outdir = _repooutdir(repodir, outdir)
     data = {}
-    keys = ("groups", "filelists", "requires", "provides")
+    keys = REPODATA_NAMES
 
     data = dict(zip(keys, init_repodata(repodir, resolve=True)))
 
@@ -313,8 +315,9 @@ def parse_and_dump_repodata(repodir, outdir):
 def load_dumped_repodata(repodir, workdir):
     outdir = _repooutdir(repodir, outdir)
     data = {}
+    keys = REPODATA_NAMES
 
-    for k in ("groups", "filelists", "requires", "provides"):
+    for k in keys:
         data[k] = pickle.load(open(pklpath(outdir, k), "rb"))
 
     return data
