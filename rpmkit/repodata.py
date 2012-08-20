@@ -294,7 +294,7 @@ def _repooutdir(repodir, outdir):
     return os.path.join(os.path.abspath(os.path.normpath(outdir)), repoid)
 
 
-def pklpath(outdir, key):
+def datapath(outdir, key):
     return os.path.join(outdir, key + ".pkl")
 
 
@@ -309,7 +309,7 @@ def parse_and_dump_repodata(repodir, outdir):
         os.makedirs(outdir)
 
     for k in keys:
-        pickle.dump(data[k], open(pklpath(outdir, k), "wb"))
+        pickle.dump(data[k], open(datapath(outdir, k), "wb"))
 
 
 def load_dumped_repodata(repodir, workdir):
@@ -318,7 +318,7 @@ def load_dumped_repodata(repodir, workdir):
     keys = REPODATA_NAMES
 
     for k in keys:
-        data[k] = pickle.load(open(pklpath(outdir, k), "rb"))
+        data[k] = pickle.load(open(datapath(outdir, k), "rb"))
 
     return data
 
