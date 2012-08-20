@@ -343,18 +343,18 @@ def load_dumped_repodata(repodir, outdir=None):
     return data
 
 
-def find_requires(x, requires, packages, blacklist=[]):
+def find_requires(x, requires, packages, exceptions=[]):
     return uniq(concat(
-        [r for r in rs if r != x and r in packages and r not in blacklist] \
+        [r for r in rs if r != x and r in packages and r not in exceptions] \
             for p, rs in requires if p == x
     ))
 
 
-def resolve_requires(xs, requires, packages, acc=[]):
+def find_all_requires(xs, requires, packages, acc):
     while True:
         rs = concat(find_requires(x, requires, packages, acc) for x in xs)
         if not rs:
-            return acc  # all requires found.
+            return sorted(acc)  # all requires found.
 
         rs = xs = uniq(rs)
         acc += rs
