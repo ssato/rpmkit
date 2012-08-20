@@ -50,7 +50,7 @@ REPODATA_TOPDIRS = [
     REPODATA_USER_TOPDIR,
 ]
 
-REPODATA_NAMES = ("groups", "filelists", "requires", "provides")
+REPODATA_NAMES = ("groups", "filelists", "requires", "provides", "packages")
 REPODATA_XMLS = \
   (REPODATA_COMPS, REPODATA_FILELISTS, REPODATA_PRIMARY) = \
   ("comps", "filelists", "primary")
@@ -279,7 +279,7 @@ def init_repodata(repodir, packages=[], resolve=False):
     filelists = get_package_files(files[REPODATA_FILELISTS])
 
     if not packages:
-        packages = uniq(p for p, _r, _p in reqs_and_provs)
+        packages = uniq(p for p, _ in filelists)
 
     requires = concat(
         izip(repeat(p), rs) for p, rs in
@@ -295,8 +295,12 @@ def init_repodata(repodir, packages=[], resolve=False):
             (p, find_providing_packages(r, provides, filelists, packages)) \
                 for p, r in requires
         ]
+        groups = [
+            (g, find_all_requires(ps, requires, packages, [])) for g, ps in
+                groups
+        ]
 
-    return (groups, filelists, requires, provides)
+    return (groups, filelists, requires, provides, packages)
 
 
 def path_to_id(p):
@@ -310,6 +314,27 @@ def _repooutdir(repodir, outdir):
 
 def datapath(outdir, name="repodata.json"):
     return os.path.join(outdir, name)
+
+
+def _find_requires(x, requires, packages, exceptions=[]):
+    return uniq(concat(
+        [r for r in rs if r != x and r in packages and r not in exceptions] \
+            for p, rs in requires if p == x
+    ))
+
+
+#find_requires = memoize(_find_requires)
+find_requires = _find_requires
+
+
+def find_all_requires(xs, requires, packages, acc):
+    while True:
+        rs = concat(find_requires(x, requires, packages, acc) for x in xs)
+        if not rs:
+            return sorted(acc)  # all requires found.
+
+        rs = xs = uniq(rs)
+        acc += rs
 
 
 def parse_and_dump_repodata(repodir, outdir=None):
@@ -338,23 +363,6 @@ def load_dumped_repodata(repodir, outdir=None):
         raise RuntimeError("Target data dumped not found: " + datafile)
 
     return json.load(open(datafile))
-
-
-def find_requires(x, requires, packages, exceptions=[]):
-    return uniq(concat(
-        [r for r in rs if r != x and r in packages and r not in exceptions] \
-            for p, rs in requires if p == x
-    ))
-
-
-def find_all_requires(xs, requires, packages, acc):
-    while True:
-        rs = concat(find_requires(x, requires, packages, acc) for x in xs)
-        if not rs:
-            return sorted(acc)  # all requires found.
-
-        rs = xs = uniq(rs)
-        acc += rs
 
 
 def option_parser():
