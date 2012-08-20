@@ -40,6 +40,13 @@ except ImportError:
     from md5 import md5
 
 
+REPODATA_SYS_TOPDIR = "/var/lib/rpmkit/repodata"
+REPODATA_USER_TOPDIR = os.path.expanduser("~/.cache/rpmkit/repodata")
+REPODATA_TOPDIRS = [
+    REPODATA_SYS_TOPDIR,
+    REPODATA_USER_TOPDIR,
+]
+
 REPODATA_NAMES = ("groups", "filelists", "requires", "provides")
 REPODATA_XMLS = \
   (REPODATA_COMPS, REPODATA_FILELISTS, REPODATA_PRIMARY) = \
@@ -56,6 +63,10 @@ def _tree_from_xml(xmlfile):
     return ET.parse(
         gzip.open(xmlfile) if xmlfile.endswith(".gz") else open(xmlfile)
     )
+
+
+def select_topdir():
+    return REPODATA_SYS_TOPDIR if os.geteuid() == 0 else REPODATA_USER_TOPDIR
 
 
 def _find_xml_files_g(topdir="/var/cache/yum", rtype=REPODATA_COMPS):
@@ -298,7 +309,10 @@ def datapath(outdir, key):
     return os.path.join(outdir, key + ".pkl")
 
 
-def parse_and_dump_repodata(repodir, outdir):
+def parse_and_dump_repodata(repodir, outdir=None):
+    if not outdir:
+        outdir = select_topdir()
+
     outdir = _repooutdir(repodir, outdir)
     data = {}
     keys = REPODATA_NAMES
@@ -312,7 +326,10 @@ def parse_and_dump_repodata(repodir, outdir):
         pickle.dump(data[k], open(datapath(outdir, k), "wb"))
 
 
-def load_dumped_repodata(repodir, workdir):
+def load_dumped_repodata(repodir, outdir=None):
+    if not outdir:
+        outdir = select_topdir()
+
     outdir = _repooutdir(repodir, outdir)
     data = {}
     keys = REPODATA_NAMES
@@ -342,7 +359,7 @@ def resolve_requires(xs, requires, packages, acc=[]):
 
 def option_parser():
     defaults = dict(
-        outdir="results",
+        outdir=None,
         packages=None,
         verbose=False,
     )
@@ -350,7 +367,7 @@ def option_parser():
     p.set_defaults(**defaults)
 
     p.add_option("-p", "--packages", help="Specify the rpm list")
-    p.add_option("-o", "--outdir", help="Output dir [%default]]")
+    p.add_option("-o", "--outdir", help="Output dir")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
