@@ -1,0 +1,48 @@
+# Makefile to build rhel-6's repodata cache rpm package w/ packagemaker.
+
+PACKAGE	= repodata-rhel-6-x86_64-data
+
+REVISION ?= 1
+PACKAGE_VERSION ?= 0.0.1.$(shell date +%Y%m%d).$(REVISION)
+
+USER	?= ssato
+EMAIL	?= ssato@redhat.com
+FULLNAME ?= Satoru SATOH
+URL	?= http://github.com/ssato/rpmkit/$(PACKAGE)
+
+DISTS	?= fedora-17-x86_64,fedora-17-i386
+
+# Expects RHEL 6 i386/x86_64 DVDs are mounted under $(datatopdir),
+# e.g. $(datatopdir)/RHEL/6/3/x86_64/default/ :
+datatopdir = /net/binaries/var/www/html/contents/
+
+curdir	= $(shell pwd)
+workdir = ./$(PACKAGE)-build
+
+
+all: srpm
+
+$(workdir):
+	mkdir -p $@
+
+$(workdir)/files.list: $(workdir) files.list
+	sed 's,@ROOT@,$(curdir),g' files.list > $@.tmp && mv $@.tmp $@
+
+srpm: $(workdir)/files.list
+	pmaker -n $(PACKAGE) --license MIT --group "System Environment/Base" \
+		--url $(URL) \
+		--summary "RHEL 6 x86_64 repodata files" \
+		--relations "requires:sqlite" \
+		--packager "$(FULLNAME)" --email $(EMAIL) \
+		--stepto sbuild --ignore-owner -w $(workdir) \
+		--no-rpmdb --no-mock --pversion $(PACKAGE_VERSION) \
+		--destdir $(curdir) --verbose $<
+	-mv -f $(workdir)/$(PACKAGE)-*/$(PACKAGE)-*.src.rpm $(workdir)
+
+release: srpm
+	myrepo -v --dists $(DISTS) d $(workdir)/*.src.rpm
+
+clean:
+	-rm -rf $(workdir)
+
+.PHONY: clean srpm release
