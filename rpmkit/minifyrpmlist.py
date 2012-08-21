@@ -183,10 +183,11 @@ def find_groups(gps, ps_ref, ps_req):
 FORMATS = (KS_FMT, JSON_FMT) = ("ks", "json")
 
 
-def dump(groups, packages, output, fmt=KS_FMT):
+def dump(groups, packages, ps_required, output, fmt=KS_FMT):
     """
     :param groups: Group and member packages
     :param packages: Packages not in groups
+    :param ps_required: Excluded packages in originaly packages list
     :param output: Output file object
     """
     if fmt == KS_FMT:
@@ -198,12 +199,19 @@ def dump(groups, packages, output, fmt=KS_FMT):
             print >> output, "# Packages of this group: %s" % \
                 ", ".join(sorted(ps_found)[:10]) + "..."
 
-            # Packages to excluded from this group explicitly:
+            # Packages to exclud from this group explicitly:
             for p in ps_missing:
                 print >> output, '-' + p
 
         for p in packages:
             print >> output, p
+
+        # Packages to exclude from the list as not needed because of
+        # dependencies:
+        print >> output, \
+            "#\n# Excluded as installed when resolving dependencies:\n#"
+        for p in ps_required:
+            print >> output, "# " + p
     else:
         data = {}
         data["groups"] = [
@@ -285,7 +293,7 @@ def main():
         gps = []
 
     output = open(options.output, 'w') if options.output else sys.stdout
-    dump(gps, ps, output, options.fmt)
+    dump(gps, ps, ps_required, output, options.fmt)
     output.close()
 
 
