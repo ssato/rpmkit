@@ -39,7 +39,7 @@ setup.stamp:
 	done
 	touch $@
 
-$(workdir)/files.list: setup.stamp
+$(workdir)/files.list: setup.stamp $(workdir)
 	find $(curdir)/var/lib/rpmkit/repodata -type f > $@
 
 srpm: $(workdir)/files.list
