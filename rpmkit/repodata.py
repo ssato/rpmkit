@@ -31,6 +31,7 @@ import os.path
 import os
 import re
 import sys
+import textwrap
 
 try:
     from hashlib import md5  # python 2.5+
@@ -369,17 +370,105 @@ def load_dumped_repodata(outdir=None, repodir=None):
     return json.load(open(datafile))
 
 
+def show_xs(xs, head="# "):
+    try:
+        width = int(os.environ['COLUMNS'])
+    except (KeyError, ValueError):
+        width = 80
+
+    width -= 2
+    text = head + ", ".join(xs)
+
+    for l in textwrap.wrap(text, width, subsequent_indent='  '):
+        print l
+
+
+# APIs:
+def list_requires(data, package):
+    """
+    :param data: Data object load_dumped_repodata() returns
+    :param package: Package name to search required packages
+    """
+    return uconcat((rs for p, rs in data["requires"] if p == package))
+
+
+def list_whatrequires(data, package):
+    """
+    :param data: Data object load_dumped_repodata() returns
+    :param package: Package name to search required packages
+    """
+    return [p for p, rs in data["requires"] if package in rs]
+
+
+def list_provides(data, package):
+    """
+    :param data: Data object load_dumped_repodata() returns
+    :param package: Package name to search required packages
+    """
+    return [pr for p, pr in data["provides"] if p == package]
+
+
+def list_files(data, package):
+    """
+    :param data: Data object load_dumped_repodata() returns
+    :param package: Package name to search required packages
+    """
+    return [f for p, f in data["filelists"] if p == package]
+
+
+_COMMANDS = (_CMD_INIT, _CMD_SEARCH) = ("init", "search")
+
+
 def option_parser():
     defaults = dict(
+        datadir=None,
+        requires=None,
+        provides=None,
+        files=None,
+        groups=False,
+        whatrequires=None,
         outdir=None,
-        packages=None,
         verbose=False,
     )
-    p = optparse.OptionParser("%prog [OPTION ...] REPODIR")
+    p = optparse.OptionParser("""\
+%prog CMD [OPTION ...]
+
+Commands:
+  i[nit]                  Initialize repodata cache for given repodata/ dir
+  s[earch] [PACKAGE ...]  Search packages/filelists/etc for given package[s] 
+
+Examples:
+
+  # Initialize repodata cache for rhel-6-3-x86_64:
+  %prog i -d /net/binaries/contents/RHEL/6/3/x86_64/default/Server \\
+    -o /var/lib/rpmkit/repodata/rhel/6/3/x86_64/Server
+
+  # Search packages require 'bash' in rhel-6-3-x86_64:
+  %prog s -d /var/lib/rpmkit/repodata/rhel/6/3/x86_64/Server \\
+    --whatrequires bash
+    """)
     p.set_defaults(**defaults)
 
-    p.add_option("-p", "--packages", help="Specify the rpm list")
-    p.add_option("-o", "--outdir", help="Output dir")
+    p.add_option("-d", "--datadir", help="Specify repodata dir")
+
+    iog = optparse.OptionGroup(p, "'init' options")
+    iog.add_option("-o", "--outdir", help="Output dir")
+    p.add_option_group(iog)
+
+    sog = optparse.OptionGroup(p, "'search' options")
+    sog.add_option('', "--requires",
+        help="List packages on which this package depends"
+    )
+    sog.add_option('', "--provides",
+        help="List capabilities on which this package provides"
+    )
+    sog.add_option('', "--files", help="List all the files in this package")
+    sog.add_option('', "--groups", action="store_true", help="List groups")
+    sog.add_option('', "--whatrequires",
+        help="List packages depends on this package"
+    )
+    p.add_option_group(sog)
+
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -395,9 +484,48 @@ def main():
         p.print_usage()
         sys.exit(1)
 
-    repodir = args[0]
+    if args[0].startswith('i'):
+        cmd = _CMD_INIT
+    elif args[0].startswith('s'):
+        cmd = _CMD_SEARCH
+    else:
+        p.print_usage()
+        sys.exit(1)
 
-    parse_and_dump_repodata(repodir, options.outdir)
+    if not options.datadir:
+        options.datadir = raw_inpu("Repodata dir? > ")
+
+    if cmd == _CMD_INIT:
+        parse_and_dump_repodata(options.datadir, options.outdir)
+    else:
+        data = load_dumped_repodata(options.datadir)
+
+        if options.groups:
+            for g, ps in data["groups"]:
+                print "@" + g
+                show_xs(ps, "# pakcages = ")
+
+            sys.exit(0)
+
+        if options.requires:
+            f = list_requires
+            p = options.requires
+        elif options.whatrequires:
+            f = list_whatrequires
+            p = options.whatrequires
+        elif options.provides:
+            f = list_provides
+            p = options.provides
+        elif options.files:
+            f = list_files
+            p = options.files
+        else:
+            print >> sys.stderr, \
+                "You must specify one of options for 'search' command"
+            sys.exit(1)
+
+        for r in f(data, p):
+            print r
 
 
 if __name__ == "__main__":
