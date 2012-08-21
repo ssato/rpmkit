@@ -29,11 +29,11 @@ $(workdir):
 	mkdir -p $@
 
 setup.stamp:
-	for i in 1 2 3; do \
+	for i in 0 1 2 3; do \
 		for subdir in HighAvailability LoadBalancer ResilientStorage ScalableFileSystem Server; do \
 			datadir=$(curdir)/var/lib/rpmkit/repodata/rhel/6/$$i/x86_64/$$subdir; \
 			mkdir -p $$datadir; \
-			cp $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.xml.gz $$datadir; \
+			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.xml.gz $$datadir; \
 			$(REPODATA_GEN) -v -o $$datadir $$datadir; \
 		done; \
 	done
