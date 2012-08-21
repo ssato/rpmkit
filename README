@@ -17,6 +17,8 @@ GPL3+/GPLv2+/MIT.
 
 * rpm2json: Dump rpm metadata in JSON format
 * rpms2csv: Dump metadata of given rpms in CSV format
+* rk-repodata: Generate/query (rpm) repodata cache
+* minifyrpmlist: Minify given rpm list with using repodata cache
 
 * swapi: Query RHN/Satellite
 
