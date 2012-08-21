@@ -34,7 +34,7 @@ setup.stamp:
 			datadir=$(curdir)/var/lib/rpmkit/repodata/rhel/6/$$i/x86_64/$$subdir; \
 			mkdir -p $$datadir; \
 			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.xml.gz $$datadir; \
-			$(REPODATA_GEN) -v -o $$datadir $$datadir; \
+			$(REPODATA_GEN) i -v -d $$datadir -o $$datadir; \
 		done; \
 	done
 	touch $@
