@@ -1,6 +1,6 @@
 # Makefile to build rhel-6's repodata cache rpm package w/ packagemaker.
 
-PACKAGE	= repodata-rhel-6-x86_64-data
+PACKAGE	= rhel-6-x86_64-repodata
 
 REVISION ?= 1
 PACKAGE_VERSION ?= 0.0.1.$(shell date +%Y%m%d).$(REVISION)
@@ -12,12 +12,15 @@ URL	?= http://github.com/ssato/rpmkit/$(PACKAGE)
 
 DISTS	?= fedora-17-x86_64,fedora-17-i386
 
-# Expects RHEL 6 i386/x86_64 DVDs are mounted under $(datatopdir),
-# e.g. $(datatopdir)/RHEL/6/3/x86_64/default/ :
-datatopdir = /net/binaries/var/www/html/contents/
+# Expects RHEL 6 i386/x86_64 DVDs are mounted under $(DATADIR),
+# e.g. $(DATADIR)/RHEL/6/3/x86_64/default/ :
+DATADIR ?= /net/binaries/var/www/html/contents/
+
+REPODATA_GEN ?= rk-repodata
+
 
 curdir	= $(shell pwd)
-workdir = ./$(PACKAGE)-build
+workdir = $(curdir)/$(PACKAGE)-build
 
 
 all: srpm
@@ -25,8 +28,19 @@ all: srpm
 $(workdir):
 	mkdir -p $@
 
-$(workdir)/files.list: $(workdir) files.list
-	sed 's,@ROOT@,$(curdir),g' files.list > $@.tmp && mv $@.tmp $@
+setup.stamp:
+	for i in 1 2 3; do \
+		for subdir in HighAvailability LoadBalancer ResilientStorage ScalableFileSystem Server; do \
+			datadir=$(curdir)/var/lib/rpmkit/repodata/rhel/6/$$i/x86_64/$$subdir; \
+			mkdir -p $$datadir; \
+			cp $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.xml.gz $$datadir; \
+			$(REPODATA_GEN) -v -o $$datadir $$datadir; \
+		done; \
+	done
+	touch $@
+
+$(workdir)/files.list: setup.stamp
+	find $(curdir)/var/lib/rpmkit/repodata -type f > $@
 
 srpm: $(workdir)/files.list
 	pmaker -n $(PACKAGE) --license MIT --group "System Environment/Base" \

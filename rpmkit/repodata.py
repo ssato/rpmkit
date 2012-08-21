@@ -307,9 +307,9 @@ def path_to_id(p):
     return md5(p).hexdigest()
 
 
-def _repooutdir(repodir, outdir):
-    repoid = path_to_id(os.path.abspath(repodir))
-    return os.path.join(os.path.abspath(os.path.normpath(outdir)), repoid)
+def _repooutdir(topdir, repodir):
+    repoid = path_to_id(os.path.abspath(repodir.rstrip(os.path)))
+    return os.path.join(os.path.abspath(os.path.normpath(topdir)), repoid)
 
 
 def datapath(outdir, name="repodata.json"):
@@ -343,9 +343,8 @@ def find_all_requires(xs, requires, packages, acc):
 
 def parse_and_dump_repodata(repodir, outdir=None):
     if not outdir:
-        outdir = select_topdir()
+        outdir = _repooutdir(select_topdir(), repodir)
 
-    outdir = _repooutdir(repodir, outdir)
     data = {}
     keys = REPODATA_NAMES
 
@@ -359,9 +358,8 @@ def parse_and_dump_repodata(repodir, outdir=None):
 
 def load_dumped_repodata(repodir, outdir=None):
     if not outdir:
-        outdir = select_topdir()
+        outdir = _repooutdir(select_topdir(), repodir)
 
-    outdir = _repooutdir(repodir, outdir)
     datafile = datapath(outdir)
     if not os.path.exists(datafile):
         raise RuntimeError("Target data dumped not found: " + datafile)
