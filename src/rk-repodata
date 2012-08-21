@@ -1,0 +1,7 @@
+#! /usr/bin/python
+#
+import rpmkit.repodata
+
+rpmkit.repodata.main()
+
+# vim:sw=4:ts=4:et:
