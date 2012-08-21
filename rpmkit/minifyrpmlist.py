@@ -226,10 +226,7 @@ def option_parser():
     defaults = dict(
         parse=False,
         groups=False,
-        limit=0,
-        mlimit=10,
-        repodir=None,
-        dir=None,
+        datadir=None,
         output=None,
         fmt=KS_FMT,
         verbose=False,
@@ -243,12 +240,7 @@ def option_parser():
     p.add_option("-G", "--groups", action="store_true",
         help="Use package groups data if True"
     )
-    p.add_option("-L", "--limit", help="Limit score to print [%default]")
-    p.add_option("-M", "--mlimit",
-        help="Limit number of missing pakcages in groups [%default]"
-    )
-    p.add_option("-r", "--repodir", help="Repo dir to get packages metadata")
-    p.add_option("-d", "--dir", help="Dir in which repodata cache was saved")
+    p.add_option("-d", "--datadir", help="Dir in which repodata cache was saved")
     p.add_option("-o", "--output", help="Output filename [stdout]")
     p.add_option("-f", "--fmt", choices=FORMATS,
         help="Output format [%default]"
@@ -268,20 +260,15 @@ def main():
         p.print_usage()
         sys.exit(1)
 
-    if not options.repodir:
-        options.repodir = raw_input(
-            "Repository dir? e.g. '/contents/RHEL/6/3/x86_64/default/Server'"
-        )
-
-    if not options.dir:
-        options.dir = RR.select_topdir()
+    if not options.datadir:
+        options.datadir = raw_input("Specify repodata cache dir > ")
 
     rpmsfile = args[0]
 
     packages = get_packages_from_file(rpmsfile, options.parse)
     logging.info("Found %d packages in %s" % (len(packages), rpmsfile))
 
-    data = RR.load_dumped_repodata(options.repodir, options.dir)
+    data = RR.load_dumped_repodata(options.datadir)
 
     # 1. Minify packages list:
     (ps, ps_required) = minify_packages(data["requires"], packages)
