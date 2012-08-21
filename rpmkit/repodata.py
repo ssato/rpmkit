@@ -356,8 +356,10 @@ def parse_and_dump_repodata(repodir, outdir=None):
     json.dump(data, open(datapath(outdir), "w"))
 
 
-def load_dumped_repodata(repodir, outdir=None):
+def load_dumped_repodata(repodir=None, outdir=None):
     if not outdir:
+        assert repodir is not None, \
+            "repodir parameter needs to be set if outdir is None"
         outdir = _repooutdir(select_topdir(), repodir)
 
     datafile = datapath(outdir)
