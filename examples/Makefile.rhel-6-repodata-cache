@@ -12,7 +12,7 @@ URL	?= http://github.com/ssato/rpmkit/$(PACKAGE)
 
 DISTS	?= fedora-17-x86_64,fedora-17-i386
 
-# Expects RHEL 6 i386/x86_64 DVDs are mounted under $(DATADIR),
+# Expects RHEL 6.X x86_64 DVDs are mounted under $(DATADIR),
 # e.g. $(DATADIR)/RHEL/6/3/x86_64/default/ :
 DATADIR ?= /net/binaries/var/www/html/contents/
 
@@ -32,8 +32,11 @@ setup.stamp:
 	for i in 0 1 2 3; do \
 		for subdir in HighAvailability LoadBalancer ResilientStorage ScalableFileSystem Server; do \
 			datadir=$(curdir)/var/lib/rpmkit/repodata/rhel/6/$$i/x86_64/$$subdir; \
-			mkdir -p $$datadir; \
-			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.xml.gz $$datadir; \
+			mkdir -p $$datadir/repodata; \
+			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.xml.gz $$datadir/repodata; \
+			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.sqlite.bz2 $$datadir/repodata; \
+			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/productid.gz $$datadir/repodata; \
+			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/repomd.xml $$datadir/repodata; \
 			$(REPODATA_GEN) i -v -d $$datadir -o $$datadir; \
 		done; \
 	done
