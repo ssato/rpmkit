@@ -170,6 +170,10 @@ def uniq(iterable, cmp=cmp, key=None):
     return acc
 
 
+def uconcat(xss):
+    return uniq(concat(xss))
+
+
 # FIXME: Looks like bad effects if memoized. Not memoized for a while
 concat = _concat
 flatten = _flatten

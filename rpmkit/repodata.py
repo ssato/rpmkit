@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.memoize import memoize
-from rpmkit.utils import concat, uniq
+from rpmkit.utils import concat, uniq, uconcat
 
 from itertools import repeat, izip
 from logging import DEBUG, INFO
@@ -315,10 +315,6 @@ def _repooutdir(topdir, repodir):
 
 def datapath(outdir, name="repodata.json"):
     return os.path.join(outdir, name)
-
-
-def uconcat(xss):
-    return uniq(concat(xss))
 
 
 def _find_requires(x, requires, packages, exceptions=[]):
