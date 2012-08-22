@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.identrpm import load_packages, parse_package_label
-from rpmkit.utils import concat, uniq
+from rpmkit.utils import concat, uniq, uconcat
 
 from itertools import izip, repeat
 from logging import DEBUG, INFO
@@ -84,10 +84,10 @@ def minify_packages(requires, packages):
     for p in packages:
         # find packages required by p, member of `packages` list, and not
         # member of prs:
-        rs = uniq(concat((
+        rs = uconcat((
             [r for r in rs if r in packages and r not in reqs] \
                 for x, rs in requires if x == p
-        )))
+        ))
         if rs:
             reqs += rs
             #logging.debug("Excluded as required by %s: %s" % (p, rs))
