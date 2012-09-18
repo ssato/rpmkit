@@ -1,6 +1,6 @@
 # Makefile to build rhel-6's repodata cache rpm package w/ packagemaker.
 
-PACKAGE	= rhel-6-x86_64-repodata
+PACKAGE	= rhel-5-x86_64-repodata
 
 REVISION ?= 1
 PACKAGE_VERSION ?= 0.0.1.$(shell date +%Y%m%d).$(REVISION)
@@ -12,8 +12,8 @@ URL	?= http://github.com/ssato/rpmkit/$(PACKAGE)
 
 DISTS	?= fedora-17-x86_64,fedora-17-i386
 
-# Expects RHEL 6.X x86_64 DVDs are mounted under $(DATADIR),
-# e.g. $(DATADIR)/RHEL/6/3/x86_64/default/ :
+# Expects RHEL 5 x86_64 DVDs are mounted under $(DATADIR),
+# e.g. $(DATADIR)/RHEL/5/7/x86_64/default/ :
 DATADIR ?= /net/binaries/var/www/html/contents/
 
 REPODATA_GEN ?= rk-repodata
@@ -29,14 +29,11 @@ $(workdir):
 	mkdir -p $@
 
 setup.stamp:
-	for i in 0 1 2 3; do \
-		for subdir in HighAvailability LoadBalancer ResilientStorage ScalableFileSystem Server; do \
-			datadir=$(curdir)/var/lib/rpmkit/repodata/rhel/6/$$i/x86_64/$$subdir; \
-			mkdir -p $$datadir/repodata; \
-			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.xml.gz $$datadir/repodata; \
-			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/*.sqlite.bz2 $$datadir/repodata; \
-			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/productid.gz $$datadir/repodata; \
-			cp -f $(DATADIR)/RHEL/6/$$i/x86_64/default/$$subdir/repodata/repomd.xml $$datadir/repodata; \
+	for i in 0 1 2 3 4 5 6 7 8; do \
+		for subdir in Cluster ClusterStorage Server VT; do \
+			datadir=$(curdir)/var/lib/rpmkit/repodata/rhel/5/$$i/x86_64/$$subdir; \
+			mkdir -p $$datadir; \
+			cp -f $(DATADIR)/RHEL/5/$$i/x86_64/default/$$subdir/repodata/*.xml* $$datadir; \
 			$(REPODATA_GEN) i -v -d $$datadir -o $$datadir; \
 		done; \
 	done
@@ -48,7 +45,7 @@ $(workdir)/files.list: setup.stamp $(workdir)
 srpm: $(workdir)/files.list
 	pmaker -n $(PACKAGE) --license MIT --group "System Environment/Base" \
 		--url $(URL) \
-		--summary "RHEL 6 x86_64 repodata files" \
+		--summary "RHEL 5 x86_64 repodata files" \
 		--relations "requires:sqlite" \
 		--packager "$(FULLNAME)" --email $(EMAIL) \
 		--stepto sbuild --ignore-owner -w $(workdir) \

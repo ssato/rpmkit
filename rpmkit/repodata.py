@@ -393,7 +393,7 @@ def list_whatrequires(data, package):
     :param data: Data object load_dumped_repodata() returns
     :param package: Package name to search required packages
     """
-    return uconcat((p for p, rs in data["requires"] if package in rs))
+    return uniq((p for p, rs in data["requires"] if package in rs))
 
 
 def list_provides(data, package):
