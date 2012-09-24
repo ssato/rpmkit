@@ -31,6 +31,9 @@ import os.path
 import sys
 
 
+_SPECIAL_GROUPS = ["core", "base"]
+
+
 def package_and_group_pairs(gps):
     """
     :param gps: Group and Package pairs, [(group, [package])
@@ -117,13 +120,39 @@ def find_groups_0(gps, ps_ref, ps_req):
     """
     Find groups of which members are in `ps_ref`.
 
+    :param gps: Group and packages pairs, [(group, [package])]
+    :param ps_ref: Packages to search groups for, [package]
+    :param ps_req: Packages not in ps_ref, required by packages in ps_ref
+
+    :return: [(group, found_packages_in_group, missing_packages_in_group)]
+    """
+    ps_all = ps_ref + ps_req
+    gps = [
+        (g,                                  # Group name.
+         [x for x in ps_all if x in ps],     # Packages found in ps.
+         [y for y in ps if y not in ps_all]  # Packages not found in
+        ) for g, ps in gps                   # both ps_ref and ps_req.
+    ]
+
+    # filter out groups having no packages in ps_ref (t[1] => ps_found)
+    #return sorted((t for t in gps if t[1]), key=key_group, reverse=True)
+    gs = [t for t in gps if t[1]]
+    for g in gs:
+        logging.debug("Groups having packages in list: " + fmt_group(g))
+
+    return gs
+
+
+def try_special_groups(gps, ps_ref, ps_req, specials=_SPECIAL_GROUPS):
+    """
+    Try matching packages `ps_ref` with some special groups.
+
     :param gps: Group and package pairs, [(group, [package])]
     :param ps_ref: Packages to search groups for, [package]
     :param ps_req: Packages required by packages in ps_ref
 
     :return: [(group, found_packages_in_group, missing_packages_in_group)]
     """
-    ps_all = ps_ref + ps_req
     gps = [
         (g,
          [x for x in ps_all if x in ps],  # packages found in ps.
