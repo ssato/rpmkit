@@ -20,7 +20,6 @@
 from rpmkit.swapi import main as swmain
 from itertools import groupby
 
-
 import logging
 import optparse
 import os
@@ -29,8 +28,45 @@ import re
 import shlex
 import sys
 
+try:
+    import json
+except ImportError:
+    try:
+        import simplejson as json
+    except ImportError:
+        json = object()
 
-DATE_REG = re.compile(r'\d{4}-\d{2}-\d{2}(?:\s+(?:\d{2}:\d{2}:\d{2})?)?')
+        def __dump(obj, fp, **kwargs):
+            pprint.pprint(obj, fp)
+
+        setattr(json, "dump", __dump)  # Looks almost same.
+
+
+_DATE_REG = re.compile(r'\d{4}-\d{2}-\d{2}(?:\s+(?:\d{2}:\d{2}:\d{2})?)?')
+
+_TIME_RESOLUTIONS = (_DAY, _MONTH, _YEAR) = (0, 1, 2)
+_TIME_RESOLUTION_S = dict(day=_DAY, month=_MONTH, year=_YEAR)
+
+
+def _simple_fmt_g(result):
+    """
+    :param result: [(key, [errata])] where key = year | month | day, 
+        e.g. "2012" (year), "2012-09" (month) and "2012-09-01" (day).
+    """
+    for k, es in result:
+        yield '\n'.join(("# " + k, '\n'.join(e["advisory"] for e in es)))
+
+
+def _simple_fmt(result, fp=sys.stdout):
+    for x in _simple_fmt_g(result):
+        fp.write(x + '\n')
+
+def _json_dump(obj, fp):
+    return json.dump(obj, fp, indent=2)
+
+
+_FORMAT_TYPES = (_SIMPLE_FMT, _JSON_FMT) = ("simple", "json")
+_FORMAT_MAP = dict(simple=_simple_fmt, json=_json_dump)
 
 
 def __swapi(cmd):
@@ -42,7 +78,7 @@ def __swapi(cmd):
     return swmain(cmd)[0]
 
 
-def validate_datetime(t, reg=DATE_REG):
+def validate_datetime(t, reg=_DATE_REG):
     """
     :param t: String represents date and time, e.g. '2012-10-09 08:00:00'
 
@@ -76,10 +112,6 @@ def list_errata(channel, start=None, end=None, offline=False):
     return __swapi([a for a in args if a is not None])
 
 
-_TIME_RESOLUTIONS = (_DAY, _MONTH, _YEAR) = (0, 1, 2)
-_TIME_RESOLUTION_S = dict(day=_DAY, month=_MONTH, year=_YEAR)
-
-
 def __keyfunc(resolution):
     """
     >>> e = {"issue_date": "2012-09-03 13:00:00"}
@@ -107,7 +139,7 @@ def div_errata_list_by_time_resolution(es, resolution=_DAY):
     :param es: Errata list
     :param resolution: Time resolution
     """
-    return [list(g) for k, g in groupby(es, key=__keyfunc(resolution))]
+    return [(k, list(g)) for k, g in groupby(es, key=__keyfunc(resolution))]
 
 
 def init_log(level):
@@ -120,6 +152,7 @@ def option_parser():
 
     defaults = dict(
         resolution="day", start=None, end=None, outdir=None, verbose=1,
+        format="simple",
     )
     p.set_defaults(**defaults)
 
@@ -130,6 +163,10 @@ def option_parser():
     p.add_option("-s", "--start", help="Specify start date to list errata from")
     p.add_option("-e", "--end", help="Specify end date to list errata to")
 
+    p.add_option(
+        "-F", "--format", type="choice", choices=_FORMAT_MAP.keys(),
+        help="Specify format type for outputs [%default]"
+    )
     p.add_option("-D", "--debug", action="store_const", const=0,
         dest="verbose", help="Debug mode"
     )
@@ -156,8 +193,9 @@ def main(argv=sys.argv):
 
     es = list_errata(channel, options.start, options.end)
     res = div_errata_list_by_time_resolution(es, resolution)
+    fmtr = _FORMAT_MAP.get(options.format, "simple")
 
-    pprint.pprint(res)
+    fmtr(res, sys.stdout)
 
 
 if __name__ == '__main__':
