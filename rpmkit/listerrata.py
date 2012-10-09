@@ -41,6 +41,10 @@ except ImportError:
 
         setattr(json, "dump", __dump)  # Looks almost same.
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as pyplot
+
 
 _DATE_REG = re.compile(r'\d{4}-\d{2}-\d{2}(?:\s+(?:\d{2}:\d{2}:\d{2})?)?')
 
@@ -63,6 +67,92 @@ def _simple_fmt(result, fp=sys.stdout):
 
 def _json_dump(obj, fp):
     return json.dump(obj, fp, indent=2)
+
+
+def plotchart(title, xlabel, ylabel, dataset, output,
+        xtick_labels=(), ytick_labels=()):
+    """
+    :param title: Title of the chart
+    :param xlabel: Label of X axis of the chart
+    :param ylabel: Label of Y axis of the chart
+    :param dataset: 2D-array dataset :: [(x, y)]
+    :param output: Output filename
+    :param xtick_labels: List of xtick lablels :: [str => tick_label]
+    :param ytick_labels: List of ytick lablels :: [str => tick_label]
+    """
+    logging.debug("dataset=" + str(dataset))
+
+    xs = [x for x, _ in dataset]
+    ys = [y for _, y in dataset]
+
+    fig = pyplot.figure()
+
+    pyplot.title(title)
+    pyplot.xlabel(xlabel)
+    pyplot.ylabel(ylabel)
+
+    if xtick_labels:
+        pyplot.xticks(range(len(xtick_labels)), xtick_labels)
+
+    if ytick_labels:
+        pyplot.yticks(range(len(ytick_labels)), ytick_labels)
+
+    pyplot.plot(xs, ys, "ro")
+
+    fig.savefig(output, format="png")
+
+
+def barchart(title, xlabel, ylabel, dataset, output,
+        xtick_labels=(), ytick_labels=(),
+        *args, **kwargs
+    ):
+    """
+    :param title: Title of the chart
+    :param xlabel: Label of X axis of the chart
+    :param ylabel: Label of Y axis of the chart
+    :param dataset: 2D-array dataset :: [(x, y)]
+    :param output: Output filename
+    """
+    logging.debug("dataset=" + str(dataset))
+
+    xs = [x for x, _ in dataset]
+    ys = [y for _, y in dataset]
+
+    fig = pyplot.figure()
+
+    pyplot.title(title)
+    pyplot.xlabel(xlabel)
+    pyplot.ylabel(ylabel)
+
+    if xtick_labels:
+        pyplot.xticks(
+            range(len(xtick_labels)), xtick_labels, rotation='vertical'
+        )
+
+    if ytick_labels:
+        pyplot.yticks(range(len(ytick_labels)), ytick_labels)
+
+    pyplot.bar(xs, ys)
+
+    fig.savefig(output, format="png")
+
+
+def errata_barchart_by_key(errata, key, output):
+    """
+    :param errata: [(key, [errata])] where key = year | month | day,
+        e.g. "2012" (year), "2012-09" (month) and "2012-09-01" (day).
+    :param key: Grouping key for `errata` list
+    :param output: Output filepath
+    """
+    args = (
+        "number of errata by " + key,
+        "time period",
+        "number of errata",
+        [(i, len(es)) for i, (k, es) in enumerate(errata)],
+        output,
+        [k for k, _es in errata],
+    )
+    barchart(*args)
 
 
 _FORMAT_TYPES = (_SIMPLE_FMT, _JSON_FMT) = ("simple", "json")
@@ -152,7 +242,7 @@ def option_parser():
 
     defaults = dict(
         resolution="day", start=None, end=None, outdir=None, verbose=1,
-        format="simple",
+        format="simple", dumpchart=None,
     )
     p.set_defaults(**defaults)
 
@@ -166,6 +256,9 @@ def option_parser():
     p.add_option(
         "-F", "--format", type="choice", choices=_FORMAT_MAP.keys(),
         help="Specify format type for outputs [%default]"
+    )
+    p.add_option("", "--dumpchart",
+        help="File path to dump errata count charts if given"
     )
     p.add_option("-D", "--debug", action="store_const", const=0,
         dest="verbose", help="Debug mode"
@@ -196,6 +289,10 @@ def main(argv=sys.argv):
     fmtr = _FORMAT_MAP.get(options.format, "simple")
 
     fmtr(res, sys.stdout)
+
+    if options.dumpchart:
+        out = options.dumpchart
+        errata_barchart_by_key(res, options.resolution, out)
 
 
 if __name__ == '__main__':
