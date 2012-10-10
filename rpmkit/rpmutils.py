@@ -129,7 +129,7 @@ def pcmp(p1, p2):
     >>> pcmp(p3, p4) < 0
     True
     """
-    p2evr = lambda p: (p["epoch"], p["version"], p["release"])
+    p2evr = operator.itemgetter("epoch", "version", "release")
 
     assert p1["name"] == p2["name"], "Trying to compare different packages!"
     return yum.compareEVR(p2evr(p1), p2evr(p2))
