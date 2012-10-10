@@ -174,6 +174,11 @@ def uconcat(xss):
     return uniq(concat(xss))
 
 
+def groupby_key(xs, keyfunc):
+    for k, g in itertools.groupby(sorted(xs, key=keyfunc), key=keyfunc):
+        yield (k, list(g))
+
+
 # FIXME: Looks like bad effects if memoized. Not memoized for a while
 concat = _concat
 flatten = _flatten
