@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.swapi import main as swmain
-from itertools import groupby
+from rpmkit.utils import groupby_key
 from operator import itemgetter
 
 import datetime
@@ -42,7 +42,8 @@ except ImportError:
         def __dump(obj, fp, **kwargs):
             pprint.pprint(obj, fp)
 
-        setattr(json, "dump", __dump)  # Looks almost same.
+        # Looks almost same and may become alternative.
+        setattr(json, "dump", __dump)
 
 import matplotlib
 matplotlib.use("Agg")
@@ -70,39 +71,6 @@ def _simple_fmt(result, fp=sys.stdout):
 
 def _json_dump(obj, fp):
     return json.dump(obj, fp, indent=2)
-
-
-def plotchart(title, xlabel, ylabel, dataset, output,
-        xtick_labels=(), ytick_labels=()):
-    """
-    :param title: Title of the chart
-    :param xlabel: Label of X axis of the chart
-    :param ylabel: Label of Y axis of the chart
-    :param dataset: 2D-array dataset :: [(x, y)]
-    :param output: Output filename
-    :param xtick_labels: List of xtick lablels :: [str => tick_label]
-    :param ytick_labels: List of ytick lablels :: [str => tick_label]
-    """
-    logging.debug("dataset=" + str(dataset))
-
-    xs = [x for x, _ in dataset]
-    ys = [y for _, y in dataset]
-
-    fig = pyplot.figure()
-
-    pyplot.title(title)
-    pyplot.xlabel(xlabel)
-    pyplot.ylabel(ylabel)
-
-    if xtick_labels:
-        pyplot.xticks(range(len(xtick_labels)), xtick_labels)
-
-    if ytick_labels:
-        pyplot.yticks(range(len(ytick_labels)), ytick_labels)
-
-    pyplot.plot(xs, ys, "ro")
-
-    fig.savefig(output, format="png")
 
 
 def barchart(title, xlabel, ylabel, dataset, output,
@@ -148,9 +116,9 @@ def errata_barchart_by_key(errata, key, output):
     :param output: Output filepath
     """
     args = (
-        "number of errata by " + key,
-        "time period",
-        "number of errata",
+        "Number of errata by " + key,
+        "Time period",
+        "Number of errata",
         [(i, len(es)) for i, (k, es) in enumerate(errata)],
         output,
         [k for k, _es in errata],
@@ -222,8 +190,7 @@ def classify_errata_list(errata):
 
     :param errata: [errata]
     """
-    kf = classify_errata
-    return [(k, list(es)) for k, es in groupby(sorted(errata, key=kf), key=kf)]
+    return list(groupby_key(errata, classify_errata))
 
 
 def __keyfunc(resolution):
@@ -254,8 +221,7 @@ def div_errata_list_by_time_resolution(es, resolution=_DAY):
     :param resolution: Time resolution
     """
     return sorted(
-        ((k, list(g)) for k, g in groupby(es, key=__keyfunc(resolution))),
-        key=itemgetter(1)
+        list(groupby_key(es, __keyfunc(resolution))), key=itemgetter(1)
     )
 
 
