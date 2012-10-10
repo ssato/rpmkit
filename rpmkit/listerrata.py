@@ -20,9 +20,11 @@
 from rpmkit.swapi import main as swmain
 from itertools import groupby
 
+import datetime
 import logging
 import optparse
 import os
+import os.path
 import pprint
 import re
 import shlex
@@ -202,6 +204,27 @@ def list_errata(channel, start=None, end=None, offline=False):
     return __swapi([a for a in args if a is not None])
 
 
+_ERRATA_TYPES_MAP = dict(SA="RHSA", BA="RHBA", EA="RHEA")
+
+
+def classify_errata(errata):
+    """Classify errata by its type, RH(SA|BA|EA).
+
+    :param errata: errata
+    """
+    return _ERRATA_TYPES_MAP[errata["advisory"][2:4]]
+
+
+def classify_errata_list(errata):
+    """
+    Classify `errata` list by each type, RH(SA|BA|EA).
+
+    :param errata: [errata]
+    """
+    kf = classify_errata
+    return [(k, list(es)) for k, es in groupby(sorted(errata, key=kf), key=kf)]
+
+
 def __keyfunc(resolution):
     """
     >>> e = {"issue_date": "2012-09-03 13:00:00"}
@@ -241,11 +264,13 @@ def option_parser():
     p = optparse.OptionParser("%prog [OPTION ...] SW_CHANNEL_LABEL")
 
     defaults = dict(
-        resolution="day", start=None, end=None, outdir=None, verbose=1,
-        format="simple", dumpchart=None,
+        outdir="list-errata-" + datetime.datetime.now().strftime("%Y%m%d"),
+        resolution="day", start=None, end=None, verbose=1,
+        format="simple", dumpcharts=False,
     )
     p.set_defaults(**defaults)
 
+    p.add_option("-o", "--outdir", help="Specify output dir [%default]")
     p.add_option(
         "-r", "--resolution", type="choice", choices=_TIME_RESOLUTION_S.keys(),
         help="Specify time resolution to group errata list [%default]"
@@ -257,7 +282,7 @@ def option_parser():
         "-F", "--format", type="choice", choices=_FORMAT_MAP.keys(),
         help="Specify format type for outputs [%default]"
     )
-    p.add_option("", "--dumpchart",
+    p.add_option("-d", "--dumpcharts", action="store_true",
         help="File path to dump errata count charts if given"
     )
     p.add_option("-D", "--debug", action="store_const", const=0,
@@ -267,6 +292,10 @@ def option_parser():
         dest="verbose", help="Quiet mode"
     )
     return p
+
+
+def __errata_file(etype, outdir, ext=".dat"):
+    return os.path.join(outdir, etype.lower() + "-errata" + ext)
 
 
 def main(argv=sys.argv):
@@ -285,14 +314,21 @@ def main(argv=sys.argv):
     resolution = _TIME_RESOLUTION_S.get(options.resolution, "day")
 
     es = list_errata(channel, options.start, options.end)
-    res = div_errata_list_by_time_resolution(es, resolution)
+    es_by_types = classify_errata_list(es)
+
     fmtr = _FORMAT_MAP.get(options.format, "simple")
 
-    fmtr(res, sys.stdout)
+    if not os.path.exists(options.outdir):
+        os.makedirs(options.outdir)
 
-    if options.dumpchart:
-        out = options.dumpchart
-        errata_barchart_by_key(res, options.resolution, out)
+    for etype, es in es_by_types:
+        res = div_errata_list_by_time_resolution(es, resolution)
+        with open(__errata_file(etype, options.outdir), 'w') as f:
+            fmtr(res, f)
+
+        if options.dumpcharts:
+            with open(__errata_file(etype, options.outdir, ".png"), 'w') as f:
+                errata_barchart_by_key(res, options.resolution, f)
 
 
 if __name__ == '__main__':
