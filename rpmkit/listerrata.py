@@ -19,6 +19,7 @@
 #
 from rpmkit.swapi import main as swmain
 from itertools import groupby
+from operator import itemgetter
 
 import datetime
 import logging
@@ -252,7 +253,10 @@ def div_errata_list_by_time_resolution(es, resolution=_DAY):
     :param es: Errata list
     :param resolution: Time resolution
     """
-    return [(k, list(g)) for k, g in groupby(es, key=__keyfunc(resolution))]
+    return sorted(
+        ((k, list(g)) for k, g in groupby(es, key=__keyfunc(resolution))),
+        key=itemgetter(1)
+    )
 
 
 def init_log(level):
