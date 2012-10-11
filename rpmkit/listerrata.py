@@ -159,7 +159,7 @@ def list_errata(channel, start=None, end=None, offline=False):
             "list_errata(): Invalid data for `start` parameter: '%s'" % start
 
     if end is not None:
-        assert start is None, \
+        assert start is not None, \
             "list_errata(): `end` paramter requires `start` parameter is set"
         assert validate_datetime(end), \
             "list_errata(): Invalid data for `end` parameter: '%s'" % end
