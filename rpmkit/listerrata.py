@@ -56,74 +56,25 @@ _TIME_RESOLUTIONS = (_DAY, _MONTH, _YEAR) = (0, 1, 2)
 _TIME_RESOLUTION_S = dict(day=_DAY, month=_MONTH, year=_YEAR)
 
 
-def _simple_fmt_g(result):
+def _simple_fmt(key, es):
     """
-    :param result: [(key, [errata])] where key = year | month | day, 
+    :param key: key = year | month | day,
         e.g. "2012" (year), "2012-09" (month) and "2012-09-01" (day).
+    :param es: errata list :: [errata :: dict]
+    """
+    return "# %s\n%s" % (key, '\n'.join(e["advisory"] for e in es))
+
+
+def _simple_dump(result, fp=sys.stdout):
+    """
+    :param result: [(key, [errata])]
     """
     for k, es in result:
-        yield '\n'.join(("# " + k, '\n'.join(e["advisory"] for e in es)))
+        print >> fp, _simple_fmt(k, es)
 
 
-def _simple_fmt(result, fp=sys.stdout):
-    for x in _simple_fmt_g(result):
-        fp.write(x + '\n')
-
-def _json_dump(obj, fp):
-    return json.dump(obj, fp, indent=2)
-
-
-def barchart(title, xlabel, ylabel, dataset, output,
-        xtick_labels=(), ytick_labels=(),
-        *args, **kwargs
-    ):
-    """
-    :param title: Title of the chart
-    :param xlabel: Label of X axis of the chart
-    :param ylabel: Label of Y axis of the chart
-    :param dataset: 2D-array dataset :: [(x, y)]
-    :param output: Output filename
-    """
-    logging.debug("dataset=" + str(dataset))
-
-    xs = [x for x, _ in dataset]
-    ys = [y for _, y in dataset]
-
-    fig = pyplot.figure()
-
-    pyplot.title(title)
-    pyplot.xlabel(xlabel)
-    pyplot.ylabel(ylabel)
-
-    if xtick_labels:
-        pyplot.xticks(
-            range(len(xtick_labels)), xtick_labels, rotation='vertical'
-        )
-
-    if ytick_labels:
-        pyplot.yticks(range(len(ytick_labels)), ytick_labels)
-
-    pyplot.bar(xs, ys)
-
-    fig.savefig(output, format="png")
-
-
-def errata_barchart_by_key(errata, key, output):
-    """
-    :param errata: [(key, [errata])] where key = year | month | day,
-        e.g. "2012" (year), "2012-09" (month) and "2012-09-01" (day).
-    :param key: Grouping key for `errata` list
-    :param output: Output filepath
-    """
-    args = (
-        "Number of errata by " + key,
-        "Time period",
-        "Number of errata",
-        [(i, len(es)) for i, (k, es) in enumerate(errata)],
-        output,
-        [k for k, _es in errata],
-    )
-    barchart(*args)
+def _json_dump(result, fp):
+    return json.dump(result, fp, indent=2)
 
 
 _FORMAT_TYPES = (_SIMPLE_FMT, _JSON_FMT) = ("simple", "json")
@@ -225,6 +176,59 @@ def div_errata_list_by_time_resolution(es, resolution=_DAY):
     )
 
 
+def barchart(title, xlabel, ylabel, dataset, output,
+        xtick_labels=(), ytick_labels=(),
+        *args, **kwargs
+    ):
+    """
+    :param title: Title of the chart
+    :param xlabel: Label of X axis of the chart
+    :param ylabel: Label of Y axis of the chart
+    :param dataset: 2D-array dataset :: [(x, y)]
+    :param output: Output filename
+    """
+    logging.debug("dataset=" + str(dataset))
+
+    xs = [x for x, _ in dataset]
+    ys = [y for _, y in dataset]
+
+    fig = pyplot.figure()
+
+    pyplot.title(title)
+    pyplot.xlabel(xlabel)
+    pyplot.ylabel(ylabel)
+
+    if xtick_labels:
+        pyplot.xticks(
+            range(len(xtick_labels)), xtick_labels, rotation='vertical'
+        )
+
+    if ytick_labels:
+        pyplot.yticks(range(len(ytick_labels)), ytick_labels)
+
+    pyplot.bar(xs, ys)
+
+    fig.savefig(output, format="png")
+
+
+def errata_barchart_by_key(errata, key, output):
+    """
+    :param errata: [(key, [errata])] where key = year | month | day,
+        e.g. "2012" (year), "2012-09" (month) and "2012-09-01" (day).
+    :param key: Grouping key for `errata` list
+    :param output: Output filepath
+    """
+    args = (
+        "Number of errata by " + key,
+        "Time period",
+        "Number of errata",
+        [(i, len(es)) for i, (k, es) in enumerate(errata)],
+        output,
+        [k for k, _es in errata],
+    )
+    barchart(*args)
+
+
 def init_log(level):
     lvl = [logging.DEBUG, logging.INFO, logging.WARN][level]
     logging.basicConfig(format="[%(levelname)s] %(message)s", level=lvl)
@@ -236,7 +240,7 @@ def option_parser():
     defaults = dict(
         outdir="list-errata-" + datetime.datetime.now().strftime("%Y%m%d"),
         resolution="day", start=None, end=None, verbose=1,
-        format="simple", dumpcharts=False,
+        format=_JSON_FMT, dumpcharts=False,
     )
     p.set_defaults(**defaults)
 
@@ -286,7 +290,7 @@ def main(argv=sys.argv):
     es = list_errata(channel, options.start, options.end)
     es_by_types = classify_errata_list(es)
 
-    fmtr = _FORMAT_MAP.get(options.format, "simple")
+    fmtr = _FORMAT_MAP.get(options.format, _JSON_FMT)
 
     if not os.path.exists(options.outdir):
         os.makedirs(options.outdir)
