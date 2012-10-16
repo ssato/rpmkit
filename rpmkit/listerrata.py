@@ -187,9 +187,13 @@ def div_errata_list_by_time_resolution(es, resolution=_DAY):
 
     :return: [(resolution, [errata])] sorted by resolution
     """
-    return sorted(
-        list(groupby_key(es, __keyfunc(resolution))), key=itemgetter(1)
-    )
+    return [
+        (int(k.replace('-', '')), v) for k, v in
+            sorted(
+                list(groupby_key(es, __keyfunc(resolution))),
+                key=itemgetter(1)
+            )
+    ]
 
 
 def barchart(title, xlabel, ylabel, dataset, output,
@@ -277,10 +281,12 @@ def __ymd_indices(key, vals):
 
 def errata_barchart_by_key(errata, key, output):
     """
-    :param errata: [(key, [errata])] where key = year | month | day,
-        e.g. "2012" (year), "2012-09" (month) and "2012-09-01" (day).
+    :param errata: [(key, [errata])] where
+        key = "YYMMDD", e.g. "2012" (year), "201209" (month) and
+        "20120901" (day).
     :param key: Grouping key for `errata` list
     :param output: Output filepath
+    """
     """
     def es_g(errata, key):
         esdict = dict(errata)
@@ -288,13 +294,14 @@ def errata_barchart_by_key(errata, key, output):
             yield (ymd, esdict.get(ymd, []))
 
     res = list(es_g(errata, key))
+    """
     args = (
         "Number of errata by " + key,
         "Time period",
         "Number of errata",
-        [(i, len(es)) for i, (k, es) in enumerate(res)],
+        [(k, len(es)) for k, es in errata],
         output,
-        [k for k, _es in res],
+        [str(k) for k, _es in errata],
     )
     barchart(*args)
 
