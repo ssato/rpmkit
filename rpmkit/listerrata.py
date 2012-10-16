@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+#from rpmkit.swapi import main as swmain, shorten_dict_keynames as shorten
 from rpmkit.swapi import main as swmain
 from rpmkit.utils import groupby_key
 from itertools import izip_longest as izip
@@ -101,6 +102,10 @@ def validate_datetime(t, reg=_DATE_REG):
     return reg.match(t) is not None
 
 
+def shorten(dic, prefix):
+    return dict((k.replace(prefix, '').lower(), v) for k, v in dic.iteritems())
+
+
 def list_errata(channel, start=None, end=None, offline=False):
     """
     :param channel: Software channel label to list errata
@@ -123,7 +128,10 @@ def list_errata(channel, start=None, end=None, offline=False):
         "channel.software.listErrata"
     ]
 
-    return __swapi([a for a in args if a is not None])
+    return [
+        shorten(e, "errata_") for e in
+            __swapi([a for a in args if a is not None])
+    ]
 
 
 _ERRATA_TYPES_MAP = dict(SA="RHSA", BA="RHBA", EA="RHEA")
@@ -352,6 +360,7 @@ def main(argv=sys.argv):
     resolution = _TIME_RESOLUTION_S.get(options.resolution, "day")
 
     es = list_errata(channel, options.start, options.end)
+    import pprint; pprint.pprint(es[0])
     es_by_types = classify_errata_list(es)
 
     fmtr = _FORMAT_MAP.get(options.format, _JSON_FMT)
