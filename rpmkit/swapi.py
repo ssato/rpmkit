@@ -569,7 +569,7 @@ def shorten_dict_keynames(dic, prefix=None):
     if prefix is None:
         prefix = longest_common_prefix(*dic.keys())
 
-    return dict((k.replace(prefix, ''), v) for k, v in dic.iteritems())
+    return dict((k.replace(prefix, '').lower(), v) for k, v in dic.iteritems())
 
 
 def urlread(url, data=None, headers={}):
