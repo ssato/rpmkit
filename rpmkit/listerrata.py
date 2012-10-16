@@ -187,13 +187,11 @@ def div_errata_list_by_time_resolution(es, resolution=_DAY):
 
     :return: [(resolution, [errata])] sorted by resolution
     """
-    return [
-        (int(k.replace('-', '')), v) for k, v in
-            sorted(
-                list(groupby_key(es, __keyfunc(resolution))),
-                key=itemgetter(1)
-            )
-    ]
+    return sorted(
+        ((int(k.replace('-', '')), v) for k, v in
+            groupby_key(es, __keyfunc(resolution))),
+        key=itemgetter(0)
+    )
 
 
 def barchart(title, xlabel, ylabel, dataset, output,
@@ -373,6 +371,15 @@ def main(argv=sys.argv):
 
     if not os.path.exists(options.outdir):
         os.makedirs(options.outdir)
+
+    # all:
+    res = div_errata_list_by_time_resolution(es, resolution)
+    with open(__errata_file("all", options.outdir), 'w') as f:
+        fmtr(res, f)
+
+    if options.dumpcharts:
+        with open(__errata_file("all", options.outdir, ".png"), 'w') as f:
+            errata_barchart_by_key(res, options.resolution, f)
 
     for etype, es in es_by_types:
         res = div_errata_list_by_time_resolution(es, resolution)
