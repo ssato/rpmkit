@@ -19,8 +19,10 @@
 #
 from rpmkit.swapi import main as swmain
 from rpmkit.utils import groupby_key
+from itertools import izip_longest as izip
 from operator import itemgetter
 
+import calendar
 import datetime
 import logging
 import optparse
@@ -131,6 +133,10 @@ def classify_errata(errata):
     """Classify errata by its type, RH(SA|BA|EA).
 
     :param errata: errata
+
+    >>> assert classify_errata(dict(advisory="RHSA-2012:1236")) == "RHSA"
+    >>> assert classify_errata(dict(advisory="RHBA-2012:1224")) == "RHBA"
+    >>> assert classify_errata(dict(advisory="RHEA-2012:0226")) == "RHEA"
     """
     return _ERRATA_TYPES_MAP[errata["advisory"][2:4]]
 
@@ -166,10 +172,12 @@ def __keyfunc(resolution):
 def div_errata_list_by_time_resolution(es, resolution=_DAY):
     """
     Divides given errata list (gotten by `list_errata` defined above) by given
-    time period `resolution`, returns list of list of errata.
+    time period (`resolution`), and returns list of list of errata.
 
     :param es: Errata list
     :param resolution: Time resolution
+
+    :return: [(resolution, [errata])] sorted by resolution
     """
     return sorted(
         list(groupby_key(es, __keyfunc(resolution))), key=itemgetter(1)
@@ -211,6 +219,54 @@ def barchart(title, xlabel, ylabel, dataset, output,
     fig.savefig(output, format="png")
 
 
+def __ymd_indices(key, vals):
+    """
+    :param key: Grouping key for `errata` list
+    :param vals: [Key_value], e.g. ["2012-09", "2012-10", "2013-02"]
+    """
+    if key == _YEAR:
+        for i in range(int(min(vals)), int(max(vals)) + 1):
+            yield str(i)
+
+    elif key == _MONTH:
+        def fmt(y, m):
+            return "%d-%d" % (y, m)
+
+        (y0, m0) = [int(i) for i in min(vals).split('-')]
+        (y1, m1) = [int(i) for i in max(vals).split('-')]
+
+        mend = m1 if y0 == y1 else 12
+        for m in range(m0, mend + 1):  # months in year `y0`
+            yield fmt(y0, m)
+
+        if y0 != y1:
+            for y in range(y0 + 1, y1 + 1):  # rest of years
+                mend = m1 if y == y1 else 12
+                for m in range(1, mend + 1):
+                    yield fmt(y, m)
+
+    elif key == _DAY:
+        def fmt(y, m, d):
+            return "%d-%d-%d" % (y, m, d)
+
+        (y0, m0, d0) = [int(i) for i in min(vals).split('-')]
+        (y1, m1, d1) = [int(i) for i in max(vals).split('-')]
+
+        mend = m1 if y0 == y1 else 12
+        for m in range(m0, mend + 1):  # months in year `y0`
+            dend = d1 if y == y1 and m == mend else calendar.mdays[m]
+            for d in range(d0, dend + 1):
+                yield fmt(y0, m, d)
+
+        if y0 != y1:
+            for y in range(y0 + 1, y1 + 1):  # rest of years
+                mend = m1 if y == y1 else 12
+                for m in range(1, mend + 1):
+                    dend = d1 if y == y1 and m == mend else calendar.mdays[m]
+                    for d in range(1, dend + 1):
+                        yield fmt(y, m, d)
+
+
 def errata_barchart_by_key(errata, key, output):
     """
     :param errata: [(key, [errata])] where key = year | month | day,
@@ -218,13 +274,19 @@ def errata_barchart_by_key(errata, key, output):
     :param key: Grouping key for `errata` list
     :param output: Output filepath
     """
+    def es_g(errata, key):
+        esdict = dict(errata)
+        for ymd in __ymd_indices(key, [k for k, _es in errata]):
+            yield (ymd, esdict.get(ymd, []))
+
+    res = list(es_g(errata, key))
     args = (
         "Number of errata by " + key,
         "Time period",
         "Number of errata",
-        [(i, len(es)) for i, (k, es) in enumerate(errata)],
+        [(i, len(es)) for i, (k, es) in enumerate(res)],
         output,
-        [k for k, _es in errata],
+        [k for k, _es in res],
     )
     barchart(*args)
 
@@ -249,7 +311,9 @@ def option_parser():
         "-r", "--resolution", type="choice", choices=_TIME_RESOLUTION_S.keys(),
         help="Specify time resolution to group errata list [%default]"
     )
-    p.add_option("-s", "--start", help="Specify start date to list errata from")
+    p.add_option("-s", "--start",
+        help="Specify start date to list errata from"
+    )
     p.add_option("-e", "--end", help="Specify end date to list errata to")
 
     p.add_option(
