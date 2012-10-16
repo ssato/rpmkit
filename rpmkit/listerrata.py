@@ -61,11 +61,11 @@ _TIME_RESOLUTION_S = dict(day=_DAY, month=_MONTH, year=_YEAR)
 
 def _simple_fmt(key, es):
     """
-    :param key: key = year | month | day,
+    :param key: key = (year [, month [, day]])
         e.g. "2012" (year), "2012-09" (month) and "2012-09-01" (day).
     :param es: errata list :: [errata :: dict]
     """
-    return "# %s\n%s" % (key, '\n'.join(e["advisory"] for e in es))
+    return "# %s\n%s" % (str(key), '\n'.join(e["advisory"] for e in es))
 
 
 def _simple_dump(result, fp=sys.stdout):
@@ -188,7 +188,7 @@ def div_errata_list_by_time_resolution(es, resolution=_DAY):
     :return: [(resolution, [errata])] sorted by resolution
     """
     return sorted(
-        ((int(k.replace('-', '')), v) for k, v in
+        (([int(i) for i in k.split('-')], v) for k, v in
             groupby_key(es, __keyfunc(resolution))),
         key=itemgetter(0)
     )
@@ -279,25 +279,25 @@ def __ymd_indices(key, vals):
 
 def errata_barchart_by_key(errata, key, output):
     """
-    :param errata: [(key, [errata])] where
-        key = "YYMMDD", e.g. "2012" (year), "201209" (month) and
-        "20120901" (day).
+    :param errata: [(key, [errata])] where key = (YY [,MM [,DD]])
     :param key: Grouping key for `errata` list
     :param output: Output filepath
     """
-    """
-    def es_g(errata, key):
-        esdict = dict(errata)
-        for ymd in __ymd_indices(key, [k for k, _es in errata]):
-            yield (ymd, esdict.get(ymd, []))
+    def ymd2i(ymd):
+        if len(ymd) == 3:
+            return datetime.date(*ymd).toordinal()
+        elif len(ymd) == 2:
+            return datetime.date(ymd[0], ymd[1], 1).toordinal()
+        elif len(ymd) == 1:
+            return datetime.date(ymd[0], 1, 1).toordinal()
+        else:
+            raise RuntimeError("Wrong ymd: " + str(ymd))
 
-    res = list(es_g(errata, key))
-    """
     args = (
         "Number of errata by " + key,
         "Time period",
         "Number of errata",
-        [(k, len(es)) for k, es in errata],
+        [(ymd2i(k), len(es)) for k, es in errata],
         output,
         [str(k) for k, _es in errata],
     )
