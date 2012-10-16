@@ -360,7 +360,6 @@ def main(argv=sys.argv):
     resolution = _TIME_RESOLUTION_S.get(options.resolution, "day")
 
     es = list_errata(channel, options.start, options.end)
-    import pprint; pprint.pprint(es[0])
     es_by_types = classify_errata_list(es)
 
     fmtr = _FORMAT_MAP.get(options.format, _JSON_FMT)
