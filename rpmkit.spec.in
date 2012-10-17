@@ -24,6 +24,16 @@ Requires:       python-BeautifulSoup
 RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 
 
+%package        extras
+Summary:        Extra and experimental modules and tools of %{name}
+Requires:       python-matplotlib
+#Requires:       cx_Oracle
+
+
+%description    extras
+This package provides experimental modules and tools of %{name}.
+
+
 %prep
 %setup -q
 
@@ -44,13 +54,33 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc README examples
-%{_bindir}/*
-%{python_sitelib}/*
+%doc README
+%{_bindir}/buildsrpm
+%{_bindir}/identrpm
+%{_bindir}/list-requires-by-package-name.sh
+%{_bindir}/list-srpmnames-by-file.sh
+%{_bindir}/rpm2json
+%{_bindir}/rpms2csv
+%{_bindir}/rpms2sqldb
+%{_bindir}/swapi
+%{python_sitelib}/*.py*
+%{python_sitelib}/imported/*.py*
+%{python_sitelib}/tests/*.py*
 %{_localstatedir}/cache/swapi
 
 
+%files          extras
+%doc README examples
+%{_bindir}/rk-*
+%{python_sitelib}/extras/*.py*
+%{python_sitelib}/rhncachedb/*.py*
+
+
 %changelog
+* Thu Oct 18 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.6-1
+- [swapi] Fixes around shorten_dict_keynames
+- Split into two RPMs
+
 * Tue Aug 21 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.5-1
 - Enhancement release including some experimental new modules and commands
 - [repodata] new command/module to generate 'resolved' metadata from installation DVDs

@@ -23,7 +23,7 @@ from itertools import izip, repeat
 from logging import DEBUG, INFO
 from operator import itemgetter
 
-import rpmkit.repodata as RR
+import rpmkit.extras.repodata as RR
 import logging
 import optparse
 import os
