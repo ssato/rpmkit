@@ -63,17 +63,17 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/rpms2csv
 %{_bindir}/rpms2sqldb
 %{_bindir}/swapi
-%{python_sitelib}/*.py*
-%{python_sitelib}/imported/*.py*
-%{python_sitelib}/tests/*.py*
+%{python_sitelib}/rpmkit/*.py*
+%{python_sitelib}/rpmkit/imported/*.py*
+%{python_sitelib}/rpmkit/tests/*.py*
 %{_localstatedir}/cache/swapi
 
 
 %files          extras
 %doc README examples
 %{_bindir}/rk-*
-%{python_sitelib}/extras/*.py*
-%{python_sitelib}/rhncachedb/*.py*
+%{python_sitelib}/rpmkit/extras/*.py*
+%{python_sitelib}/rpmkit/rhncachedb/*.py*
 
 
 %changelog
