@@ -1,7 +1,7 @@
 About
 =======================
 
-This is a collecTION OF SOME RPM RELATED TOOLS DISTRIBUTED UNDER
+This is a collection of some rpm related toools distributed under
 GPL3+/GPLv2+/MIT.
 
 * buildsrpm: Build source rpm from given rpm spec file
