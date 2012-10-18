@@ -556,20 +556,25 @@ def shorten_dict_keynames(dic, prefix=None):
     old code (i.e. RHN hosted). This function is to hide and keep backward
     compatibility about it.
 
-    >>> d0 = dict(channel_label='foo-channel', channel_name='Foo Channel')
+    >>> dr0 = dict(channel_label='foo-channel', channel_name='Foo Channel')
+    >>> dr1 = dict(CHANNEL_LABEL='foo-channel', CHANNEL_NAME='Foo Channel')
     >>> d_ref = dict(label="foo-channel", name="Foo Channel")
-    >>> d1 = shorten_dict_keynames(d0, 'channel_')
-    >>> d2 = shorten_dict_keynames(d0)
+    >>> d1 = shorten_dict_keynames(dr0, 'channel_')
+    >>> d2 = shorten_dict_keynames(dr0)
+    >>> d3 = shorten_dict_keynames(dr1, 'channel_')
+    >>> d4 = shorten_dict_keynames(dr1)
     >>> assert dict_equals(d_ref, d1)
     >>> assert dict_equals(d_ref, d2)
+    >>> assert dict_equals(d_ref, d3)
+    >>> assert dict_equals(d_ref, d4)
     """
     if not isinstance(dic, dict):  # dic may be a str.
         return dic
 
     if prefix is None:
-        prefix = longest_common_prefix(*dic.keys())
+        prefix = longest_common_prefix(*dic.keys()).lower()
 
-    return dict((k.replace(prefix, '').lower(), v) for k, v in dic.iteritems())
+    return dict((k.lower().replace(prefix, ''), v) for k, v in dic.iteritems())
 
 
 def urlread(url, data=None, headers={}):
@@ -688,7 +693,8 @@ def get_all_cve_g(raw=False):
     CVE-2009-1303 ...,cvss2=6.8/AV:N/AC:M/Au:N/C:P/I:P/A:P,impact...
     """
     cve_reg = r"^(?P<cve>CVE-\d+-\d+) .*"
-    cve_cvsss_reg = cve_reg + r"cvss2=(?P<score>[^/]+)/(?P<metrics>AV:[^,]+A:(?:N|P|C)).*"
+    cve_cvsss_reg = cve_reg + \
+        r"cvss2=(?P<score>[^/]+)/(?P<metrics>AV:[^,]+A:(?:N|P|C)).*"
 
     cvss_marker = "cvss2="
 

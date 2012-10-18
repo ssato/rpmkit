@@ -9,7 +9,7 @@ curdir = os.getcwd()
 sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
-VERSION = "0.2.10.5"
+VERSION = "0.2.10.6"
 
 # daily snapshots:
 #VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
@@ -77,6 +77,7 @@ setup(name=PACKAGE,
     url="https://github.com/ssato/rpmkit",
     packages=[
         "rpmkit",
+        "rpmkit.extras",
         "rpmkit.imported",
         "rpmkit.rhncachedb",
         "rpmkit.tests",
