@@ -635,6 +635,30 @@ def __cvss_data(cve, data):
     return d
 
 
+def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
+    """
+    >>> ms = cvss_metrics("AV:N/AC:H/Au:N/C:N/I:P/A:N")
+    >>> ms_ref = [
+    ...     ("Access Vector", 3), ("Access Complexity", 1),
+    ...     ("Authentication", 3), ("Confidentiality Impact", 1),
+    ...     ("Integrity Impact", 2), ("Availability Impact", 1),
+    ... ]
+    >>> assert ms == ms_ref, str(ms)
+    """
+    metrics = []
+
+    for lms in cvss.split("/"):
+        (key, m) = lms.split(":")
+        metric = metrics_map[key]
+
+        label = metric["label"]
+        val = metric["metrics"][m]
+
+        metrics.append((label, val))
+
+    return metrics
+
+
 def get_cvss_for_cve(cve):
     """
     Get CVSS data for given cve from the Red Hat www site.
@@ -660,12 +684,13 @@ def get_cvss_for_cve(cve):
         cvss_base_metrics = soup.findAll(has_cvss_link)[0].string
         cvss_base_score = soup.findAll(is_base_score)[0].parent.td.string
 
-        return {
-            "cve": cve,
-            "metrics": cvss_base_metrics,
-            "score": cvss_base_score,
-            "url": url_fmt % (cve, cvss_base_metrics),
-        }
+        cvss_base_metrics_vec = cvss_metrics(cvss_base_metrics)
+
+        return dict(cve=cve,
+                    metrics=cvss_base_metrics,
+                    metrics_v=cvss_base_metrics_vec,
+                    score=cvss_base_score,
+                    url=url_fmt % (cve, cvss_base_metrics))
 
     except Exception, e:
         logging.warn(" Could not get CVSS data: err=" + str(e))
