@@ -544,37 +544,48 @@ def all_eq(xs):
 def longest_common_prefix(*args):
     """Variant of LCS = Longest Common Sub-sequence.
 
+    For LCS, see http://en.wikipedia.org/wiki/Longest_common_substring_problem
+
     >>> longest_common_prefix("abc", "ab", "abcd")
     'ab'
     >>> longest_common_prefix("abc", "bc")
     ''
     """
-    return "".join(x[0] for x in takewhile(all_eq, izip(*args)))
+    return ''.join(x[0] for x in takewhile(all_eq, izip(*args)))
 
 
 def shorten_dict_keynames(dic, prefix=None):
-    """It seems that API key names are shortened a bit at a time. The keys
-    having prefix (e.g. 'channel_') will be deprecated but still remains in the
-    old code (i.e. RHN hosted). This function is to hide and keep backward
-    compatibility about it.
+    """
+    It seems that API key names are shortened a bit at a time. The keys having
+    prefix (e.g. 'channel_') will be deprecated but still remains in the old
+    code (i.e. RHN hosted).
+
+    This function is to hide and keep backward compatibility about it.
+
+    :param dic: A dict instance.
 
     >>> dr0 = dict(channel_label="foo-channel", channel_name="Foo Channel")
     >>> dr1 = dict(CHANNEL_LABEL="foo-channel", CHANNEL_NAME="Foo Channel")
+    >>> dr2 = dict(channel_label="foo-channel", CHANNEL_NAME="Foo Channel")
     >>> d_ref = dict(label="foo-channel", name="Foo Channel")
     >>> d1 = shorten_dict_keynames(dr0, "channel_")
     >>> d2 = shorten_dict_keynames(dr0)
     >>> d3 = shorten_dict_keynames(dr1, "channel_")
     >>> d4 = shorten_dict_keynames(dr1)
+    >>> d5 = shorten_dict_keynames(dr2, "channel_")
+    >>> d6 = shorten_dict_keynames(dr2)
     >>> assert dict_equals(d_ref, d1)
     >>> assert dict_equals(d_ref, d2)
     >>> assert dict_equals(d_ref, d3)
     >>> assert dict_equals(d_ref, d4)
+    >>> assert dict_equals(d_ref, d5)
+    >>> assert dict_equals(d_ref, d6)
     """
-    if not isinstance(dic, dict):  # dic may be a str.
+    if not isinstance(dic, dict):  # `dic` may be a str.
         return dic
 
     if prefix is None:
-        prefix = longest_common_prefix(*dic.keys()).lower()
+        prefix = longest_common_prefix(*(k.lower() for k in dic.keys()))
 
     return dict((k.lower().replace(prefix, ''), v) for k, v in dic.iteritems())
 
