@@ -570,12 +570,14 @@ def shorten_dict_keynames(dic, prefix=None):
     >>> dr1 = dict(CHANNEL_LABEL="foo-channel", CHANNEL_NAME="Foo Channel")
     >>> dr2 = dict(channel_label="foo-channel", CHANNEL_NAME="Foo Channel")
     >>> d_ref = dict(label="foo-channel", name="Foo Channel")
+
     >>> d1 = shorten_dict_keynames(dr0, "channel_")
     >>> d2 = shorten_dict_keynames(dr0)
     >>> d3 = shorten_dict_keynames(dr1, "channel_")
     >>> d4 = shorten_dict_keynames(dr1)
     >>> d5 = shorten_dict_keynames(dr2, "channel_")
     >>> d6 = shorten_dict_keynames(dr2)
+
     >>> assert dict_equals(d_ref, d1)
     >>> assert dict_equals(d_ref, d2)
     >>> assert dict_equals(d_ref, d3)
