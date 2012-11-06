@@ -612,42 +612,6 @@ def cve2url(cve):
     return "https://www.redhat.com/security/data/cve/%s.html" % cve
 
 
-def __cvss_data(cve, data):
-    """
-    normalize and extend cvss data.
-
-    :param cve: CVE name, e.g. "CVE-2010-1585" :: str
-    :param data: CVSS data :: dict
-
-    >>> cve = "CVE-2010-1585"
-    >>> d = {u'Access Complexity': u'Medium', u'Access Vector': u'Network',
-    ...  u'Authentication': u'None', u'Availability Impact': u'Partial',
-    ...  u'Base Metrics': u'AV:N/AC:M/Au:N/C:P/I:P/A:P',
-    ...  u'Base Score': u'6.8', u'Confidentiality Impact': u'Partial',
-    ...  u'Integrity Impact': u'Partial'}
-    >>> d["cve"] = cve
-    >>> d["metrics"] = dict(AV="N", AC="M", Au="N", C="P", I="P", A="P")
-    >>> d2 = __cvss_data(cve, d)
-    >>> assert d["cve"] == d2["cve"], d2["cve"]
-    >>> for k, v in d2["metrics"].iteritems():
-    ...     assert d["metrics"][k] == v, v
-    """
-    d = dict((k.replace(" ", "_").lower(), v) for k, v in data.iteritems())
-    d["metrics"] = dict()
-
-    for kv in data.get("Base Metrics").split("/"):
-        k, v = kv.split(":")
-        d["metrics"][k] = v
-
-    url = "http://nvd.nist.gov/cvss.cfm?version=2&name=%s&vector=(%s)" % \
-        (cve, data["Base Metrics"])
-
-    d["cve"] = cve
-    d["url"] = url
-
-    return d
-
-
 def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
     """
     >>> ms = cvss_metrics("AV:N/AC:H/Au:N/C:N/I:P/A:N")
@@ -735,14 +699,11 @@ def get_all_cve_g(raw=False):
     cve_reg = r"^(?P<cve>CVE-\d+-\d+) .*"
     cve_cvsss_reg = cve_reg + \
         r"cvss2=(?P<score>[^/]+)/(?P<metrics>AV:[^,]+A:(?:N|P|C)).*"
-
     cvss_marker = "cvss2="
-
     url = "https://www.redhat.com/security/data/metrics/cve_dates.txt"
 
     try:
         data = urlread(url)
-
         if raw:
             for line in data.splitlines():
                 yield line
@@ -759,7 +720,6 @@ def get_all_cve_g(raw=False):
                 if m:
                     d = m.groupdict()
                     d["url"] = d["cve_url"] = cve2url(d["cve"])
-
                     yield d
                 else:
                     logging.warn("Not look a valid CVE line: " + line)
@@ -790,12 +750,10 @@ def get_all_errata_g(raw=False):
     """
     advisory_prefix = "RH"
     cve_prefix = "CVE-"
-
     url = "https://www.redhat.com/security/data/metrics/rhsamapcpe.txt"
 
     try:
         data = urlread(url)
-
         if raw:
             for line in data.splitlines():
                 yield line
@@ -1003,10 +961,7 @@ class RpcApi(object):
         """Get result from the caches.
         """
         for cache in self.caches:
-            logging.info(
-                " Try the cache: " + cache.topdir
-            )
-
+            logging.info(" Try the cache: " + cache.topdir)
             if not self.cacheonly and cache.needs_update(key):
                 logging.debug(
                     " Cached result is old and not used: " + str(key)
@@ -1148,10 +1103,7 @@ def parse_api_args(args, arg_sep=','):
 
     try:
         x = json.loads(args)
-        if isinstance(x, list):
-            ret = x
-        else:
-            ret = [x]
+        ret = x if isinstance(x, list) else [x]
 
     except ValueError:
         ret = [__parse(a) for a in parse_list_str(args, arg_sep)]
@@ -1239,7 +1191,6 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
         config_files = CONFIG_FILES
 
     cp = configparser.SafeConfigParser()
-
     logging.debug(" Loading config files: %s" % ",".join(config_files))
 
     if profile:
@@ -1251,7 +1202,6 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
             continue
 
         cp.read(cfg)
-
         if profile and cp.has_section(profile):
             try:
                 opts = dict(cp.items(profile))
@@ -1325,7 +1275,6 @@ def option_parser(prog="swapi"):
         profile=os.environ.get("SWAPI_PROFILE", ""),
         list=False,
     )
-
     p = optparse.OptionParser("""%(cmd)s [OPTION ...] RPC_API_STRING
 
 Examples:
@@ -1366,11 +1315,10 @@ password = secretpasswd
 """ % {'cmd': prog, 'config': CONFIG},
         prog=prog,
     )
-
     p.set_defaults(**defaults)
 
     config_help = "Config file path [%s; loaded in this order]" % \
-        ",".join(CONFIG_FILES)
+        ','.join(CONFIG_FILES)
 
     p.add_option('-C', '--config', help=config_help)
     p.add_option('-P', '--profile',
@@ -1454,12 +1402,10 @@ def init_log(verbose):
 
 def init_rpcapi(options):
     params = configure(options)
-
     rapi = RpcApi(
         params, not options.no_cache, options.cachedir, options.rpcdebug,
         options.readonly, options.cacheonly,
     )
-
     return rapi
 
 
@@ -1522,7 +1468,6 @@ def main(argv):
 
         (key, values) = kvs
         values = parse_list_str(values, ",")
-
         res = select_by(res, key, values)
 
     if options.deselect:
@@ -1536,7 +1481,6 @@ def main(argv):
 
         (key, values) = kvs
         values = parse_list_str(values, ",")
-
         res = deselect_by(res, key, values)
 
     return (res, options)
@@ -1562,6 +1506,5 @@ def realmain(argv):
 
 if __name__ == '__main__':
     sys.exit(realmain(sys.argv))
-
 
 # vim:sw=4:ts=4:et:
