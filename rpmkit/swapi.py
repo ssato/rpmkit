@@ -524,6 +524,8 @@ def dict_equals(d0, d1, allow_more=False):
 def all_eq(xs):
     """Whether all items in xs (list or generator) equals each other.
 
+    >>> all_eq([])
+    False
     >>> all_eq(["a", "a", "a"])
     True
     >>> all_eq(c for c in "")
@@ -538,7 +540,7 @@ def all_eq(xs):
     if not isinstance(xs, list):
         xs = list(xs)  # xs may be a generator...
 
-    return xs and all(x == xs[0] for x in xs[1:]) or False
+    return all(x == xs[0] for x in xs[1:]) if xs else False
 
 
 def longest_common_prefix(*args):
