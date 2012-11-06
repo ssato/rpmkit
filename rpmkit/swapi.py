@@ -476,6 +476,10 @@ CVSSS_METRICS_MAP = dict(
 
 
 def str_to_id(s):
+    """
+    >>> str_to_id("aaa")
+    '47bce5c74f589f4867dbd57e9ca9f808'
+    """
     return md5(s).hexdigest()
 
 
@@ -486,9 +490,9 @@ def object_to_id(obj):
 
     >>> object_to_id("test")
     '098f6bcd4621d373cade4e832627b4f6'
-    >>> object_to_id({'a':"test"})
+    >>> object_to_id({'a': "test"})
     'c5b846ec3b2f1a5b7c44c91678a61f47'
-    >>> object_to_id(['a','b','c'])
+    >>> object_to_id(['a', 'b', 'c'])
     'eea457285a61f212e4bbaaf890263ab4'
     """
     return str_to_id(str(obj))
@@ -514,7 +518,7 @@ def dict_equals(d0, d1, allow_more=False):
     if not allow_more and len(d0.keys()) != len(d1.keys()):
         return False
 
-    return all(k in d1.keys() and d0[k] == d1.get(k) for k in d0.keys())
+    return all(k in d1 and d0[k] == d1.get(k, None) for k in d0.keys())
 
 
 def all_eq(xs):
@@ -554,12 +558,12 @@ def shorten_dict_keynames(dic, prefix=None):
     old code (i.e. RHN hosted). This function is to hide and keep backward
     compatibility about it.
 
-    >>> dr0 = dict(channel_label='foo-channel', channel_name='Foo Channel')
-    >>> dr1 = dict(CHANNEL_LABEL='foo-channel', CHANNEL_NAME='Foo Channel')
+    >>> dr0 = dict(channel_label="foo-channel", channel_name="Foo Channel")
+    >>> dr1 = dict(CHANNEL_LABEL="foo-channel", CHANNEL_NAME="Foo Channel")
     >>> d_ref = dict(label="foo-channel", name="Foo Channel")
-    >>> d1 = shorten_dict_keynames(dr0, 'channel_')
+    >>> d1 = shorten_dict_keynames(dr0, "channel_")
     >>> d2 = shorten_dict_keynames(dr0)
-    >>> d3 = shorten_dict_keynames(dr1, 'channel_')
+    >>> d3 = shorten_dict_keynames(dr1, "channel_")
     >>> d4 = shorten_dict_keynames(dr1)
     >>> assert dict_equals(d_ref, d1)
     >>> assert dict_equals(d_ref, d2)
@@ -821,11 +825,11 @@ class Cache(object):
     def path(self, obj):
         """Resolve path to cache file of the object.
         """
-        return os.path.join(self.dir(obj), 'cache.pkl')
+        return os.path.join(self.dir(obj), "cache.pkl")
 
     def load(self, obj):
         try:
-            return pickle.load(open(self.path(obj), 'rb'))
+            return pickle.load(open(self.path(obj), "rb"))
         except:
             return None
 
@@ -847,7 +851,7 @@ class Cache(object):
 
         try:
             # TODO: How to detect errors during/after pickle.dump.
-            pickle.dump(data, open(cache_path, 'wb'), protocol)
+            pickle.dump(data, open(cache_path, "wb"), protocol)
             logging.debug(" Saved in " + cache_path)
 
             return True
@@ -907,9 +911,9 @@ class RpcApi(object):
         :param cacheonly: Get results only from cache (w/o any access to RHNS)
         """
         self.url = "%(protocol)s://%(server)s/rpc/api" % conn_params
-        self.userid = conn_params.get('userid')
-        self.passwd = conn_params.get('password')
-        self.timeout = conn_params.get('timeout')
+        self.userid = conn_params.get("userid")
+        self.passwd = conn_params.get("password")
+        self.timeout = conn_params.get("timeout")
 
         self.sid = None
         self.debug = debug
@@ -1023,7 +1027,7 @@ class RpcApi(object):
 
             # Special cases which do not need session_id parameter:
             # api.{getVersion, systemVersion} and auth.login.
-            if re.match(r'^(api.|proxy.|auth.login)', method_name):
+            if re.match(r"^(api.|proxy.|auth.login)", method_name):
                 ret = method(*args)
             else:
                 ret = method(self.sid, *args)
@@ -1052,18 +1056,18 @@ class RpcApi(object):
 
 def __parse(arg):
     """
-    >>> __parse('1234567')
+    >>> __parse("1234567")
     1234567
-    >>> __parse('abcXYZ012')
+    >>> __parse("abcXYZ012")
     'abcXYZ012'
     >>> d = dict(channelLabel="foo-i386-5")
     >>> d = __parse('{"channelLabel": "foo-i386-5"}')
     >>> assert d["channelLabel"] == "foo-i386-5"
     """
     try:
-        if re.match(r'[1-9]\d*', arg):
+        if re.match(r"[1-9]\d*", arg):
             return int(arg)
-        elif re.match(r'{.*}', arg):
+        elif re.match(r"{.*}", arg):
             return json.loads(arg)  # retry with json module
         else:
             return str(arg)
@@ -1081,9 +1085,9 @@ def parse_api_args(args, arg_sep=','):
 
     >>> parse_api_args('')
     []
-    >>> parse_api_args('1234567')
+    >>> parse_api_args("1234567")
     [1234567]
-    >>> parse_api_args('abcXYZ012')
+    >>> parse_api_args("abcXYZ012")
     ['abcXYZ012']
 
     >>> cl = '{"channelLabel": "foo-i386-5"}'
@@ -1124,7 +1128,7 @@ class JSONEncoder(json.JSONEncoder):
 
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
-            return obj.strftime('%Y-%m-%dT%H:%M:%S')
+            return obj.strftime("%Y-%m-%dT%H:%M:%S")
         else:
             return json.JSONEncoder.default(self, obj)
 
@@ -1136,7 +1140,7 @@ def results_to_json_str(results, indent=2):
     #>>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
     #'[123, "abc", {"x": "yz"}]'
 
-    >>> results_to_json_str([123, 'abc', {'x':'yz'}])
+    >>> results_to_json_str([123, "abc", {'x': "yz"}])
     '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
     """
     return json.dumps(
@@ -1172,14 +1176,22 @@ def deselect_by(results, key, values):
     return [r for r in results if r.get(key, None) not in values]
 
 
-def configure_with_configfile(config_file, profile=""):
-    """
-    @config_file  Configuration file path, ex. '~/.swapi/config'.
-    """
-    (server, userid, password, timeout, protocol) = \
-        ('', '', '', TIMEOUT, PROTO)
+CONN_DEFAULTS = dict(
+    server='', userid='', password='', timeout=TIMEOUT, protocol=PROTO,
+)
 
-    # expand '~/'
+
+def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
+    """
+    @config_file  Configuration file path, ex. "~/.swapi/config".
+    """
+    server = defaults["server"]
+    userid = defaults["userid"]
+    password = defaults["password"]
+    timeout = defaults["timeout"]
+    protocol = defaults["protocol"]
+
+    # expand "~/"
     if config_file:
         if '~' in config_file:
             config_file = os.path.expanduser(config_file)
@@ -1217,7 +1229,16 @@ def configure_with_configfile(config_file, profile=""):
         protocol = opts.get("protocol", protocol)
 
     return dict(server=server, userid=userid, password=password,
-        timeout=timeout, protocol=protocol)
+                timeout=timeout, protocol=protocol)
+
+
+def set_options(key, config, opts, fallback):
+    cv = config.get(key, False)
+    if cv:
+        v = getattr(opts, key, False)
+        return v if v else cv  # Prefer value from options.
+    else:
+        return fallback
 
 
 def configure_with_options(config, options):
@@ -1225,21 +1246,17 @@ def configure_with_options(config, options):
     @config   config parameters dict: {'server':, 'userid':, ...}
     @options  optparse.Options
     """
-    server = config.get('server') or \
-        (options.server or raw_input('Enter server name > '))
-    userid = config.get('userid') or \
-        (options.userid or raw_input('Enter user ID > '))
-    password = config.get('password') or \
-        (options.password or getpass.getpass('Enter your password > '))
-    timeout = config.get('timeout') or \
-        ((options.timeout and options.timeout != TIMEOUT) and \
-            options.timeout or TIMEOUT)
-    protocol = config.get('protocol') or \
-        ((options.protocol and options.protocol != PROTO) and \
-            options.protocol or PROTO)
+    server = set_options("server", config, options,
+                         raw_input("Enter server name > "))
+    userid = set_options("userid", config, options,
+                         raw_input("Enter user ID > "))
+    password = set_options("password", config, options,
+                           getpass.getpass("Enter your password > "))
+    timeout = set_options("timeout", config, options, TIMEOUT)
+    protocol = set_options("protocol", config, options, PROTO)
 
     return dict(server=server, userid=userid, password=password,
-        timeout=timeout, protocol=protocol)
+                timeout=timeout, protocol=protocol)
 
 
 def configure(options):
