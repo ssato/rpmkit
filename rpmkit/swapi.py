@@ -1,8 +1,8 @@
 #
 # Like utils/spacewalk-api, call Spacewalk/RHN RPC API from command line.
 #
-# Copyright (C) 2010 Satoru SATOH <satoru.satoh@gmail.com>
-# Copyright (C) 2011 Satoru SATOH <ssato@redhat.com>
+# Copyright (C) 2010 Satoru SATOH <satoru.satoh at gmail.com>
+# Copyright (C) 2011, 2012 Satoru SATOH <ssato at redhat.com>
 #
 # This software is licensed to you under the GNU General Public License,
 # version 2 (GPLv2). There is NO WARRANTY for this software, express or
@@ -34,6 +34,7 @@
 #
 # * Can call an API with multiple different arguments sets at once.
 #
+from itertools import takewhile, izip, groupby
 from operator import itemgetter
 
 import BeautifulSoup
@@ -43,7 +44,6 @@ import commands
 import datetime
 import getpass
 import glob
-import itertools
 import logging
 import optparse
 import os
@@ -545,9 +545,7 @@ def longest_common_prefix(*args):
     >>> longest_common_prefix("abc", "bc")
     ''
     """
-    return "".join(x[0] for x in itertools.takewhile(
-        all_eq, itertools.izip(*args))
-    )
+    return "".join(x[0] for x in takewhile(all_eq, izip(*args)))
 
 
 def shorten_dict_keynames(dic, prefix=None):
@@ -1162,12 +1160,8 @@ def sorted_by(results, key):
 
 
 def group_by(results, key):
-    groups = dict()
-
-    for k, grp in itertools.groupby(results, itemgetter(key)):
-        groups[k] = groups.get(k, []) + list(grp)
-
-    return groups
+    kf = itemgetter(key)
+    return dict((k, list(g)) for k, g in groupby(sorted_by(results, key), kf))
 
 
 def select_by(results, key, values):
@@ -1175,7 +1169,7 @@ def select_by(results, key, values):
 
 
 def deselect_by(results, key, values):
-    return [r for r in results if r.get(key, None) != values]
+    return [r for r in results if r.get(key, None) not in values]
 
 
 def configure_with_configfile(config_file, profile=""):
