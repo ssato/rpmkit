@@ -553,7 +553,7 @@ def longest_common_prefix(*args):
     return ''.join(x[0] for x in takewhile(all_eq, izip(*args)))
 
 
-def shorten_dict_keynames(dic, prefix=None):
+def shorten_dict_keynames(d, prefix=None):
     """
     It seems that API key names are shortened a bit at a time. The keys having
     prefix (e.g. 'channel_') will be deprecated but still remains in the old
@@ -561,7 +561,7 @@ def shorten_dict_keynames(dic, prefix=None):
 
     This function is to hide and keep backward compatibility about it.
 
-    :param dic: A dict instance.
+    :param d: A dict instance.
 
     >>> dr0 = dict(channel_label="foo-channel", channel_name="Foo Channel")
     >>> dr1 = dict(CHANNEL_LABEL="foo-channel", CHANNEL_NAME="Foo Channel")
@@ -582,13 +582,13 @@ def shorten_dict_keynames(dic, prefix=None):
     >>> assert dict_equals(d_ref, d5)
     >>> assert dict_equals(d_ref, d6)
     """
-    if not isinstance(dic, dict):  # `dic` may be a str.
-        return dic
+    if not isinstance(d, dict):  # `dic` may be a str.
+        return d
 
     if prefix is None:
-        prefix = longest_common_prefix(*(k.lower() for k in dic.keys()))
+        prefix = longest_common_prefix(*(k.lower() for k in d.keys()))
 
-    return dict((k.lower().replace(prefix, ''), v) for k, v in dic.iteritems())
+    return dict((k.lower().replace(prefix, ''), v) for k, v in d.iteritems())
 
 
 def urlread(url, data=None, headers={}):
