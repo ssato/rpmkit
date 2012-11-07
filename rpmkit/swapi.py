@@ -1243,17 +1243,24 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
         timeout = int(opts.get("timeout", timeout))
         protocol = opts.get("protocol", protocol)
 
-    return dict(server=server, userid=userid, password=password,
-                timeout=timeout, protocol=protocol)
+    d = dict(server=server, userid=userid, password=password,
+             timeout=timeout, protocol=protocol)
+    logging.debug("conn_params from config files: " + str(d))
+
+    return d
 
 
-def set_options(key, config, opts, fallback):
+def id_(x):
+    return x
+
+
+def set_options(key, config, opts, ask_fun, param):
     cv = config.get(key, False)
     if cv:
         v = getattr(opts, key, False)
         return v if v else cv  # Prefer value from options.
     else:
-        return fallback
+        return ask_fun(param)
 
 
 def configure_with_options(config, options):
@@ -1262,16 +1269,19 @@ def configure_with_options(config, options):
     @options  optparse.Options
     """
     server = set_options("server", config, options,
-                         raw_input("Enter server name > "))
+                         raw_input, "Enter server name > ")
     userid = set_options("userid", config, options,
-                         raw_input("Enter user ID > "))
+                         raw_input, "Enter user ID > ")
     password = set_options("password", config, options,
-                           getpass.getpass("Enter your password > "))
-    timeout = set_options("timeout", config, options, TIMEOUT)
-    protocol = set_options("protocol", config, options, PROTO)
+                           getpass.getpass, "Enter your password > ")
+    timeout = set_options("timeout", config, options, id_, TIMEOUT)
+    protocol = set_options("protocol", config, options, id_, PROTO)
 
-    return dict(server=server, userid=userid, password=password,
-                timeout=timeout, protocol=protocol)
+    d = dict(server=server, userid=userid, password=password,
+             timeout=timeout, protocol=protocol)
+    logging.debug("conn_params from options: " + str(d))
+
+    return d
 
 
 def configure(options):
