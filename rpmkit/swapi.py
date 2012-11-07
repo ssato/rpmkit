@@ -741,7 +741,7 @@ def get_all_errata_g(raw=False):
 
     :param raw: Get raw txt data if True [False]
 
-    It return {errata_advisory: ["cve"]}
+    It returns {errata_advisory: ["cve"]}
 
     rhsamapcpe.txt format:
 
