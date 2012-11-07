@@ -920,11 +920,12 @@ class RpcApi(object):
 
         self.sid = None
         self.debug = debug
+        self.readonly = readonly
         self.cacheonly = cacheonly
         self.vapis = vapis
 
         if enable_cache:
-            cachecls = ReadOnlyCache if self.cacheonly else Cache
+            cachecls = ReadOnlyCache if self.readonly else Cache
             cdomain = str_to_id("%s:%s" % (self.url, self.userid))
 
             self.caches = [
