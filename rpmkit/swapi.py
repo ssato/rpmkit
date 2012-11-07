@@ -662,7 +662,6 @@ def get_cvss_for_cve(cve):
 
         cvss_base_metrics = soup.findAll(has_cvss_link)[0].string
         cvss_base_score = soup.findAll(is_base_score)[0].parent.td.string
-
         cvss_base_metrics_vec = cvss_metrics(cvss_base_metrics)
 
         return dict(cve=cve,
