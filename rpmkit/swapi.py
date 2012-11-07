@@ -790,22 +790,24 @@ def run(cmd_str):
     return commands.getstatusoutput(cmd_str)
 
 
+def id_(x):
+    return x
+
+
 class Cache(object):
     """Pickle module based data caching backend.
     """
 
-    def __init__(self, domain, topdir=CACHE_DIR, readonly=False,
+    def __init__(self, domain, topdir=CACHE_DIR,
             expirations=API_CACHE_EXPIRATIONS):
         """Initialize domain-local caching parameters.
 
         :param domain: a str represents target domain
         :param topdir: topdir to save cache files
-        :param readonly: Access to cache database is read only
         :param expirations: Cache expiration dates map
         """
         self.domain = domain
         self.topdir = os.path.join(topdir, domain)
-        self.readonly = readonly
         self.expirations = expirations
 
     def dir(self, obj):
@@ -835,10 +837,6 @@ class Cache(object):
         :param obj:  object of which obj_id is used as caching key
         :param data: data to saved in cache
         """
-        if self.readonly:
-            logging.debug(" Not save as in read-only mode: " + self.topdir)
-            return
-
         cache_dir = self.dir(obj)
 
         if not os.path.isdir(cache_dir):
@@ -850,20 +848,18 @@ class Cache(object):
             # TODO: How to detect errors during/after pickle.dump.
             pickle.dump(data, open(cache_path, "wb"), protocol)
             logging.debug(" Saved in " + cache_path)
-
             return True
         except:
             return False
 
-    def needs_update(self, obj):
-        """FIXME: closely-coupled with data type of obj argument.
-
-        :param obj: (api_method_name, api_args) :: (str, [str | int | ... ])
+    def needs_update(self, obj, obj2key=id_):
         """
-        (method, args) = obj
-        expires = self.expirations.get(method, 0)  # Default: no cache
-
-        logging.debug(" Expiration dates for %s: %d" % (method, expires))
+        :param obj: Cache key object
+        :param obj2key: Any callables convert obj to key for expirations map.
+        """
+        key = obj2key(obj)
+        expires = self.expirations.get(key, 0)  # Default: no cache
+        logging.debug(" Expiration dates for %s: %d" % (key, expires))
 
         if expires == 0:  # it means never cache.
             return True
@@ -887,9 +883,18 @@ class Cache(object):
         if cur_time < cache_mtime:
             return True
 
-        delta = cur_time - cache_mtime
+        return (cur_time - cache_mtime) >= datetime.timedelta(expires)
 
-        return delta >= datetime.timedelta(expires)
+
+class ReadOnlyCache(Cache):
+
+    def save(self, *args, **kwargs):
+        logging.debug(" Not save as read-only cache: " + self.topdir)
+        return True
+
+    def needs_update(self, *args, **kwargs):
+        logging.debug(" No updates needed as read-only cache: " + self.topdir)
+        return False
 
 
 class RpcApi(object):
@@ -897,7 +902,7 @@ class RpcApi(object):
     """
 
     def __init__(self, conn_params, enable_cache=True, cachedir=CACHE_DIR,
-            debug=False, readonly=False, cacheonly=False):
+            debug=False, readonly=False, cacheonly=False, vapis=VIRTUAL_APIS):
         """
         :param conn_params: Connection parameters: server, userid, password,
             timeout, protocol.
@@ -906,6 +911,7 @@ class RpcApi(object):
         :param debug: Debug mode
         :param readonly: Use read only cache
         :param cacheonly: Get results only from cache (w/o any access to RHNS)
+        :param vapis: Virtual APIs :: dict
         """
         self.url = "%(protocol)s://%(server)s/rpc/api" % conn_params
         self.userid = conn_params.get("userid")
@@ -915,16 +921,15 @@ class RpcApi(object):
         self.sid = None
         self.debug = debug
         self.cacheonly = cacheonly
+        self.vapis = vapis
 
         if enable_cache:
-            if self.cacheonly:
-                readonly = True
-
+            cachecls = ReadOnlyCache if self.cacheonly else Cache
             cdomain = str_to_id("%s:%s" % (self.url, self.userid))
 
             self.caches = [
-                Cache(cdomain, SYSTEM_CACHE_DIR, True),
-                Cache(cdomain, cachedir, readonly),
+                ReadOnlyCache(cdomain, SYSTEM_CACHE_DIR),
+                cachecls(cdomain, cachedir),
             ]
         else:
             self.caches = []
@@ -958,12 +963,12 @@ class RpcApi(object):
         self.server.auth.logout(self.sid)
         self.sid = None
 
-    def get_from_cache(self, key):
-        """Get result from the caches.
-        """
+    def get_result_from_caches(self, key):
+        obj2key = lambda obj: obj[0]  # obj = (method, args)
+
         for cache in self.caches:
             logging.info(" Try the cache: " + cache.topdir)
-            if not self.cacheonly and cache.needs_update(key):
+            if not self.cacheonly and cache.needs_update(key, obj2key):
                 logging.debug(
                     " Cached result is old and not used: " + str(key)
                 )
@@ -983,7 +988,7 @@ class RpcApi(object):
         return (method_name, args)
 
     def call_virtual_api(self, method_name, *args):
-        ret = VIRTUAL_APIS[method_name](*args)
+        ret = self.vapis[method_name](*args)
 
         for cache in self.caches:
             key = self.ma_to_key(method_name, args)
@@ -996,7 +1001,7 @@ class RpcApi(object):
         key = self.ma_to_key(method_name, args)
 
         if self.caches:
-            ret = self.get_from_cache(key)
+            ret = self.get_result_from_caches(key)
 
             if ret is None:
                 if self.cacheonly:
@@ -1009,7 +1014,7 @@ class RpcApi(object):
         # multiple times.
         time.sleep(random.random() * 5)
 
-        if method_name in VIRTUAL_APIS:
+        if method_name in self.vapis:
             return self.call_virtual_api(method_name, *args)
 
         try:
