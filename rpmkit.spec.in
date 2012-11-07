@@ -81,6 +81,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Nov  7 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.7-1
+- [swapi] Various fixes and refactoring, and also added some more test cases
+
 * Fri Oct 19 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.6-1
 - [swapi] Fixes around shorten_dict_keynames
 - Split into two RPMs
