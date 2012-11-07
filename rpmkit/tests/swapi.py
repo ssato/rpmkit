@@ -98,6 +98,24 @@ class Test_32_ReadOnlyCache(unittest.TestCase):
         self.assertFalse(c.needs_update("not_existent_obj"))
 
 
+class Test_40_RpcApi__wo_caches(unittest.TestCase):
+
+    def test_00___init__(self):
+        conn_params = dict(protocol="https", server="rhns.example.com",
+                           userid="foo", passwd="secret", timeout=600)
+        rapi = S.RpcApi(conn_params, enable_cache=False, debug=True)
+
+        self.assertEquals(rapi.caches, [])
+        self.assertTrue(
+            rapi.get_result_from_caches("not_existent_key") is None
+        )
+
+
+class Test_42_RpcApi__w_caches(unittest.TestCase):
+    """FIXME: Test cases for RpcApi class w/ caches"""
+    pass
+
+
 class Test_99_system_tests(unittest.TestCase):
 
     def test_01_api_wo_arg_and_sid(self):
