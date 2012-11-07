@@ -21,6 +21,7 @@ import unittest
 
 
 SYSTEST_ENABLED = os.environ.get("SWAPI_SYSTEST", False)
+NET_ENABLED = os.environ.get("SWAPI_NETTEST", False)
 
 
 def _systest_helper(args):
@@ -33,15 +34,26 @@ def _systest_helper(args):
 
 
 class Test_10_pure_functions(unittest.TestCase):
-    pass
+
+    def test_01_sorted_by(self):
+        (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=3, b=0))
+        xs = [a, b, c]
+
+        self.assertEquals(S.sorted_by(xs, "a"), [b, a, c])
 
 
 class Test_20_effectful_functions(unittest.TestCase):
 
     def test_05_urlread(self):
+        if not NET_ENABLED:
+            return
+
         self.assertTrue(S.urlread("http://www.example.com") is not None)
 
     def test_10_get_cvss_for_cve(self):
+        if not NET_ENABLED:
+            return
+
         # "CVE-2010-1585" has CVSS metrics data.
         self.assertTrue(S.get_cvss_for_cve("CVE-2010-1585") is not None)
 
@@ -49,6 +61,9 @@ class Test_20_effectful_functions(unittest.TestCase):
         self.assertTrue(S.get_cvss_for_cve("CVE-2008-0001") is None)
 
     def test_12_get_all_cve(self):
+        if not NET_ENABLED:
+            return
+
         self.assertTrue(S.get_all_errata())
         self.assertTrue(S.get_all_errata(True))
 
