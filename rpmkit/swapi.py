@@ -718,16 +718,19 @@ def get_all_cve_g(raw=False):
                 if m:
                     d = m.groupdict()
                     d["url"] = d["cve_url"] = cve2url(d["cve"])
-                    yield d
                 else:
                     logging.warn("Not look a valid CVE line: " + line)
+                    d = dict()
+
+                yield d
 
     except Exception, e:
         logging.warn(" Could not get CVE and CVSS data: err=" + str(e))
+        yield  # None
 
 
 def get_all_cve(raw=False):
-    return [r for r in get_all_cve_g(raw)]
+    return [r for r in get_all_cve_g(raw) if r is not None]
 
 
 def get_all_errata_g(raw=False):
