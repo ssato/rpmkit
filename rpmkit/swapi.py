@@ -1119,8 +1119,7 @@ def parse_api_args(args, arg_sep=','):
 
 
 class JSONEncoder(json.JSONEncoder):
-    """
-    @see http://goo.gl/vEwdE
+    """@see http://goo.gl/vEwdE
     """
 
     def default(self, obj):
@@ -1156,21 +1155,42 @@ def parse_list_str(list_s, sep=","):
     return [p for p in list_s.split(sep) if p]
 
 
-def sorted_by(results, key):
-    return sorted(results, key=itemgetter(key))
+def sorted_by(ds, key):
+    """
+    >>> (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=3, b=0))
+    >>> ds = [a, b, c]
+    >>> assert sorted_by(ds, "a") == [b, a, c]
+    """
+    return sorted(ds, key=itemgetter(key))
 
 
-def group_by(results, key):
+def group_by(ds, key):
+    """
+    >>> (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=1, b=0))
+    >>> ds = [a, b, c]
+    >>> ref = dict([(1, [a, c]), (0, [b])])
+    >>> assert dict_equals(group_by(ds, "a"), ref)
+    """
     kf = itemgetter(key)
-    return dict((k, list(g)) for k, g in groupby(sorted_by(results, key), kf))
+    return dict((k, list(g)) for k, g in groupby(sorted_by(ds, key), kf))
 
 
-def select_by(results, key, values):
-    return [r for r in results if r.get(key, None) in values]
+def select_by(ds, key, values):
+    """
+    >>> (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=3, b=0))
+    >>> ds = [a, b, c]
+    >>> assert select_by(ds, "a", (0, 1)) == [a, b]
+    """
+    return [r for r in ds if r.get(key, False) in values]
 
 
-def deselect_by(results, key, values):
-    return [r for r in results if r.get(key, None) not in values]
+def deselect_by(ds, key, values):
+    """
+    >>> (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=3, b=0))
+    >>> ds = [a, b, c]
+    >>> assert deselect_by(ds, "a", (0, 1)) == [c]
+    """
+    return [r for r in ds if r.get(key, False) not in values]
 
 
 CONN_DEFAULTS = dict(
