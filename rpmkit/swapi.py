@@ -720,7 +720,7 @@ def get_all_cve_g(raw=False):
                     d["url"] = d["cve_url"] = cve2url(d["cve"])
                 else:
                     logging.warn("Not look a valid CVE line: " + line)
-                    d = dict()
+                    d = None
 
                 yield d
 
@@ -1243,11 +1243,8 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
         timeout = int(opts.get("timeout", timeout))
         protocol = opts.get("protocol", protocol)
 
-    d = dict(server=server, userid=userid, password=password,
-             timeout=timeout, protocol=protocol)
-    logging.debug("conn_params from config files: " + str(d))
-
-    return d
+    return dict(server=server, userid=userid, password=password,
+                timeout=timeout, protocol=protocol)
 
 
 def id_(x):
@@ -1277,11 +1274,8 @@ def configure_with_options(config, options):
     timeout = set_options("timeout", config, options, id_, TIMEOUT)
     protocol = set_options("protocol", config, options, id_, PROTO)
 
-    d = dict(server=server, userid=userid, password=password,
-             timeout=timeout, protocol=protocol)
-    logging.debug("conn_params from options: " + str(d))
-
-    return d
+    return dict(server=server, userid=userid, password=password,
+                timeout=timeout, protocol=protocol)
 
 
 def configure(options):
