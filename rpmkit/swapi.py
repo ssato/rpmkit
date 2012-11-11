@@ -445,15 +445,6 @@ CVSSS_METRICS_MAP = dict(
             N=3,  # None
         ),
     ),
-    # FIXME:
-    AU=dict(
-        label="Authentication",
-        metrics=dict(
-            M=1,  # Multiple
-            S=2,  # Single
-            N=3,  # None
-        ),
-    ),
     C=dict(
         label="Confidentiality Impact",
         metrics=dict(
@@ -631,8 +622,17 @@ def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
     ... ]
     >>> assert ms0 == ms_ref, str(ms0)
     >>> assert ms1 == ms_ref, str(ms1)
+
+    >>> ms2 = cvss_metrics("AV:N/AC:H/Au/N/C:N/I:P/A:N")
+    >>> assert ms2 == ms_ref, str(ms2)
     """
     metrics = []
+
+    if "/AU" in cvss:
+        cvss = cvss.replace("/AU", "/Au")
+
+    if "/Au/" in cvss:  # Looks like a bug in CVE or CVSS pages.
+        cvss = cvss.replace("/Au/", "/Au:")
 
     for lms in cvss.split("/"):
         (key, m) = lms.split(":")
