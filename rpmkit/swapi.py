@@ -420,6 +420,8 @@ API_CACHE_EXPIRATIONS = {
 VIRTUAL_APIS = dict()
 
 # @see http://www.first.org/cvss/cvss-guide.html
+# AV:L/AC:N/Au:N/C:N/I:N/A:C
+# AC:N/Au:N/C:N/I:N/A:C
 CVSSS_METRICS_MAP = dict(
     AV=dict(
         label="Access Vector",
@@ -613,6 +615,9 @@ def cve2url(cve):
 
 def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
     """
+    TODO: It seems that some of CVE data looks wrong in Red Hat CVE
+    database.
+
     >>> ms0 = cvss_metrics("AV:N/AC:H/Au:N/C:N/I:P/A:N")
     >>> ms1 = cvss_metrics("AV:N/AC:H/AU:N/C:N/I:P/A:N")
     >>> ms_ref = [
@@ -631,15 +636,25 @@ def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
     if "/AU" in cvss:
         cvss = cvss.replace("/AU", "/Au")
 
-    if "/Au/" in cvss:  # Looks like a bug in CVE or CVSS pages.
+    if "/Au/" in cvss:
         cvss = cvss.replace("/Au/", "/Au:")
 
     for lms in cvss.split("/"):
         (key, m) = lms.split(":")
-        metric = metrics_map[key]
+        metric = metrics_map.get(key, False)
+
+        if not metrics:
+            logging.error("Unknown CVSS metric abbrev: " + key)
+            return metrics
 
         label = metric["label"]
-        val = metric["metrics"][m]
+        val = metric["metrics"].get(m, False)
+
+        if not val:
+            logging.error(
+                "Uknown value for CVSS metric '%s': %s" % (metric, m)
+            )
+            return metrics
 
         metrics.append((label, val))
 
@@ -671,17 +686,14 @@ def get_cvss_for_cve(cve):
         cvss_base_metrics = soup.findAll(has_cvss_link)[0].string
         cvss_base_score = soup.findAll(is_base_score)[0].parent.td.string
 
-        try:
-            cvss_base_metrics_vec = cvss_metrics(cvss_base_metrics)
+        # may fail to parse `cvss_base_metrics`
+        cvss_base_metrics_vec = cvss_metrics(cvss_base_metrics)
 
-            return dict(cve=cve,
-                        metrics=cvss_base_metrics,
-                        metrics_v=cvss_base_metrics_vec,
-                        score=cvss_base_score,
-                        url=url_fmt % (cve, cvss_base_metrics))
-
-        except Exception, e:
-            logging.warn(" Could not parse CVSS metrics: err=" + str(e))
+        return dict(cve=cve,
+                    metrics=cvss_base_metrics,
+                    metrics_v=cvss_base_metrics_vec,
+                    score=cvss_base_score,
+                    url=url_fmt % (cve, cvss_base_metrics))
 
     except Exception, e:
         logging.warn(" Could not get CVSS data: err=" + str(e))
