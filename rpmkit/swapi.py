@@ -445,6 +445,15 @@ CVSSS_METRICS_MAP = dict(
             N=3,  # None
         ),
     ),
+    # FIXME:
+    AU=dict(
+        label="Authentication",
+        metrics=dict(
+            M=1,  # Multiple
+            S=2,  # Single
+            N=3,  # None
+        ),
+    ),
     C=dict(
         label="Confidentiality Impact",
         metrics=dict(
@@ -613,13 +622,15 @@ def cve2url(cve):
 
 def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
     """
-    >>> ms = cvss_metrics("AV:N/AC:H/Au:N/C:N/I:P/A:N")
+    >>> ms0 = cvss_metrics("AV:N/AC:H/Au:N/C:N/I:P/A:N")
+    >>> ms1 = cvss_metrics("AV:N/AC:H/AU:N/C:N/I:P/A:N")
     >>> ms_ref = [
     ...     ("Access Vector", 3), ("Access Complexity", 1),
     ...     ("Authentication", 3), ("Confidentiality Impact", 1),
     ...     ("Integrity Impact", 2), ("Availability Impact", 1),
     ... ]
-    >>> assert ms == ms_ref, str(ms)
+    >>> assert ms0 == ms_ref, str(ms0)
+    >>> assert ms1 == ms_ref, str(ms1)
     """
     metrics = []
 
@@ -659,13 +670,18 @@ def get_cvss_for_cve(cve):
 
         cvss_base_metrics = soup.findAll(has_cvss_link)[0].string
         cvss_base_score = soup.findAll(is_base_score)[0].parent.td.string
-        cvss_base_metrics_vec = cvss_metrics(cvss_base_metrics)
 
-        return dict(cve=cve,
-                    metrics=cvss_base_metrics,
-                    metrics_v=cvss_base_metrics_vec,
-                    score=cvss_base_score,
-                    url=url_fmt % (cve, cvss_base_metrics))
+        try:
+            cvss_base_metrics_vec = cvss_metrics(cvss_base_metrics)
+
+            return dict(cve=cve,
+                        metrics=cvss_base_metrics,
+                        metrics_v=cvss_base_metrics_vec,
+                        score=cvss_base_score,
+                        url=url_fmt % (cve, cvss_base_metrics))
+
+        except Exception, e:
+            logging.warn(" Could not parse CVSS metrics: err=" + str(e))
 
     except Exception, e:
         logging.warn(" Could not get CVSS data: err=" + str(e))
