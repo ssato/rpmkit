@@ -605,10 +605,10 @@ def urlread(url, data=None, headers={}):
 
 def cve2url(cve):
     """
-    >>> url = "https://www.redhat.com/security/data/cve/CVE-2010-1585.html"
+    >>> url = "https://access.redhat.com/security/cve/CVE-2010-1585?lang=en"
     >>> assert url == cve2url("CVE-2010-1585")
     """
-    return "https://www.redhat.com/security/data/cve/%s.html" % cve
+    return "https://access.redhat.com/security/cve/%s?lang=en" % cve
 
 
 def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
