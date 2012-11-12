@@ -934,7 +934,8 @@ class RpcApi(object):
     """
 
     def __init__(self, conn_params, enable_cache=True, cachedir=CACHE_DIR,
-            debug=False, readonly=False, cacheonly=False, vapis=VIRTUAL_APIS):
+            debug=False, readonly=False, cacheonly=False, force=False,
+            vapis=VIRTUAL_APIS):
         """
         :param conn_params: Connection parameters: server, userid, password,
             timeout, protocol.
@@ -943,6 +944,8 @@ class RpcApi(object):
         :param debug: Debug mode
         :param readonly: Use read only cache
         :param cacheonly: Get results only from cache (w/o any access to RHNS)
+        :param force: Force update caches even if these cached data are new and
+            not need updates
         :param vapis: Virtual APIs :: dict
         """
         self.url = "%(protocol)s://%(server)s/rpc/api" % conn_params
@@ -954,6 +957,7 @@ class RpcApi(object):
         self.debug = debug
         self.readonly = readonly
         self.cacheonly = cacheonly
+        self.force = force
         self.vapis = vapis
 
         if enable_cache:
@@ -999,8 +1003,11 @@ class RpcApi(object):
     def get_result_from_caches(self, key):
         obj2key = lambda obj: obj[0]  # obj = (method, args)
 
+        if self.force:
+            return None
+
         for cache in self.caches:
-            logging.info(" Try the cache: " + cache.topdir)
+            logging.debug(" Try the cache: " + cache.topdir)
             if not self.cacheonly and cache.needs_update(key, obj2key):
                 logging.debug(
                     " Cached result is old and not used: " + str(key)
@@ -1328,6 +1335,7 @@ def option_parser(prog="swapi"):
         cachedir=CACHE_DIR,
         readonly=False,
         cacheonly=False,
+        force=False
         format=False,
         indent=2,
         sort="",
@@ -1413,6 +1421,8 @@ password = secretpasswd
         help="Get results only from cache w/o any access to RHNS")
     caog.add_option('', '--offline', action="store_true", dest="cacheonly",
         help="Same as --cacheonly")
+    caog.add_option('', '--force', action="store_true",
+        help="Force update caches regardless of caches expiration dates")
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
@@ -1467,7 +1477,7 @@ def init_rpcapi(options):
     params = configure(options)
     rapi = RpcApi(
         params, not options.no_cache, options.cachedir, options.rpcdebug,
-        options.readonly, options.cacheonly,
+        options.readonly, options.cacheonly, options.force,
     )
     return rapi
 
@@ -1497,6 +1507,11 @@ def main(argv):
 
     api = args[0]
     rapi = init_rpcapi(options)
+
+    if options.force:
+        logging.info(
+            "Caches will be updated regardless of its expiration dates"
+        )
 
     if options.list_args:
         list_args = parse_api_args(options.list_args)
