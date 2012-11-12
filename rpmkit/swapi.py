@@ -615,26 +615,30 @@ def cve2url(cve):
 
 def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
     """
-    TODO: It seems that some of CVE data looks wrong in Red Hat CVE
-    database.
+    TODO: Some of CVEs in Red Hat CVE database look having wrong CVSS
+    metrics data.
 
     >>> ms0 = cvss_metrics("AV:N/AC:H/Au:N/C:N/I:P/A:N")
-    >>> ms1 = cvss_metrics("AV:N/AC:H/AU:N/C:N/I:P/A:N")
     >>> ms_ref = [
     ...     ("Access Vector", 3), ("Access Complexity", 1),
     ...     ("Authentication", 3), ("Confidentiality Impact", 1),
     ...     ("Integrity Impact", 2), ("Availability Impact", 1),
     ... ]
     >>> assert ms0 == ms_ref, str(ms0)
+
+    >>> ms1 = cvss_metrics("AV:N/AC:H/AU:N/C:N/I:P/A:N")  # CVE-2012-3406
     >>> assert ms1 == ms_ref, str(ms1)
 
-    >>> ms2 = cvss_metrics("AV:N/AC:H/Au/N/C:N/I:P/A:N")
+    >>> ms2 = cvss_metrics("AV:N/AC:H/Au/N/C:N/I:P/A:N")  # CVE-2012-5077
     >>> assert ms2 == ms_ref, str(ms2)
+
+    >>> ms3 = cvss_metrics("AV:N/AC:N/Au/N/C:P/I:N/A:N")  # CVE-2012-3375
+    >>> assert ms3 != ms_ref, str(ms3)
     """
     metrics = []
 
-    if "/AU" in cvss:
-        cvss = cvss.replace("/AU", "/Au")
+    if "/AU:" in cvss:
+        cvss = cvss.replace("/AU:", "/Au:")
 
     if "/Au/" in cvss:
         cvss = cvss.replace("/Au/", "/Au:")
@@ -643,7 +647,7 @@ def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
         (key, m) = lms.split(":")
         metric = metrics_map.get(key, False)
 
-        if not metrics:
+        if not metric:
             logging.error("Unknown CVSS metric abbrev: " + key)
             return metrics
 
