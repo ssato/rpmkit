@@ -20,7 +20,7 @@
 # Refs:
 # * <python sitelib>/createrepo/yumbased.py
 #
-import rpmkit.sqlminus as SQ
+import rpmkit.extras.sqlminus as SQ
 import datetime
 import logging
 import optparse
