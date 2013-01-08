@@ -489,7 +489,7 @@ def main():
         sys.exit(1)
 
     if not options.datadir:
-        options.datadir = raw_inpu("Repodata dir? > ")
+        options.datadir = raw_input("Repodata dir? > ")
 
     if cmd == _CMD_INIT:
         parse_and_dump_repodata(options.datadir, options.outdir)
