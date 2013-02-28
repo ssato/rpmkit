@@ -2,7 +2,7 @@
 # Like utils/spacewalk-api, call Spacewalk/RHN RPC API from command line.
 #
 # Copyright (C) 2010 Satoru SATOH <satoru.satoh at gmail.com>
-# Copyright (C) 2011, 2012 Satoru SATOH <ssato at redhat.com>
+# Copyright (C) 2011 - 2013 Satoru SATOH <ssato at redhat.com>
 #
 # This software is licensed to you under the GNU General Public License,
 # version 2 (GPLv2). There is NO WARRANTY for this software, express or
@@ -81,6 +81,12 @@ try:
     from collections import OrderedDict as dict
 except ImportError:
     pass
+
+try:
+    import tablib
+    TABLIB_FOUND = True
+except ImportError:
+    TABLIB_FOUND = False
 
 
 """
@@ -1324,7 +1330,7 @@ def configure(options):
     return conf
 
 
-def option_parser(prog="swapi"):
+def option_parser(prog="swapi", tablib_found=TABLIB_FOUND):
     defaults = dict(
         config=None,
         verbose=0,
@@ -1345,7 +1351,13 @@ def option_parser(prog="swapi"):
         short_keys=True,
         profile=os.environ.get("SWAPI_PROFILE", ""),
         list=False,
+        output="stdout",
     )
+
+    if tablib_found:
+        defaults["output_format"] = None
+        defaults["headers"] = None
+
     p = optparse.OptionParser("""%(cmd)s [OPTION ...] RPC_API_STRING
 
 Examples:
@@ -1428,6 +1440,15 @@ password = secretpasswd
     oog = optparse.OptionGroup(p, "Output options")
     oog.add_option('-L', '--list', action="store_true", help="List APIs")
     oog.add_option('-F', '--format', help="Output format (non-json)")
+    oog.add_option('-o', '--output', help="Output [stdout]")
+
+    if tablib_found:
+        formats = ("json", "xls", "yaml", "csv", "tsv", "xlsx", "ods")
+        oog.add_option('-O', '--output-format', choices=formats,
+                       help="Select output format from: " + ", ".join(formats))
+        oog.add_option('-H', '--headers',
+                       help="Comma separated output headers, e.g. 'aaa,bbb'")
+
     oog.add_option('-I', '--indent', type="int",
         help="Indent for JSON output. 0 means no indent. [%default]",
     )
@@ -1482,7 +1503,7 @@ def init_rpcapi(options):
     return rapi
 
 
-def main(argv):
+def main(argv, tablib_found=TABLIB_FOUND):
     out = sys.stdout
     enable_cache = True
 
@@ -1500,6 +1521,14 @@ def main(argv):
             " Conflicted options were given: --no-cache and --cacheonly"
         )
         return None
+
+    # FIXME: Breaks DRY principle:
+    if tablib_found:
+        if options.output_format in ("xls", "xlsx", "ods") and \
+            options.output == "stdout":
+            logging.error(" Output format '%s' requires output but not "
+                          "specified w/ --output option" % option.output_format)
+            return None
 
     if len(args) == 0:
         parser.print_usage()
@@ -1564,7 +1593,7 @@ def main(argv):
     return (res, options)
 
 
-def realmain(argv):
+def realmain(argv, tablib_found=TABLIB_FOUND):
     result = main(argv[1:])
 
     if not result:
@@ -1574,10 +1603,36 @@ def realmain(argv):
     (res, options) = result
 
     if options.format:
-        for r in res:
-            print options.format % r
+        if options.output == 'stdout':
+            for r in res:
+                print options.format % r
+        else:
+            with open(options.output, 'w') as f:
+                for r in res:
+                    print >> f, options.format % r
     else:
-        print results_to_json_str(res, options.indent)
+        if tablib_found and options.output_format:
+            data = tablib.Dataset()
+
+            if options.headers:
+                data.headers = options.headers.split(",")
+                for r in res:
+                    data.append([r.get(h) for h in data.headers])
+            else:
+                for r in res:
+                    data.append(r.values())
+
+            flg = "wb" if options.output_format in ("xls", "xlsx", "ods") else "w"
+
+            with open(options.output, flg) as f:
+                content = getattr(data, options.output_format)
+                f.write(content)
+        else:
+            if options.output == 'stdout':
+                print results_to_json_str(res, options.indent)
+            else:
+                with open(options.output, 'w') as f:
+                    print >> f, results_to_json_str(res, options.indent)
 
     return 0
 
