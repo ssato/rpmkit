@@ -81,6 +81,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Mar  1 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.10-1
+- [swapi] Implemented experimental support of various output formats w/ tablib
+
 * Fri Dec 14 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.9-1
 - [swapi] Fixed bugs to get CVE and CVSS metrics correctly
 - [rk-repodata] Fixed module loading path
