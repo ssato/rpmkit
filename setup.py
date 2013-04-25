@@ -11,9 +11,10 @@ sys.path.append(curdir)
 PACKAGE = "rpmkit"
 VERSION = "0.2.10.10"
 
-# daily snapshots:
-#VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
-
+# For daily snapshot versioning mode:
+if os.environ.get("_SNAPSHOT_BUILD", None) is not None:
+    import datetime
+    VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 data_files = []
 
