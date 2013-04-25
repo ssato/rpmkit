@@ -56,10 +56,8 @@ import sys
 try:
     import cx_Oracle
 except ImportError:
-    print >> sys.stderr, \
-        "This module depends on cx_Oracle module available from " + \
-        "http://cx-oracle.sourceforge.net"
-    raise
+    raise ImportError("This module depends on cx_Oracle module available "
+                      "from http://cx-oracle.sourceforge.net")
 
 import optparse
 import os
