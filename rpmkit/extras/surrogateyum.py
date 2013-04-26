@@ -46,7 +46,7 @@ try:
         logging.debug("cmd: " + cmd)
         return subprocess.check_output(cmd, shell=True)
 
-except NameError:
+except AttributeError:
     def subproc_check_output(cmd):
         logging.debug("cmd: " + cmd)
         return subprocess.Popen(cmd, shell=True,
