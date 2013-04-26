@@ -36,6 +36,8 @@ _WORKDIR = os.path.join(_CURDIR, "yumoffline-root-" + _TODAY)
 
 _DEFAULTS = dict(path=None, root=_WORKDIR, dist="rhel", force=False, verbose=False)
 
+# It seems there are versions of python of which subprocess module lacks
+# 'check_output' function:
 try:
     subproc_check_output = subprocess.check_output
 except NameError:
