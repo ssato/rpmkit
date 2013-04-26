@@ -77,11 +77,22 @@ def _is_errata_line(line, dist):
     return line and reg.match(line)
 
 
-def list_errata(root, dist):
+def list_errata_g(root, dist):
+    """
+    A generator to return errata found in the output result of 'yum list-sec'
+    one by one.
+
+    :param root: Pivot root dir where var/lib/rpm/Packages of the target host
+                 exists, e.g. /root/host_a/
+    :param dist: Distribution name
+    """
     c = "yum --installroot=%s list-sec" % os.path.abspath(root)
     logging.debug("cmd: " + c)
     result = subproc_check_output(shlex.split(c))
-    return [l for l in result.splitlines() if _is_errata_line(l, dist)]
+    if result:
+        for line in result.splitlines():
+            if _is_errata_line(line, dist):
+                yield line
 
 
 def get_errata_deails(errata):
@@ -121,10 +132,10 @@ def main():
     path = args[0]
 
     setup(path, options.root, options.force)
-    es = list_errata(options.root, options.dist)
+    es_g = list_errata_g(options.root, options.dist)
 
     output = open(options.output, 'w') if options.output else sys.stdout
-    for e in es:
+    for e in es_g:
         output.write(str(e) + "\n")
 
 
