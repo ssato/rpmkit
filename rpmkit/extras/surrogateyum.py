@@ -32,7 +32,7 @@ import sys
 
 _CURDIR = os.path.curdir
 _TODAY = datetime.datetime.now().strftime("%Y%m%d")
-_WORKDIR = os.path.join(_CURDIR, "yumoffline-root-" + _TODAY)
+_WORKDIR = os.path.join(_CURDIR, "surrogate-yum-root-" + _TODAY)
 
 _DEFAULTS = dict(path=None, root=_WORKDIR, dist="rhel", force=False, verbose=False)
 
