@@ -44,12 +44,12 @@ try:
         :param cmd: Command string
         """
         logging.debug("cmd: " + cmd)
-        return subprocess.check_output(shlex.split(cmd))[0]
+        return subprocess.check_output(cmd, shell=True)
 
 except NameError:
     def subproc_check_output(cmd):
         logging.debug("cmd: " + cmd)
-        return subprocess.Popen(shlex.split(cmd), shell=True,
+        return subprocess.Popen(cmd, shell=True,
                                 stdout=subprocess.PIPE).communicate()[0]
 
 
@@ -109,8 +109,11 @@ def list_errata_g(root, dist):
     result = surrogate_operation(root, "list-sec")
     if result:
         for line in result.splitlines():
+            #logging.debug("line=" + line)
             if _is_errata_line(line, dist):
                 yield line
+    else:
+        raise RuntimeError("Could not get the result. op=list-sec")
 
 
 def get_errata_deails(errata):
