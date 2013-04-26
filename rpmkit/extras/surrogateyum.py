@@ -117,6 +117,32 @@ def list_errata_g(root, dist):
         raise RuntimeError("Could not get the result. op=list-sec")
 
 
+def list_updates_g(root, *args):
+    """
+    FIXME: Ugly and maybe yum-version-dependent implementation.
+
+    A generator to return updates found in the output result of 'yum
+    check-update' one by one.
+
+    :param root: Pivot root dir where var/lib/rpm/Packages of the target host
+                 exists, e.g. /root/host_a/
+    """
+    # NOTE: 'yum check-update' looks returns !0 exit code (e.g. 100) when there
+    # are any updates found.
+    result = surrogate_operation(root, "check-update || :")
+    if result:
+        # It seems that yum prints out an empty line before listing updates.
+        in_list = False
+        for line in result.splitlines():
+            if line:
+                if in_list:
+                    yield line
+            else:
+                in_list = True
+    else:
+        raise RuntimeError("Could not get the result. op=list-sec")
+
+
 def get_errata_deails(errata):
     """
     TBD
@@ -135,7 +161,6 @@ def option_parser(defaults=_DEFAULTS):
                  help="Select distribution [%default]")
     p.add_option("-f", "--force", action="store_true",
                  help="Force overwrite rpmdb and outputs even if exists")
-    p.add_option("-o", "--output", help="Output filename [stdout]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -156,9 +181,8 @@ def main():
     setup(path, options.root, options.force)
     es_g = list_errata_g(options.root, options.dist)
 
-    output = open(options.output, 'w') if options.output else sys.stdout
     for e in es_g:
-        output.write(str(e) + "\n")
+        sys.stdout.write(str(e) + "\n")
 
 
 if __name__ == '__main__':
