@@ -278,7 +278,7 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
             run_yum_cmd(options.root, ' '.join(yum_argv))
         else:
             for x in f(options.root, options.dist):
-                sys.stdout.write(str(x.values()) + "\n")
+                sys.stdout.write(str(x) + "\n")
     else:
         run_yum_cmd(options.root, ' '.join(yum_argv))
 
