@@ -208,14 +208,14 @@ def split_yum_args(argv, sep=_ARGV_SEP):
     return (argv[:sep_idx], argv[sep_idx+1:])
 
 
-def main(argv=sys.argv[1:], sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
+def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
     p = option_parser()
 
-    if sep not in argv:
+    if sep not in argv[1:]:
         logging.error("No yum command and options specified after '--'")
         p.print_usage()
 
-    (self_argv, yum_argv) = split_yum_args(argv)
+    (self_argv, yum_argv) = split_yum_args(argv[1:])
 
     if not yum_argv:
         p.print_usage()
