@@ -39,12 +39,18 @@ _DEFAULTS = dict(path=None, root=_WORKDIR, dist="rhel", force=False, verbose=Fal
 # It seems there are versions of python of which subprocess module lacks
 # 'check_output' function:
 try:
-    subproc_check_output = subprocess.check_output
+    def subproc_check_output(cmd):
+        """
+        :param cmd: Command string
+        """
+        logging.debug("cmd: " + cmd)
+        return subprocess.check_output(shlex.split(cmd))[0]
+
 except NameError:
     def subproc_check_output(cmd):
-        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        res = p.communicate()
-        return res[0]
+        logging.debug("cmd: " + cmd)
+        return subprocess.Popen(shlex.split(cmd), shell=True,
+                                stdout=subprocess.PIPE).communicate()[0]
 
 
 def setup(path, root, force=False):
@@ -88,8 +94,7 @@ def surrogate_operation(root, operation):
     :param operation: Yum operation (command), e.g. 'list-sec'
     """
     c = "yum --installroot=%s %s" % (os.path.abspath(root), operation)
-    logging.debug("cmd: " + c)
-    return subproc_check_output(shlex.split(c))
+    return subproc_check_output(c)
 
 
 def list_errata_g(root, dist):
