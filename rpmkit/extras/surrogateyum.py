@@ -1,4 +1,4 @@
-#
+#! /usr/bin/python -tt
 # surrogateyum.py - Surrogate yum checks updates for other hosts
 #
 # Copyright (C) 2013 Satoru SATOH <ssato@redhat.com>
