@@ -1,8 +1,8 @@
 #! /usr/bin/python
 #
-import rpmkit.extras.surrogateyum
+import rpmkit.extras.surrogateyum as S
 import sys
 
-surrogateyum.main(sys.argv)
+S.main(sys.argv)
 
 # vim:sw=4:ts=4:et:
