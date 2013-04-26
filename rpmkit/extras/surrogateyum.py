@@ -79,6 +79,19 @@ def _is_errata_line(line, dist):
     return line and reg.match(line)
 
 
+def surrogate_operation(root, operation):
+    """
+    Surrogates yum operation (command).
+
+    :param root: Pivot root dir where var/lib/rpm/Packages of the target host
+                 exists, e.g. /root/host_a/
+    :param operation: Yum operation (command), e.g. 'list-sec'
+    """
+    c = "yum --installroot=%s %s" % (os.path.abspath(root), operation)
+    logging.debug("cmd: " + c)
+    return subproc_check_output(shlex.split(c))
+
+
 def list_errata_g(root, dist):
     """
     A generator to return errata found in the output result of 'yum list-sec'
@@ -88,9 +101,7 @@ def list_errata_g(root, dist):
                  exists, e.g. /root/host_a/
     :param dist: Distribution name
     """
-    c = "yum --installroot=%s list-sec" % os.path.abspath(root)
-    logging.debug("cmd: " + c)
-    result = subproc_check_output(shlex.split(c))
+    result = surrogate_operation(root, "list-sec")
     if result:
         for line in result.splitlines():
             if _is_errata_line(line, dist):
