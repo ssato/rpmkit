@@ -75,10 +75,10 @@ def setup(path, root, force=False):
 
 
 def detect_dist():
-    if os.path.exists("/etc/redhat-release"):
-        return "rhel"
-    elif os.path.exists("/etc/fedora-release"):
+    if os.path.exists("/etc/fedora-release"):
         return "fedora"
+    elif os.path.exists("/etc/redhat-release"):
+        return "rhel"
     else:
         return "uknown"
 
@@ -126,6 +126,8 @@ def list_errata_g(root, dist):
         for line in result[0].splitlines():
             if _is_errata_line(line, dist):
                 yield line
+            #else:
+            #    yield "Not matched: " + line
     else:
         result_fail("list-sec", result)
 
@@ -235,8 +237,8 @@ def main(argv=sys.argv[1:], sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
         f = None
         for c in fmtble_cmds.keys():
             if c in yum_argv:
-                logging.debug("cmd=%s, fun=%s" % (c, f))
                 f = fmtble_cmds[c]
+                logging.debug("cmd=%s, fun=%s" % (c, f))
                 break
 
         if f is None:
