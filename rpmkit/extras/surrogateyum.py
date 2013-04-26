@@ -221,7 +221,18 @@ _FORMATABLE_COMMANDS = {"check-update": list_updates_g,
 def option_parser(defaults=_DEFAULTS, sep=_ARGV_SEP,
                   fmt_cmds=_FORMATABLE_COMMANDS):
     p = optparse.OptionParser(
-        "%%prog [OPTION ...] %s yum_command_and_options..." % sep
+        """%%prog [OPTION ...] %s yum_command_and_options...
+
+Examples:
+  # Run %%prog on host accessible to any repos, for the host named
+  # rhel-6-client-2 which is not accessible to any repos provides updates:
+  # 1. list repos:
+  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- repolist
+  # 2. list updates:
+  %%prog -vf -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- check-update
+  # 3. list errata:
+  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec
+""" % sep
     )
     p.set_defaults(**defaults)
 
