@@ -34,24 +34,21 @@ _CURDIR = os.path.curdir
 _TODAY = datetime.datetime.now().strftime("%Y%m%d")
 _WORKDIR = os.path.join(_CURDIR, "surrogate-yum-root-" + _TODAY)
 
-_DEFAULTS = dict(path=None, root=_WORKDIR, dist="rhel", force=False, verbose=False)
+_DEFAULTS = dict(path=None, root=_WORKDIR, dist="auto", format=False,
+                 force=False, verbose=False)
+_ARGV_SEP = "--"
 
-# It seems there are versions of python of which subprocess module lacks
-# 'check_output' function:
-try:
-    subprocess.check_output
-    def subproc_check_output(cmd):
-        """
-        :param cmd: Command string
-        """
-        logging.debug("cmd: " + cmd)
-        return subprocess.check_output(cmd, shell=True)
 
-except AttributeError:
-    def subproc_check_output(cmd):
-        logging.debug("cmd: " + cmd)
-        return subprocess.Popen(cmd, shell=True,
-                                stdout=subprocess.PIPE).communicate()[0]
+def run(cmd):
+    """
+    :param cmd: Command string
+    :return: (output :: str ,err_output :: str, exitcode :: Int)
+    """
+    logging.debug("cmd: " + cmd)
+    p = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE,
+                         stdout=subprocess.PIPE)
+    (out, err) = p.communicate()
+    return (out, err, p.returncode)
 
 
 def setup(path, root, force=False):
@@ -77,13 +74,13 @@ def setup(path, root, force=False):
         shutil.copy2(path, rpmdb_Packages_path)
 
 
-def _is_errata_line(line, dist):
-    if dist == "fedora":
-        reg = re.compile(r"^FEDORA-")
-    else:  # RHEL:
-        reg = re.compile(r"^RH[SBE]A-")
-
-    return line and reg.match(line)
+def detect_dist():
+    if os.path.exists("/etc/redhat-release"):
+        return "rhel"
+    elif os.path.exists("/etc/fedora-release"):
+        return "fedora"
+    else:
+        return "uknown"
 
 
 def surrogate_operation(root, operation):
@@ -95,7 +92,24 @@ def surrogate_operation(root, operation):
     :param operation: Yum operation (command), e.g. 'list-sec'
     """
     c = "yum --installroot=%s %s" % (os.path.abspath(root), operation)
-    return subproc_check_output(c)
+    return run(c)
+
+
+def _is_errata_line(line, dist):
+    if dist == "fedora":
+        reg = re.compile(r"^FEDORA-")
+    else:  # RHEL:
+        reg = re.compile(r"^RH[SBE]A-")
+
+    return line and reg.match(line)
+
+
+def result_fail(cmd, result):
+    #logging.debug("result=(%s, %s, %d)" % result)
+    raise RuntimeError(
+        "Could not get the result. op=" + cmd + \
+        ", out=%s, err=%s, rc=%d" % result
+    )
 
 
 def list_errata_g(root, dist):
@@ -108,13 +122,12 @@ def list_errata_g(root, dist):
     :param dist: Distribution name
     """
     result = surrogate_operation(root, "list-sec")
-    if result:
-        for line in result.splitlines():
-            #logging.debug("line=" + line)
+    if result[-1] == 0:
+        for line in result[0].splitlines():
             if _is_errata_line(line, dist):
                 yield line
     else:
-        raise RuntimeError("Could not get the result. op=list-sec")
+        result_fail("list-sec", result)
 
 
 def list_updates_g(root, *args):
@@ -129,18 +142,18 @@ def list_updates_g(root, *args):
     """
     # NOTE: 'yum check-update' looks returns !0 exit code (e.g. 100) when there
     # are any updates found.
-    result = surrogate_operation(root, "check-update || :")
-    if result:
+    result = surrogate_operation(root, "check-update")
+    if result[0]:
         # It seems that yum prints out an empty line before listing updates.
         in_list = False
-        for line in result.splitlines():
+        for line in result[0].splitlines():
             if line:
                 if in_list:
                     yield line
             else:
                 in_list = True
     else:
-        raise RuntimeError("Could not get the result. op=list-sec")
+        result_fail("check-update", result)
 
 
 def get_errata_deails(errata):
@@ -152,37 +165,87 @@ def get_errata_deails(errata):
     return None
 
 
-def option_parser(defaults=_DEFAULTS):
-    p = optparse.OptionParser("%prog [OPTION ...] path_to_Packages_rpmdb")
+def run_yum_cmd(root, yum_args, *args):
+    result = surrogate_operation(root, yum_args)
+    if result[-1] == 0:
+        print result[0]
+    else:
+        # FIXME: Ugly code based on heuristics.
+        if "check-update" in yum_args:
+            print result[0]
+        else:
+            result_fail(yum_args, result)
+
+
+_FORMATABLE_COMMANDS = {"check-update": list_updates_g,
+                        "list-sec": list_errata_g, }
+
+
+def option_parser(defaults=_DEFAULTS, sep=_ARGV_SEP, fmt_cmds=_FORMATABLE_COMMANDS):
+    p = optparse.OptionParser(
+        "%%prog [OPTION ...] %s yum_command_and_options..." % sep
+    )
     p.set_defaults(**defaults)
 
+    p.add_option("-p", "--path", help="Path to the rpmdb (/var/lib/rpm/Packages)")
     p.add_option("-r", "--root", help="Output root dir [%default]")
-    p.add_option("-d", "--dist", choices=("rhel", "fedora"),
+    p.add_option("-d", "--dist", choices=("rhel", "fedora", "auto"),
                  help="Select distribution [%default]")
+    p.add_option("-F", "--format", action="store_true",
+                 help="Format outputs of some commands ("
+                       ", ".join(fmt_cmds.keys()) + ") [%default]")
     p.add_option("-f", "--force", action="store_true",
-                 help="Force overwrite rpmdb and outputs even if exists")
+                 help="Force overwrite pivot rpmdb and outputs even if exists")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
 
 
-def main():
+def split_yum_args(argv, sep=_ARGV_SEP):
+    sep_idx = argv.index("--")
+    return (argv[:sep_idx], argv[sep_idx+1:])
+
+
+def main(argv=sys.argv[1:], sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
     p = option_parser()
-    (options, args) = p.parse_args()
 
-    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
+    if sep not in argv:
+        logging.error("No yum command and options specified after '--'")
+        p.print_usage()
 
-    if not args:
+    (self_argv, yum_argv) = split_yum_args(argv)
+
+    if not yum_argv:
         p.print_usage()
         sys.exit(-1)
 
-    path = args[0]
+    (options, args) = p.parse_args(self_argv)
 
-    setup(path, options.root, options.force)
-    es_g = list_errata_g(options.root, options.dist)
+    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
 
-    for e in es_g:
-        sys.stdout.write(str(e) + "\n")
+    if options.dist == "auto":
+        options.dist = detect_dist()
+
+    if not options.path:
+        options.path = raw_input("Path to the rpm db to surrogate > ")
+
+    setup(options.path, options.root, options.force)
+
+    if options.format:
+        f = None
+        for c in fmtble_cmds.keys():
+            if c in yum_argv:
+                logging.debug("cmd=%s, fun=%s" % (c, f))
+                f = fmtble_cmds[c]
+                break
+
+        if f is None:
+            run_yum_cmd(options.root, ' '.join(yum_argv))
+        else:
+            for x in f(options.root, options.dist):
+                sys.stdout.write(str(x) + "\n")
+    else:
+        run_yum_cmd(options.root, ' '.join(yum_argv))
 
 
 if __name__ == '__main__':
