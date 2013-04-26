@@ -51,7 +51,7 @@ def run(cmd):
     return (out, err, p.returncode)
 
 
-def setup(path, root, force=False):
+def setup_data(path, root, force=False):
     """
     :param path: Path to the 'Packages' rpm database originally came from
                  /var/lib/rpm on the target host.
@@ -107,7 +107,7 @@ def _is_errata_line(line, dist):
 def result_fail(cmd, result):
     #logging.debug("result=(%s, %s, %d)" % result)
     raise RuntimeError(
-        "Could not get the result. op=" + cmd + \
+        "Could not get the result. op=" + cmd +
         ", out=%s, err=%s, rc=%d" % result
     )
 
@@ -125,11 +125,46 @@ def list_errata_g(root, dist):
     if result[-1] == 0:
         for line in result[0].splitlines():
             if _is_errata_line(line, dist):
-                yield line
+                yield dict(zip(("advisory", "type", "package"),
+                               line.split()))
             #else:
             #    yield "Not matched: " + line
     else:
         result_fail("list-sec", result)
+
+
+def parse_update_line(line):
+    """
+
+    >>> s = "bind-libs.x86_64  32:9.8.2-0.17.rc1.el6_4.4  rhel-x86_64-server-6"
+    >>> p = parse_update_line(s)
+    >>> assert p["name"] == "bind-libs"
+    >>> assert p["arch"] == "x86_64"
+    >>> assert p["epoch"] == "32"
+    >>> assert p["version"] == "9.8.2"
+    >>> assert p["release"] == "0.17.rc1.el6_4.4"
+
+    >>> s = "perl-HTTP-Tiny.noarch   0.017-242.fc18   updates"
+    >>> p = parse_update_line(s)
+    >>> assert p["name"] == "perl-HTTP-Tiny"
+    >>> assert p["arch"] == "noarch"
+    >>> assert p["epoch"] == "0"
+    >>> assert p["version"] == "0.017"
+    >>> assert p["release"] == "242.fc18"
+    """
+    preg = re.compile(r"^(?P<name>[A-Za-z0-9][^.]+)[.](?P<arch>\w+) +" +
+                      r"(?:(?P<epoch>\d+):)?(?P<version>[^-]+)-" +
+                      r"(?P<release>\S+) +(?P<repo>\S+)$")
+
+    m = preg.match(line)
+    if m:
+        p = m.groupdict()
+        if p["epoch"] is None:
+            p["epoch"] = "0"
+
+        return p
+    else:
+        return dict()
 
 
 def list_updates_g(root, *args):
@@ -151,7 +186,7 @@ def list_updates_g(root, *args):
         for line in result[0].splitlines():
             if line:
                 if in_list:
-                    yield line
+                    yield parse_update_line(line)
             else:
                 in_list = True
     else:
@@ -183,13 +218,15 @@ _FORMATABLE_COMMANDS = {"check-update": list_updates_g,
                         "list-sec": list_errata_g, }
 
 
-def option_parser(defaults=_DEFAULTS, sep=_ARGV_SEP, fmt_cmds=_FORMATABLE_COMMANDS):
+def option_parser(defaults=_DEFAULTS, sep=_ARGV_SEP,
+                  fmt_cmds=_FORMATABLE_COMMANDS):
     p = optparse.OptionParser(
         "%%prog [OPTION ...] %s yum_command_and_options..." % sep
     )
     p.set_defaults(**defaults)
 
-    p.add_option("-p", "--path", help="Path to the rpmdb (/var/lib/rpm/Packages)")
+    p.add_option("-p", "--path",
+                 help="Path to the rpmdb (/var/lib/rpm/Packages)")
     p.add_option("-r", "--root", help="Output root dir [%default]")
     p.add_option("-d", "--dist", choices=("rhel", "fedora", "auto"),
                  help="Select distribution [%default]")
@@ -227,7 +264,7 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
     if not options.path:
         options.path = raw_input("Path to the rpm db to surrogate > ")
 
-    setup(options.path, options.root, options.force)
+    setup_data(options.path, options.root, options.force)
 
     if options.format:
         f = None
@@ -241,7 +278,7 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
             run_yum_cmd(options.root, ' '.join(yum_argv))
         else:
             for x in f(options.root, options.dist):
-                sys.stdout.write(str(x) + "\n")
+                sys.stdout.write(str(x.values()) + "\n")
     else:
         run_yum_cmd(options.root, ' '.join(yum_argv))
 
