@@ -1,5 +1,5 @@
 #
-# yumoffline.py - Offline mode (!?) yum
+# surrogateyum.py - Surrogate yum checks updates for other hosts
 #
 # Copyright (C) 2013 Satoru SATOH <ssato@redhat.com>
 #
@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#from rpmkit.utils import concat, uniq, uconcat
 from logging import DEBUG, INFO
 
 import datetime
