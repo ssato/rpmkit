@@ -39,6 +39,7 @@ _DEFAULTS = dict(path=None, root=_WORKDIR, dist="rhel", force=False, verbose=Fal
 # It seems there are versions of python of which subprocess module lacks
 # 'check_output' function:
 try:
+    subprocess.check_output
     def subproc_check_output(cmd):
         """
         :param cmd: Command string
