@@ -226,11 +226,11 @@ def option_parser(defaults=_DEFAULTS, sep=_ARGV_SEP,
 Examples:
   # Run %%prog on host accessible to any repos, for the host named
   # rhel-6-client-2 which is not accessible to any repos provides updates:
-  # 1. list repos:
+  # a. list repos:
   %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- repolist
-  # 2. list updates:
+  # b. list updates:
   %%prog -vf -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- check-update
-  # 3. list errata:
+  # c. list errata:
   %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec
 """ % sep
     )
