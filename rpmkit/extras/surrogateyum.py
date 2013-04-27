@@ -230,6 +230,9 @@ Examples:
   # a. list repos:
   %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- repolist
 
+  # a'. same as the above except for the path of rpmdb:
+  %%prog -p ./rhel-6-client-2/var/lib/rpm/Packages -- repolist
+
   # b. list applicable updates:
   %%prog -vf -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- check-update
 
@@ -241,7 +244,7 @@ Examples:
 
     p.add_option("-p", "--path",
                  help="Path to the rpmdb (/var/lib/rpm/Packages)")
-    p.add_option("-r", "--root", help="Output root dir [%default]")
+    p.add_option("-r", "--root", help="Output root dir [the path or %default]")
     p.add_option("-d", "--dist", choices=("rhel", "fedora", "auto"),
                  help="Select distribution [%default]")
     p.add_option("-F", "--format", action="store_true",
@@ -278,7 +281,10 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
     if not options.path:
         options.path = raw_input("Path to the rpm db to surrogate > ")
 
-    setup_data(options.path, options.root, options.force)
+    if options.path.endswith("/var/lib/rpm/Packages"):
+        options.root = options.path.replace("/var/lib/rpm/Packages", "")
+    else:
+        setup_data(options.path, options.root, options.force)
 
     if options.format:
         f = None
