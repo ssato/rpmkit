@@ -89,7 +89,7 @@ def setup_data(path, root, force=False, use_other_rpmdb=True,
             if not os.path.exists(src):
                 logging.warn("File does not exist: " + src)
 
-            copyfile(src, os.path.join(rpmdb_path, f))
+            copyfile(src, os.path.join(rpmdb_path, f), force)
 
 
 def detect_dist():
