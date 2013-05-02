@@ -38,6 +38,8 @@ _DEFAULTS = dict(path=None, root=_WORKDIR, dist="auto", format=False,
                  force=False, verbose=False)
 _ARGV_SEP = "--"
 
+_RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
+
 
 def run(cmd):
     """
@@ -51,12 +53,22 @@ def run(cmd):
     return (out, err, p.returncode)
 
 
-def setup_data(path, root, force=False):
+def copyfile(src, dst, force):
+    if os.path.exists(dst) and not force:
+        raise RuntimeError("Already exists: " + dst)
+    else:
+        logging.debug("Copying: %s -> %s/" % (src, os.path.dirname(dst)))
+        shutil.copy2(src, dst)
+
+
+def setup_data(path, root, force=False, use_other_rpmdb=False,
+               rpmdb_filenames=_RPM_DB_FILENAMES):
     """
     :param path: Path to the 'Packages' rpm database originally came from
                  /var/lib/rpm on the target host.
     :param root: The temporal root directry to put the rpm database.
     :param force: Force overwrite the rpmdb file previously copied.
+    :param use_other_rpmdb: If other rpm dabase files are used or not.
     """
     assert root != "/"
 
@@ -67,11 +79,12 @@ def setup_data(path, root, force=False):
         logging.debug("Creating rpmdb dir: " + rpmdb_path)
         os.makedirs(rpmdb_path)
 
-    if os.path.exists(rpmdb_Packages_path) and not force:
-        raise RuntimeError("RPM DB already exists: " + rpmdb_Packages_path)
-    else:
-        logging.debug("Copying RPM DB: %s -> %s/" % (path, rpmdb_path))
-        shutil.copy2(path, rpmdb_Packages_path)
+    copyfile(path, rpmdb_Packages_path, force)
+
+    if use_other_rpmdb:
+        srcdir = os.path.dirname(path)
+        for f in rpmdb_filenames:
+            copyfile(os.path.join(srcdir, f), os.path.join(rpmdb_path, f))
 
 
 def detect_dist():
@@ -81,6 +94,15 @@ def detect_dist():
         return "rhel"
     else:
         return "uknown"
+
+
+def check_if_rpmdb_files_exist(path, rpmdb_filenames=_RPM_DB_FILENAMES):
+    """
+    :param path: Path to 'Packages' rpm database file where other files might
+                 exists.
+    """
+    dbdir = os.path.dirname(path)
+    return all(os.path.exists(os.path.join(dbdir, f) for f in rpmdb_filenames))
 
 
 def surrogate_operation(root, operation):
@@ -237,9 +259,8 @@ Examples:
   %%prog -vf -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- check-update
 
   # c. list applicable errata:
-  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec
-""" % sep
-    )
+  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec""" % sep)
+
     p.set_defaults(**defaults)
 
     p.add_option("-p", "--path",
