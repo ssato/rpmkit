@@ -58,7 +58,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc README
+%doc README.rst
 %{_bindir}/buildsrpm
 %{_bindir}/identrpm
 %{_bindir}/list-requires-by-package-name.sh
@@ -74,7 +74,7 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %files          extras
-%doc README examples
+%doc README.rst examples
 %{_bindir}/rk-*
 %{_bindir}/yum-surrogate
 %{python_sitelib}/rpmkit/extras/*.py*

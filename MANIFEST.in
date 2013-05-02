@@ -1,5 +1,5 @@
 include MANIFEST.in
-include README
+include README.rst
 include rpmkit.spec.in
 include setup.py
 recursive-include rpmkit *.py
