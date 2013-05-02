@@ -36,7 +36,7 @@ _TODAY = datetime.datetime.now().strftime("%Y%m%d")
 _WORKDIR = os.path.join(_CURDIR, "surrogate-yum-root-" + _TODAY)
 
 _DEFAULTS = dict(path=None, root=_WORKDIR, dist="auto", format=False,
-                 force=False, verbose=False)
+                 link=False, force=False, verbose=False)
 _ARGV_SEP = "--"
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
@@ -54,15 +54,24 @@ def run(cmd):
     return (out, err, p.returncode)
 
 
-def copyfile(src, dst, force):
-    if os.path.exists(dst) and not force:
-        raise RuntimeError("Already exists: " + dst)
+def copyfile(src, dst, force, link=False):
+    if os.path.exists(dst):
+        if force:
+            os.remove(dst)
+        else:
+            raise RuntimeError("Already exists: " + dst)
+
+    if link:
+        logging.debug(
+            "Create a symlink: %s -> %s/" % (src, os.path.dirname(dst))
+        )
+        os.symlink(src, dst)
     else:
         logging.debug("Copying: %s -> %s/" % (src, os.path.dirname(dst)))
         shutil.copy2(src, dst)
 
 
-def setup_data(path, root, force=False, use_other_rpmdb=True,
+def setup_data(path, root, force=False, use_other_rpmdb=True, link=False,
                rpmdb_filenames=_RPM_DB_FILENAMES):
     """
     :param path: Path to the 'Packages' rpm database originally came from
@@ -80,7 +89,7 @@ def setup_data(path, root, force=False, use_other_rpmdb=True,
         logging.debug("Creating rpmdb dir: " + rpmdb_path)
         os.makedirs(rpmdb_path)
 
-    copyfile(path, rpmdb_Packages_path, force)
+    copyfile(path, rpmdb_Packages_path, force, link)
 
     if use_other_rpmdb:
         srcdir = os.path.dirname(path)
@@ -89,7 +98,7 @@ def setup_data(path, root, force=False, use_other_rpmdb=True,
             if not os.path.exists(src):
                 logging.warn("File does not exist: " + src)
 
-            copyfile(src, os.path.join(rpmdb_path, f), force)
+            copyfile(src, os.path.join(rpmdb_path, f), force, link)
 
 
 def detect_dist():
@@ -276,6 +285,8 @@ Examples:
     p.add_option("-F", "--format", action="store_true",
                  help="Format outputs of some commands ("
                        ", ".join(fmt_cmds.keys()) + ") [%default]")
+    p.add_option("-L", "--link", action="store_true",
+                 help="Create symlinks to rpmdb files instead of copy")
     p.add_option("-f", "--force", action="store_true",
                  help="Force overwrite pivot rpmdb and outputs even if exists")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -310,7 +321,7 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
     if options.path.endswith("/var/lib/rpm/Packages"):
         options.root = options.path.replace("/var/lib/rpm/Packages", "")
     else:
-        setup_data(options.path, options.root, options.force)
+        setup_data(options.path, options.root, options.force, options.link)
 
     if options.format:
         f = None
