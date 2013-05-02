@@ -1,5 +1,6 @@
 #! /usr/bin/python -tt
-# surrogateyum.py - Surrogate yum checks updates for other hosts
+# surrogateyum.py - Surrogate yum execution for other hosts have no access to
+# any yum repositories
 #
 # Copyright (C) 2013 Satoru SATOH <ssato@redhat.com>
 #
@@ -61,7 +62,7 @@ def copyfile(src, dst, force):
         shutil.copy2(src, dst)
 
 
-def setup_data(path, root, force=False, use_other_rpmdb=False,
+def setup_data(path, root, force=False, use_other_rpmdb=True,
                rpmdb_filenames=_RPM_DB_FILENAMES):
     """
     :param path: Path to the 'Packages' rpm database originally came from
@@ -84,7 +85,11 @@ def setup_data(path, root, force=False, use_other_rpmdb=False,
     if use_other_rpmdb:
         srcdir = os.path.dirname(path)
         for f in rpmdb_filenames:
-            copyfile(os.path.join(srcdir, f), os.path.join(rpmdb_path, f))
+            src = os.path.join(srcdir, f)
+            if not os.path.exists(src):
+                logging.warn("File does not exist: " + src)
+
+            copyfile(src, os.path.join(rpmdb_path, f))
 
 
 def detect_dist():
