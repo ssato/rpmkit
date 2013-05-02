@@ -78,7 +78,7 @@ Here is an example session running yum-surrogate::
   This system is receiving updates from RHN Classic or RHN Satellite.
   repo id                     repo name                                                                   status
   *epel                       Extra Packages for Enterprise Linux 6 - x86_64                               8,629
-  rhel-nrt-ssato              Custom yum repository on file.nrt.redhat.com by ssato                           58
+  rhel-nrt-ssato              Custom yum repository on ********.redhat.com by ssato                           58
   rhel-x86_64-server-6        Red Hat Enterprise Linux Server (v. 6 for 64-bit x86_64)                    10,485
   repolist: 19,172
   [root@rhel-6-client-1 ~]# ssh rhel-6-client-2 "yum repolist"
