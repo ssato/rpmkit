@@ -16,7 +16,6 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python
 Requires:       rpm-python
-Requires:       sqlite
 Requires:       python-BeautifulSoup
 
 
@@ -25,14 +24,22 @@ RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 
 
 %package        extras
-Summary:        Extra and experimental modules and tools of %{name}
+Summary:        Extra and experimental modules and tools in %{name}
 Requires:       %{name} = %{version}-%{release}
 Requires:       python-matplotlib
 #Requires:       cx_Oracle
 
-
 %description    extras
 This package provides experimental modules and tools of %{name}.
+
+
+%package        sqldb
+Summary:        rpms2sqldb and related tools in %{name}
+Requires:       %{name} = %{version}-%{release}
+Requires:       sqlite
+
+%description    sqldb
+This package contains rpms2sqldb and related tools in %{name}.
 
 
 %prep
@@ -61,11 +68,8 @@ rm -rf $RPM_BUILD_ROOT
 %doc README.rst
 %{_bindir}/buildsrpm
 %{_bindir}/identrpm
-%{_bindir}/list-requires-by-package-name.sh
-%{_bindir}/list-srpmnames-by-file.sh
 %{_bindir}/rpm2json
 %{_bindir}/rpms2csv
-%{_bindir}/rpms2sqldb
 %{_bindir}/swapi
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/imported/*.py*
@@ -79,6 +83,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/yum-surrogate
 %{python_sitelib}/rpmkit/extras/*.py*
 %{python_sitelib}/rpmkit/rhncachedb/*.py*
+
+
+%files          sqldb
+%doc README.rst
+%{_bindir}/rpms2sqldb
+%{_bindir}/list-requires-by-package-name.sh
+%{_bindir}/list-srpmnames-by-file.sh
 
 
 %changelog
