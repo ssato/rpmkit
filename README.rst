@@ -30,15 +30,15 @@ Here is an example session running yum-surrogate::
 
   [root@rhel-6-client-1 ~]# scp rhel-6-client-2:/var/lib/rpm/{Packages,Basenames,Name,Providename,Requirename} rhel-6-client-2/rpmdb/
   root@rhel-6-client-2's password:
-  Packages                                                                                                                              100%   16MB   5.3MB/s   00:03
+  Packages                                                                                          100%   16MB   5.3MB/s   00:03
   root@rhel-6-client-2's password:
-  Basenames                                                                                                                             100% 1476KB   1.4MB/s   00:00
+  Basenames                                                                                         100% 1476KB   1.4MB/s   00:00
   root@rhel-6-client-2's password:
-  Name                                                                                                                                  100%   12KB  12.0KB/s   00:00
+  Name                                                                                              100%   12KB  12.0KB/s   00:00
   root@rhel-6-client-2's password:
-  Providename                                                                                                                           100% 1232KB   1.2MB/s   00:00
+  Providename                                                                                       100% 1232KB   1.2MB/s   00:00
   root@rhel-6-client-2's password:
-  Requirename                                                                                                                           100%  116KB 116.0KB/s   00:00
+  Requirename                                                                                       100%  116KB 116.0KB/s   00:00
   [root@rhel-6-client-1 ~]# yum-surrogate -L -v -f -p ./rhel-6-client-2/rpmdb/Packages -r rhel-6-client-2/ -- list-sec | grep RHSA
   DEBUG:root:Creating rpmdb dir: rhel-6-client-2/var/lib/rpm
   DEBUG:root:Create a symlink: ./rhel-6-client-2/rpmdb/Packages -> rhel-6-client-2/var/lib/rpm/
