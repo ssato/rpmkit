@@ -65,7 +65,7 @@ def copyfile(src, dst, force, link=False):
         logging.debug(
             "Create a symlink: %s -> %s/" % (src, os.path.dirname(dst))
         )
-        os.symlink(src, dst)
+        os.symlink(os.path.abspath(src), os.path.abspath(dst))
     else:
         logging.debug("Copying: %s -> %s/" % (src, os.path.dirname(dst)))
         shutil.copy2(src, dst)
