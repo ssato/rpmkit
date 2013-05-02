@@ -40,4 +40,4 @@ reqs="$reqs "$($sqlite $sqldb "$sql")
 
 for r in $reqs; do echo $r; done | sort | uniq
 
-# vim: set sw=4 ts=4 et:
+# vim:sw=2:ts=2:et:

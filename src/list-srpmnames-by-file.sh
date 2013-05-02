@@ -32,4 +32,4 @@ fi
 #$sqlite $sqldb "$sql" | sort
 $sqlite $sqldb "$sql"
 
-# vim: set sw=4 ts=4 et:
+# vim:sw=2:ts=2:et:
