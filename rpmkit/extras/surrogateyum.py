@@ -71,7 +71,7 @@ def copyfile(src, dst, force, link=False):
         shutil.copy2(src, dst)
 
 
-def setup_data(path, root, force=False, use_other_rpmdb=True, link=False,
+def setup_data(path, root, force=False, link=False, use_other_rpmdb=True,
                rpmdb_filenames=_RPM_DB_FILENAMES):
     """
     :param path: Path to the 'Packages' rpm database originally came from
