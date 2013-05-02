@@ -6,6 +6,8 @@
 #
 # Requirements: rpm-python, rpm-build
 #
+from logging import DEBUG, INFO
+
 import rpmkit.shell as SH
 
 import logging
@@ -22,6 +24,9 @@ def get_source0_url_from_rpmspec(rpmspec):
     Parse given rpm spec and return (source0's url, source0).
 
     It may throw ValuError("can't parse specfile"), etc.
+
+    :param rpmspec: Path to the RPM SPEC file
+    :return: (URL_of_source0, source0_basename)
     """
     spec = rpm.spec(rpmspec)
 
@@ -31,11 +36,12 @@ def get_source0_url_from_rpmspec(rpmspec):
     src0 = [s for s in spec.sources if is_source(s)][0][0]
     assert src0, "SOURCE0 should not be empty!"
 
-    # First, try SOURCE0:
-    if re.match(r"(ftp|http|https)://", src0):
+    # 1. Try SOURCE0:
+    if re.match(r"^(ftp|http|https)://", src0):
         logging.debug("URL=" + src0)
         return (src0, os.path.basename(src0))
 
+    # 2. Try URL + basename(src0):
     base_url = spec.sourceHeader["URL"]
     assert base_url, "URL should not be empty!"
 
@@ -45,7 +51,12 @@ def get_source0_url_from_rpmspec(rpmspec):
 
 def download(url, out, data=None, headers={}):
     """
-    Download file from given URL and save as $out.
+    Download file from given URL and save as ``out``.
+
+    :param url: URL of the file
+    :param out: Output file path
+    :param data: Data to send to when requesting the file
+    :param headers: Extra headers to send to
     """
     req = urllib2.Request(url=url, data=data, headers=headers)
     f = urllib2.urlopen(req)
@@ -55,34 +66,40 @@ def download(url, out, data=None, headers={}):
 
 
 def download_src0(rpmspec, url, out):
+    """
+    :param rpmspec: Path to the RPM SPEC file
+    :param url: URL candidate for the source0
+    :param out: Output file path
+    """
     try:
         download(url, out)
 
     except urllib2.HTTPError, e:
-        logging.warn("Could not download source0's url.")
-        url = raw_input("Input the URL of source0 > ")
+        logging.warn("Could not download source0 from: " + url)
+        url = raw_input("Input the correct URL of source0 > ")
 
         download(url, out)
 
 
 def do_buildsrpm(rpmspec, workdir):
-    cmd = " ".join([
-        "rpmbuild",
-        "--define \"_srcrpmdir %(workdir)s\"",
-        "--define \"_sourcedir %(workdir)s\"",
-        "--define \"_buildroot %(workdir)s\"",
-        "-bs %(spec)s",
-    ]) % { "workdir": workdir, "spec": rpmspec, }
+    """
+    Build the source rpm.
+
+    :param rpmspec: Path to the RPM SPEC file
+    :param workdir: Working dir to make RPM files
+    """
+    cs = ["rpmbuild", "--define \"_srcrpmdir %(workdir)s\"",
+          "--define \"_sourcedir %(workdir)s\"",
+          "--define \"_buildroot %(workdir)s\"",
+          "-bs %(spec)s"]
+    cmd = ' '.join(cs) % dict(workdir=workdir, spec=rpmspec)
 
     logging.info("Creating src.rpm from %s in %s" % (rpmspec, workdir))
     SH.run(cmd, workdir=workdir, stop_on_error=True)
 
 
 def main(argv=sys.argv):
-    defaults = {
-        "debug": False,
-        "workdir": None,
-    }
+    defaults = dict(debug=False, workdir=None)
 
     p = optparse.OptionParser("%prog [Options...] RPM_SPEC")
     p.set_defaults(**defaults)
@@ -96,10 +113,7 @@ def main(argv=sys.argv):
         p.print_usage()
         sys.exit(-1)
 
-    if options.debug:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=(DEBUG if options.debug else INFO), )
 
     rpmspec = os.path.abspath(args[0])
     logging.info("rpm spec is " + rpmspec)
@@ -112,6 +126,10 @@ def main(argv=sys.argv):
     (url, src0) = get_source0_url_from_rpmspec(rpmspec)
     s0 = os.path.join(options.workdir, src0)
 
+    if not os.path.exists(options.workdir):
+        logging.debug("Creating working dir: " + options.workdir)
+        os.makedirs(options.workdir)
+
     if not os.path.exists(s0):
         download_src0(rpmspec, url, s0)
 
@@ -120,6 +138,5 @@ def main(argv=sys.argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-
 
 # vim:sw=4:ts=4:et:
