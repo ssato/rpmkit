@@ -70,8 +70,8 @@ Here is an example::
   $ identrpm --format "{name}: {summary}" autoconf-2.59-12
   autoconf: A GNU tool for automatically configuring source code.
 
-.. note:: As identrpm delegate RHN access to swapi, swapi must be configured
-          when running identrpm.
+.. note:: identrpm delegates swapi to query RHN to get necessary package
+          metadata, so swapi must be configured when running identrpm.
 
 rpm2json
 ---------
