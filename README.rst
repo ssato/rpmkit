@@ -152,7 +152,7 @@ Here is an example::
   DEBUG:root:Create a symlink: ./rhel-6-client-2/rpmdb/Name -> rhel-6-client-2/var/lib/rpm/
   DEBUG:root:Create a symlink: ./rhel-6-client-2/rpmdb/Providename -> rhel-6-client-2/var/lib/rpm/
   DEBUG:root:Create a symlink: ./rhel-6-client-2/rpmdb/Requirename -> rhel-6-client-2/var/lib/rpm/
-  DEBUG:root:cmd: yum --installroot=/root/rhel-6-client-2 list-sec
+  DEBUG:root:Run command: yum --installroot=/root/rhel-6-client-2 list-sec
   RHSA-2013:0550 Moderate/Sec.  bind-libs-32:9.8.2-0.17.rc1.el6.3.x86_64
   RHSA-2013:0689 Important/Sec. bind-libs-32:9.8.2-0.17.rc1.el6_4.4.x86_64
   RHSA-2013:0550 Moderate/Sec.  bind-utils-32:9.8.2-0.17.rc1.el6.3.x86_64
