@@ -47,7 +47,7 @@ def run(cmd):
     :param cmd: Command string
     :return: (output :: str ,err_output :: str, exitcode :: Int)
     """
-    logging.debug("cmd: " + cmd)
+    logging.debug("Run command: " + cmd)
     p = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE,
                          stdout=subprocess.PIPE)
     (out, err) = p.communicate()
