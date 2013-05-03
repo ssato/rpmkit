@@ -72,7 +72,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/rpms2csv
 %{_bindir}/swapi
 %{python_sitelib}/rpmkit/*.py*
-%{python_sitelib}/rpmkit/imported/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{_localstatedir}/cache/swapi
 

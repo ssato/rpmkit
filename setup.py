@@ -79,7 +79,6 @@ setup(name=PACKAGE,
     packages=[
         "rpmkit",
         "rpmkit.extras",
-        "rpmkit.imported",
         "rpmkit.rhncachedb",
         "rpmkit.tests",
     ],
