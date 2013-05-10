@@ -67,12 +67,10 @@ def copyfile(src, dst, force, link=False):
             raise RuntimeError("Already exists: " + dst)
 
     if link:
-        logging.debug(
-            "Create a symlink: %s -> %s" % (src, dst)
-        )
+        logging.debug("Create a symlink: %s -> %s" % (src, dst))
         os.symlink(src, dst)
     else:
-        logging.debug("Copying: %s -> %s" % (src, dst)
+        logging.debug("Copying: %s -> %s" % (src, dst))
         shutil.copy2(src, dst)
 
 
