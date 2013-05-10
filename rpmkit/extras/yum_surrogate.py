@@ -265,9 +265,15 @@ def option_parser(defaults=_DEFAULTS, sep=_ARGV_SEP,
     p = optparse.OptionParser(
         """%%prog [OPTION ...] %s yum_command_and_options...
 
+NOTE:
+  The host surrogates yum run must have access to all of the yum repositories
+  provide any updates which the target host needs. And by necessity, the host
+  runs this script must be same architecutre as the target host, and runs same
+  OS version as the one the target runs.
+
 Examples:
   # Run %%prog on host accessible to any repos, for the host named
-  # rhel-6-client-2 which don't have access to any repos provides updates:
+  # rhel-6-client-2 which don't have access to any repos provide updates:
 
   # a. list repos:
   %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- repolist
