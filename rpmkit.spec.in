@@ -92,6 +92,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri May 10 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11-1
+- [yum-surrogate] Add to surrogate running yum on hosts have access to yum
+  repos for hosts have no or only partial access to yum repos
+
 * Fri Mar  1 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.10-1
 - [swapi] Implemented experimental support of various output formats w/ tablib
 
