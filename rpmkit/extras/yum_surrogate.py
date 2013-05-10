@@ -250,7 +250,7 @@ def run_yum_cmd(root, yum_args, *args):
         print result[0]
     else:
         # FIXME: Ugly code based on heuristics.
-        if "check-update" in yum_args:
+        if "check-update" in yum_args or "--downloadonly" in yum_args:
             print result[0]
         else:
             failure(yum_args, result)
