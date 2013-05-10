@@ -55,6 +55,11 @@ def run(cmd):
 
 
 def copyfile(src, dst, force, link=False):
+    src = os.path.abspath(os.path.realpath(src))
+    dst = os.path.abspath(os.path.realpath(dst))
+
+    assert src != dst, "Copying source and destination are same file!"
+
     if os.path.exists(dst):
         if force:
             os.remove(dst)
@@ -63,11 +68,11 @@ def copyfile(src, dst, force, link=False):
 
     if link:
         logging.debug(
-            "Create a symlink: %s -> %s/" % (src, os.path.dirname(dst))
+            "Create a symlink: %s -> %s" % (src, dst)
         )
-        os.symlink(os.path.abspath(src), os.path.abspath(dst))
+        os.symlink(src, dst)
     else:
-        logging.debug("Copying: %s -> %s/" % (src, os.path.dirname(dst)))
+        logging.debug("Copying: %s -> %s" % (src, dst)
         shutil.copy2(src, dst)
 
 
