@@ -65,7 +65,8 @@ def copyfile(src, dst, force, link=False):
         if force:
             os.remove(dst)
         else:
-            raise RuntimeError("Already exists: " + dst)
+            logging.warn("Already exists: " + dst)
+            return
 
     if link:
         logging.debug("Create a symlink: %s -> %s" % (src, dst))
