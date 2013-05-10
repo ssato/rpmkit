@@ -36,7 +36,8 @@ _TODAY = datetime.datetime.now().strftime("%Y%m%d")
 _WORKDIR = os.path.join(_CURDIR, "surrogate-yum-root-" + _TODAY)
 
 _DEFAULTS = dict(path=None, root=_WORKDIR, dist="auto", format=False,
-                 link=False, force=False, verbose=False)
+                 link=False, force=False, verbose=False,
+                 other_db=False)
 _ARGV_SEP = "--"
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
@@ -74,34 +75,35 @@ def copyfile(src, dst, force, link=False):
         shutil.copy2(src, dst)
 
 
-def setup_data(path, root, force=False, link=False, use_other_rpmdb=True,
+def setup_data(path, root, force=False, link=False, refer_other_rpmdb=True,
                rpmdb_filenames=_RPM_DB_FILENAMES):
     """
     :param path: Path to the 'Packages' rpm database originally came from
                  /var/lib/rpm on the target host.
     :param root: The temporal root directry to put the rpm database.
     :param force: Force overwrite the rpmdb file previously copied.
-    :param use_other_rpmdb: If other rpm dabase files are used or not.
+    :param refer_other_rpmdb: True If other rpm dabase files are refered.
     """
     assert root != "/"
 
-    rpmdb_path = os.path.join(root, "var/lib/rpm")
-    rpmdb_Packages_path = os.path.join(rpmdb_path, "Packages")
+    rpmdb_dir = os.path.join(root, "var/lib/rpm")
+    rpmdb_Packages_path = os.path.join(rpmdb_dir, "Packages")
 
-    if not os.path.exists(rpmdb_path):
-        logging.debug("Creating rpmdb dir: " + rpmdb_path)
-        os.makedirs(rpmdb_path)
+    if not os.path.exists(rpmdb_dir):
+        logging.debug("Creating rpmdb dir: " + rpmdb_dir)
+        os.makedirs(rpmdb_dir)
 
     copyfile(path, rpmdb_Packages_path, force, link)
 
-    if use_other_rpmdb:
+    if refer_other_rpmdb:
         srcdir = os.path.dirname(path)
+
+        if not rpmdb_files_exist(path, rpmdb_filenames):
+            RuntimeError("Some RPM Database files not exist in " + srcdir)
+
         for f in rpmdb_filenames:
             src = os.path.join(srcdir, f)
-            if not os.path.exists(src):
-                logging.warn("File does not exist: " + src)
-
-            copyfile(src, os.path.join(rpmdb_path, f), force, link)
+            copyfile(src, os.path.join(rpmdb_dir, f), force, link)
 
 
 def detect_dist():
@@ -113,7 +115,7 @@ def detect_dist():
         return "uknown"
 
 
-def check_if_rpmdb_files_exist(path, rpmdb_filenames=_RPM_DB_FILENAMES):
+def rpmdb_files_exist(path, rpmdb_filenames=_RPM_DB_FILENAMES):
     """
     :param path: Path to 'Packages' rpm database file where other files might
                  exists.
@@ -264,7 +266,7 @@ def option_parser(defaults=_DEFAULTS, sep=_ARGV_SEP,
 
 Examples:
   # Run %%prog on host accessible to any repos, for the host named
-  # rhel-6-client-2 which is not accessible to any repos provides updates:
+  # rhel-6-client-2 which don't have access to any repos provides updates:
 
   # a. list repos:
   %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- repolist
@@ -272,11 +274,16 @@ Examples:
   # a'. same as the above except for the path of rpmdb:
   %%prog -p ./rhel-6-client-2/var/lib/rpm/Packages -- repolist
 
-  # b. list applicable updates:
+  # b. list updates applicable to rhel-6-client-2:
   %%prog -vf -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- check-update
 
-  # c. list applicable errata:
-  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec""" % sep)
+  # c. list errata applicable to rhel-6-client-2:
+  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec
+
+  # d. download update rpms applicable to rhel-6-client-2:
+  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ \\
+    -O -- update --downloadonly --downloaddir=./rhel-6-client-2/updates/\
+""" % sep)
 
     p.set_defaults(**defaults)
 
@@ -292,6 +299,10 @@ Examples:
                  help="Create symlinks to rpmdb files instead of copy")
     p.add_option("-f", "--force", action="store_true",
                  help="Force overwrite pivot rpmdb and outputs even if exists")
+    p.add_option("-O", "--other-db", action="store_true",
+                 help="Refer RPM DB files other than 'Packages' also."
+                      "You must specify this if you run some actions like "
+                      "'install', 'update' requires other RPM database files")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -324,7 +335,8 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
     if options.path.endswith("/var/lib/rpm/Packages"):
         options.root = options.path.replace("/var/lib/rpm/Packages", "")
     else:
-        setup_data(options.path, options.root, options.force, options.link)
+        setup_data(options.path, options.root, options.force,
+                   options.link, options.other_db)
 
     if options.format:
         f = None
