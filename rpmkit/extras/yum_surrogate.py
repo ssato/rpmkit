@@ -146,7 +146,7 @@ def _is_errata_line(line, dist):
     return line and reg.match(line)
 
 
-def result_fail(cmd, result):
+def failure(cmd, result):
     #logging.debug("result=(%s, %s, %d)" % result)
     raise RuntimeError(
         "Could not get the result. op=" + cmd +
@@ -172,7 +172,7 @@ def list_errata_g(root, dist):
             #else:
             #    yield "Not matched: " + line
     else:
-        result_fail("list-sec", result)
+        failure("list-sec", result)
 
 
 def parse_update_line(line):
@@ -232,7 +232,7 @@ def list_updates_g(root, *args):
             else:
                 in_list = True
     else:
-        result_fail("check-update", result)
+        failure("check-update", result)
 
 
 def get_errata_deails(errata):
@@ -253,7 +253,7 @@ def run_yum_cmd(root, yum_args, *args):
         if "check-update" in yum_args:
             print result[0]
         else:
-            result_fail(yum_args, result)
+            failure(yum_args, result)
 
 
 _FORMATABLE_COMMANDS = {"check-update": list_updates_g,
