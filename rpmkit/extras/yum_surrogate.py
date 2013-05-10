@@ -323,18 +323,18 @@ def split_yum_args(argv, sep=_ARGV_SEP):
 
     >>> argv = ["-p", "./rhel-6-client-2/rpmdb/Packages", "-r",
     ...         "rhel-6-client-2/", "-v", "--", "list-sec"]
-    >>> (ops_and_args, yargs) = split_yum_args(argv)
-    >>> ops_and_args  # doctest: +NORMALIZE_WHITESPACE
+    >>> (self_argv, yum_argv) = split_yum_args(argv)
+    >>> self_argv  # doctest: +NORMALIZE_WHITESPACE
     ['-p', './rhel-6-client-2/rpmdb/Packages', '-r',
      'rhel-6-client-2/', '-v']
-    >>> yargs
+    >>> yum_argv
     ['list-sec']
 
     >>> argv = ["-p", "./rhel-6-client-2/rpmdb/Packages", "-h"]
-    >>> (ops_and_args, yargs) = split_yum_args(argv)
-    >>> ops_and_args
+    >>> (self_argv, yum_argv) = split_yum_args(argv)
+    >>> self_argv
     ['-p', './rhel-6-client-2/rpmdb/Packages', '-h']
-    >>> yargs
+    >>> yum_argv
     []
     """
     sep_idx = argv.index(sep) if sep in argv else len(argv)
