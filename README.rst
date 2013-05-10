@@ -141,8 +141,25 @@ Here is an example::
   Name                                                                             100%   12KB  12.0KB/s   00:00
   Providename                                                                      100% 1232KB   1.2MB/s   00:00
   Requirename                                                                      100%  116KB 116.0KB/s   00:00
-  [root@rhel-6-client-1 ~]# yum-surrogate -L -v -f -p ./rhel-6-client-2/rpmdb/Packages \
-  > -r rhel-6-client-2/ -- list-sec | grep RHSA
+  [root@rhel-6-client-1 ~]# yum-surrogate -v -f -p ./rhel-6-client-2/rpmdb/Packages \
+  > -r rhel-6-client-2/ -- list-sec
+  DEBUG:root:Creating rpmdb dir: rhel-6-client-2/var/lib/rpm
+  DEBUG:root:Create a symlink: /root/rhel-6-client-2/rpmdb/Packages -> /root/rhel-6-client-2/var/lib/rpm/Packages
+  DEBUG:root:Run command: yum --installroot=/root/rhel-6-client-2 list-sec
+  oaded plugins: downloadonly, rhnplugin, security
+  This system is receiving updates from RHN Classic or RHN Satellite.
+  RHSA-2013:0550 Moderate/Sec.  bind-libs-32:9.8.2-0.17.rc1.el6.3.x86_64
+  RHSA-2013:0689 Important/Sec. bind-libs-32:9.8.2-0.17.rc1.el6_4.4.x86_64
+  RHSA-2013:0550 Moderate/Sec.  bind-utils-32:9.8.2-0.17.rc1.el6.3.x86_64
+  RHSA-2013:0689 Important/Sec. bind-utils-32:9.8.2-0.17.rc1.el6_4.4.x86_64
+  RHBA-2013:0703 bugfix         coreutils-8.4-19.el6_4.1.x86_64
+  RHBA-2013:0703 bugfix         coreutils-libs-8.4-19.el6_4.1.x86_64
+  RHSA-2013:0771 Moderate/Sec.  curl-7.19.7-36.el6_4.x86_64
+  RHSA-2013:0568 Important/Sec. dbus-glib-0.86-6.el6_4.x86_64
+  RHBA-2011:1395 bugfix         dmidecode-1:2.11-2.el6_1.x86_64
+  ...
+
+
   DEBUG:root:Creating rpmdb dir: rhel-6-client-2/var/lib/rpm
   DEBUG:root:Create a symlink: ./rhel-6-client-2/rpmdb/Packages -> rhel-6-client-2/var/lib/rpm/
   DEBUG:root:Create a symlink: ./rhel-6-client-2/rpmdb/Basenames -> rhel-6-client-2/var/lib/rpm/

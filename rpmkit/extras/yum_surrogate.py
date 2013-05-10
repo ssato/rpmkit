@@ -61,8 +61,8 @@ def run(cmd):
 
 
 def copyfile(src, dst, force, copy=False):
-    src = os.path.abspath(os.path.realpath(src))
-    dst = os.path.abspath(os.path.realpath(dst))
+    src = os.path.abspath(src)
+    dst = os.path.abspath(dst)
 
     assert src != dst, "Copying source and destination are same file!"
 
