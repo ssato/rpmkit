@@ -1,6 +1,6 @@
 #! /usr/bin/python -tt
-# surrogateyum.py - Surrogate yum execution for other hosts have no access to
-# any yum repositories
+# yum_surrogate.py - Surrogate yum execution for other hosts have no access to
+# any yum repositories provides updates
 #
 # Copyright (C) 2013 Satoru SATOH <ssato@redhat.com>
 #
@@ -121,7 +121,7 @@ def rpmdb_files_exist(path, rpmdb_filenames=_RPM_DB_FILENAMES):
                  exists.
     """
     dbdir = os.path.dirname(path)
-    return all(os.path.exists(os.path.join(dbdir, f) for f in rpmdb_filenames))
+    return all(os.path.exists(os.path.join(dbdir, f)) for f in rpmdb_filenames)
 
 
 def surrogate_operation(root, operation):
