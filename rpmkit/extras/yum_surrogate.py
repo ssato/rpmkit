@@ -156,6 +156,81 @@ def failure(cmd, result):
                        ", out=%s, err=%s, rc=%d" % result)
 
 
+_RPM_ARCHS = ("i386", "i586", "i686", "x86_64", "ppc", "ia64", "s390",
+              "s390x", "noarch")
+
+
+def __parse_errata_type(type_s, sep="/"):
+    """
+    Parse errata type string in the errata list by 'yum list-sec'.
+
+    :param type_s: Errata type string in the errata list
+    :return: (errata_type, errata_severity)
+        where severity is None if errata_type is not 'Security'.
+
+    >>> __parse_errata_type("Moderate/Sec.")
+    ('Security', 'Moderate')
+    >>> __parse_errata_type("bugfix")
+    ('Bugfix', None)
+    >>> __parse_errata_type("enhancement")
+    ('Enhancement', None)
+    """
+    if sep in type_s:
+        return ("Security", type_s.split(sep)[0])
+    else:
+        return (type_s.title(), None)
+
+
+def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':'):
+    """
+    Parse a line in the output of 'yum list-sec'.
+
+    See also: The format string '"%(n)s-%(epoch)s%(v)s-%(r)s.%(a)s"' at the
+    back of UpdateinfoCommand.doCommand_li in /usr/lib/yum-plugins/security.py
+
+    >>> ls = [
+    ...   "RHSA-2013:0587 Moderate/Sec.  openssl-1.0.0-27.el6_4.2.x86_64",
+    ...   "RHBA-2013:0781 bugfix         perl-libs-4:5.10.1-131.el6_4.x86_64",
+    ...   "RHBA-2013:0781 bugfix         perl-version-3:0.77-131.el6_4.x86_64",
+    ...   "RHEA-2013:0615 enhancement    tzdata-2012j-2.el6.noarch",
+    ... ]
+    >>> xs = [parse_errata_line(l) for l in ls]
+
+    >>> [(x["advisory"], x["type"],  # doctest: +NORMALIZE_WHITESPACE
+    ...   x["severity"]) for x in xs]
+    [('RHSA-2013:0587', 'Security', 'Moderate'),
+     ('RHBA-2013:0781', 'Bugfix', None),
+     ('RHBA-2013:0781', 'Bugfix', None),
+     ('RHEA-2013:0615', 'Enhancement', None)]
+
+    >>> [(x["name"], x["epoch"],  # doctest: +NORMALIZE_WHITESPACE
+    ...   x["version"], x["release"], x["arch"]) for x in xs]
+    [('openssl', '0', '1.0.0', '27.el6_4.2', 'x86_64'),
+     ('perl-libs', '4', '5.10.1', '131.el6_4', 'x86_64'),
+     ('perl-version', '3', '0.77', '131.el6_4', 'x86_64'),
+     ('tzdata', '0', '2012j', '2.el6', 'noarch')]
+
+    """
+    (advisory, type_s, pname) = line.rstrip().split()
+    (etype, severity) = __parse_errata_type(type_s)
+
+    (rest, arch) = pname.rsplit('.', 1)
+    assert arch and arch in archs, \
+        "no or invalid arch string found in package name: " + pname
+
+    (name, ev, release) = rest.rsplit('-', 2)
+
+    if ev_sep in ev:
+        (epoch, version) = ev.split(ev_sep)
+    else:
+        epoch = '0'
+        version = ev
+
+    return dict(advisory=advisory, type=etype, severity=severity,  # errata
+                name=name, epoch=epoch, version=version,  # RPM package
+                release=release, arch=arch)
+
+
 def list_errata_g(root, dist):
     """
     A generator to return errata found in the output result of 'yum list-sec'
@@ -169,10 +244,9 @@ def list_errata_g(root, dist):
     if result[-1] == 0:
         for line in result[0].splitlines():
             if _is_errata_line(line, dist):
-                yield dict(zip(("advisory", "type", "package"),
-                               line.split()))
-            #else:
-            #    yield "Not matched: " + line
+                yield parse_errata_line(line)
+            else:
+                logging.debug("Not errata line: " + line)
     else:
         failure("list-sec", result)
 
