@@ -383,7 +383,9 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
         if f is None:
             run_yum_cmd(options.root, ' '.join(yum_argv))
         else:
-            json.dump([x for x in f(options.root, options.dist)])
+            json.dump([x for x in f(options.root, options.dist)],
+                      sys.stdout, indent=2)
+            print
     else:
         run_yum_cmd(options.root, ' '.join(yum_argv))
 
