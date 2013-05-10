@@ -221,8 +221,8 @@ def list_updates_g(root, *args):
     :param root: Pivot root dir where var/lib/rpm/Packages of the target host
                  exists, e.g. /root/host_a/
     """
-    # NOTE: 'yum check-update' looks returns !0 exit code (e.g. 100) when there
-    # are any updates found.
+    # NOTE: 'yum check-update' looks returning non-zero exit code (e.g. 100)
+    # when there are any updates found.
     result = surrogate_operation(root, "check-update")
     if result[0]:
         # It seems that yum prints out an empty line before listing updates.
