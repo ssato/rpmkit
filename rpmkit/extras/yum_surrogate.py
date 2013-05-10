@@ -282,8 +282,9 @@ Examples:
   %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec
 
   # d. download update rpms applicable to rhel-6-client-2:
+  # (NOTE: '-y' option for 'update' is must as yum cannot interact with you.)
   %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ \\
-    -O -- update --downloadonly --downloaddir=./rhel-6-client-2/updates/\
+    -O -- update -y --downloadonly --downloaddir=./rhel-6-client-2/updates/\
 """ % sep)
 
     p.set_defaults(**defaults)
