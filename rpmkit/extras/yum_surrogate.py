@@ -147,11 +147,8 @@ def _is_errata_line(line, dist):
 
 
 def failure(cmd, result):
-    #logging.debug("result=(%s, %s, %d)" % result)
-    raise RuntimeError(
-        "Could not get the result. op=" + cmd +
-        ", out=%s, err=%s, rc=%d" % result
-    )
+    raise RuntimeError("Could not get the result. op=" + cmd +
+                       ", out=%s, err=%s, rc=%d" % result)
 
 
 def list_errata_g(root, dist):
