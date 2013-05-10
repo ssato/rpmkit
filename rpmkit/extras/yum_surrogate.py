@@ -314,7 +314,30 @@ Examples:
 
 
 def split_yum_args(argv, sep=_ARGV_SEP):
-    sep_idx = argv.index("--") if sep in argv else len(argv)
+    """
+    Split list of command arguments w/o argv[0] into options for this script
+    itself and yum command to surrogate run.
+
+    :param argv: Command line arguments :: [str]
+    :param sep: splitter
+
+    >>> argv = ["-p", "./rhel-6-client-2/rpmdb/Packages", "-r",
+    ...         "rhel-6-client-2/", "-v", "--", "list-sec"]
+    >>> (ops_and_args, yargs) = split_yum_args(argv)
+    >>> ops_and_args  # doctest: +NORMALIZE_WHITESPACE
+    ['-p', './rhel-6-client-2/rpmdb/Packages', '-r',
+     'rhel-6-client-2/', '-v']
+    >>> yargs
+    ['list-sec']
+
+    >>> argv = ["-p", "./rhel-6-client-2/rpmdb/Packages", "-h"]
+    >>> (ops_and_args, yargs) = split_yum_args(argv)
+    >>> ops_and_args
+    ['-p', './rhel-6-client-2/rpmdb/Packages', '-h']
+    >>> yargs
+    []
+    """
+    sep_idx = argv.index(sep) if sep in argv else len(argv)
     return (argv[:sep_idx], argv[sep_idx+1:])
 
 
