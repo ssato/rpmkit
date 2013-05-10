@@ -306,8 +306,9 @@ Examples:
                  help="Force overwrite pivot rpmdb and outputs even if exists")
     p.add_option("-O", "--other-db", action="store_true",
                  help="Refer RPM DB files other than 'Packages' also."
-                      "You must specify this if you run some actions like "
-                      "'install', 'update' requires other RPM database files")
+                      "You must specify this if you want to perform some "
+                      "yum sub commands like 'install', 'update' requires "
+                      "other RPM database files")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
