@@ -41,7 +41,7 @@ _TODAY = datetime.datetime.now().strftime("%Y%m%d")
 _WORKDIR = os.path.join(_CURDIR, "surrogate-yum-root-" + _TODAY)
 
 _DEFAULTS = dict(path=None, root=_WORKDIR, dist="auto", format=False,
-                 link=False, force=False, verbose=False,
+                 copy=False, force=False, verbose=False,
                  other_db=False)
 _ARGV_SEP = "--"
 
@@ -60,7 +60,7 @@ def run(cmd):
     return (out, err, p.returncode)
 
 
-def copyfile(src, dst, force, link=False):
+def copyfile(src, dst, force, copy=False):
     src = os.path.abspath(os.path.realpath(src))
     dst = os.path.abspath(os.path.realpath(dst))
 
@@ -73,21 +73,22 @@ def copyfile(src, dst, force, link=False):
             logging.info("Already exists and skip copying: " + dst)
             return
 
-    if link:
-        logging.debug("Create a symlink: %s -> %s" % (src, dst))
-        os.symlink(src, dst)
-    else:
+    if copy:
         logging.debug("Copying: %s -> %s" % (src, dst))
         shutil.copy2(src, dst)
+    else:
+        logging.debug("Create a symlink: %s -> %s" % (src, dst))
+        os.symlink(src, dst)
 
 
-def setup_data(path, root, force=False, link=False, refer_other_rpmdb=True,
+def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
                rpmdb_filenames=_RPM_DB_FILENAMES):
     """
     :param path: Path to the 'Packages' rpm database originally came from
                  /var/lib/rpm on the target host.
     :param root: The temporal root directry to put the rpm database.
     :param force: Force overwrite the rpmdb file previously copied.
+    :param copy: Copy RPM db files instead of symlinks
     :param refer_other_rpmdb: True If other rpm dabase files are refered.
     """
     assert root != "/"
@@ -99,7 +100,7 @@ def setup_data(path, root, force=False, link=False, refer_other_rpmdb=True,
         logging.debug("Creating rpmdb dir: " + rpmdb_dir)
         os.makedirs(rpmdb_dir)
 
-    copyfile(path, rpmdb_Packages_path, force, link)
+    copyfile(path, rpmdb_Packages_path, force, copy)
 
     if refer_other_rpmdb:
         srcdir = os.path.dirname(path)
@@ -109,7 +110,7 @@ def setup_data(path, root, force=False, link=False, refer_other_rpmdb=True,
 
         for f in rpmdb_filenames:
             src = os.path.join(srcdir, f)
-            copyfile(src, os.path.join(rpmdb_dir, f), force, link)
+            copyfile(src, os.path.join(rpmdb_dir, f), force, copy)
 
 
 def detect_dist():
@@ -379,8 +380,8 @@ Examples:
     p.add_option("-F", "--format", action="store_true",
                  help="Output parsed results in JSON format for some "
                       "commands (" + ", ".join(fmt_cmds.keys()) + ")")
-    p.add_option("-L", "--link", action="store_true",
-                 help="Create symlinks to rpmdb files instead of copy")
+    p.add_option("-c", "--copy", action="store_true",
+                 help="Copy rpmdb files instead of symlinks")
     p.add_option("-f", "--force", action="store_true",
                  help="Force overwrite pivot rpmdb and outputs even if exists")
     p.add_option("-O", "--other-db", action="store_true",
@@ -444,7 +445,7 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
         options.root = options.path.replace("/var/lib/rpm/Packages", "")
     else:
         setup_data(options.path, options.root, options.force,
-                   options.link, options.other_db)
+                   options.copy, options.other_db)
 
     if options.format:
         f = None
