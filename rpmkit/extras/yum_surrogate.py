@@ -65,7 +65,7 @@ def copyfile(src, dst, force, link=False):
         if force:
             os.remove(dst)
         else:
-            logging.warn("Already exists: " + dst)
+            logging.info("Already exists and skip copying: " + dst)
             return
 
     if link:
