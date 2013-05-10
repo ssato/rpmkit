@@ -30,6 +30,11 @@ import shlex
 import subprocess
 import sys
 
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
 
 _CURDIR = os.path.curdir
 _TODAY = datetime.datetime.now().strftime("%Y%m%d")
@@ -298,8 +303,8 @@ Examples:
     p.add_option("-d", "--dist", choices=("rhel", "fedora", "auto"),
                  help="Select distribution [%default]")
     p.add_option("-F", "--format", action="store_true",
-                 help="Format outputs of some commands ("
-                       ", ".join(fmt_cmds.keys()) + ") [%default]")
+                 help="Output parsed results in JSON format for some "
+                      "commands (" + ", ".join(fmt_cmds.keys()) + ")")
     p.add_option("-L", "--link", action="store_true",
                  help="Create symlinks to rpmdb files instead of copy")
     p.add_option("-f", "--force", action="store_true",
@@ -378,8 +383,7 @@ def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
         if f is None:
             run_yum_cmd(options.root, ' '.join(yum_argv))
         else:
-            for x in f(options.root, options.dist):
-                sys.stdout.write(str(x) + "\n")
+            json.dump([x for x in f(options.root, options.dist)])
     else:
         run_yum_cmd(options.root, ' '.join(yum_argv))
 
