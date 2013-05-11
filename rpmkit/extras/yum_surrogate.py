@@ -47,6 +47,36 @@ _ARGV_SEP = "--"
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
 
+_USAGE = "%prog [Options...] " + _ARGV_SEP + """ yum_command_and_options...
+
+Notes:
+  The host surrogates yum run must have access to all of the yum repositories
+  provide updates which the target host needs. And by necessity, the host runs
+  this tool must be same architecutre as the target host, and runs same OS
+  version as the one the target runs.
+
+Examples:
+  # Run %prog on host accessible to any repos, for the host named
+  # rhel-6-client-2 which don't have access to any repos provide updates:
+
+  # a. list repos:
+  %prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- repolist
+
+  # a'. same as the above except for the path of rpmdb:
+  %prog -p ./rhel-6-client-2/var/lib/rpm/Packages -- repolist
+
+  # b. list updates applicable to rhel-6-client-2:
+  %prog -vf -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- check-update
+
+  # c. list errata applicable to rhel-6-client-2:
+  %prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec
+
+  # d. download update rpms applicable to rhel-6-client-2:
+  # (NOTE: '-y' option for 'update' is must as yum cannot interact with you.)
+  %prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ \\
+    -O -- update -y --downloadonly --downloaddir=./rhel-6-client-2/updates/\
+"""
+
 
 def run(cmd):
     """
@@ -312,15 +342,6 @@ def list_updates_g(root, *args):
         failure("check-update", result)
 
 
-def get_errata_deails(errata):
-    """
-    TBD
-
-    :param errata: Errata advisory
-    """
-    return None
-
-
 def run_yum_cmd(root, yum_args, *args):
     result = surrogate_operation(root, yum_args)
     if result[-1] == 0:
@@ -337,58 +358,34 @@ _FORMATABLE_COMMANDS = {"check-update": list_updates_g,
                         "list-sec": list_errata_g, }
 
 
-def option_parser(defaults=_DEFAULTS, sep=_ARGV_SEP,
+def option_parser(defaults=_DEFAULTS, usage=_USAGE,
                   fmt_cmds=_FORMATABLE_COMMANDS):
-    p = optparse.OptionParser(
-        """%%prog [OPTION ...] %s yum_command_and_options...
-
-NOTE:
-  The host surrogates yum run must have access to all of the yum repositories
-  provide any updates which the target host needs. And by necessity, the host
-  runs this script must be same architecutre as the target host, and runs same
-  OS version as the one the target runs.
-
-Examples:
-  # Run %%prog on host accessible to any repos, for the host named
-  # rhel-6-client-2 which don't have access to any repos provide updates:
-
-  # a. list repos:
-  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- repolist
-
-  # a'. same as the above except for the path of rpmdb:
-  %%prog -p ./rhel-6-client-2/var/lib/rpm/Packages -- repolist
-
-  # b. list updates applicable to rhel-6-client-2:
-  %%prog -vf -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- check-update
-
-  # c. list errata applicable to rhel-6-client-2:
-  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec
-
-  # d. download update rpms applicable to rhel-6-client-2:
-  # (NOTE: '-y' option for 'update' is must as yum cannot interact with you.)
-  %%prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ \\
-    -O -- update -y --downloadonly --downloaddir=./rhel-6-client-2/updates/\
-""" % sep)
-
+    """
+    :param defaults: Option value defaults
+    :param usage: Usage text
+    :param fmt_cmds: Commands supports format option
+    """
+    p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
 
     p.add_option("-p", "--path",
-                 help="Path to the rpmdb (/var/lib/rpm/Packages)")
-    p.add_option("-r", "--root", help="Output root dir [the path or %default]")
+                 help="Path to the RPM DB file '/var/lib/rpm/Packages' "
+                      "originally taken from the target host")
+    p.add_option("-r", "--root", help="RPM DB root dir [%default]")
     p.add_option("-d", "--dist", choices=("rhel", "fedora", "auto"),
-                 help="Select distribution [%default]")
+                 help="Select distributions: fedora, rhel or auto [%default]")
     p.add_option("-F", "--format", action="store_true",
-                 help="Output parsed results in JSON format for some "
-                      "commands (" + ", ".join(fmt_cmds.keys()) + ")")
+                 help="Parse results and output in JSON format for some "
+                      "commands: " + ", ".join(fmt_cmds.keys()))
     p.add_option("-c", "--copy", action="store_true",
-                 help="Copy rpmdb files instead of symlinks")
+                 help="Copy RPM DB files instead of symlinks")
     p.add_option("-f", "--force", action="store_true",
-                 help="Force overwrite pivot rpmdb and outputs even if exists")
+                 help="Force overwrite RPM DB files even if exists already")
     p.add_option("-O", "--other-db", action="store_true",
-                 help="Refer RPM DB files other than 'Packages' also."
+                 help="Refer RPM DB files other than 'Packages' also. "
                       "You must specify this if you want to perform some "
                       "yum sub commands like 'install', 'update' requires "
-                      "other RPM database files")
+                      "other RPM DB files")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -422,7 +419,7 @@ def split_yum_args(argv, sep=_ARGV_SEP):
     return (argv[:sep_idx], argv[sep_idx+1:])
 
 
-def main(argv=sys.argv, sep=_ARGV_SEP, fmtble_cmds=_FORMATABLE_COMMANDS):
+def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
     p = option_parser()
 
     (self_argv, yum_argv) = split_yum_args(argv[1:])
