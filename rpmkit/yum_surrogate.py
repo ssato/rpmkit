@@ -26,7 +26,6 @@ import os
 import os.path
 import re
 import shutil
-import shlex
 import subprocess
 import sys
 
