@@ -440,6 +440,7 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
 
     if options.path.endswith("var/lib/rpm/Packages"):
         options.root = options.path.replace("var/lib/rpm/Packages", "")
+        logging.debug("Set root to: " + options.root)
     else:
         setup_data(options.path, options.root, options.force,
                    options.copy, options.other_db)
