@@ -126,7 +126,7 @@ def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
     rpmdb_dir = os.path.join(root, "var/lib/rpm")
     rpmdb_Packages_path = os.path.join(rpmdb_dir, "Packages")
 
-    assert os.path.exists(rpmdb_Packages_path)
+    assert os.path.exists(path)
 
     if not os.path.exists(rpmdb_dir):
         logging.debug("Creating rpmdb dir: " + rpmdb_dir)
