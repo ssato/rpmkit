@@ -169,8 +169,10 @@ def surrogate_operation(root, operation):
                  exists, e.g. /root/host_a/
     :param operation: Yum operation (command), e.g. 'list-sec'
     """
-    c = "yum --installroot=%s %s" % (os.path.abspath(root), operation)
-    return run(c)
+    root = os.path.abspath(root)
+    cs = ["yum", ("" if root == "/" else "--installroot=" + root), operation]
+
+    return run(' '.join(cs))
 
 
 def _is_errata_line(line, dist):
