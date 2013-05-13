@@ -17,6 +17,7 @@ BuildArch:      noarch
 BuildRequires:  python
 Requires:       rpm-python
 Requires:       python-BeautifulSoup
+#Requires:       yum-plugin-security
 
 
 %description
