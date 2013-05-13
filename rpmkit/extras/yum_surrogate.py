@@ -438,8 +438,8 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
     if not options.path:
         options.path = raw_input("Path to the rpm db to surrogate > ")
 
-    if options.path.endswith("/var/lib/rpm/Packages"):
-        options.root = options.path.replace("/var/lib/rpm/Packages", "")
+    if options.path.endswith("var/lib/rpm/Packages"):
+        options.root = options.path.replace("var/lib/rpm/Packages", "")
     else:
         setup_data(options.path, options.root, options.force,
                    options.copy, options.other_db)
