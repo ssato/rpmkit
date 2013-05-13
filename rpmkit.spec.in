@@ -71,6 +71,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/rpm2json
 %{_bindir}/rpms2csv
 %{_bindir}/swapi
+%{_bindir}/yum-surrogate
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{_localstatedir}/cache/swapi
@@ -79,7 +80,6 @@ rm -rf $RPM_BUILD_ROOT
 %files          extras
 %doc README.rst examples
 %{_bindir}/rk-*
-%{_bindir}/yum-surrogate
 %{python_sitelib}/rpmkit/extras/*.py*
 %{python_sitelib}/rpmkit/rhncachedb/*.py*
 
@@ -92,6 +92,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon May 13 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11.999-1
+- [yum-surrogate] promoted from extras to main
+- [yum-surrogate] some fixes around 'Packages' path and roo handling
+
 * Fri May 10 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11-1
 - [yum-surrogate] Add to surrogate running yum on hosts have access to yum
   repos for hosts have no or only partial access to yum repos

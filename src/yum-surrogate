@@ -1,6 +1,6 @@
-#! /usr/bin/python
+#! /usr/bin/python -tt
 #
-import rpmkit.extras.yum_surrogate as S
+import rpmkit.yum_surrogate as S
 import sys
 
 S.main(sys.argv)
