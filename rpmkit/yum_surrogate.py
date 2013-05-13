@@ -126,6 +126,8 @@ def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
     rpmdb_dir = os.path.join(root, "var/lib/rpm")
     rpmdb_Packages_path = os.path.join(rpmdb_dir, "Packages")
 
+    assert os.path.exists(rpmdb_Packages_path)
+
     if not os.path.exists(rpmdb_dir):
         logging.debug("Creating rpmdb dir: " + rpmdb_dir)
         os.makedirs(rpmdb_dir)
@@ -140,7 +142,13 @@ def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
 
         for f in rpmdb_filenames:
             src = os.path.join(srcdir, f)
-            copyfile(src, os.path.join(rpmdb_dir, f), force, copy)
+            dst = os.path.join(rpmdb_dir, f)
+
+            if not os.path.exists(src):
+                logging.warn("File not exists. Skipped: " + src)
+                continue
+
+            copyfile(src, dst, force, copy)
 
 
 def detect_dist():
