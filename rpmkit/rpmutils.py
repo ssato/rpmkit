@@ -93,6 +93,35 @@ def normalize(p):
     return p
 
 
+def h2nvrea(h, keys=("name", "version", "release", "epoch", "arch")):
+    """
+    :param h: RPM DB header object
+    :param keys: RPM Package dict keys
+    """
+    return dict(zip(keys, [h[k] for k in keys]))
+
+
+def rpm_list(rpmdb_dir=None,
+             keys=("name", "version", "release", "epoch", "arch")):
+    """
+    :param rpmdb_dir:
+    :param keys: RPM Package dict keys
+    """
+    if rpmdb_dir:
+        rpm.addMacro("_dbpath", rpmdb_dir)
+
+    ts = rpm.TransactionSet()
+    mi = ts.dbMatch()
+
+    if rpmdb_dir:
+        rpm.delMacro("_dbpath")
+
+    ps = [h2nvrea(h) for h in mi]
+    del mi, ts
+
+    return ps
+
+
 def pcmp(p1, p2):
     """Compare packages by NVRAEs.
 
