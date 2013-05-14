@@ -88,6 +88,23 @@ try:
 except ImportError:
     TABLIB_FOUND = False
 
+try:
+    from rpmkit.memoize import memoize
+except ImportError:
+    def memoize(fn):
+        """memoization decorator.
+        """
+        cache = {}
+
+        def wrapped(*args, **kwargs):
+            key = repr(args) + repr(kwargs)
+            if key not in cache:
+                cache[key] = fn(*args, **kwargs)
+
+            return cache[key]
+
+        return wrapped
+
 
 """
 Examples:
@@ -1501,6 +1518,48 @@ def init_rpcapi(options):
         options.readonly, options.cacheonly, options.force,
     )
     return rapi
+
+
+# wrapper functions to utilize this from other programs:
+def _connect(*options):
+    """
+    :param options: List of option strings for swapi.main,
+        e.g. ["--verbose", "--cacheonly"].
+
+    """
+    argv = ["dummy_av0"] + list(options) + ["dummy_args0"]
+    (opts, _) = option_parser().parse_args(argv)
+
+    return init_rpcapi(opts)
+
+
+def _call(api, args=[], options=[]):
+    """
+    :param api: String represents RHN or swapi's virtual API,
+        e.g. "packages.listProvidingErrata", "swapi.errata.getAll"
+    :param options: List of options options for swapi. see also: _connect
+    :param args: An argument or list of arguments passed to API call.
+        (NOTE: rpmkit.swapi.parse_api_args can be used to parse
+        string contains these arguments.)
+
+    :return: [Reult]
+    """
+    args = args if isinstance(args, (list, tuple)) else [args]
+
+    rapi = connect(*options)
+    res = rapi.call(api, *args)
+
+    if res is None:
+        return []
+
+    if not (isinstance(res, list) or getattr(res, "next", False)):
+        res = [res]
+
+    return [shorten_dict_keynames(r) for r in res]
+
+
+connect = memoize(_connect)
+call = memoize(_call)
 
 
 def main(argv, tablib_found=TABLIB_FOUND):
