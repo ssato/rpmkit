@@ -18,8 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from logging import DEBUG, INFO
+from operator import itemgetter
 
 import rpmkit.rpmutils as RU
+import rpmkit.utils as U
 import rpmkit.yum_surrogate as YS
 
 import logging
@@ -41,6 +43,10 @@ _DEFAULTS = dict(path=None, root=_WORKDIR, dist="auto", format=False,
 
 _RPMDB_SUBDIR = "var/lib/rpm"
 
+_RPM_LIST_FILE = "packages.json"
+_ERRATA_SUMMARY_FILE = "errata_summary.json"
+_ERRATA_LIST_FILE = "errata.json"
+
 
 def export_rpm_list(datadir, subdir=_RPMDB_SUBDIR):
     """
@@ -56,10 +62,14 @@ def export_rpm_list(datadir, subdir=_RPMDB_SUBDIR):
     return RU.rpm_list(datadir)
 
 
-def dump_rpm_list(rpm_list, workdir):
+def dump_rpm_list(rpm_list, workdir, filename=_RPM_LIST_FILE):
     """
+    :param rpm_list: The list of RPM package (NVREA) retuned from
+        export_rpm_list() :: [{name, version, release, epoch, arch}]
+    :param workdir: Working dir to dump the result
+    :param filename: Output file basename
     """
-    json.dump(rpm_list, open(os.path.join(workdir, "packages.json"), 'w')
+    json.dump(rpm_list, open(os.path.join(workdir, filename), 'w')
 
 
 def get_errata_list_g(ppath):
@@ -89,6 +99,44 @@ def get_errata_list_g(ppath):
 
     for e in YU.list_errata_g(options.root):
         yield e
+
+
+_ERRATA_KEYS = ("advisory", "type", "severity")
+
+
+def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
+    """
+    >>> e = (u'RHSA-2013:0771', u'Security', u'Moderate')
+    >>> ps = [{u'advisory': u'RHSA-2013:0771',  # doctest: +NORMALIZE_WHITESPACE
+    ...        u'arch': u'x86_64', u'epoch': u'0', u'name': u'curl',
+    ...        u'release': u'36.el6_4', u'severity': u'Moderate',
+    ...        u'type': u'Security', u'version': u'7.19.7'},
+    ...       {u'advisory': u'RHSA-2013:0771', u'arch': u'x86_64',
+    ...        u'epoch': u'0', u'name': u'libcurl', u'release': u'36.el6_4',
+    ...        u'severity': u'Moderate', u'type': u'Security',
+    ...        u'version': u'7.19.7'}])
+    >>> d = _mkedic(e, ps)
+    """
+    pkeys = ("name", "version", "release", "epoch", "arch")
+
+    d = dict(zip(ekeys, errata))
+    d["packages"] = [dict(zip(pkeys, itemgetter(pkeys)(p))) for p in packages]
+
+    return d
+
+
+def dump_errata_summary(ppath, workdir, filename=_ERRATA_SUMMARY_FILE,
+                        ekeys=_ERRATA_KEYS):
+    """
+    :param ppath: The path to RPM DB 'Packages' of target host or system group
+    :param workdir: Working dir to dump the result
+    :param filename: Output file basename
+    """
+    es = sorted((e for e in get_errata_list_g(ppath)),
+                key=itemgetter("advisory"))
+
+    es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
+    json.dump(es, open(os.path.join(workdir, filename), 'w')
 
 
 # vim:sw=4:ts=4:et:
