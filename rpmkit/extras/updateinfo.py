@@ -39,10 +39,6 @@ except ImportError:
     import simplejson as json
 
 
-_DEFAULTS = dict(path=None, root=_WORKDIR, dist="auto", format=False,
-                 copy=False, force=False, verbose=False,
-                 other_db=False)
-
 _RPMDB_SUBDIR = "var/lib/rpm"
 
 _RPM_LIST_FILE = "packages.json"
@@ -104,7 +100,7 @@ def dump_rpm_list(rpm_list, workdir, filename=_RPM_LIST_FILE):
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    json.dump(rpm_list, open(rpm_list_path(workdir, filename), 'w')
+    json.dump(rpm_list, open(rpm_list_path(workdir, filename), 'w'))
 
 
 def get_errata_list_g(ppath):
@@ -171,7 +167,7 @@ def dump_errata_summary(ppath, workdir, filename=_ERRATA_SUMMARY_FILE,
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
-    json.dump(es, open(errata_summary_path(workdir, filename), 'w')
+    json.dump(es, open(errata_summary_path(workdir, filename), 'w'))
 
 
 def _swapicall(api, offline=False, args=[]):
