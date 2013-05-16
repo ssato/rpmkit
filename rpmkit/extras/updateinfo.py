@@ -39,8 +39,6 @@ except ImportError:
     import simplejson as json
 
 
-_RPMDB_SUBDIR = "var/lib/rpm"
-
 _RPM_LIST_FILE = "packages.json"
 _ERRATA_SUMMARY_FILE = "errata_summary.json"
 _ERRATA_LIST_FILE = "errata.json"
@@ -79,65 +77,28 @@ def errata_cve_map_path(workdir, filename=_ERRATA_CVE_MAP_FILE):
     return os.path.join(workdir, filename)
 
 
-def export_rpm_list(datadir, subdir=_RPMDB_SUBDIR):
+def export_rpm_list(root, subdir=YS._RPMDB_SUBDIR):
     """
-    :param datadir: RPM DB top dir where ``subdir`` exists
-    :param subdir: sub dir of ``datadir`` in which RPM DB files exist
+    :param root: RPM DB top dir where ``subdir`` exists
+    :param subdir: sub dir of ``root`` in which RPM DB files exist
 
     :return: The list of RPM package (NVREA) ::
              [{name, version, release, epoch, arch}]
     """
-    f = os.paht.join(datadir, subdir, "Packages")
-    assert os.path.exists(f), "RPM DB file looks not exist under " + datadir
+    f = os.paht.join(root, subdir, "Packages")
+    assert os.path.exists(f), "RPM DB file looks not exist under " + root
 
-    return RU.rpm_list(datadir)
+    return RU.rpm_list(root)
 
 
-def dump_rpm_list(rpmdir, workdir, filename=_RPM_LIST_FILE):
+def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
     """
-    :param rpmdir: RPM DB top dir
+    :param root: RPM DB top dir
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    json.dump(export_rpm_list(rpmdir),
+    json.dump(export_rpm_list(root),
               open(rpm_list_path(workdir, filename), 'w'))
-
-
-def setup_root(ppath, subdir=_RPMDB_SUBDIR):
-    """
-    :param ppath: The path to RPM DB 'Packages' of target host
-    :return: (Root path, corrected path to RPM DB 'Packages')
-    """
-    pdir = os.path.join(subdir, "Packages")
-
-    if ppath.endswith(pdir):
-        root = ppath.replace(pdir, "")
-        assert root != '/'
-
-        logging.debug("Set root to: " + root)
-    else:
-        root = os.path.dirname(ppath)
-        assert root != '/'
-
-        YU.setup_data(ppath, root, refer_other_rpmdb=False)
-        ppath = os.path.join(root, pdir)
-
-    return (root, ppath)
-
-
-def get_errata_list_g(ppath):
-    """
-    Get errata applicable to given RPM db ``ppath`` (Packages) with
-    yum-surrogate's help: yum-surrogate -p ``ppath`` -r ``root`` -F -- list-sec
-
-    :param ppath: The path to RPM DB 'Packages' of target host or system group
-    :return: [{errata_advisory, errata_type, errata_severity_or_None,
-               rpm_name, rpm_epoch, rpm_version, rpm_release, rpm_arch}]
-    """
-    (root, ppath) = setup_root(ppath)
-
-    for e in YU.list_errata_g(root):
-        yield e
 
 
 _ERRATA_KEYS = ("advisory", "type", "severity")
@@ -164,14 +125,14 @@ def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
     return d
 
 
-def dump_errata_summary(ppath, workdir, filename=_ERRATA_SUMMARY_FILE,
+def dump_errata_summary(root, workdir, filename=_ERRATA_SUMMARY_FILE,
                         ekeys=_ERRATA_KEYS):
     """
-    :param ppath: The path to RPM DB 'Packages' of target host or system group
+    :param root: RPM DB top dir
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    es = sorted((e for e in get_errata_list_g(ppath)),
+    es = sorted((e for e in YS.list_errata_g(root)),
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
@@ -291,23 +252,27 @@ def dump_errata_list(workdir, offline=False,
     return [e for e in _g(es)]
 
 
-def modmain(ppath, workdir=None, offline=False, errata_details=False,
-            subdir=_RPMDB_SUBDIR):
+def modmain(ppath, workdir=None, offline=False, errata_details=False):
+    """
+    :param ppath: The path to 'Packages' RPM DB file
+    :param workdir: Working dir to dump the result
+    :param offline: True if get results only from local cache
+    :param errata_details: True if detailed errata info is needed
+    """
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
 
+    ppath = os.path.normpath(ppath)
+    root = YS.setup_root(ppath, force=True)
+
     if not workdir:
-        prelpath = os.path.join(subdir, "Packages")
-        if ppath.endswith(prelpath):
-            workdir = ppath.replace(prelpath, "")
-        else:
-            workdir = raw_input("Path to working dir > ")
+        workdir = root
 
     logging.info("Dump RPM list...")
-    dump_rpm_list(os.path.dirname(ppath), workdir)
+    dump_rpm_list(root, workdir)
 
     logging.info("Dump Errata summaries...")
-    dump_errata_summary(ppath, workdir)
+    dump_errata_summary(root, workdir)
 
     if errata_details:
         logging.info("Dump Errata details...")
@@ -322,12 +287,13 @@ def option_parser():
     defaults = dict(path=None, workdir=None, details=False, offline=False,
                     verbose=False)
 
-    p = optparse.OptionParser("%prog [Options...]")
+    p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
+
+    where RPMDB_PATH = the path to 'Packages' RPM DB file taken from
+                       '/var/lib/rpm' on the target host""")
+
     p.set_defaults(**defaults)
 
-    p.add_option("-p", "--path",
-                 help="Path to the RPM DB file '/var/lib/rpm/Packages' "
-                      "originally taken from the target host")
     p.add_option("-w", "--workdir", help="Working dir [%default]")
     p.add_option("-d", "--details", action="store_true",
                  help="Get errata details also from RHN / Satellite")
@@ -337,13 +303,18 @@ def option_parser():
     return p
 
 
-def main(rpmdb_subdir=_RPMDB_SUBDIR):
+def main():
     p = option_parser()
-    (options, _args) = p.parse_args()
+    (options, args) = p.parse_args()
 
     logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
 
-    modmain(options.path, options.workdir, options.offline, options.details)
+    if args:
+        ppath = args[0]
+    else:
+        ppath = raw_input("Path to the 'Packages' RPM DB file > ")
+
+    modmain(ppath, options.workdir, options.offline, options.details)
 
 
 if __name__ == '__main__':
