@@ -93,14 +93,36 @@ def export_rpm_list(datadir, subdir=_RPMDB_SUBDIR):
     return RU.rpm_list(datadir)
 
 
-def dump_rpm_list(rpm_list, workdir, filename=_RPM_LIST_FILE):
+def dump_rpm_list(rpmdir, workdir, filename=_RPM_LIST_FILE):
     """
-    :param rpm_list: The list of RPM package (NVREA) retuned from
-        export_rpm_list() :: [{name, version, release, epoch, arch}]
+    :param rpmdir: RPM DB top dir
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    json.dump(rpm_list, open(rpm_list_path(workdir, filename), 'w'))
+    json.dump(export_rpm_list(rpmdir),
+              open(rpm_list_path(workdir, filename), 'w'))
+
+
+def setup_root(ppath, subdir=_RPMDB_SUBDIR):
+    """
+    :param ppath: The path to RPM DB 'Packages' of target host
+    :return: (Root path, corrected path to RPM DB 'Packages')
+    """
+    pdir = os.path.join(subdir, "Packages")
+
+    if ppath.endswith(pdir):
+        root = ppath.replace(pdir, "")
+        assert root != '/'
+
+        logging.debug("Set root to: " + root)
+    else:
+        root = os.path.dirname(ppath)
+        assert root != '/'
+
+        YU.setup_data(ppath, root, refer_other_rpmdb=False)
+        ppath = os.path.join(root, pdir)
+
+    return (root, ppath)
 
 
 def get_errata_list_g(ppath):
@@ -112,23 +134,9 @@ def get_errata_list_g(ppath):
     :return: [{errata_advisory, errata_type, errata_severity_or_None,
                rpm_name, rpm_epoch, rpm_version, rpm_release, rpm_arch}]
     """
-    defaults = YU._DEFAULTS
-    defaults["path"] = ppath
-    defaults["format"] = True
+    (root, ppath) = setup_root(ppath)
 
-    yum_argv = ["list-sec"]
-
-    p = YU.option_parser(defaults)
-    (options, _args) = p.parse_args([])
-
-    if options.path.endswith("/var/lib/rpm/Packages"):
-        options.root = options.path.replace("/var/lib/rpm/Packages", "")
-    else:
-        options.root = os.path.dirname(options.path)
-        YU.setup_data(options.path, options.root, options.force,
-                      options.copy, options.other_db)
-
-    for e in YU.list_errata_g(options.root):
+    for e in YU.list_errata_g(root):
         yield e
 
 
@@ -282,5 +290,63 @@ def dump_errata_list(workdir, offline=False,
 
     return [e for e in _g(es)]
 
+
+def modmain(ppath, workdir=None, offline=False, errata_details=False,
+            subdir=_RPMDB_SUBDIR):
+    if not ppath:
+        ppath = raw_input("Path to the RPM DB 'Packages' > ")
+
+    if not workdir:
+        prelpath = os.path.join(subdir, "Packages")
+        if ppath.endswith(prelpath):
+            workdir = ppath.replace(prelpath, "")
+        else:
+            workdir = raw_input("Path to working dir > ")
+
+    logging.info("Dump RPM list...")
+    dump_rpm_list(os.path.dirname(ppath), workdir)
+
+    logging.info("Dump Errata summaries...")
+    dump_errata_summary(ppath, workdir)
+
+    if errata_details:
+        logging.info("Dump Errata details...")
+        dump_errata_list(workdir, offline)
+
+
+def option_parser():
+    """
+    :param defaults: Option value defaults
+    :param usage: Usage text
+    """
+    defaults = dict(path=None, workdir=None, details=False, offline=False,
+                    verbose=False)
+
+    p = optparse.OptionParser("%prog [Options...]")
+    p.set_defaults(**defaults)
+
+    p.add_option("-p", "--path",
+                 help="Path to the RPM DB file '/var/lib/rpm/Packages' "
+                      "originally taken from the target host")
+    p.add_option("-w", "--workdir", help="Working dir [%default]")
+    p.add_option("-d", "--details", action="store_true",
+                 help="Get errata details also from RHN / Satellite")
+    p.add_option("", "--offline", action="store_true", help="Offline mode")
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+
+    return p
+
+
+def main(rpmdb_subdir=_RPMDB_SUBDIR):
+    p = option_parser()
+    (options, _args) = p.parse_args()
+
+    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
+
+    modmain(options.path, options.workdir, options.offline, options.details)
+
+
+if __name__ == '__main__':
+    main()
 
 # vim:sw=4:ts=4:et:
