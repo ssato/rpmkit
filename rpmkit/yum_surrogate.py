@@ -278,9 +278,9 @@ def list_errata_g(root, dist=None):
 
     :param root: Pivot root dir where var/lib/rpm/Packages of the target host
                  exists, e.g. /root/host_a/
-    :param dist: Distribution name
+    :param dist: Distribution name or None
     """
-    if dist is None:
+    if not dist:
         dist = detect_dist()
 
     result = surrogate_operation(root, "list-sec")
