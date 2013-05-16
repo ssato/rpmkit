@@ -88,7 +88,8 @@ def export_rpm_list(root, subdir=YS._RPMDB_SUBDIR):
     f = os.paht.join(root, subdir, "Packages")
     assert os.path.exists(f), "RPM DB file looks not exist under " + root
 
-    return RU.rpm_list(root)
+    keys = ("name", "version", "release", "epoch", "arch", "buildhost")
+    return RU.rpm_list(root, keys)
 
 
 def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
