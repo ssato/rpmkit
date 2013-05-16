@@ -154,8 +154,7 @@ Here is an example::
   Name                                                                             100%   12KB  12.0KB/s   00:00
   Providename                                                                      100% 1232KB   1.2MB/s   00:00
   Requirename                                                                      100%  116KB 116.0KB/s   00:00
-  [root@rhel-6-client-1 ~]# yum-surrogate -v -p ./rhel-6-client-2/rpmdb/Packages \
-  > -r rhel-6-client-2/ -- list-sec
+  [root@rhel-6-client-1 ~]# yum-surrogate -v ./rhel-6-client-2/rpmdb/Packages -- list-sec
   DEBUG:root:Creating rpmdb dir: rhel-6-client-2/var/lib/rpm
   DEBUG:root:Create a symlink: /root/rhel-6-client-2/rpmdb/Packages -> /root/rhel-6-client-2/var/lib/rpm/Packages
   DEBUG:root:Run command: yum --installroot=/root/rhel-6-client-2 list-sec
@@ -171,8 +170,7 @@ Here is an example::
   RHSA-2013:0568 Important/Sec. dbus-glib-0.86-6.el6_4.x86_64
   RHBA-2011:1395 bugfix         dmidecode-1:2.11-2.el6_1.x86_64
   ...
-  [root@rhel-6-client-1 ~]# yum-surrogate -v -p ./rhel-6-client-2/rpmdb/Packages \
-  > -r rhel-6-client-2/ -F -- list-sec
+  [root@rhel-6-client-1 ~]# yum-surrogate -vF ./rhel-6-client-2/rpmdb/Packages -- list-sec
   DEBUG:root:root=rhel-6-client-2/, Packages(dst)=rhel-6-client-2/var/lib/rpm/Packages
   INFO:root:Already exists and skip copying: /root/rhel-6-client-2/var/lib/rpm/Packages
   DEBUG:root:cmd=list-sec, fun=<function list_errata_g at 0x2774230>
@@ -203,9 +201,8 @@ Here is an example::
     },
     ...
   [root@rhel-6-client-1 ~]# mkdir rhel-6-client-2/updates/
-  [root@rhel-6-client-1 ~]# yum-surrogate -v -p ./rhel-6-client-2/rpmdb/Packages \
-  > -r rhel-6-client-2/ -v -f -O -- update \
-  >   --downloadonly --downloaddir=./rhel-6-client-2/updates/ -y
+  [root@rhel-6-client-1 ~]# yum-surrogate -vfO ./rhel-6-client-2/rpmdb/Packages \
+  > -- update --downloadonly --downloaddir=./rhel-6-client-2/updates/ -y
   DEBUG:root:root=rhel-6-client-2/, Packages(dst)=rhel-6-client-2/var/lib/rpm/Packages
   DEBUG:root:Create a symlink: /root/rhel-6-client-2/rpmdb/Packages -> /root/rhel-6-client-2/var/lib/rpm/Packages
   DEBUG:root:Create a symlink: /root/rhel-6-client-2/rpmdb/Basenames -> /root/rhel-6-client-2/var/lib/rpm/Basenames

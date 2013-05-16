@@ -43,7 +43,11 @@ _ARGV_SEP = "--"
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
 
-_USAGE = "%prog [Options...] " + _ARGV_SEP + """ yum_command_and_options...
+_USAGE = "%prog [Options...] RPMDB_PATH" + _ARGV_SEP + """ yum_args...
+
+  where RPMDB_PATH = the path to 'Packages' RPM DB file taken from
+                     '/var/lib/rpm' on the target host
+        yum_args = yum command, options and other args to run
 
 Notes:
   The host surrogates yum run must have access to all of the yum repositories
@@ -56,21 +60,21 @@ Examples:
   # rhel-6-client-2 which don't have access to any repos provide updates:
 
   # a. list repos:
-  %prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- repolist
+  %prog ./rhel-6-client-2/Packages -- repolist
 
   # a'. same as the above except for the path of rpmdb:
-  %prog -p ./rhel-6-client-2/var/lib/rpm/Packages -- repolist
+  %prog ./rhel-6-client-2/var/lib/rpm/Packages -- repolist
 
   # b. list updates applicable to rhel-6-client-2:
-  %prog -vf -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- check-update
+  %prog -vf ./rhel-6-client-2/Packages -- check-update
 
   # c. list errata applicable to rhel-6-client-2:
-  %prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ -- list-sec
+  %prog ./rhel-6-client-2/Packages -- list-sec
 
   # d. download update rpms applicable to rhel-6-client-2:
   # (NOTE: '-y' option for 'update' is must as yum cannot interact with you.)
-  %prog -p ./rhel-6-client-2/Packages -r rhel-6-client-2/ \\
-    -O -- update -y --downloadonly --downloaddir=./rhel-6-client-2/updates/\
+  %prog ./rhel-6-client-2/Packages -O -- update -y \\
+    --downloadonly --downloaddir=./rhel-6-client-2/updates/\
 """
 
 
@@ -158,9 +162,6 @@ def setup_root(ppath, root=None, force=False, copy=False,
     :param refer_other_rpmdb: True If other rpm dabase files are refered.
     :return: Root path
     """
-    if not ppath:
-        ppath = raw_input("Path to the rpm db to surrogate > ")
-
     ppath = os.path.normpath(ppath)
 
     if root:
@@ -409,12 +410,9 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE,
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
 
-    p.add_option("-p", "--path",
-                 help="Path to the RPM DB file '/var/lib/rpm/Packages' "
-                      "originally taken from the target host")
     p.add_option("-r", "--root", help="RPM DB root dir. By default, dir "
-                 "in which the above 'Packages' db exists or '../../../' "
-                 "of that dir if 'Packages' db exists under 'var/lib/rpm'.")
+                 "in which the 'Packages' RPM DB exists or '../../../' "
+                 "of that dir if 'Packages' exists under 'var/lib/rpm'.")
     p.add_option("-d", "--dist", choices=("rhel", "fedora", "auto"),
                  help="Select distributions: fedora, rhel or auto [%default]")
     p.add_option("-F", "--format", action="store_true",
@@ -475,11 +473,16 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
 
     logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
 
+    if args:
+        ppath = args[0]
+    else:
+        ppath = raw_input("Path to the 'Packages' RPM DB file > ")
+
     if options.dist == "auto":
         options.dist = detect_dist()
 
-    root = setup_root(options.path, options.root, options.force,
-                      options.copy, options.other_db)
+    root = setup_root(ppath, options.root, options.force, options.copy,
+                      options.other_db)
 
     if options.format:
         f = None
