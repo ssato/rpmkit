@@ -271,7 +271,7 @@ def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':'):
                 release=release, arch=arch)
 
 
-def list_errata_g(root, dist):
+def list_errata_g(root, dist=None):
     """
     A generator to return errata found in the output result of 'yum list-sec'
     one by one.
@@ -280,6 +280,9 @@ def list_errata_g(root, dist):
                  exists, e.g. /root/host_a/
     :param dist: Distribution name
     """
+    if dist is None:
+        dist = detect_dist()
+
     result = surrogate_operation(root, "list-sec")
     if result[-1] == 0:
         for line in result[0].splitlines():
