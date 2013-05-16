@@ -19,7 +19,6 @@
 #
 from logging import DEBUG, INFO
 
-import datetime
 import logging
 import optparse
 import os
@@ -35,11 +34,9 @@ except ImportError:
     import simplejson as json
 
 
-_CURDIR = os.path.curdir
-_TODAY = datetime.datetime.now().strftime("%Y%m%d")
-_WORKDIR = os.path.join(_CURDIR, "surrogate-yum-root-" + _TODAY)
+_RPMDB_SUBDIR = "var/lib/rpm"
 
-_DEFAULTS = dict(path=None, root=_WORKDIR, dist="auto", format=False,
+_DEFAULTS = dict(path=None, root=None, dist="auto", format=False,
                  copy=False, force=False, verbose=False,
                  other_db=False)
 _ARGV_SEP = "--"
@@ -111,10 +108,10 @@ def copyfile(src, dst, force, copy=False):
 
 
 def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
-               rpmdb_filenames=_RPM_DB_FILENAMES):
+               rpmdb_filenames=_RPM_DB_FILENAMES, rpmdb_subdir=_RPMDB_SUBDIR):
     """
     :param path: Path to the 'Packages' rpm database originally came from
-                 /var/lib/rpm on the target host.
+                 /var/lib/rpm on the target host, not under ``rpmdb_subdir``.
     :param root: The temporal root directry to put the rpm database.
     :param force: Force overwrite the rpmdb file previously copied.
     :param copy: Copy RPM db files instead of symlinks
@@ -122,7 +119,7 @@ def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
     """
     assert root != "/"
 
-    rpmdb_dir = os.path.join(root, "var/lib/rpm")
+    rpmdb_dir = os.path.join(root, rpmdb_subdir)
     rpmdb_Packages_path = os.path.join(rpmdb_dir, "Packages")
 
     assert os.path.exists(path)
@@ -148,6 +145,38 @@ def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
                 continue
 
             copyfile(src, dst, force, copy)
+
+
+def setup_root(ppath, root=None, force=False, copy=False,
+               refer_other_rpmdb=True, subdir=_RPMDB_SUBDIR):
+    """
+    :param ppath: The path to RPM DB 'Packages' of the target host, may not be
+        under ``subdir``.
+    :param root: The temporal root directry to put the rpm database.
+    :param force: Force overwrite the rpmdb file previously copied.
+    :param copy: Copy RPM db files instead of symlinks
+    :param refer_other_rpmdb: True If other rpm dabase files are refered.
+    :return: Root path
+    """
+    if not ppath:
+        ppath = raw_input("Path to the rpm db to surrogate > ")
+
+    ppath = os.path.normpath(ppath)
+
+    if root:
+        setup_data(ppath, root, force, copy, refer_other_rpmdb)
+    else:
+        prelpath = os.path.join(subdir, "Packages")
+
+        if ppath.endswith(prelpath):
+            root = ppath.replace(prelpath, "")
+        else:
+            root = os.path.dirname(ppath)
+            assert root != '/'
+
+            setup_data(ppath, root, force, copy, refer_other_rpmdb)
+
+    return root
 
 
 def detect_dist():
@@ -383,7 +412,9 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE,
     p.add_option("-p", "--path",
                  help="Path to the RPM DB file '/var/lib/rpm/Packages' "
                       "originally taken from the target host")
-    p.add_option("-r", "--root", help="RPM DB root dir [%default]")
+    p.add_option("-r", "--root", help="RPM DB root dir. By default, dir "
+                 "in which the above 'Packages' db exists or '../../../' "
+                 "of that dir if 'Packages' db exists under 'var/lib/rpm'.")
     p.add_option("-d", "--dist", choices=("rhel", "fedora", "auto"),
                  help="Select distributions: fedora, rhel or auto [%default]")
     p.add_option("-F", "--format", action="store_true",
@@ -447,15 +478,8 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
     if options.dist == "auto":
         options.dist = detect_dist()
 
-    if not options.path:
-        options.path = raw_input("Path to the rpm db to surrogate > ")
-
-    if options.path.endswith("var/lib/rpm/Packages"):
-        options.root = options.path.replace("var/lib/rpm/Packages", "")
-        logging.debug("Set root to: " + options.root)
-    else:
-        setup_data(options.path, options.root, options.force,
-                   options.copy, options.other_db)
+    root = setup_root(options.path, options.root, options.force,
+                      options.copy, options.other_db)
 
     if options.format:
         f = None
@@ -466,13 +490,13 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
                 break
 
         if f is None:
-            run_yum_cmd(options.root, ' '.join(yum_argv))
+            run_yum_cmd(root, ' '.join(yum_argv))
         else:
-            json.dump([x for x in f(options.root, options.dist)],
+            json.dump([x for x in f(root, options.dist)],
                       sys.stdout, indent=2)
             print
     else:
-        run_yum_cmd(options.root, ' '.join(yum_argv))
+        run_yum_cmd(root, ' '.join(yum_argv))
 
 
 if __name__ == '__main__':
