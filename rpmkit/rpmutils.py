@@ -15,13 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.memoize as M
+from rpmkit.memoize import memoize
+from rpmkit.utils import uniq
 
-import itertools
+from itertools import groupby
+from operator import itemgetter
+from yum.rpmsack import RPMDBPackageSack
+
 import logging
-import operator
+import os
 import random
 import re
+import sys
 import rpm
 import yum
 
@@ -40,7 +45,7 @@ def _is_noarch(srpm):
     return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
 
 
-is_noarch = M.memoize(_is_noarch)
+is_noarch = memoize(_is_noarch)
 
 
 def normalize_arch(arch):
@@ -158,7 +163,7 @@ def pcmp(p1, p2):
     >>> pcmp(p3, p4) < 0
     True
     """
-    p2evr = operator.itemgetter("epoch", "version", "release")
+    p2evr = itemgetter("epoch", "version", "release")
 
     assert p1["name"] == p2["name"], "Trying to compare different packages!"
     return yum.compareEVR(p2evr(p1), p2evr(p2))
@@ -176,7 +181,7 @@ def sort_by_names(xs):
     """
     :param xs: [dict(name, ...)]
     """
-    return sorted(xs, key=operator.itemgetter("name"))
+    return sorted(xs, key=itemgetter("name"))
 
 
 def group_by_names_g(xs):
@@ -195,8 +200,7 @@ def group_by_names_g(xs):
     >>> [(n, ys) for n, ys in group_by_names_g(xs)] == zs
     True
     """
-    f = operator.itemgetter("name")
-    for name, g in itertools.groupby(sort_by_names(xs), f):
+    for name, g in groupby(sort_by_names(xs), itemgetter("name")):
         yield (name, list(g))
 
 
@@ -282,6 +286,166 @@ def find_updates_g(all_packages, packages):
                     " updates for %s: %s" % (p2s(p), ps2s(updates))
                 )
                 yield sorted(updates)
+
+
+def make_requires_dict(root):
+    """
+    Based on yumQuiet.getDeps() in repo-graph in yum-utils licensed and
+    distributed under GPLv2+.
+
+    :param root: root dir of RPM Database
+    """
+    requires = dict()
+    providers = dict()
+    skip = []
+
+    sack = RPMDBPackageSack(root, cachedir=os.path.join(root, "cache"),
+                            persistdir=root)
+
+    for p in sack.returnPackages():
+        cachedb = dict()
+
+        for r in p.returnPrco("requires"):
+            reqname = r[0]
+
+            if reqname.startswith("rpmlib"):  # special case.
+                continue
+
+            if reqname == p.name:  # p requires self.
+                continue
+
+            if reqname in providers:
+                prov = providers[reqname]
+            else:
+                prov = sack.searchProvides(reqname)
+                if prov:
+                    prov = prov[0].name
+                    providers[reqname] = prov
+                else:
+                    logging.warn("Nothing provides " + reqname)
+                    continue
+
+            if prov == p.name:
+                cachedb[prov] = None
+            else:
+                if prov in cachedb or prov in skip:
+                    continue
+                else:
+                    cachedb[prov] = None
+
+            requires[p.name] = [x for x in cachedb.keys() if x != p.name]
+
+    return requires
+
+
+sys.setrecursionlimit(20)
+
+
+class Node(object):
+
+    def __init__(self, name, rank=0, children=[], seen=[]):
+        """
+        :param name: Name :: str
+        :param rank: Rank :: Int
+        :param children: Child nodes :: [Node]
+        :param seen: Seen node names must not be appended to :: [str]
+        """
+        self.name = name
+        self.rank = rank
+        self.children = [c for c in children if c.name not in seen]
+        self.seen = seen
+
+    def set_rank(self, rank):
+        self.rank = rank
+        for c in self.children:
+            c.set_rank(rank + 1)
+
+    def up_rank(self):
+        self.set_rank(self.rank + 1)
+
+    def add_seen(self, diff):
+        diff = [c for c in diff if c not in self.seen]
+        self.seen += diff
+        imax = 10; i = 0
+        for c in self.children:
+            try:
+                c.add_seen([x for x in diff if x != c])
+            except:
+                print "c=" + str(c)
+                print "diff=" + str(diff)
+                i += 1
+                if i > imax:
+                    raise
+                continue
+
+    def children(self):
+        return self.children
+
+    def add_children(self, diff):
+        diff = [c for c in diff if c not in self.children and c != self]
+        self.children = sorted(self.children + diff)
+
+    def __repr__(self):
+        return "Node { '%s', rank=%d, %d children}" % \
+               (self.name, self.rank, len(self.children))
+
+    def __cmp__(self, other):
+        return cmp(self.name, other.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def to_dict(self):
+        return dict(name=self.name,
+                    children=[c.to_dict() for c in self.children])
+
+
+def make_reverse_requires_dict(root):
+    """
+    :param root: root dir of RPM Database
+    :return: {name_required: [name_requires]}
+    """
+    reqs_map = make_requires_dict(root)  # {req: [reqd]}
+    rreqs = dict()  # {reqd : [req]}
+
+    for p, rs in reqs_map.iteritems():
+        for r in rs:
+            if r == p:
+                continue  # skip self.
+
+            rreqs[r] = sorted(uniq(rreqs.get(r, []) + [p]))
+
+    return rreqs
+
+
+def make_depgraph(root):
+    """
+    Make a dependency graph of installed RPMs.
+
+    :param root: RPM DB top dir
+    """
+    rreqs_map = make_reverse_requires_dict(root)  # {reqd: [req]}
+    nodes_cache = dict()  # {name: Node n}
+
+    for r, ps in rreqs_map.iteritems():
+        rnode = nodes_cache.get(r, Node(r, 0, [], [r] + ps))
+        pnodes = []
+
+        for p in ps:
+            pnode = nodes_cache.get(p, None)
+
+            if pnode is None:
+                pnode = nodes_cache[p] = Node(p, 1, [], [r, p])
+            else:
+                pnode.add_seen([r, p])
+                pnode.up_rank()
+
+            pnodes.append(pnode)
+
+        rnode.add_children(sorted(pnodes))
+
+    #return [node for name, node in nodes_cache.iteritems() if node.rank == 0]
+    return nodes_cache
 
 
 # vim:sw=4:ts=4:et:
