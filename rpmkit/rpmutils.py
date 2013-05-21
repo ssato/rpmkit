@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.memoize import memoize
-from rpmkit.utils import uniq
+from rpmkit.utils import concat, uniq
 
 from itertools import groupby
 from operator import itemgetter
@@ -338,56 +338,75 @@ def make_requires_dict(root):
     return requires
 
 
-sys.setrecursionlimit(20)
+sys.setrecursionlimit(2000)
+
+
+def _node_list_seen(node):
+    """
+    :param node: Node object
+    :return: Seen (child) node names in this node
+    """
+    names = [node.name]
+    nodes = node.list_children()
+
+    while nodes:
+        names += uniq([n.name for n in nodes if n.name not in names])
+        nodes = uniq(concat(n.list_children() for n in nodes))
+
+    logging.debug("_node_list_seen: names=" + ', '.join(names))
+    return names
+
+
+def _node_set_rank(node, rank):
+    node.rank = rank
+    nodes = node.list_children()
+
+    while nodes:
+        for n in nodes:
+            logging.debug("_node_set_rank: set rank '%d' of node=%s" % (rank, repr(node)))
+            n.rank = rank
+
+        nodes = uniq(concat(n.list_children() for n in nodes))
+
+
+node_list_seen = memoize(_node_list_seen)
+node_set_rank = memoize(_node_set_rank)
 
 
 class Node(object):
 
-    def __init__(self, name, rank=0, children=[], seen=[]):
+    def __init__(self, name, rank=0, children=[]):
         """
         :param name: Name :: str
         :param rank: Rank :: Int
         :param children: Child nodes :: [Node]
-        :param seen: Seen node names must not be appended to :: [str]
         """
         self.name = name
         self.rank = rank
-        self.children = [c for c in children if c.name not in seen]
-        self.seen = seen
+        self.children = children
+
+    def list_children(self):
+        return self.children
 
     def set_rank(self, rank):
-        self.rank = rank
-        for c in self.children:
-            c.set_rank(rank + 1)
+        node_set_rank(self, rank)
 
     def up_rank(self):
         self.set_rank(self.rank + 1)
 
-    def add_seen(self, diff):
-        diff = [c for c in diff if c not in self.seen]
-        self.seen += diff
-        imax = 10; i = 0
-        for c in self.children:
-            try:
-                c.add_seen([x for x in diff if x != c])
-            except:
-                print "c=" + str(c)
-                print "diff=" + str(diff)
-                i += 1
-                if i > imax:
-                    raise
-                continue
-
-    def children(self):
-        return self.children
-
     def add_children(self, diff):
-        diff = [c for c in diff if c not in self.children and c != self]
+        """
+        :param diff: Node list
+        :type [Node]:
+        """
+        logging.debug("add_children: diff=" + str(diff))
+
+        diff = [c for c in diff if c.name not in node_list_seen(self)]
         self.children = sorted(self.children + diff)
 
     def __repr__(self):
-        return "Node { '%s', rank=%d, %d children}" % \
-               (self.name, self.rank, len(self.children))
+        return "Node { '%s', rank=%d, children=%s...}" % \
+               (self.name, self.rank, ', '.join(self.children[:5]))
 
     def __cmp__(self, other):
         return cmp(self.name, other.name)
@@ -428,24 +447,27 @@ def make_depgraph(root):
     nodes_cache = dict()  # {name: Node n}
 
     for r, ps in rreqs_map.iteritems():
-        rnode = nodes_cache.get(r, Node(r, 0, [], [r] + ps))
         pnodes = []
 
         for p in ps:
             pnode = nodes_cache.get(p, None)
 
             if pnode is None:
-                pnode = nodes_cache[p] = Node(p, 1, [], [r, p])
+                logging.debug("Create child node: name=" + p)
+                pnode = nodes_cache[p] = Node(p, 1, [])
             else:
-                pnode.add_seen([r, p])
+                logging.debug("Found the child node: name=" + p)
                 pnode.up_rank()
 
             pnodes.append(pnode)
 
-        rnode.add_children(sorted(pnodes))
+        rnode = nodes_cache.get(r, None)
+        if rnode is None:
+            logging.debug("Create root node: name=" + r)
+            nodes_cache[r] = Node(r, 0, pnodes)
 
-    #return [node for name, node in nodes_cache.iteritems() if node.rank == 0]
-    return nodes_cache
+    return sorted((n for n in nodes_cache.values() if n.rank == 0),
+                  key=attrgetter("name"))
 
 
 # vim:sw=4:ts=4:et:
