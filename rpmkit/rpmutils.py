@@ -356,6 +356,20 @@ def pp_list(xs, limit=None):
     return ", ".join(str(x) for x in xs[:limit])
 
 
+def pp_nodes(ns, limit=None):
+    """
+    Pretty print list of nodes.
+
+    :param ns: List of nodes
+    :param limit: Limit items to print
+    :return: Pretty printed list string
+    """
+    if limit is None:
+        limit = len(xs) + 1
+
+    return ", ".join(n.name for n in ns[:limit])
+
+
 def _node_list_seen(node):
     """
     Walk through children of ``node`` and aggregate seen node names.
@@ -379,77 +393,72 @@ def _node_list_seen(node):
     return names
 
 
-def _node_set_rank(node, rank):
+def _node_to_dict_0(node, children=[]):
     """
-    Walk through children of ``node`` and set rank to each nodes.
+    Walk through children of ``node`` and make up node dict tree.
 
     :param node: Node object
-    :param rank: Rank number to set
+    :return: Nested dict of nodes represents relationship between self and
+        children of each nodes.
     """
-    assert node.rank != rank, \
-           "You're trying to set the value same as the value of current rank"
+    for n in node.list_children():
+        if n.list_children():
+            cs = [_node_to_dict_0(c) for c in n.list_children()]
+            children.append(dict(name=n.name, children=cs))
+        else:
+            children.append(dict(name=n.name))
 
-    node.rank = rank  # Set the rank of self.
-    nodes = node.list_children()
-
-    # Walk through all children and set rank to each nodes.
-    while nodes:
-        rank += 1  # The rank of children should be incremented.
-
-        for n in nodes:
-            #logging.debug("_node_set_rank: set rank '%d' to node=%s" % \
-            #              (rank, repr(node)))
-            n.rank = rank
-
-        nodes = uniq(concat(n.list_children() for n in nodes))  # Next children
+    return dict(name=node.name, children=children)
 
 
 #node_list_seen = memoize(_node_list_seen)
-#node_set_rank = memoize(_node_set_rank)
 node_list_seen = _node_list_seen
-node_set_rank = _node_set_rank
 
 
 class Node(object):
 
-    def __init__(self, name, rank=0, children=[]):
+    def __init__(self, name, children=[], parents=[]):
         """
         :param name: Name :: str
-        :param rank: Rank :: Int
         :param children: Child nodes :: [Node]
+        :param parents: Parent nodes :: [Node]
         """
         self.name = name
-        self.rank = rank
         self.children = children
+        self.parents = parents
 
     def list_children(self):
         return self.children
 
-    def set_rank(self, rank):
-        if self.rank == rank:
-            return  # Already set and nothing to do.
-
-        node_set_rank(self, rank)
-
-    def up_rank(self):
-        self.set_rank(self.rank + 1)
+    def list_parents(self):
+        return self.parents
 
     def add_children(self, diff):
         """
         :param diff: Node list
         :type [Node]:
         """
-        logging.debug("add_children: diff=" + str(diff))
+        logging.debug("add_children: diff=" + pp_nodes(diff, 20))
 
         diff = [c for c in diff if c.name not in node_list_seen(self)]
         self.children = sorted(self.children + diff)
+
+    def add_parent(self, parent):
+        """
+        :param parent: Parent node
+        :type Node:
+        """
+        if parent not in self.parents:
+            logging.debug("add_parent: parent=" + parent.name)
+            self.parents = sorted(self.parents + [parent])
 
     def __str__(self):
         return repr(self)
 
     def __repr__(self):
-        return "Node { '%s', rank=%d, children=%s...}" % \
-               (self.name, self.rank, pp_list(self.list_children(), 20))
+        return "Node { '%s', children=%s..., parents=%s...}" % \
+               (self.name, pp_nodes(self.children, 20),
+                pp_nodes(self.parents, 20))
 
     def __cmp__(self, other):
         return cmp(self.name, other.name)
@@ -491,28 +500,29 @@ def make_depgraph(root):
     nodes_cache = dict()  # {name: Node n}
 
     for r, ps in rreqs_map.iteritems():
+        rnode = nodes_cache.get(r, None)
         pnodes = []
+
+        if rnode is None:
+            logging.debug("Create root node: name=" + r)
+            rnode = nodes_cache[r] = Node(r, [], [])
 
         for p in ps:
             pnode = nodes_cache.get(p, None)
 
             if pnode is None:
                 logging.debug("Create child node: name=" + p)
-                pnode = nodes_cache[p] = Node(p, 1, [])
+                pnode = nodes_cache[p] = Node(p, [], [rnode])
             else:
                 logging.debug("Found the child node: name=" + p)
-                pnode.up_rank()
+                pnode.add_parent(rnode)
 
             pnodes.append(pnode)
 
-        rnode = nodes_cache.get(r, None)
-        if rnode is None:
-            logging.debug("Create root node: name=" + r)
-            nodes_cache[r] = Node(r, 0, pnodes)
-        else:
-            rnode.add_children(pnodes)
+        rnode.add_children(pnodes)
 
-    return sorted((n for n in nodes_cache.values() if n.rank == 0),
+    #return sorted(nodes_cache.values(), key=attrgetter("name"))
+    return sorted((n for n in nodes_cache.values() if not n.list_parents()),
                   key=attrgetter("name"))
 
 
