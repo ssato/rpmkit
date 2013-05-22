@@ -19,7 +19,7 @@ from rpmkit.memoize import memoize
 from rpmkit.utils import concat, uniq
 
 from itertools import groupby
-from operator import itemgetter
+from operator import itemgetter, attrgetter
 from yum.rpmsack import RPMDBPackageSack
 
 import logging
@@ -341,32 +341,66 @@ def make_requires_dict(root):
 sys.setrecursionlimit(2000)
 
 
+def pp_list(xs, limit=None):
+    """
+    Pretty print list of items.
+
+    :param xs: List of items
+    :param limit: Limit items to print
+    :return: Pretty printed list string
+    """
+    if limit is None:
+        limit = len(xs) + 1
+
+    return ", ".join(str(x) for x in xs[:limit])
+
+
 def _node_list_seen(node):
     """
-    :param node: Node object
-    :return: Seen (child) node names in this node
-    """
-    names = [node.name]
-    nodes = node.list_children()
+    Walk through children of ``node`` and aggregate seen node names.
 
+    :param node: Node object
+    :return: Seen (self and child) node names in this node. This list will be
+        used to avoid adding already seen node to children later.
+    """
+    names = [node.name]  # Add self
+    nodes = node.list_children()  # Immediate children
+
+    # Walk through all children and aggregate seen node names and nodes.
     while nodes:
         names += uniq([n.name for n in nodes if n.name not in names])
-        nodes = uniq(concat(n.list_children() for n in nodes))
+        nodes = uniq(concat(n.list_children() for n in nodes))  # Next children
 
-    logging.debug("_node_list_seen: names=" + ', '.join(names))
+        logging.debug("_node_list_seen: Added: names=%s, nodes=%s..." % \
+                      (pp_list(names), pp_list(nodes, 5)))
+
+    logging.debug("_node_list_seen: names=" + pp_list(names))
     return names
 
 
 def _node_set_rank(node, rank):
-    node.rank = rank
+    """
+    Walk through children of ``node`` and set rank to each nodes.
+
+    :param node: Node object
+    :param rank: Rank number to set
+    """
+    assert node.rank != rank, \
+           "You're trying to set the value same as the value of current rank"
+
+    node.rank = rank  # Set the rank of self.
     nodes = node.list_children()
 
+    # Walk through all children and set rank to each nodes.
     while nodes:
+        rank += 1  # The rank of children should be incremented.
+
         for n in nodes:
-            logging.debug("_node_set_rank: set rank '%d' of node=%s" % (rank, repr(node)))
+            logging.debug("_node_set_rank: set rank '%d' to node=%s" % \
+                          (rank, repr(node)))
             n.rank = rank
 
-        nodes = uniq(concat(n.list_children() for n in nodes))
+        nodes = uniq(concat(n.list_children() for n in nodes))  # Next children
 
 
 node_list_seen = memoize(_node_list_seen)
@@ -389,6 +423,9 @@ class Node(object):
         return self.children
 
     def set_rank(self, rank):
+        if self.rank == rank:
+            return  # Already set and nothing to do.
+
         node_set_rank(self, rank)
 
     def up_rank(self):
@@ -404,9 +441,12 @@ class Node(object):
         diff = [c for c in diff if c.name not in node_list_seen(self)]
         self.children = sorted(self.children + diff)
 
+    def __str__(self):
+        return repr(self)
+
     def __repr__(self):
         return "Node { '%s', rank=%d, children=%s...}" % \
-               (self.name, self.rank, ', '.join(self.children[:5]))
+               (self.name, self.rank, pp_list(self.list_children(), 10))
 
     def __cmp__(self, other):
         return cmp(self.name, other.name)
