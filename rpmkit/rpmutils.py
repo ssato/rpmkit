@@ -294,6 +294,7 @@ def make_requires_dict(root):
     distributed under GPLv2+.
 
     :param root: root dir of RPM Database
+    :return: Requirement relation map, {package: [required_package]}
     """
     requires = dict()
     providers = dict()
@@ -311,7 +312,7 @@ def make_requires_dict(root):
             if reqname.startswith("rpmlib"):  # special case.
                 continue
 
-            if reqname == p.name:  # p requires self.
+            if reqname == p.name:  # It requires self.
                 continue
 
             if reqname in providers:
@@ -396,15 +397,17 @@ def _node_set_rank(node, rank):
         rank += 1  # The rank of children should be incremented.
 
         for n in nodes:
-            logging.debug("_node_set_rank: set rank '%d' to node=%s" % \
-                          (rank, repr(node)))
+            #logging.debug("_node_set_rank: set rank '%d' to node=%s" % \
+            #              (rank, repr(node)))
             n.rank = rank
 
         nodes = uniq(concat(n.list_children() for n in nodes))  # Next children
 
 
-node_list_seen = memoize(_node_list_seen)
-node_set_rank = memoize(_node_set_rank)
+#node_list_seen = memoize(_node_list_seen)
+#node_set_rank = memoize(_node_set_rank)
+node_list_seen = _node_list_seen
+node_set_rank = _node_set_rank
 
 
 class Node(object):
@@ -446,7 +449,7 @@ class Node(object):
 
     def __repr__(self):
         return "Node { '%s', rank=%d, children=%s...}" % \
-               (self.name, self.rank, pp_list(self.list_children(), 10))
+               (self.name, self.rank, pp_list(self.list_children(), 20))
 
     def __cmp__(self, other):
         return cmp(self.name, other.name)
@@ -482,6 +485,7 @@ def make_depgraph(root):
     Make a dependency graph of installed RPMs.
 
     :param root: RPM DB top dir
+    :return: List of root nodes.
     """
     rreqs_map = make_reverse_requires_dict(root)  # {reqd: [req]}
     nodes_cache = dict()  # {name: Node n}
@@ -505,6 +509,8 @@ def make_depgraph(root):
         if rnode is None:
             logging.debug("Create root node: name=" + r)
             nodes_cache[r] = Node(r, 0, pnodes)
+        else:
+            rnode.add_children(pnodes)
 
     return sorted((n for n in nodes_cache.values() if n.rank == 0),
                   key=attrgetter("name"))
