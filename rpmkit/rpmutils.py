@@ -371,7 +371,7 @@ def pp_nodes(ns, limit=None):
     return ", ".join(n.name for n in ns[:limit])
 
 
-def _node_list_seen(node):
+def node_list_seen(node, acc=set()):
     """
     Walk through children of ``node`` and aggregate seen node names.
 
@@ -379,21 +379,26 @@ def _node_list_seen(node):
     :return: Seen (self and child) node names in this node. This list will be
         used to avoid adding already seen node to children later.
     """
-    names = [node.name]  # Add self
+    names = set([node.name])  # Add self
     nodes = node.list_children()  # Immediate children
 
     # Walk through all children and aggregate seen node names and nodes.
     while nodes:
-        nodes = []
+        next_nodes = []
 
         for n in nodes:
             if n.name not in names:
-                logging.debug("_node_list_seen: add " + n.name)
-                names.append(n.name)
+                logging.debug("node_list_seen: add " + n.name)
+                names.add(n.name)
 
-            nodes += n.list_children()  # Next children
+            next_nodes += n.list_children()  # Next children
 
-    return sorted(names)
+        nodes = set(next_nodes)
+
+    names = sorted(names)
+
+    logging.debug("node=%s, names=%s" % (node.name, str(names)))
+    return names
 
 
 def _node_to_yaml_s_g(node, indent=0):
@@ -401,7 +406,7 @@ def _node_to_yaml_s_g(node, indent=0):
     yield _indent + "- name: " + node.name
     _indent += "  "
 
-    if node.has_children():
+    if node.list_children():
         yield _indent + "children:"
 
         for c in node.list_children():
@@ -409,61 +414,48 @@ def _node_to_yaml_s_g(node, indent=0):
                 yield s
 
 
-node_list_seen = memoize(_node_list_seen)
-
-
 class Node(object):
 
-    def __init__(self, name, children=[], parents=[]):
+    def __init__(self, name, children=[], is_root=False):
         """
         :param name: Name :: str
         :param children: Child nodes :: [Node]
-        :param parents: Parent nodes :: [Node]
         """
         self.name = name
         self.children = children
-        self.parents = parents
-
-        if not children:
-            self._has_children = False
-
-    def has_children(self):
-        return self._has_children
+        self._is_root = is_root
 
     def list_children(self):
-        return self.children
+        return sorted(self.children)
 
-    def list_parents(self):
-        return self.parents
+    def add_child(self, cnode):
+        """
+        :param cnode: Child node to add
+        :type Node:
+        """
+        if cnode.name not in node_list_seen(self):
+            self.children.append(cnode)
 
     def add_children(self, diff):
         """
         :param diff: Node list
         :type [Node]:
         """
-        self._has_children = True
+        for c in diff:
+            self.add_child(c)
 
-        logging.debug("add_children: diff=" + pp_nodes(diff, 20))
+    def is_root(self):
+        return self._is_root
 
-        diff = [c for c in diff if c.name not in node_list_seen(self)]
-        self.children = sorted(self.children + diff)
-
-    def add_parent(self, parent):
-        """
-        :param parent: Parent node
-        :type Node:
-        """
-        if parent not in self.parents:
-            logging.debug("add_parent: parent=" + parent.name)
-            self.parents = sorted(self.parents + [parent])
+    def toggle_is_root(self):
+        self._is_root = not self.is_root()
 
     def __str__(self):
         return repr(self)
 
     def __repr__(self):
-        return "Node { '%s', children=%s..., parents=%s...}" % \
-               (self.name, pp_nodes(self.children, 20),
-                pp_nodes(self.parents, 20))
+        return "Node { '%s', children=%s...}" % \
+               (self.name, pp_nodes(self.children, 20))
 
     def __cmp__(self, other):
         return cmp(self.name, other.name)
@@ -476,7 +468,7 @@ class Node(object):
                     children=[c.to_dict() for c in self.children])
 
 
-def make_reverse_requires_dict(root):
+def make_reversed_requires_dict(root):
     """
     :param root: root dir of RPM Database
     :return: {name_required: [name_requires]}
@@ -489,7 +481,7 @@ def make_reverse_requires_dict(root):
             if r == p:
                 continue  # skip self.
 
-            rreqs[r] = sorted(uniq(rreqs.get(r, []) + [p]))
+            rreqs[r] = sorted(set(rreqs.get(r, []) + [p]))
 
     return rreqs
 
@@ -501,34 +493,28 @@ def make_depgraph(root):
     :param root: RPM DB top dir
     :return: List of root nodes.
     """
-    rreqs_map = make_reverse_requires_dict(root)  # {reqd: [req]}
+    rreqs_map = make_reversed_requires_dict(root)  # {reqd: [req]}
     nodes_cache = dict()  # {name: Node n}
 
     for r, ps in rreqs_map.iteritems():
         rnode = nodes_cache.get(r, None)
-        pnodes = []
 
         if rnode is None:
             logging.debug("Create root node: name=" + r)
-            rnode = nodes_cache[r] = Node(r, [], [])
+            rnode = nodes_cache[r] = Node(r, [])
 
         for p in ps:
             pnode = nodes_cache.get(p, None)
 
             if pnode is None:
                 logging.debug("Create child node: name=" + p)
-                pnode = nodes_cache[p] = Node(p, [], [rnode])
+                pnode = nodes_cache[p] = Node(p, [], is_root=False)
             else:
-                logging.debug("Found the child node: name=" + p)
-                pnode.add_parent(rnode)
+                pnode._is_root = False
 
-            pnodes.append(pnode)
+            rnode.add_child(pnode)
 
-        rnode.add_children(pnodes)
-
-    #return sorted(nodes_cache.values(), key=attrgetter("name"))
-    return sorted((n for n in nodes_cache.values() if not n.list_parents()),
-                  key=attrgetter("name"))
+    return sorted(nodes_cache.values(), key=attrgetter("name"))
 
 
 # vim:sw=4:ts=4:et:
