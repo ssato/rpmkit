@@ -334,7 +334,8 @@ def make_requires_dict(root):
                 else:
                     cachedb[prov] = None
 
-            requires[p.name] = [x for x in cachedb.keys() if x != p.name]
+            requires[p.name] = [x for x in cachedb.keys() if x != p.name \
+                                and p.name not in requires.get(x, [])]
 
     return requires
 
@@ -383,36 +384,32 @@ def _node_list_seen(node):
 
     # Walk through all children and aggregate seen node names and nodes.
     while nodes:
-        names += uniq([n.name for n in nodes if n.name not in names])
-        nodes = uniq(concat(n.list_children() for n in nodes))  # Next children
+        nodes = []
 
-        logging.debug("_node_list_seen: Added: names=%s, nodes=%s..." % \
-                      (pp_list(names), pp_list(nodes, 5)))
+        for n in nodes:
+            if n.name not in names:
+                logging.debug("_node_list_seen: add " + n.name)
+                names.append(n.name)
 
-    logging.debug("_node_list_seen: names=" + pp_list(names))
-    return names
+            nodes += n.list_children()  # Next children
 
-
-def _node_to_dict_0(node, children=[]):
-    """
-    Walk through children of ``node`` and make up node dict tree.
-
-    :param node: Node object
-    :return: Nested dict of nodes represents relationship between self and
-        children of each nodes.
-    """
-    for n in node.list_children():
-        if n.list_children():
-            cs = [_node_to_dict_0(c) for c in n.list_children()]
-            children.append(dict(name=n.name, children=cs))
-        else:
-            children.append(dict(name=n.name))
-
-    return dict(name=node.name, children=children)
+    return sorted(names)
 
 
-#node_list_seen = memoize(_node_list_seen)
-node_list_seen = _node_list_seen
+def _node_to_yaml_s_g(node, indent=0):
+    _indent =  ' ' * indent
+    yield _indent + "- name: " + node.name
+    _indent += "  "
+
+    if node.has_children():
+        yield _indent + "children:"
+
+        for c in node.list_children():
+            for s in _node_to_yaml_s_g(c, indent + 2):
+                yield s
+
+
+node_list_seen = memoize(_node_list_seen)
 
 
 class Node(object):
@@ -427,6 +424,12 @@ class Node(object):
         self.children = children
         self.parents = parents
 
+        if not children:
+            self._has_children = False
+
+    def has_children(self):
+        return self._has_children
+
     def list_children(self):
         return self.children
 
@@ -438,6 +441,8 @@ class Node(object):
         :param diff: Node list
         :type [Node]:
         """
+        self._has_children = True
+
         logging.debug("add_children: diff=" + pp_nodes(diff, 20))
 
         diff = [c for c in diff if c.name not in node_list_seen(self)]
