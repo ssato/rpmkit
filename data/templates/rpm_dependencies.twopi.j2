@@ -1,0 +1,43 @@
+/*
+ * Refs: 
+ *  - http://d.hatena.ne.jp/simply-k/20100727/1280224098
+ */
+{% macro node_name(index, subindex) -%}
+node_{{ index }}_{{ subindex }}
+{%- endmacro %}
+{% macro def_node(name, index, subindex) -%}
+{{ node_name(index, subindex) }} [ label = "", tooltip = "{{ name }}" ]
+{%- endmacro %}
+{% macro gen_subgraph(name, index, subindex) %}    subgraph cluster_{{ index }}_{{ subindex }} {
+        labelloc = t
+        labeljust = l
+        penwidth = 0  // Do not render subgraph envelope lines.
+        label = "{{ name }}"
+        tooltip = "{{ name }}"
+
+        {{ def_node(name, index, subindex) }}
+    }
+{%- endmacro %}
+{% macro gen_subgraph_and_rel_map(reqd, reqs, index) -%}
+{{ gen_subgraph(reqd, index, 0) }}
+{% for p in reqs %}{{ gen_subgraph(p, index, loop.index) }}
+    {{ node_name(index, 0) }} -> {{ node_name(index, loop.index) }}
+{%- endfor %}
+{% endmacro %}
+
+digraph rpm_dependencies {
+    node [ fillcolor="white", shape="circle", label="", tooltip="\N", width="0.2"]
+    edge [ arrowhead="none", w="10", len="1000"]
+    overlap="false";
+
+{% for reqd, reqs in dependencies -%}{% set index = loop.index0 %}
+{# {{ gen_subgraph_and_rel_map(reqd, reqs, loop.index0) }} #}
+{# {{ node_name(index, 0) }} [ label="{{ reqd }}", tooltip="{{ reqd }}" ] #}
+{% for p in reqs %}
+    "{{ reqd }}" -> "{{ p }}"
+{# {{ node_name(index, loop.index) }} [ label="{{ p }}", tooltip="{{ p }}" ]
+{{ node_name(index, 0) }} -> {{ node_name(index, loop.index) }} #}
+{% endfor %}{% endfor %}
+}
+/* vim:sw=4:ts=4:et:ft=dot:
+*/
