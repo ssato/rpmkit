@@ -28,6 +28,7 @@ RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 Summary:        Extra and experimental modules and tools in %{name}
 Requires:       %{name} = %{version}-%{release}
 Requires:       python-matplotlib
+#Requires:       python-jinja2-cli
 #Requires:       cx_Oracle
 
 %description    extras
