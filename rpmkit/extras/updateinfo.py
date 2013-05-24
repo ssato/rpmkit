@@ -282,7 +282,7 @@ def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     (out, err, rc) = YS.run("twopi -Tsvg -o %s %s" % (twopi_src, output))
 
 
-def modmain(ppath, workdir=None, offline=False, errata_details=False
+def modmain(ppath, workdir=None, offline=False, errata_details=False,
             report=False):
     """
     :param ppath: The path to 'Packages' RPM DB file
