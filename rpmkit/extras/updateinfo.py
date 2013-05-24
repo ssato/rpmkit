@@ -158,7 +158,10 @@ def dump_errata_summary(root, workdir, filename=_ERRATA_SUMMARY_FILE,
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    es = sorted((e for e in YS.list_errata_g(root)),
+    logfiles = (os.path.join(workdir, "errata_summary_output.log"),
+                os.path.join(workdir, "errata_summary_error.log"))
+
+    es = sorted((e for e in YS.list_errata_g(root, logfiles=logfiles)),
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
@@ -331,7 +334,13 @@ def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     open(twopi_src, 'w').write(depgraph_s)
 
     output = twopi_src + ".svg"
+    (outlog, errlog) = (os.path.join(workdir, "graphviz_out.log"),
+                        os.path.join(workdir, "graphviz_err.log"))
+
     (out, err, rc) = YS.run("twopi -Tsvg -o %s %s" % (output, twopi_src))
+
+    open(outlog, 'w').write(out)
+    open(errlog, 'w').write(err)
 
 
 def modmain(ppath, workdir=None, offline=False, errata_details=False,
