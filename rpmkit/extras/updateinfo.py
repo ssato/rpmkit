@@ -355,7 +355,9 @@ def _detailed_errata_list_g(workdir, edkeys=_DETAILED_ERRATA_KEYS):
         if x["severity"] is None:
             x["severity"] = "N/A"
 
-        x["cves"] = ", ".join(x["cves"])
+        if x["cves"]:
+            cves = ["%(cve)s (%(score)s, %(url)s)" % c for c in x["cves"]]
+            x["cves"] = ", ".join(cves)
 
         yield x
 
