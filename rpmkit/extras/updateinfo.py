@@ -300,6 +300,10 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
     if not workdir:
         workdir = root
 
+    if not os.path.exists(workdir):
+        logging.info("Creating working dir: " + workdir)
+        os.makedirs(workdir)
+
     logging.info("Dump RPM list...")
     dump_rpm_list(root, workdir)
 
