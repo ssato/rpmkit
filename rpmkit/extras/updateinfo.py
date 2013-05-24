@@ -47,11 +47,17 @@ except ImportError:
 
     _JINJA2_CLI = False
 
+try:
+    from tablib import Dataset, Databook
+except ImportError:
+    Dataset = Databook = None
+
 
 _RPM_LIST_FILE = "packages.json"
 _ERRATA_SUMMARY_FILE = "errata_summary.json"
 _ERRATA_LIST_FILE = "errata.json"
 _ERRATA_CVE_MAP_FILE = "errata_cve_map.json"
+_XLS_FILE = "packages_and_errata_summary.xls"
 
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
@@ -86,7 +92,18 @@ def errata_cve_map_path(workdir, filename=_ERRATA_CVE_MAP_FILE):
     return os.path.join(workdir, filename)
 
 
-def export_rpm_list(root, subdir=YS._RPMDB_SUBDIR):
+def dataset_file_path(workdir, filename=_XLS_FILE):
+    """
+    :param workdir: Working dir to dump the result
+    :param filename: Output file basename
+    """
+    return os.path.join(workdir, filename)
+
+
+_RPM_KEYS = ("name", "version", "release", "epoch", "arch", "buildhost")
+
+
+def export_rpm_list(root, subdir=YS._RPMDB_SUBDIR, rpmkeys=_RPM_KEYS):
     """
     :param root: RPM DB top dir where ``subdir`` exists
     :param subdir: sub dir of ``root`` in which RPM DB files exist
@@ -97,8 +114,7 @@ def export_rpm_list(root, subdir=YS._RPMDB_SUBDIR):
     f = os.path.join(root, subdir, "Packages")
     assert os.path.exists(f), "RPM DB file looks not exist under " + root
 
-    keys = ("name", "version", "release", "epoch", "arch", "buildhost")
-    return RU.rpm_list(root, keys)
+    return RU.rpm_list(root, rpmkeys)
 
 
 def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
@@ -262,6 +278,39 @@ def dump_errata_list(workdir, offline=False,
     return [e for e in _g(es)]
 
 
+def _make_dataset(headers, list_data):
+    """
+    :param headers: Dataset headers
+    :param list_data: List of data
+    """
+    dataset = Dataset()
+    dataset = Dataset()
+    dataset.headers = headers
+
+    for x in list_data:
+        dataset.append([x.get(h) for h in headers])
+
+    return dataset
+
+
+def dump_datasets(workdir, format="xls", rpmkeys=_RPM_KEYS,
+                  ekeys=_ERRATA_KEYS):
+    """
+    :param workdir: Working dir to dump the result
+    :param format: Output format: xls, xlsx or ods
+    """
+    rpms = json.load(open(rpm_list_path(workdir)))  # [{("name", "version", "release", "epoch", "arch", "buildhost")}]
+    errata = json.load(open(errata_summary_path(workdir)))
+
+    rpms_dataset = _make_dataset(rpmkeys, rpms)
+    errata_dataset = _make_dataset(ekeys, errata)
+
+    book = Databook((rpms_dataset, errata_dataset))
+
+    with open(dataset_file_path(workdir), 'wb') as out:
+        out.write(book.xls)
+
+
 def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     """
     Generate dependency graph with using graphviz (twopi).
@@ -269,7 +318,7 @@ def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
     """
-    rreqs_map = make_reversed_requires_dict(root)
+    rreqs_map = RU.make_reversed_requires_dict(root)
     ctx = dict(dependencies=[(r, ps) for r, ps in rreqs_map.iteritems()])
 
     twopi_src = os.path.join(workdir, "rpm_dependencies.twopi")
@@ -279,7 +328,7 @@ def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     open(twopi_src, 'w').write(depgraph_s)
 
     output = twopi_src + ".svg"
-    (out, err, rc) = YS.run("twopi -Tsvg -o %s %s" % (twopi_src, output))
+    (out, err, rc) = YS.run("twopi -Tsvg -o %s %s" % (output, twopi_src))
 
 
 def modmain(ppath, workdir=None, offline=False, errata_details=False,
@@ -314,7 +363,11 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
         logging.info("Dump Errata details...")
         dump_errata_list(workdir, offline)
 
+    logging.info("Dump dataset file...")
+    dump_datasets(workdir)
+
     if report:
+        logging.info("Dump depgraph...")
         gen_depgraph(root, workdir)
 
 
