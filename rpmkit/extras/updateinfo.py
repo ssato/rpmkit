@@ -253,6 +253,16 @@ def dump_errata_list(workdir, offline=False,
     return [e for e in _g(es)]
 
 
+def gen_depgraph(root, workdir=None):
+    """
+    Generate dependency graph with using graphviz.
+
+    :param root: Root dir where 'var/lib/rpm' exists
+    :param workdir: Working dir to dump the result
+    """
+    rreqs_map = make_reversed_requires_dict(root)
+
+
 def modmain(ppath, workdir=None, offline=False, errata_details=False):
     """
     :param ppath: The path to 'Packages' RPM DB file
@@ -286,7 +296,7 @@ def option_parser():
     :param usage: Usage text
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    verbose=False)
+                    report=False, verbose=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -299,6 +309,8 @@ def option_parser():
     p.add_option("-d", "--details", action="store_true",
                  help="Get errata details also from RHN / Satellite")
     p.add_option("", "--offline", action="store_true", help="Offline mode")
+    p.add_option("", "--report", action="store_true",
+                 help="Generate summarized report in HTML format")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
