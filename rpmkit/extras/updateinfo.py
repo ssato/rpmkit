@@ -60,6 +60,10 @@ _ERRATA_CVE_MAP_FILE = "errata_cve_map.json"
 _UPDATES_FILE = "updates.json"
 _XLS_FILE = "packages_and_errata_summary.xls"
 
+_RPM_KEYS = ("name", "version", "release", "epoch", "arch", "buildhost")
+_ERRATA_KEYS = ("advisory", "type", "severity")
+_UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
+
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
     """
@@ -109,9 +113,6 @@ def updates_file_path(workdir, filename=_UPDATES_FILE):
     return os.path.join(workdir, filename)
 
 
-_RPM_KEYS = ("name", "version", "release", "epoch", "arch", "buildhost")
-
-
 def export_rpm_list(root, subdir=YS._RPMDB_SUBDIR, rpmkeys=_RPM_KEYS):
     """
     :param root: RPM DB top dir where ``subdir`` exists
@@ -134,9 +135,6 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
     """
     json.dump(export_rpm_list(root),
               open(rpm_list_path(workdir, filename), 'w'))
-
-
-_ERRATA_KEYS = ("advisory", "type", "severity")
 
 
 def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
@@ -343,7 +341,7 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
 
 _DETAILED_ERRATA_KEYS = ("advisory", "type", "severity", "synopsis",
                          "description", "issue_date", "last_modified_date",
-                         "update_date", "cves", "url")
+                         "update_date", "url")  # TODO: CVEs
 
 
 def _detailed_errata_list_g(workdir, edkeys=_DETAILED_ERRATA_KEYS):
@@ -355,7 +353,7 @@ def _detailed_errata_list_g(workdir, edkeys=_DETAILED_ERRATA_KEYS):
         if x["severity"] is None:
             x["severity"] = "N/A"
 
-        if x["cves"]:
+        if x.get("cves", False):
             cves = ['"%(cve)s (%(score)s %(url)s)"' % c for c in x["cves"]]
             x["cves"] = ", ".join(cves)
         else:
@@ -364,24 +362,35 @@ def _detailed_errata_list_g(workdir, edkeys=_DETAILED_ERRATA_KEYS):
         yield x
 
 
+def _updates_list_g(workdir, ukeys=_UPDATE_KEYS):
+    updates = json.load(open(updates_file_path(workdir)))
+
+    for u in updates:
+        u["advisories"] = ", ".join(u["advisories"])
+        yield u
+
+
 def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
-                  ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS):
+                  ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
+                  ukeys=_UPDATE_KEYS):
     """
     :param workdir: Working dir to dump the result
     """
     rpms = json.load(open(rpm_list_path(workdir)))
     errata = json.load(open(errata_summary_path(workdir)))
+    updates = [u for u in _updates_list_g(workdir, ukeys)]
 
-    rpms_dataset = _make_dataset(rpms, rpmkeys)
-    errata_dataset = _make_dataset(errata, ekeys)
+    datasets = [_make_dataset(rpms, rpmkeys),
+                _make_dataset(errata, ekeys),
+                _make_dataset(updates, ukeys)]
 
     if details:
         des = [x for x in _detailed_errata_list_g(workdir)]
         des_dataset = _make_dataset(des, dekeys)
 
-        book = Databook((rpms_dataset, errata_dataset, des_dataset))
+        book = Databook(datasets + [des_dataset])
     else:
-        book = Databook((rpms_dataset, errata_dataset))
+        book = Databook(datasets)
 
     with open(dataset_file_path(workdir), 'wb') as out:
         out.write(book.xls)
