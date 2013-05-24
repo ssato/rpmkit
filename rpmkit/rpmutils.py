@@ -341,7 +341,26 @@ def make_requires_dict(root):
     return requires
 
 
-sys.setrecursionlimit(2000)
+def make_reversed_requires_dict(root):
+    """
+    :param root: root dir of RPM Database
+    :return: {name_required: [name_requires]}
+    """
+    reqs_map = make_requires_dict(root)  # {req: [reqd]}
+    rreqs = dict()  # {reqd : [req]}
+
+    for p, rs in reqs_map.iteritems():
+        for r in rs:
+            if r == p:
+                continue  # skip self.
+
+            rreqs[r] = sorted(set(rreqs.get(r, []) + [p]))
+
+    return rreqs
+
+
+## The followings are very experimental...
+sys.setrecursionlimit(1000)
 
 
 def pp_list(xs, limit=None):
@@ -482,24 +501,6 @@ class Node(object):
                     children=[c.to_dict() for c in self.children])
 
 
-def make_reversed_requires_dict(root):
-    """
-    :param root: root dir of RPM Database
-    :return: {name_required: [name_requires]}
-    """
-    reqs_map = make_requires_dict(root)  # {req: [reqd]}
-    rreqs = dict()  # {reqd : [req]}
-
-    for p, rs in reqs_map.iteritems():
-        for r in rs:
-            if r == p:
-                continue  # skip self.
-
-            rreqs[r] = sorted(set(rreqs.get(r, []) + [p]))
-
-    return rreqs
-
-
 def make_depgraph(root):
     """
     Make a dependency graph of installed RPMs.
@@ -572,7 +573,6 @@ def _node_to_yaml_s_g(node, indent=0):
         for c in node.list_children_g():
             for s in _node_to_yaml_s_g(c, indent + 2):
                 yield s
-
 
 
 # vim:sw=4:ts=4:et:
