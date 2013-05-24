@@ -321,9 +321,9 @@ def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     rreqs_map = RU.make_reversed_requires_dict(root)
     ctx = dict(dependencies=[(r, ps) for r, ps in rreqs_map.iteritems()])
 
-    twopi_src = os.path.join(workdir, "rpm_dependencies.twopi")
     depgraph_s = render("rpm_dependencies.twopi.j2", ctx, [templatedir],
                         ask=True)
+    twopi_src = os.path.join(workdir, "rpm_dependencies.twopi")
 
     open(twopi_src, 'w').write(depgraph_s)
 
