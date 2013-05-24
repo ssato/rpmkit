@@ -1,8 +1,9 @@
 from distutils.core import setup, Command
+from glob import glob
 
 import datetime
-import glob
 import os
+import os.path
 import sys
 
 curdir = os.getcwd()
@@ -16,7 +17,14 @@ if os.environ.get("_SNAPSHOT_BUILD", None) is not None:
     import datetime
     VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
-data_files = []
+
+def list_files(tdir):
+    return [f for f in glob(os.path.join(tdir, '*')) if os.path.isfile(f)]
+
+
+data_files = [
+    ("share/rpmkit/templates", list_files("data/templates/")),
+]
 
 
 class SrpmCommand(Command):
@@ -82,7 +90,7 @@ setup(name=PACKAGE,
         "rpmkit.rhncachedb",
         "rpmkit.tests",
     ],
-    scripts=glob.glob("src/*"),
+    scripts=glob("src/*"),
     data_files=data_files,
     cmdclass={
         "srpm": SrpmCommand,
