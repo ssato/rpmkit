@@ -130,7 +130,7 @@ def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
     pkeys = ("name", "version", "release", "epoch", "arch")
 
     d = dict(zip(ekeys, errata))
-    d["packages"] = [dict(zip(pkeys, itemgetter(pkeys)(p))) for p in packages]
+    d["packages"] = [dict(zip(pkeys, itemgetter(*pkeys)(p))) for p in packages]
 
     return d
 
