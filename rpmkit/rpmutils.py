@@ -18,6 +18,7 @@
 from rpmkit.memoize import memoize
 from rpmkit.utils import concat, uniq
 
+from collections import deque
 from itertools import groupby
 from operator import itemgetter, attrgetter
 from yum.rpmsack import RPMDBPackageSack
@@ -366,12 +367,12 @@ def pp_nodes(ns, limit=None):
     :return: Pretty printed list string
     """
     if limit is None:
-        limit = len(xs) + 1
+        limit = len(ns) + 1
 
     return ", ".join(n.name for n in ns[:limit])
 
 
-def node_list_seen(node, acc=set()):
+def node_list_seen(node, acc=set(), sorted=False):
     """
     Walk through children of ``node`` and aggregate seen node names.
 
@@ -384,34 +385,22 @@ def node_list_seen(node, acc=set()):
 
     # Walk through all children and aggregate seen node names and nodes.
     while nodes:
-        next_nodes = []
+        next_nodes = set()
 
         for n in nodes:
             if n.name not in names:
                 logging.debug("node_list_seen: add " + n.name)
                 names.add(n.name)
 
-            next_nodes += n.list_children()  # Next children
+            next_nodes.update(n.list_children())  # Next children
 
-        nodes = set(next_nodes)
+        nodes = next_nodes
 
-    names = sorted(names)
+    if sorted:
+        names = sorted(names)
 
     logging.debug("node=%s, names=%s" % (node.name, str(names)))
     return names
-
-
-def _node_to_yaml_s_g(node, indent=0):
-    _indent =  ' ' * indent
-    yield _indent + "- name: " + node.name
-    _indent += "  "
-
-    if node.list_children():
-        yield _indent + "children:"
-
-        for c in node.list_children():
-            for s in _node_to_yaml_s_g(c, indent + 2):
-                yield s
 
 
 class Node(object):
@@ -423,18 +412,43 @@ class Node(object):
         """
         self.name = name
         self.children = children
+        self.childnames = set([c.name for c in children])
         self._is_root = is_root
+        self._has_children = bool(children)
 
     def list_children(self):
-        return sorted(self.children)
+        return self.children
+
+    def list_children_g(self):
+        for c in self.children:
+            yield c
+
+    def list_child_names(self):
+        return self.childnames
+
+    def has_children(self):
+        return self._has_children
+
+    def list_seen(self):
+        return [self.name] + list(self.list_child_names())
+
+    def was_seen(self, name):
+        return name in self.list_seen()
 
     def add_child(self, cnode):
         """
         :param cnode: Child node to add
         :type Node:
         """
-        if cnode.name not in node_list_seen(self):
+        if cnode.name == self.name:
+            return  # Do not add self.
+
+        if cnode.name not in self.list_child_names():
             self.children.append(cnode)
+            self.childnames.add(cnode.name)
+
+            if not self.has_children():
+                self._has_children = True
 
     def add_children(self, diff):
         """
@@ -447,15 +461,15 @@ class Node(object):
     def is_root(self):
         return self._is_root
 
-    def toggle_is_root(self):
-        self._is_root = not self.is_root()
+    def make_not_root(self):
+        self._is_root = False
 
     def __str__(self):
         return repr(self)
 
     def __repr__(self):
-        return "Node { '%s', children=%s...}" % \
-               (self.name, pp_nodes(self.children, 20))
+        return "Node { '%s', children=[%s]}" % \
+               (self.name, pp_nodes(self.children))
 
     def __cmp__(self, other):
         return cmp(self.name, other.name)
@@ -510,11 +524,55 @@ def make_depgraph(root):
                 logging.debug("Create child node: name=" + p)
                 pnode = nodes_cache[p] = Node(p, [], is_root=False)
             else:
-                pnode._is_root = False
+                pnode.make_not_root()
 
             rnode.add_child(pnode)
 
     return sorted(nodes_cache.values(), key=attrgetter("name"))
+
+
+def traverse_node_g(node, rank=0):
+    """
+    Yields list of nodes traversing children of given node.
+
+    :param node: Node object
+    """
+    to_traverse = deque()
+    nodes_list = []
+    last_rank = cur_rank = rank
+
+    to_traverse.append((cur_rank, node))
+
+    while to_traverse:
+        logging.debug("to_traverse=" + str(to_traverse))
+        (cur_rank, cur_node) = to_traverse.popleft()
+
+        while last_rank and last_rank >= cur_rank:
+            nodes_list.pop()
+            logging.debug("nodes_list=" + str(nodes_list) + ", ranks: last=%d, cur=%d" % (last_rank, cur_rank))
+            last_rank -= 1
+
+        nodes_list.append(cur_node.name)
+        logging.debug("(nodes_list to yield: " + str(nodes_list))
+        yield nodes_list
+
+        to_traverse.extendleft(((cur_rank + 1, c) for c in
+                               cur_node.list_children_g()))
+        last_rank = cur_rank
+
+
+def _node_to_yaml_s_g(node, indent=0):
+    _indent =  ' ' * indent
+    yield _indent + "- name: " + node.name
+    _indent += "  "
+
+    if node.has_children():
+        yield _indent + "children:"
+
+        for c in node.list_children_g():
+            for s in _node_to_yaml_s_g(c, indent + 2):
+                yield s
+
 
 
 # vim:sw=4:ts=4:et:
