@@ -268,11 +268,12 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
     ed = swapicall("errata.getDetails", offline, adv)[0]
     errata.update(ed)
 
-    # FIXME: Errata - CVE map looks sometimes not enough.
-    if use_map:
-        errata["cves"] = errata_cves_map.get(adv, [])
-    else:
-        errata["cves"] = swapicall("errata.listCves", offline, adv)[0]
+    if adv.startswith("RHSA"):
+        # FIXME: Errata - CVE map looks sometimes not enough.
+        if use_map:
+            errata["cves"] = errata_cves_map.get(adv, [])
+        else:
+            errata["cves"] = swapicall("errata.listCves", offline, adv)[0]
 
     errata["url"] = errata_url(adv)
 
