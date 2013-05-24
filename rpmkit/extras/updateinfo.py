@@ -293,17 +293,21 @@ def dump_errata_list(workdir, offline=False,
     json.dump(errata, open(errata_list_path(workdir), 'w'))
 
 
-def _make_dataset(headers, list_data):
+def _make_dataset(list_data, headers=None):
     """
-    :param headers: Dataset headers
     :param list_data: List of data
+    :param headers: Dataset headers
     """
     dataset = Dataset()
-    dataset = Dataset()
-    dataset.headers = headers
 
-    for x in list_data:
-        dataset.append([x.get(h) for h in headers])
+    if headers:
+        dataset.headers = headers
+
+        for x in list_data:
+            dataset.append([x.get(h) for h in headers])
+    else:
+        for x in list_data:
+            dataset.append(x.values())
 
     return dataset
 
@@ -337,19 +341,43 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
     json.dump(updates.values(), open(updates_file_path(workdir), 'w'))
 
 
-def dump_datasets(workdir, format="xls", rpmkeys=_RPM_KEYS,
-                  ekeys=_ERRATA_KEYS):
+_DETAILED_ERRATA_KEYS = ("advisory", "type", "severity", "synopsis",
+                         "description", "issue_date", "last_modified_date",
+                         "update_date", "cves", "url")
+
+
+def _detailed_errata_list_g(workdir, edkeys=_DETAILED_ERRATA_KEYS):
+    es = json.load(open(errata_list_path(workdir)))
+
+    for e in es:
+        x = dict(zip(edkeys, itemgetter(*edkeys)(e)))
+
+        if x["severity"] is None:
+            x["severity"] = "N/A"
+
+        x["cves"] = ", ".join(x["cves"])
+
+        yield x
+
+
+def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
+                  ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS):
     """
     :param workdir: Working dir to dump the result
-    :param format: Output format: xls, xlsx or ods
     """
     rpms = json.load(open(rpm_list_path(workdir)))
     errata = json.load(open(errata_summary_path(workdir)))
 
-    rpms_dataset = _make_dataset(rpmkeys, rpms)
-    errata_dataset = _make_dataset(ekeys, errata)
+    rpms_dataset = _make_dataset(rpms, rpmkeys)
+    errata_dataset = _make_dataset(errata, ekeys)
 
-    book = Databook((rpms_dataset, errata_dataset))
+    if details:
+        des = [x for x in _detailed_errata_list_g(workdir)]
+        des_dataset = _make_dataset(des, dekeys)
+
+        book = Databook((rpms_dataset, errata_dataset, des_dataset))
+    else:
+        book = Databook((rpms_dataset, errata_dataset))
 
     with open(dataset_file_path(workdir), 'wb') as out:
         out.write(book.xls)
@@ -420,7 +448,7 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
     dump_updates_list(workdir)
 
     logging.info("Dump dataset file from RPMs and Errata data...")
-    dump_datasets(workdir)
+    dump_datasets(workdir, errata_details)
 
     if report:
         logging.info("Dump depgraph...")
