@@ -38,6 +38,15 @@ try:
 except ImportError:
     import simplejson as json
 
+try:
+    from jinja2_cli.render import render
+    _JINJA2_CLI = True
+except ImportError:
+    def render(*args, **kwargs):
+        pass
+
+    _JINJA2_CLI = False
+
 
 _RPM_LIST_FILE = "packages.json"
 _ERRATA_SUMMARY_FILE = "errata_summary.json"
@@ -253,22 +262,34 @@ def dump_errata_list(workdir, offline=False,
     return [e for e in _g(es)]
 
 
-def gen_depgraph(root, workdir=None):
+def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     """
-    Generate dependency graph with using graphviz.
+    Generate dependency graph with using graphviz (twopi).
 
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
     """
     rreqs_map = make_reversed_requires_dict(root)
+    ctx = dict(dependencies=[(r, ps) for r, ps in rreqs_map.iteritems()])
+
+    twopi_src = os.path.join(workdir, "rpm_dependencies.twopi")
+    depgraph_s = render("rpm_dependencies.twopi.j2", ctx, [templatedir],
+                        ask=True)
+
+    open(twopi_src, 'w').write(depgraph_s)
+
+    output = twopi_src + ".svg"
+    (out, err, rc) = YS.run("twopi -Tsvg -o %s %s" % (twopi_src, output))
 
 
-def modmain(ppath, workdir=None, offline=False, errata_details=False):
+def modmain(ppath, workdir=None, offline=False, errata_details=False
+            report=False):
     """
     :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
     :param offline: True if get results only from local cache
     :param errata_details: True if detailed errata info is needed
+    :param report: True if report to be generated
     """
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
@@ -288,6 +309,9 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False):
     if errata_details:
         logging.info("Dump Errata details...")
         dump_errata_list(workdir, offline)
+
+    if report:
+        gen_depgraph(root, workdir)
 
 
 def option_parser():
@@ -327,7 +351,13 @@ def main():
     else:
         ppath = raw_input("Path to the 'Packages' RPM DB file > ")
 
-    modmain(ppath, options.workdir, options.offline, options.details)
+    if options.report and not _JINJA2_CLI:
+        sys.stderr.write("python-jinja2-cli is not installed so that "
+                         "reporting function is disabled.")
+        options.report = False
+
+    modmain(ppath, options.workdir, options.offline, options.details,
+            options.report)
 
 
 if __name__ == '__main__':
