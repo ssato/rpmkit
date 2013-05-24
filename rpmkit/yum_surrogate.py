@@ -37,7 +37,7 @@ except ImportError:
 _RPMDB_SUBDIR = "var/lib/rpm"
 
 _DEFAULTS = dict(path=None, root=None, dist="auto", format=False,
-                 copy=False, force=False, verbose=False,
+                 logdir=None, copy=False, force=False, verbose=False,
                  other_db=False)
 _ARGV_SEP = "--"
 
@@ -198,18 +198,26 @@ def rpmdb_files_exist(path, rpmdb_filenames=_RPM_DB_FILENAMES):
     return all(os.path.exists(os.path.join(dbdir, f)) for f in rpmdb_filenames)
 
 
-def surrogate_operation(root, operation):
+def surrogate_operation(root, operation, logfiles=None):
     """
     Surrogates yum operation (command).
 
     :param root: Pivot root dir where var/lib/rpm/Packages of the target host
-                 exists, e.g. /root/host_a/
+        exists, e.g. /root/host_a/
     :param operation: Yum operation (command), e.g. 'list-sec'
+    :param logfiles: Pair of output and error log files,
+        e.g. ('./tmp/out.log', '/tmp/err.log')
     """
     root = os.path.abspath(root)
     cs = ["yum", ("" if root == "/" else "--installroot=" + root), operation]
 
-    return run(' '.join(cs))
+    (out, err, rc) = run(' '.join(cs))
+    if logfiles:
+        (outlog, errlog) = logfiles
+        open(outlog, 'w').write(out)
+        open(errlog, 'w').write(err)
+
+    return (out, err, rc)
 
 
 def _is_errata_line(line, dist):
@@ -301,7 +309,7 @@ def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':'):
                 release=release, arch=arch)
 
 
-def list_errata_g(root, dist=None):
+def list_errata_g(root, dist=None, logfiles=None):
     """
     A generator to return errata found in the output result of 'yum list-sec'
     one by one.
@@ -309,11 +317,12 @@ def list_errata_g(root, dist=None):
     :param root: Pivot root dir where var/lib/rpm/Packages of the target host
                  exists, e.g. /root/host_a/
     :param dist: Distribution name or None
+    :param logfiles: Pair of command's output and error log files
     """
     if not dist:
         dist = detect_dist()
 
-    result = surrogate_operation(root, "list-sec")
+    result = surrogate_operation(root, "list-sec", logfiles)
     if result[-1] == 0:
         for line in result[0].splitlines():
             if _is_errata_line(line, dist):
@@ -358,7 +367,7 @@ def parse_update_line(line):
         return dict()
 
 
-def list_updates_g(root, *args):
+def list_updates_g(root, logfiles=None, *args):
     """
     FIXME: Ugly and maybe yum-version-dependent implementation.
 
@@ -367,10 +376,11 @@ def list_updates_g(root, *args):
 
     :param root: Pivot root dir where var/lib/rpm/Packages of the target host
                  exists, e.g. /root/host_a/
+    :param logfiles: Pair of command's output and error log files
     """
     # NOTE: 'yum check-update' looks returning non-zero exit code (e.g. 100)
     # when there are any updates found.
-    result = surrogate_operation(root, "check-update")
+    result = surrogate_operation(root, "check-update", logfiles=logfiles)
     if result[0]:
         # It seems that yum prints out an empty line before listing updates.
         in_list = False
@@ -384,8 +394,8 @@ def list_updates_g(root, *args):
         failure("check-update", result)
 
 
-def run_yum_cmd(root, yum_args, *args):
-    result = surrogate_operation(root, yum_args)
+def run_yum_cmd(root, yum_args, logfiles, *args):
+    result = surrogate_operation(root, yum_args, logfiles)
     if result[-1] == 0:
         print result[0]
     else:
@@ -427,6 +437,7 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE,
                       "You must specify this if you want to perform some "
                       "yum sub commands like 'install', 'update' requires "
                       "other RPM DB files")
+    p.add_option("-L", "--logdir", help="Path to log dir")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -484,6 +495,16 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
     root = setup_root(ppath, options.root, options.force, options.copy,
                       options.other_db)
 
+    if options.logdir:
+        if not os.path.exists(options.logdir):
+            logging.info("Create log dir: " + options.logdir)
+            os.makedirs(options.logdir)
+
+        logfiles = (os.path.join(options.logdir, "output.log"),
+                    os.path.join(options.logdir, "error.log"))
+    else:
+        logfiles = None
+
     if options.format:
         f = None
         for c in fmtble_cmds.keys():
@@ -493,13 +514,13 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
                 break
 
         if f is None:
-            run_yum_cmd(root, ' '.join(yum_argv))
+            run_yum_cmd(root, ' '.join(yum_argv), logfiles=logfiles)
         else:
-            json.dump([x for x in f(root, options.dist)],
-                      sys.stdout, indent=2)
+            res = [x for x in f(root, options.dist, logfiles=logfiles)]
+            json.dump(res, sys.stdout, indent=2)
             print
     else:
-        run_yum_cmd(root, ' '.join(yum_argv))
+        run_yum_cmd(root, ' '.join(yum_argv), logfiles=logfiles)
 
 
 if __name__ == '__main__':
