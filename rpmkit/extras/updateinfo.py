@@ -289,7 +289,8 @@ def dump_errata_list(workdir, offline=False,
         for ref_e in es:
             yield get_errata_details(ref_e, workdir, offline)
 
-    return [e for e in _g(es)]
+    errata = [e for e in _g(es)]
+    json.dump(errata, open(errata_list_path(workdir), 'w'))
 
 
 def _make_dataset(headers, list_data):
