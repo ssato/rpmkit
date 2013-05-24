@@ -57,6 +57,7 @@ _RPM_LIST_FILE = "packages.json"
 _ERRATA_SUMMARY_FILE = "errata_summary.json"
 _ERRATA_LIST_FILE = "errata.json"
 _ERRATA_CVE_MAP_FILE = "errata_cve_map.json"
+_UPDATES_FILE = "updates.json"
 _XLS_FILE = "packages_and_errata_summary.xls"
 
 
@@ -93,6 +94,14 @@ def errata_cve_map_path(workdir, filename=_ERRATA_CVE_MAP_FILE):
 
 
 def dataset_file_path(workdir, filename=_XLS_FILE):
+    """
+    :param workdir: Working dir to dump the result
+    :param filename: Output file basename
+    """
+    return os.path.join(workdir, filename)
+
+
+def updates_file_path(workdir, filename=_UPDATES_FILE):
     """
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
@@ -296,13 +305,42 @@ def _make_dataset(headers, list_data):
     return dataset
 
 
+_MIN_RPM_KEYS = ("name", "version", "release", "epoch", "arch")
+
+
+def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
+    """
+    :param workdir: Working dir to dump the result
+    :param format: Output format: xls, xlsx or ods
+    """
+    errata = json.load(open(errata_summary_path(workdir)))
+    updates = dict()
+    p2k = itemgetter(*rpmkeys)
+
+    for e in errata:
+        adv = e["advisory"]
+
+        for p in e["packages"]:
+            x_seen = updates.get(p2k(p), None)
+
+            if x_seen is None:
+                x = p
+                x["advisories"] = [adv]
+                updates[p2k(p)] = x
+            else:
+                if adv not in x_seen:
+                    x_seen["advisories"].append(adv)
+
+    json.dump(updates.values(), open(updates_file_path(workdir), 'w'))
+
+
 def dump_datasets(workdir, format="xls", rpmkeys=_RPM_KEYS,
                   ekeys=_ERRATA_KEYS):
     """
     :param workdir: Working dir to dump the result
     :param format: Output format: xls, xlsx or ods
     """
-    rpms = json.load(open(rpm_list_path(workdir)))  # [{("name", "version", "release", "epoch", "arch", "buildhost")}]
+    rpms = json.load(open(rpm_list_path(workdir)))
     errata = json.load(open(errata_summary_path(workdir)))
 
     rpms_dataset = _make_dataset(rpmkeys, rpms)
@@ -375,7 +413,10 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
         logging.info("Dump Errata details...")
         dump_errata_list(workdir, offline)
 
-    logging.info("Dump dataset file...")
+    logging.info("Dump update RPM list from errata data...")
+    dump_updates_list(workdir)
+
+    logging.info("Dump dataset file from RPMs and Errata data...")
     dump_datasets(workdir)
 
     if report:
