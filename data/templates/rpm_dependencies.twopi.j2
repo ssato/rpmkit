@@ -26,7 +26,7 @@ node_{{ index }}_{{ subindex }}
 {% endmacro %}
 
 digraph rpm_dependencies {
-    node [ fillcolor="white", shape="circle", label="", tooltip="\N", width="0.2"]
+    node [ fillcolor="white", shape="point", style="filled", id="\N", width="0.5" ]
     edge [ arrowhead="none", w="10", len="1000"]
     overlap="false";
 
