@@ -263,11 +263,13 @@ def get_errata_details(errata, workdir, offline=False):
         json.dump(errata_cves_map, open(cve_ref_path, 'w'))
         #assert bool(errata_cves_map), "errata_cache=" + errata_cache
 
-    ed = swapicall("errata.getDetails", offline, e["advisory"])[0]
+    adv = errata["advisory"]
+
+    ed = swapicall("errata.getDetails", offline, adv)[0]
     errata.update(ed)
 
-    errata["cves"] = errata_cves_map.get(e["advisory"], [])
-    errata["url"] = errata_url(e["advisory"])
+    errata["cves"] = errata_cves_map.get(adv, [])
+    errata["url"] = errata_url(adv)
 
     return errata
 
