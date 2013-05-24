@@ -133,8 +133,10 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    json.dump(export_rpm_list(root),
-              open(rpm_list_path(workdir, filename), 'w'))
+    rpms = export_rpm_list(root)
+    logging.debug("%d installed rpms found")
+
+    json.dump(rpms, open(rpm_list_path(workdir, filename), 'w'))
 
 
 def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
@@ -242,7 +244,7 @@ def mk_errata_map(offline):
     return errata_cves_map
 
 
-def get_errata_details(errata, workdir, offline=False):
+def get_errata_details(errata, workdir, offline=False, use_map=False):
     """
     Get errata details with using swapi (RHN hosted or satellite).
 
@@ -266,7 +268,12 @@ def get_errata_details(errata, workdir, offline=False):
     ed = swapicall("errata.getDetails", offline, adv)[0]
     errata.update(ed)
 
-    errata["cves"] = errata_cves_map.get(adv, [])
+    # FIXME: Errata - CVE map looks sometimes not enough.
+    if use_map:
+        errata["cves"] = errata_cves_map.get(adv, [])
+    else:
+        errata["cves"] = swapicall("errata.listCves", offline, adv)[0]
+
     errata["url"] = errata_url(adv)
 
     return errata
