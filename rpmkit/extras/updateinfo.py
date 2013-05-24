@@ -94,7 +94,7 @@ def export_rpm_list(root, subdir=YS._RPMDB_SUBDIR):
     :return: The list of RPM package (NVREA) ::
              [{name, version, release, epoch, arch}]
     """
-    f = os.paht.join(root, subdir, "Packages")
+    f = os.path.join(root, subdir, "Packages")
     assert os.path.exists(f), "RPM DB file looks not exist under " + root
 
     keys = ("name", "version", "release", "epoch", "arch", "buildhost")
