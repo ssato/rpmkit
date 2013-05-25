@@ -177,7 +177,7 @@ def setup_root(ppath, root=None, force=False, copy=False,
 
             setup_data(ppath, root, force, copy, refer_other_rpmdb)
 
-    return root
+    return os.path.abspath(root)
 
 
 def detect_dist():
