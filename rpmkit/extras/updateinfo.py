@@ -345,7 +345,7 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
                 if adv not in x_seen:
                     x_seen["advisories"].append(adv)
 
-    json.dump(sorted(updates.values(), key=itemgetter("name"),
+    json.dump(sorted(updates.values(), key=itemgetter("name")),
               open(updates_file_path(workdir), 'w'))
 
 
