@@ -300,12 +300,16 @@ def dump_errata_list(workdir, offline=False,
     json.dump(errata, open(errata_list_path(workdir), 'w'))
 
 
-def _make_dataset(list_data, headers=None):
+def _make_dataset(list_data, headers=None, title=None):
     """
     :param list_data: List of data
-    :param headers: Dataset headers
+    :param headers: Dataset headers to be used as column headers
+    :param headers: Dataset title to be used as worksheet's name
     """
     dataset = Dataset()
+
+    if title:
+        dataset.title = title
 
     if headers:
         dataset.headers = headers
@@ -390,13 +394,13 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
     errata = json.load(open(errata_summary_path(workdir)))
     updates = [u for u in _updates_list_g(workdir, ukeys)]
 
-    datasets = [_make_dataset(rpms, rpmkeys),
-                _make_dataset(errata, ekeys),
-                _make_dataset(updates, ukeys)]
+    datasets = [_make_dataset(rpms, rpmkeys, "Installed RPMs"),
+                _make_dataset(errata, ekeys, "Errata"),
+                _make_dataset(updates, ukeys, "Update RPMs")]
 
     if details:
         des = [x for x in _detailed_errata_list_g(workdir)]
-        des_dataset = _make_dataset(des, dekeys)
+        des_dataset = _make_dataset(des, dekeys, "Errata Details")
 
         book = Databook(datasets + [des_dataset])
     else:
