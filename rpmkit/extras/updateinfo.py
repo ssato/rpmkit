@@ -113,17 +113,14 @@ def updates_file_path(workdir, filename=_UPDATES_FILE):
     return os.path.join(workdir, filename)
 
 
-def export_rpm_list(root, subdir=YS._RPMDB_SUBDIR, rpmkeys=_RPM_KEYS):
+def export_rpm_list(root, rpmkeys=_RPM_KEYS):
     """
     :param root: RPM DB top dir where ``subdir`` exists
-    :param subdir: sub dir of ``root`` in which RPM DB files exist
+    :param rpmkeys: RPM dict keys
 
     :return: The list of RPM package (NVREA) ::
              [{name, version, release, epoch, arch}]
     """
-    f = os.path.join(root, subdir, "Packages")
-    assert os.path.exists(f), "RPM DB file looks not exist under " + root
-
     return RU.rpm_list(root, rpmkeys)
 
 
@@ -134,7 +131,7 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
     :param filename: Output file basename
     """
     rpms = export_rpm_list(root)
-    logging.debug("%d installed rpms found")
+    logging.debug("%d installed rpms found" % len(rpms))
 
     json.dump(rpms, open(rpm_list_path(workdir, filename), 'w'))
 
@@ -516,6 +513,8 @@ def main():
         ppath = args[0]
     else:
         ppath = raw_input("Path to the 'Packages' RPM DB file > ")
+
+    assert os.path.exists(ppath), "RPM DB file looks not exist"
 
     if options.report and not _JINJA2_CLI:
         sys.stderr.write("python-jinja2-cli is not installed so that "
