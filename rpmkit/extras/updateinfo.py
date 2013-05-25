@@ -130,7 +130,7 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    rpms = export_rpm_list(root)
+    rpms = sorted(export_rpm_list(root), key=itemgetter("name"))
     logging.debug("%d installed rpms found in %s" % (len(rpms), root))
 
     json.dump(rpms, open(rpm_list_path(workdir, filename), 'w'))
@@ -296,7 +296,7 @@ def dump_errata_list(workdir, offline=False,
         for ref_e in es:
             yield get_errata_details(ref_e, workdir, offline)
 
-    errata = [e for e in _g(es)]
+    errata = sorted((e for e in _g(es)), key=itemgetter("advisory"))
     json.dump(errata, open(errata_list_path(workdir), 'w'))
 
 
@@ -345,7 +345,8 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
                 if adv not in x_seen:
                     x_seen["advisories"].append(adv)
 
-    json.dump(updates.values(), open(updates_file_path(workdir), 'w'))
+    json.dump(sorted(updates.values(), key=itemgetter("name"),
+              open(updates_file_path(workdir), 'w'))
 
 
 _DETAILED_ERRATA_KEYS = ("advisory", "type", "severity", "synopsis",
