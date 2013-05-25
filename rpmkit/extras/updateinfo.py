@@ -273,7 +273,11 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
         if use_map:
             errata["cves"] = errata_cves_map.get(adv, [])
         else:
-            errata["cves"] = swapicall("errata.listCves", offline, adv)[0]
+            try:
+                errata["cves"] = swapicall("errata.listCves", offline, adv)[0]
+            except IndexError:
+                logging.warn("Could not get relevant CVEs of errata: " + adv)
+                errata["cves"] = ["N/A (failed to get info)"]
 
     errata["url"] = errata_url(adv)
 
