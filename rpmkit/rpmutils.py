@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Red Hat, Inc.
+# Copyright (C) 2011 - 2013 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -501,17 +501,20 @@ class Node(object):
                     children=[c.to_dict() for c in self.children])
 
 
-def make_depgraph(root):
+def make_depgraph(root, reversed=False):
     """
     Make a dependency graph of installed RPMs.
 
     :param root: RPM DB top dir
+    :param reversed: Try to make reversed dependency graph (very experimental).
     :return: List of root nodes.
     """
-    rreqs_map = make_reversed_requires_dict(root)  # {reqd: [req]}
+    f = make_reversed_requires_dict if reversed else make_requires_dict
+    reqs_map = f(root)  # {reqd: [req]}
+
     nodes_cache = dict()  # {name: Node n}
 
-    for r, ps in rreqs_map.iteritems():
+    for r, ps in reqs_map.iteritems():
         rnode = nodes_cache.get(r, None)
 
         if rnode is None:
