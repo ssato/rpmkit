@@ -122,7 +122,7 @@ def rpm_list(rpmdb_dir=None,
     if rpmdb_dir:
         rpm.delMacro("_dbpath")
 
-    ps = [h2nvrea(h) for h in mi]
+    ps = [h2nvrea(h, keys) for h in mi]
     del mi, ts
 
     return ps
