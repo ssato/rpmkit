@@ -131,7 +131,7 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
     :param filename: Output file basename
     """
     rpms = export_rpm_list(root)
-    logging.debug("%d installed rpms found" % len(rpms))
+    logging.debug("%d installed rpms found in %s" % (len(rpms), root))
 
     json.dump(rpms, open(rpm_list_path(workdir, filename), 'w'))
 
