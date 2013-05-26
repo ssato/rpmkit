@@ -314,15 +314,13 @@ def make_requires_dict(root):
         for r in p.returnPrco("requires"):
             reqname = r[0]
 
-            if reqname.startswith("rpmlib"):  # special case.
+            # Special cases: rpmlib* or self dependency
+            if reqname.startswith("rpmlib") or reqname == p.name:
                 continue
 
-            if reqname == p.name:  # It requires self.
-                continue
+            prov = providers.get(reqname, None)
 
-            if reqname in providers:
-                prov = providers[reqname]
-            else:
+            if prov is None:
                 prov = sack.searchProvides(reqname)
                 if prov:
                     prov = prov[0].name
