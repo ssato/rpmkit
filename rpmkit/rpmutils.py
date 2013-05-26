@@ -301,6 +301,10 @@ def make_requires_dict(root):
     providers = dict()
     skip = []
 
+    def _find_reqs(name, cachedb, requires):
+        return [x for x in cachedb.keys()
+                if x != name and name not in requires.get(x, [])]
+
     sack = RPMDBPackageSack(root, cachedir=os.path.join(root, "cache"),
                             persistdir=root)
 
@@ -335,8 +339,7 @@ def make_requires_dict(root):
                 else:
                     cachedb[prov] = None
 
-            requires[p.name] = [x for x in cachedb.keys() if x != p.name \
-                                and p.name not in requires.get(x, [])]
+            requires[p.name] = _find_reqs(p.name, cachedb, requires)
 
     return requires
 
@@ -553,7 +556,8 @@ def traverse_node_g(node, rank=0):
 
         while last_rank and last_rank >= cur_rank:
             nodes_list.pop()
-            logging.debug("nodes_list=" + str(nodes_list) + ", ranks: last=%d, cur=%d" % (last_rank, cur_rank))
+            logging.debug("nodes_list=" + str(nodes_list) +
+                          ", ranks: last=%d, cur=%d" % (last_rank, cur_rank))
             last_rank -= 1
 
         nodes_list.append(cur_node.name)
@@ -565,8 +569,21 @@ def traverse_node_g(node, rank=0):
         last_rank = cur_rank
 
 
+def traverse_node(node, rank=0):
+    """
+    Return list of nodes traversing children of given node.
+
+    :param node: Node object
+    """
+    nlists = []
+    for nlist in traverse_node_g(node, rank):
+        nlists.append(nlist)
+
+    return nlists
+
+
 def _node_to_yaml_s_g(node, indent=0):
-    _indent =  ' ' * indent
+    _indent = ' ' * indent
     yield _indent + "- name: " + node.name
     _indent += "  "
 
