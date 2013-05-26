@@ -417,9 +417,6 @@ def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
     """
-    # FIXME: fix RU.make_reversed_requires_dict()
-    #rreqs_map = RU.make_reversed_requires_dict(root)
-    #ctx = dict(dependencies=[(r, ps) for r, ps in rreqs_map.iteritems()])
     reqs_map = RU.make_requires_dict(root)
     ctx = dict(dependencies=[(r, ps) for r, ps in reqs_map.iteritems()])
 
