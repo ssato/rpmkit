@@ -27,8 +27,9 @@ node_{{ index }}_{{ subindex }}
 
 digraph rpm_dependencies {
     node [ fillcolor="white", shape="point", style="filled", id="\N", width="0.5" ]
-    edge [ arrowhead="none", w="10", len="1000", id="\T_._\H" ]
-    overlap="false";
+    /* edge [ arrowhead="none", w="10", len="1000", id="\T_._\H" ] */
+    edge [ w="10", len="1000", id="\T_._\H", weight = "0.1", arrowsize=0.4, penwidth=1.2 ]
+    overlap="false"; ranksep=3.0; nodesep=2.0;
 
 {% for reqd, reqs in dependencies -%}{% set index = loop.index0 %}
 {# {{ gen_subgraph_and_rel_map(reqd, reqs, loop.index0) }} #}
