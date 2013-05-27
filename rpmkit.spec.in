@@ -17,7 +17,8 @@ BuildArch:      noarch
 BuildRequires:  python
 Requires:       rpm-python
 Requires:       python-BeautifulSoup
-#Requires:       yum-plugin-security
+# To support 'list-sec' sub command in yum via yum-surrogate:
+Requires:       yum-plugin-security
 
 
 %description
@@ -28,7 +29,8 @@ RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 Summary:        Extra and experimental modules and tools in %{name}
 Requires:       %{name} = %{version}-%{release}
 Requires:       python-matplotlib
-#Requires:       python-jinja2-cli
+Requires:       python-tablib
+Requires:       python-jinja2-cli
 #Requires:       cx_Oracle
 
 %description    extras
@@ -95,9 +97,14 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
-* Mon May 13 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11.999-1
+* Mon May 27 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11.999-1
 - [yum-surrogate] promoted from extras to main
-- [yum-surrogate] some fixes around 'Packages' path and roo handling
+- [yum-surrogate] some fixes around 'Packages' path and root processing
+- [yum-surrogate] make root and dist computed automatically if not given
+- [yum-surrogate] add new option -L to specify dir to output command log files
+- [yum-surrogate] other misc related fixes and enhancements
+- [updateinfo] add new sub command to get update info with using yum-surrogate
+- related small fixes and enhancements in rpmkit.rpmutils, etc.
 
 * Fri May 10 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11-1
 - [yum-surrogate] Add to surrogate running yum on hosts have access to yum
