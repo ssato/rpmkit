@@ -31,6 +31,7 @@ Requires:       %{name} = %{version}-%{release}
 Requires:       python-matplotlib
 Requires:       python-tablib
 Requires:       python-jinja2-cli
+Requires:       graphviz
 #Requires:       cx_Oracle
 
 %description    extras
@@ -103,7 +104,7 @@ rm -rf $RPM_BUILD_ROOT
 - [yum-surrogate] make root and dist computed automatically if not given
 - [yum-surrogate] add new option -L to specify dir to output command log files
 - [yum-surrogate] other misc related fixes and enhancements
-- [updateinfo] add new sub command to get update info with using yum-surrogate
+- [updateinfo] add new command to get update info with using yum-surrogate
 - related small fixes and enhancements in rpmkit.rpmutils, etc.
 
 * Fri May 10 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11-1
