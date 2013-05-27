@@ -121,7 +121,7 @@ def export_rpm_list(root, rpmkeys=_RPM_KEYS):
     :return: The list of RPM package (NVREA) ::
              [{name, version, release, epoch, arch}]
     """
-    return RU.rpm_list(root, rpmkeys)
+    return RU.list_installed_rpms(root, rpmkeys)
 
 
 def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
@@ -130,7 +130,7 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    rpms = sorted(export_rpm_list(root), key=itemgetter("name"))
+    rpms = export_rpm_list(root)
     logging.debug("%d installed rpms found in %s" % (len(rpms), root))
 
     json.dump(rpms, open(rpm_list_path(workdir, filename), 'w'))
