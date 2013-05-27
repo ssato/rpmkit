@@ -32,6 +32,9 @@ import rpm
 import yum
 
 
+RPM_BASIC_KEYS = ("name", "version", "release", "epoch", "arch")
+
+
 def rpm_header_from_rpmfile(rpmfile):
     """
     Read rpm.hdr from rpmfile.
@@ -99,7 +102,7 @@ def normalize(p):
     return p
 
 
-def h2nvrea(h, keys=("name", "version", "release", "epoch", "arch")):
+def h2nvrea(h, keys=RPM_BASIC_KEYS):
     """
     :param h: RPM DB header object
     :param keys: RPM Package dict keys
@@ -107,11 +110,11 @@ def h2nvrea(h, keys=("name", "version", "release", "epoch", "arch")):
     return dict(zip(keys, [h[k] for k in keys]))
 
 
-def rpm_list(rpmdb_dir=None,
-             keys=("name", "version", "release", "epoch", "arch")):
+def list_installed_rpms(rpmdb_dir=None, keys=RPM_BASIC_KEYS):
     """
     :param rpmdb_dir:
     :param keys: RPM Package dict keys
+    :return: List of RPM dict of given keys
     """
     if rpmdb_dir:
         rpm.addMacro("_dbpath", rpmdb_dir)
@@ -125,7 +128,7 @@ def rpm_list(rpmdb_dir=None,
     ps = [h2nvrea(h, keys) for h in mi]
     del mi, ts
 
-    return ps
+    return sorted(ps, key=itemgetter(*keys))
 
 
 def pcmp(p1, p2):
