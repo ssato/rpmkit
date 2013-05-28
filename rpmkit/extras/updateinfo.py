@@ -64,6 +64,8 @@ _RPM_KEYS = ("name", "version", "release", "epoch", "arch", "buildhost")
 _ERRATA_KEYS = ("advisory", "type", "severity")
 _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 
+_TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
+
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
     """
@@ -139,7 +141,8 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
 def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
     """
     >>> e = (u'RHSA-2013:0771', u'Security', u'Moderate')
-    >>> ps = [{u'advisory': u'RHSA-2013:0771',  # doctest: +NORMALIZE_WHITESPACE
+    >>> ps = [  # doctest: +NORMALIZE_WHITESPACE
+    ...       {u'advisory': u'RHSA-2013:0771',
     ...        u'arch': u'x86_64', u'epoch': u'0', u'name': u'curl',
     ...        u'release': u'36.el6_4', u'severity': u'Moderate',
     ...        u'type': u'Security', u'version': u'7.19.7'},
@@ -231,7 +234,7 @@ def mk_errata_map(offline):
 
             if not cve:
                 logging.warn(
-                    "The CVE %s not found in master data " % c + \
+                    "The CVE %s not found in master data " % c +
                     "downloaded from access.redhat.com"
                 )
                 cve = swapicall("swapi.cve.getCvss", offline, c)[0]
@@ -413,7 +416,7 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
-def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
+def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS):
     """
     Generate dependency graph with using graphviz (twopi).
 
@@ -423,8 +426,8 @@ def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     reqs_map = RU.make_requires_dict(root)
     ctx = dict(dependencies=[(r, ps) for r, ps in reqs_map.iteritems()])
 
-    depgraph_s = render("rpm_dependencies.twopi.j2", ctx, [templatedir],
-                        ask=True)
+    depgraph_s = render("rpm_dependencies.twopi.j2", ctx,
+                        template_paths, ask=True)
     twopi_src = os.path.join(workdir, "rpm_dependencies.twopi")
 
     open(twopi_src, 'w').write(depgraph_s)
@@ -439,8 +442,28 @@ def gen_depgraph(root, workdir, templatedir="/usr/share/rpmkit/templates"):
     open(errlog, 'w').write(err)
 
 
+def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
+    """
+    Generate HTML report of RPMs.
+
+    :param root: Root dir where 'var/lib/rpm' exists
+    :param workdir: Working dir to dump the result
+    """
+    gen_depgraph(root, workdir, template_paths)
+
+    jsdir = os.path.join(workdir, "js")
+    if not os.path.exists(jsdir):
+        os.makedirs(jsdir)
+
+    for f in ("js/graphviz-svg.js.j2", "js/jquery.js.j2",
+              "rpm_dependencies.html.j2"):
+        dst = os.path.join(workdir, f[:-3])
+        s = render(f, {}, template_paths, ask=True)
+        open(dst, 'w').write(s)
+
+
 def modmain(ppath, workdir=None, offline=False, errata_details=False,
-            report=False):
+            report=False, template_paths=_TEMPLATE_PATHS):
     """
     :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
@@ -478,17 +501,37 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
     dump_datasets(workdir, errata_details)
 
     if report:
-        logging.info("Dump depgraph...")
-        gen_depgraph(root, workdir)
+        logging.info("Dump depgraph and generating HTML reports...")
+        gen_html_report(root, workdir, template_paths)
 
 
-def option_parser():
+def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
+    """
+    :param tpaths_s: ':' separated template path list
+
+    >>> default = _TEMPLATE_PATHS
+    >>> default == mk_template_paths("")
+    True
+    >>> ["/a/b"] + default == mk_template_paths("/a/b")
+    True
+    >>> ["/a/b", "/c"] + default == mk_template_paths("/a/b:/c")
+    True
+    """
+    tpaths = tpaths_s.split(sep)
+
+    if tpaths:
+        return tpaths + default
+    else:
+        return default  # Ignore given paths string.
+
+
+def option_parser(template_paths=_TEMPLATE_PATHS):
     """
     :param defaults: Option value defaults
     :param usage: Usage text
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    report=False, verbose=False)
+                    report=False, template_paths="", verbose=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -503,6 +546,9 @@ def option_parser():
     p.add_option("", "--offline", action="store_true", help="Offline mode")
     p.add_option("", "--report", action="store_true",
                  help="Generate summarized report in HTML format")
+    p.add_option("-T", "--tpaths",
+                 help="':' separated additional template search path "
+                      "list [%s]" % ':'.join(template_paths))
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -521,13 +567,15 @@ def main():
 
     assert os.path.exists(ppath), "RPM DB file looks not exist"
 
+    tpaths = mk_template_paths(options.tpaths)
+
     if options.report and not _JINJA2_CLI:
         sys.stderr.write("python-jinja2-cli is not installed so that "
                          "reporting function is disabled.")
         options.report = False
 
     modmain(ppath, options.workdir, options.offline, options.details,
-            options.report)
+            options.report, tpaths)
 
 
 if __name__ == '__main__':
