@@ -349,8 +349,11 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
                 if adv not in x_seen:
                     x_seen["advisories"].append(adv)
 
-    json.dump(sorted(updates.values(), key=itemgetter("name")),
-              open(updates_file_path(workdir), 'w'))
+    # Make it valid JSON data. (It seems simple array isn't valid.)
+    us = sorted(updates.values(), key=itemgetter("name"))
+    data = dict(updates=us)
+
+    json.dump(data, open(updates_file_path(workdir), 'w'))
 
 
 _DETAILED_ERRATA_KEYS = ("advisory", "type", "severity", "synopsis",
