@@ -403,7 +403,7 @@ def _updates_list_g(workdir, ukeys=_UPDATE_KEYS):
 
 
 def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
-		  ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
+                  ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
                   ukeys=_UPDATE_KEYS):
     """
     :param workdir: Working dir to dump the result
@@ -470,13 +470,20 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
     if not os.path.exists(jsdir):
         os.makedirs(jsdir)
 
-    js_tpaths = [os.path.join(t, "js") for t in template_paths]
+    def renderfile(f, subdir=None, tpaths=template_paths):
+        if subdir:
+            dst = os.path.join(workdir, subdir, f[:-3])
+        else:
+            dst = os.path.join(workdir, f[:-3])
 
-    for f in ("graphviz-svg.js.j2", "jquery.js.j2",
-              "rpm_dependencies.html.j2"):
-        dst = os.path.join(workdir, f[:-3])
-        s = render(f, {}, template_paths + js_tpaths, ask=True)
+        s = render(f, {}, tpaths, ask=True)
         open(dst, 'w').write(s)
+
+    renderfile("rpm_dependencies.html.j2")
+
+    js_tpaths = [os.path.join(t, "js") for t in template_paths]
+    for f in ("graphviz-svg.js.j2", "jquery.js.j2"):
+        renderfile(f, "js", js_tpaths)
 
 
 def modmain(ppath, workdir=None, offline=False, errata_details=False,
