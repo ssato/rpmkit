@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" type="text/css" href="css/jquery.svg.css"> 
+    <!-- <script type="text/javascript" src="js/compat.js"></script> -->
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/graphviz-svg.js"></script>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="controller" >
+        <div class="current_scale"><span id="current_scale"/>scale = 1.0</div>
+        <input type="submit" id="zoom_in" value="+"/>
+        <input type="submit" id="zoom_out" value="-"/>
+        <input type="submit" id="reset_zoom" value="reset"/>
+        <input type="submit" id="switch_to_hilight_update_rpms" value="Highlight update RPMs"/>
+        <input type="submit" id="reset_hightlights" value="Reset highlights"/>
+      </div>
+    </div>
+    <div>
+      <object type="image/svg+xml" data="rpm_dependencies.twopi.svg" height="800px" width="1400px" id="svg_graph"></object>
+    </div>
+  </body>
+</html>

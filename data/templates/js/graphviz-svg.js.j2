@@ -1,0 +1,170 @@
+/*
+
+ */
+var svg_id = "svg_graph";
+
+function get_scale () {
+    return document.getElementById(svg_id).getSVGDocument().documentElement.currentScale;
+}
+function set_scale (newval) {
+    document.getElementById(svg_id).getSVGDocument().documentElement.currentScale = newval;
+    $("#current_scale").text("scale=" + newval.toPrecision(2));
+}
+function zoom_in () { var scale = get_scale(); set_scale (scale * 1.1); }
+function zoom_out () { var scale = get_scale(); set_scale (scale / 1.1); }
+function reset_zoom () { set_scale (1); }
+
+function list_rpms_having_updates () {
+    var rpms = []
+    var url = "updates.json";
+
+    // Hack: http://bit.ly/12Zm5jv
+    $.ajaxSetup({beforeSend: function(xhr){
+        if (xhr.overrideMimeType) {
+            xhr.overrideMimeType("application/json");
+        }
+    }});
+    $.getJSON(url, function(data) {
+        if (! data["updates"])
+            console.log("No data found in JSON: " + url);
+
+        $.each(data["updates"], function (idx, u) { rpms.push(u); });
+    });
+    if (rpms)
+        console.log("Found " + rpms.length + " update RPMs found.");
+    return rpms;
+}
+
+var updates = list_rpms_having_updates();
+var highlighted_elems = [];
+var normal_color = "white";
+
+function highlight (elem, color) {
+    if (typeof elem === 'undefined') return;
+    if (! elem.attributes) return;
+
+    if (elem.nodeName == "polyline" || elem.nodeName == "path" || elem.nodeName == 'polygon' || elem.nodeName == 'ellipse') {
+        if (elem.nodeName == 'polygon' || elem.nodeName == 'ellipse') {
+            if (elem.getAttribute("fill") != 'none') {   
+                if (color)
+                    elem.setAttribute("fill", color);
+                else
+                    elem.setAttribute("fill", 'black');
+            }
+        }
+        if (color)
+            elem.setAttribute("stroke", color);
+        else
+            elem.setAttribute("stroke", 'black');
+    }
+    $.each(elem.childNodes, function (idx, celem) {
+        highlight(celem, color);
+        highlighted_elems.push(celem);
+    });
+}
+
+function get_highlight_color(update) {
+    if (! update["advisories"])
+        console.log("No advisories found in " + update["name"]);
+
+    var color = "gray";
+
+    $.each(update["advisories"], function (idx, adv) {
+        if (adv.startsWith("RHSA")) {
+            return "red";
+        } else if (adv.startsWith("RHBA")) {
+            color = "yellow";
+        } else if (adv.startsWith("RHEA")) {
+            if (color != "yellow")
+                color = "blue";
+        } else {
+            if (color != "bug" || color != "enhancement")
+                color = "gray";
+        }
+    });
+    return color;
+}
+
+function highlight_rpms_having_updates (ignores, color, updates, etypes) {
+    if (typeof ignores === 'undefined')
+        var ignores = [];
+
+    if (typeof color === 'undefined')
+        var color = "red";
+
+    if (typeof updates === 'undefined')
+        var updates = list_rpms_having_updates();
+
+    var svgroot = document.getElementById(svg_id).getSVGDocument();
+
+    if (! svgroot)
+        console.log("Could not get SVG document root!");
+
+    $.each(updates, function (idx, u) {
+        var g = svgroot.getElementById(u["name"]);
+
+        if (g) {
+            console.log("Get the target SVG group by ID: " + u["name"]);
+
+            if (typeof etypes === 'undefined') {
+                $.each(g.childNodes, function () { highlight(this, "red"); });
+            } else {
+                matched_updates = $.grep(g.childNodes, function (u, idx) {
+                    highlight(u, get_highlight_color(u));
+                });
+            }
+        }
+    });
+}
+
+function reset_highlight_rpms_having_updates () {
+    $.each(highlighted_elems, function (idx, elem) {
+        highlight(elem, normal_color);
+    });
+}
+
+$(document).ready(function() {
+    var svg_id = "svg_graph";
+
+    $("#zoom_in").bind("click", function() { zoom_in(); });
+    $("#zoom_out").bind("click", function() { zoom_out(); });
+    $("#reset_zoom").bind("click", function() { reset_zoom(); });
+    $("#switch_to_hilight_update_rpms").bind("click", function() { highlight_rpms_having_updates([], "red", updates); });
+    $("#reset_highlights").bind("click", function() { reset_highlight_rpms_having_updates([], "red", updates); });
+/*
+    var scale = 1;
+
+    $("#zoom_in").bind("click", function() {
+        $("#svg_graph").prop("currentScale", scale *= 1.1);
+        console.log("zoom in!");
+    });
+    $("#zoom_out").bind("click", function() { 
+        $("#svg_graph").prop("currentScale", scale /= 1.1);
+        console.log("zoom out!");
+    });
+    $("#reset_zoom").bind("click", function() { 
+        $("#svg_graph").prop("currentScale", 1);
+        console.log("reset zoom!");
+    });
+    var scale = 1;
+    var svg = $('#svg_graph').svg('get');
+    var g = $('g', svg.root())[0];
+
+    $("#zoom_in").bind("click", function() {
+        scale *= 1.1;
+        g.setAttribute('transform','scale(' + scale + ')');
+        console.log("do_scale: zoom in!");
+    });
+    $("#zoom_out").bind("click", function() { 
+        scale /= 1.1;
+        g.setAttribute('transform','scale(' + scale + ')');
+        console.log("do_scale: zoom out!");
+    });
+    $("#reset_zoom").bind("click", function() { 
+        g.setAttribute('transform','scale(' + 1 + ')');
+        console.log("do_scale: reset zoom!");
+    });
+*/
+})
+/* vim:sw=4:ts=4:et:
+ */
