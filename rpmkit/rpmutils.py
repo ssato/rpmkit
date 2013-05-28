@@ -570,19 +570,6 @@ def traverse_node_g(node, rank=0):
         last_rank = cur_rank
 
 
-def traverse_node(node, rank=0):
-    """
-    Return list of nodes traversing children of given node.
-
-    :param node: Node object
-    """
-    nlists = []
-    for nlist in traverse_node_g(node, rank):
-        nlists.append(nlist)
-
-    return nlists
-
-
 def _node_to_yaml_s_g(node, indent=0):
     _indent = ' ' * indent
     yield _indent + "- name: " + node.name
