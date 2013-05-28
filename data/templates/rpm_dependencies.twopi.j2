@@ -35,7 +35,7 @@ digraph rpm_dependencies {
 {# {{ gen_subgraph_and_rel_map(reqd, reqs, loop.index0) }} #}
 {# {{ node_name(index, 0) }} [ label="{{ reqd }}", tooltip="{{ reqd }}" ] #}
 {% for p in reqs %}
-    "{{ reqd }}" -> "{{ p }}"
+    "{{ p }}" -> "{{ reqd }}"
 {# {{ node_name(index, loop.index) }} [ label="{{ p }}", tooltip="{{ p }}" ]
 {{ node_name(index, 0) }} -> {{ node_name(index, loop.index) }} #}
 {% endfor %}{% endfor %}
