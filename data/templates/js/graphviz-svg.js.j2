@@ -64,23 +64,31 @@ function highlight (elem, color) {
 }
 
 function get_highlight_color(update) {
-    if (! update["advisories"])
+    if (! update["advisories"]) {
         console.log("No advisories found in " + update["name"]);
+        return normal_color;
+    }
 
     var color = "gray";
 
     $.each(update["advisories"], function (idx, adv) {
         if (adv.startsWith("RHSA")) {
-            return "red";
+            console.log("RHSA: " + adv + " in update " + update["name"]);
+            color = "red";
+            return false;
         } else if (adv.startsWith("RHBA")) {
+            console.log("RHBA: " + adv + " in update " + update["name"]);
             color = "yellow";
         } else if (adv.startsWith("RHEA")) {
+            console.log("RHEA: " + adv + " in update " + update["name"]);
             if (color != "yellow")
                 color = "blue";
         } else {
+            console.log("Unknown: " + adv + " in update " + update["name"]);
             if (color != "bug" || color != "enhancement")
                 color = "gray";
         }
+        return false;
     });
     return color;
 }
@@ -106,11 +114,13 @@ function highlight_rpms_having_updates (ignores, color, updates, etypes) {
         if (g) {
             console.log("Get the target SVG group by ID: " + u["name"]);
 
-            if (typeof etypes === 'undefined') {
-                $.each(g.childNodes, function () { highlight(this, "red"); });
+            if (typeof etypes === 'undefined') {  // All
+                // console.log("Highlight updates having all type of errata");
+                $.each(g.childNodes, function (idx, x) { highlight(x, get_highlight_color(u)); });
             } else {
-                matched_updates = $.grep(g.childNodes, function (u, idx) {
-                    highlight(u, get_highlight_color(u));
+                // TODO:
+                matched_updates = $.grep(g.childNodes, function (x, idx) {
+                    highlight(x, get_highlight_color(u));
                 });
             }
         }
