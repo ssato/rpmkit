@@ -275,7 +275,7 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
             errata["cves"] = errata_cves_map.get(adv, [])
         else:
             try:
-                cves = swapicall("errata.listCves", offline, adv)[0]
+                cves = swapicall("errata.listCves", offline, adv)
                 dcves = []
                 if cves:
                     for cve in cves:
