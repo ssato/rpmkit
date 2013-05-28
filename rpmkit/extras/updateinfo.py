@@ -251,17 +251,18 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
     :param errata: Basic errata info, {advisory, type, severity, ...}
     :param offline: True if get results only from local cache
     """
-    cve_ref_path = errata_cve_map_path(workdir)
+    if use_map:
+        cve_ref_path = errata_cve_map_path(workdir)
 
-    if os.path.exists(cve_ref_path):
-        errata_cves_map = json.load(open(cve_ref_path))
-    else:
-        logging.info("Make up errata - cve - cvss map data from RHN...")
-        errata_cves_map = mk_errata_map(offline)
+        if os.path.exists(cve_ref_path):
+            errata_cves_map = json.load(open(cve_ref_path))
+        else:
+            logging.info("Make up errata - cve - cvss map data from RHN...")
+            errata_cves_map = mk_errata_map(offline)
 
-        logging.info("Dumping errata - cve - cvss map data from RHN...")
-        json.dump(errata_cves_map, open(cve_ref_path, 'w'))
-        #assert bool(errata_cves_map), "errata_cache=" + errata_cache
+            logging.info("Dumping errata - cve - cvss map data from RHN...")
+            json.dump(errata_cves_map, open(cve_ref_path, 'w'))
+            #assert bool(errata_cves_map), "errata_cache=" + errata_cache
 
     adv = errata["advisory"]
 
@@ -269,7 +270,7 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
     errata.update(ed)
 
     if adv.startswith("RHSA"):
-        # FIXME: Errata - CVE map looks sometimes not enough.
+        # FIXME: Errata - CVE map looks sometimes incomplete.
         if use_map:
             errata["cves"] = errata_cves_map.get(adv, [])
         else:
@@ -280,13 +281,17 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
                     for cve in cves:
                         dcve = swapicall("swapi.cve.getCvss", offline, cve)[0]
                         if dcve:
-                            logging.debug("Got detailed CVE info: " + cve)
+                            log_prefix = "Got detailed info: "
                             dcves.append(dcve)
                         else:
-                            logging.debug("Got detailed CVE info: " + cve)
+                            log_prefix = "Could not get detailed info: "
+
+                        logging.debug(log_prefix + cve)
+
                 errata["cves"] = dcves if dcves else cves
+
             except IndexError:
-                logging.warn("Could not get relevant CVEs of errata: " + adv)
+                logging.warn("Could not get relevant CVEs: " + adv)
                 errata["cves"] = []
 
     errata["url"] = errata_url(adv)
@@ -374,6 +379,20 @@ _DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
                          "update_date", "url", "cves"]
 
 
+def _fmt_cvess(cves):
+    """
+    :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
+    :return: List of CVE strings
+    """
+    try:
+        fmt = '"%(cve)s (score=%(score)s, metrics=%(metrics)s, url=%(url)s)"'
+        cves = [fmt % c for c in cves]
+    except KeyError:
+        pass
+
+    return cves
+
+
 def _detailed_errata_list_g(workdir):
     es = json.load(open(errata_list_path(workdir)))
 
@@ -382,12 +401,7 @@ def _detailed_errata_list_g(workdir):
             e["severity"] = "N/A"
 
         if e.get("cves", False):
-            try:
-                cves = ['"%(cve)s (%(score)s %(url)s)"' % c for c in e["cves"]]
-            except KeyError:
-                cves = ','.join(e["cves"])
-
-            e["cves"] = ", ".join(cves)
+            e["cves"] = ", ".join(_fmt_cvess(e["cves"]))
         else:
             e["cves"] = "N/A"
 
