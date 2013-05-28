@@ -383,9 +383,9 @@ def _detailed_errata_list_g(workdir, edkeys=_DETAILED_ERRATA_KEYS):
 
 
 def _updates_list_g(workdir, ukeys=_UPDATE_KEYS):
-    updates = json.load(open(updates_file_path(workdir)))
+    data = json.load(open(updates_file_path(workdir)))
 
-    for u in updates:
+    for u in data["updates"]:
         u["advisories"] = ", ".join(u["advisories"])
         yield u
 
