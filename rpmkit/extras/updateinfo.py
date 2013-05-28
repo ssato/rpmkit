@@ -418,7 +418,7 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
 
 def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS):
     """
-    Generate dependency graph with using graphviz (twopi).
+    Generate dependency graph with using graphviz (neato).
 
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
@@ -426,17 +426,17 @@ def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS):
     reqs_map = RU.make_requires_dict(root)
     ctx = dict(dependencies=[(r, ps) for r, ps in reqs_map.iteritems()])
 
-    depgraph_s = render("rpm_dependencies.twopi.j2", ctx,
+    depgraph_s = render("rpm_dependencies.graphviz.j2", ctx,
                         template_paths, ask=True)
-    twopi_src = os.path.join(workdir, "rpm_dependencies.twopi")
+    src = os.path.join(workdir, "rpm_dependencies.graphviz")
 
-    open(twopi_src, 'w').write(depgraph_s)
+    open(src, 'w').write(depgraph_s)
 
-    output = twopi_src + ".svg"
+    output = src + ".svg"
     (outlog, errlog) = (os.path.join(workdir, "graphviz_out.log"),
                         os.path.join(workdir, "graphviz_err.log"))
 
-    (out, err, rc) = YS.run("twopi -Tsvg -o %s %s" % (output, twopi_src))
+    (out, err, rc) = YS.run("neato -Tsvg -o %s %s" % (output, src))
 
     open(outlog, 'w').write(out)
     open(errlog, 'w').write(err)
