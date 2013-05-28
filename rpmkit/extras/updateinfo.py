@@ -416,12 +416,15 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
-def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS):
+def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
+                 engine="twopi"):
     """
-    Generate dependency graph with using graphviz (neato).
+    Generate dependency graph with using graphviz.
 
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
+    :param template_paths: Template path list
+    :param engine: Graphviz rendering engine to choose, e.g. neato
     """
     reqs_map = RU.make_requires_dict(root)
     ctx = dict(dependencies=[(r, ps) for r, ps in reqs_map.iteritems()])
@@ -436,7 +439,7 @@ def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS):
     (outlog, errlog) = (os.path.join(workdir, "graphviz_out.log"),
                         os.path.join(workdir, "graphviz_err.log"))
 
-    (out, err, rc) = YS.run("neato -Tsvg -o %s %s" % (output, src))
+    (out, err, rc) = YS.run("%s -Tsvg -o %s %s" % (engine, output, src))
 
     open(outlog, 'w').write(out)
     open(errlog, 'w').write(err)
@@ -455,10 +458,12 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
     if not os.path.exists(jsdir):
         os.makedirs(jsdir)
 
-    for f in ("js/graphviz-svg.js.j2", "js/jquery.js.j2",
+    js_tpaths = [os.path.join(t, "js") for t in template_paths]
+
+    for f in ("graphviz-svg.js.j2", "jquery.js.j2",
               "rpm_dependencies.html.j2"):
         dst = os.path.join(workdir, f[:-3])
-        s = render(f, {}, template_paths, ask=True)
+        s = render(f, {}, template_paths + js_tpaths, ask=True)
         open(dst, 'w').write(s)
 
 
