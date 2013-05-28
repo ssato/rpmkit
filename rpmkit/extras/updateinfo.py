@@ -274,7 +274,17 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
             errata["cves"] = errata_cves_map.get(adv, [])
         else:
             try:
-                errata["cves"] = swapicall("errata.listCves", offline, adv)[0]
+                cves = swapicall("errata.listCves", offline, adv)[0]
+                dcves = []
+                if cves:
+                    for cve in cves:
+                        dcve = swapicall("swapi.cve.getCvss", offline, cve)[0]
+                        if dcve:
+                            logging.debug("Got detailed CVE info: " + cve)
+                            dcves.append(dcve)
+                        else:
+                            logging.debug("Got detailed CVE info: " + cve)
+                errata["cves"] = dcves if dcves else cves
             except IndexError:
                 logging.warn("Could not get relevant CVEs of errata: " + adv)
                 errata["cves"] = []
@@ -359,27 +369,29 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
     json.dump(data, open(updates_file_path(workdir), 'w'))
 
 
-_DETAILED_ERRATA_KEYS = ("advisory", "type", "severity", "synopsis",
+_DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
                          "description", "issue_date", "last_modified_date",
-                         "update_date", "url")  # TODO: CVEs
+                         "update_date", "url", "cves"]
 
 
-def _detailed_errata_list_g(workdir, edkeys=_DETAILED_ERRATA_KEYS):
+def _detailed_errata_list_g(workdir):
     es = json.load(open(errata_list_path(workdir)))
 
     for e in es:
-        x = dict(zip(edkeys, itemgetter(*edkeys)(e)))
+        if e["severity"] is None:
+            e["severity"] = "N/A"
 
-        if x["severity"] is None:
-            x["severity"] = "N/A"
+        if e.get("cves", False):
+            try:
+                cves = ['"%(cve)s (%(score)s %(url)s)"' % c for c in e["cves"]]
+            except KeyError:
+                cves = ','.join(e["cves"])
 
-        if x.get("cves", False):
-            cves = ['"%(cve)s (%(score)s %(url)s)"' % c for c in x["cves"]]
-            x["cves"] = ", ".join(cves)
+            e["cves"] = ", ".join(cves)
         else:
-            x["cves"] = "N/A"
+            e["cves"] = "N/A"
 
-        yield x
+        yield e
 
 
 def _updates_list_g(workdir, ukeys=_UPDATE_KEYS):
@@ -391,7 +403,7 @@ def _updates_list_g(workdir, ukeys=_UPDATE_KEYS):
 
 
 def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
-                  ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
+		  ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
                   ukeys=_UPDATE_KEYS):
     """
     :param workdir: Working dir to dump the result
