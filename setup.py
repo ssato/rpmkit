@@ -24,6 +24,7 @@ def list_files(tdir):
 
 data_files = [
     ("share/rpmkit/templates", list_files("data/templates/")),
+    ("share/rpmkit/templates/js", list_files("data/templates/js")),
 ]
 
 

@@ -86,6 +86,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc README.rst examples
 %{_bindir}/rk-*
 %{_datadir}/rpmkit/templates/*.j2
+%{_datadir}/rpmkit/templates/js/*
 %{python_sitelib}/rpmkit/extras/*.py*
 %{python_sitelib}/rpmkit/rhncachedb/*.py*
 
