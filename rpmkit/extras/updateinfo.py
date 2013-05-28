@@ -555,7 +555,7 @@ def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
     >>> ["/a/b", "/c"] + default == mk_template_paths("/a/b:/c")
     True
     """
-    tpaths = tpaths_s.split(sep)
+    tpaths = tpaths_s.split(sep) if tpaths_s else None
 
     if tpaths:
         return tpaths + default
