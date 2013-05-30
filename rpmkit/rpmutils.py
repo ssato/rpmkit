@@ -333,7 +333,7 @@ def make_requires_dict(root=None, reversed=False):
      * X.requiring_packages returns RPMs requiring it (X instance).
        e.g. libgcc (X) is required by gc
 
-     * yum.rpmsack.RPMInstalledPackage goes away in DNF so that 
+     * yum.rpmsack.RPMInstalledPackage goes away in DNF so that
        I have to find similar function in DNF.
 
        (see also: http://fedoraproject.org/wiki/Features/DNF)
@@ -497,7 +497,7 @@ def find_all_paths(graph, start, end, path=[]):
     path = path + [start]
     if start == end:
         return [path]
-    if not graph.has_key(start):
+    if not start in graph:
         return []
     paths = []
     for node in graph[start]:
