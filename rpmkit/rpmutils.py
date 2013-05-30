@@ -110,25 +110,46 @@ def h2nvrea(h, keys=RPM_BASIC_KEYS):
     return dict(zip(keys, [h[k] for k in keys]))
 
 
-def list_installed_rpms(rpmdb_dir=None, keys=RPM_BASIC_KEYS):
+def yum_list_installed(root=None):
     """
-    :param rpmdb_dir:
+    :param root: RPM DB root dir
+    :return: List of yum.rpmsack.RPMInstalledPackage objects
+    """
+    if root is None:
+        root = "/var/lib/rpm"
+
+    sack = RPMDBPackageSack(root, cachedir=os.path.join(root, "cache"),
+                            persistdir=root)
+
+    return sack.returnPackages()  # NOTE: 'gpg-pubkey' is not in this list.
+
+
+def list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False):
+    """
+    :param root: RPM DB root dir
     :param keys: RPM Package dict keys
+    :param yum: Use yum instead of querying rpm db directly
     :return: List of RPM dict of given keys
     """
-    if rpmdb_dir:
-        rpm.addMacro("_dbpath", rpmdb_dir)
+    if yum:
+        p2d = lambda p: dict(zip(keys, attrgetter(*keys)(p)))
 
-    ts = rpm.TransactionSet()
-    mi = ts.dbMatch()
+        return sorted((p2d(p) for p in yum_list_installed(root)),
+                      key=itemgetter(*keys))
+    else:
+        if rpmdb_dir:
+            rpm.addMacro("_dbpath", rpmdb_dir)
 
-    if rpmdb_dir:
-        rpm.delMacro("_dbpath")
+        ts = rpm.TransactionSet()
+        mi = ts.dbMatch()
 
-    ps = [h2nvrea(h, keys) for h in mi]
-    del mi, ts
+        if rpmdb_dir:
+            rpm.delMacro("_dbpath")
 
-    return sorted(ps, key=itemgetter(*keys))
+        ps = [h2nvrea(h, keys) for h in mi]
+        del mi, ts
+
+        return sorted(ps, key=itemgetter(*keys))
 
 
 def pcmp(p1, p2):
@@ -292,63 +313,31 @@ def find_updates_g(all_packages, packages):
                 yield sorted(updates)
 
 
-def make_requires_dict(root):
+def make_requires_dict(root=None, reversed=False):
     """
-    Based on yumQuiet.getDeps() in repo-graph in yum-utils licensed and
-    distributed under GPLv2+.
+    Returns RPM dependency relations map.
 
-    :param root: root dir of RPM Database
-    :return: Requirement relation map, {package: [required_package]}
+    :param root: RPM Database root dir or None (use /var/lib/rpm).
+    :param reversed: Returns a dict such
+        {required_RPM: [RPM_requires]} instead of a dict such
+        {RPM: [RPM_required]} if True.
+
+    :return: Requirements relation map, {p: [required]} or {required: [p]}
     """
-    requires = dict()
-    providers = dict()
-    skip = []
+    # NOTE:
+    # * X.required_packages returns RPMs required to install it (X instance).
+    #   e.g. gc (X) requires libgcc
+    #
+    # * X.requiring_packages returns RPMs requiring it (X instance).
+    #   e.g. libgcc (X) is required by gc
+    #
+    #   where X = yum.rpmsack.RPMInstalledPackage
+    #
+    def list_reqs(p):
+        fn = "requiring_packages" if reversed else "required_packages"
+        return sorted(x.name for x in getattr(p, fn)())
 
-    def _find_reqs(name, cachedb, requires):
-        return [x for x in cachedb.keys() if x != name]
-
-    sack = RPMDBPackageSack(root, cachedir=os.path.join(root, "cache"),
-                            persistdir=root)
-
-    for p in sack.returnPackages():
-        cachedb = dict()
-
-        reqs = p.returnPrco("requires")
-
-        # It seems there is no such cases but just in case.
-        if not reqs:
-            requires[p.name] = []
-            continue
-
-        for rs in reqs:
-            reqname = rs[0]
-
-            # Special cases: rpmlib* or self dependency
-            if reqname.startswith("rpmlib") or reqname == p.name:
-                continue
-
-            prov = providers.get(reqname, None)
-
-            if prov is None:
-                provs = sack.searchProvides(reqname)
-                if provs:
-                    prov = provs[0].name
-                    providers[reqname] = prov
-                else:
-                    logging.warn("Nothing provides " + reqname)
-                    continue
-
-            if prov == p.name:
-                cachedb[prov] = None
-            else:
-                if prov in cachedb or prov in skip:
-                    continue
-                else:
-                    cachedb[prov] = None
-
-            requires[p.name] = _find_reqs(p.name, cachedb, requires)
-
-    return requires
+    return dict((p.name, list_reqs(p)) for p in yum_list_installed(root))
 
 
 def make_reversed_requires_dict(root):
@@ -356,17 +345,7 @@ def make_reversed_requires_dict(root):
     :param root: root dir of RPM Database
     :return: {name_required: [name_requires]}
     """
-    reqs_map = make_requires_dict(root)  # {req: [reqd]}
-    rreqs = dict()  # {reqd : [req]}
-
-    for p, rs in reqs_map.iteritems():
-        for r in rs:
-            if r == p:
-                continue  # skip self.
-
-            rreqs[r] = sorted(set(rreqs.get(r, []) + [p]))
-
-    return rreqs
+    return make_requires_dict(root, True)
 
 
 ## The followings are very experimental...
@@ -459,20 +438,6 @@ class Node(object):
 
     def __eq__(self, other):
         return self.name == other.name
-
-
-def resolv_deps(root, rreqs, acc=[]):
-    pass  # for r in rreqs.get(root)
-
-
-def make_depgraph(root, reversed=False):
-    """
-    Make a dependency graph of installed RPMs.
-
-    :param root: RPM DB top dir
-    :return: List of root nodes.
-    """
-    pass
 
 
 def make_depgraph_2(root, reversed=False):
