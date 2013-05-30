@@ -315,6 +315,7 @@ def make_requires_dict(root):
 
         reqs = p.returnPrco("requires")
 
+        # It seems there is no such cases but just in case.
         if not reqs:
             requires[p.name] = []
             continue
