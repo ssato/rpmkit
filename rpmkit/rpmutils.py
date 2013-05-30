@@ -305,8 +305,7 @@ def make_requires_dict(root):
     skip = []
 
     def _find_reqs(name, cachedb, requires):
-        return [x for x in cachedb.keys()
-                if x != name and name not in requires.get(x, [])]
+        return [x for x in cachedb.keys() if x != name]
 
     sack = RPMDBPackageSack(root, cachedir=os.path.join(root, "cache"),
                             persistdir=root)
@@ -314,8 +313,14 @@ def make_requires_dict(root):
     for p in sack.returnPackages():
         cachedb = dict()
 
-        for r in p.returnPrco("requires"):
-            reqname = r[0]
+        reqs = p.returnPrco("requires")
+
+        if not reqs:
+            requires[p.name] = []
+            continue
+
+        for rs in reqs:
+            reqname = rs[0]
 
             # Special cases: rpmlib* or self dependency
             if reqname.startswith("rpmlib") or reqname == p.name:
@@ -324,9 +329,9 @@ def make_requires_dict(root):
             prov = providers.get(reqname, None)
 
             if prov is None:
-                prov = sack.searchProvides(reqname)
-                if prov:
-                    prov = prov[0].name
+                provs = sack.searchProvides(reqname)
+                if provs:
+                    prov = provs[0].name
                     providers[reqname] = prov
                 else:
                     logging.warn("Nothing provides " + reqname)
@@ -367,20 +372,6 @@ def make_reversed_requires_dict(root):
 sys.setrecursionlimit(1000)
 
 
-def pp_list(xs, limit=None):
-    """
-    Pretty print list of items.
-
-    :param xs: List of items
-    :param limit: Limit items to print
-    :return: Pretty printed list string
-    """
-    if limit is None:
-        limit = len(xs) + 1
-
-    return ", ".join(str(x) for x in xs[:limit])
-
-
 def pp_nodes(ns, limit=None):
     """
     Pretty print list of nodes.
@@ -395,83 +386,48 @@ def pp_nodes(ns, limit=None):
     return ", ".join(n.name for n in ns[:limit])
 
 
-def node_list_seen(node, acc=set(), sorted=False):
-    """
-    Walk through children of ``node`` and aggregate seen node names.
-
-    :param node: Node object
-    :return: Seen (self and child) node names in this node. This list will be
-        used to avoid adding already seen node to children later.
-    """
-    names = set([node.name])  # Add self
-    nodes = node.list_children()  # Immediate children
-
-    # Walk through all children and aggregate seen node names and nodes.
-    while nodes:
-        next_nodes = set()
-
-        for n in nodes:
-            if n.name not in names:
-                logging.debug("node_list_seen: add " + n.name)
-                names.add(n.name)
-
-            next_nodes.update(n.list_children())  # Next children
-
-        nodes = next_nodes
-
-    if sorted:
-        names = sorted(names)
-
-    logging.debug("node=%s, names=%s" % (node.name, str(names)))
-    return names
-
-
 class Node(object):
 
     def __init__(self, name, children=[], is_root=False):
         """
         :param name: Name :: str
         :param children: Child nodes :: [Node]
+        :param is_root: Is this node root ?
         """
         self.name = name
-        self.children = children
-        self.childnames = set([c.name for c in children])
         self._is_root = is_root
-        self._has_children = bool(children)
 
-    def list_children(self):
+        self.children = set(children)
+        self.childnames = set(c.name for c in children)
+        self._has_children = bool(self.childnames)
+
+    def get_children(self):
         return self.children
 
-    def list_children_g(self):
-        for c in self.children:
-            yield c
-
-    def list_child_names(self):
+    def get_child_names(self):
         return self.childnames
 
     def has_children(self):
         return self._has_children
 
-    def list_seen(self):
-        return [self.name] + list(self.list_child_names())
-
-    def was_seen(self, name):
-        return name in self.list_seen()
-
-    def add_child(self, cnode):
+    def add_child(self, cnode, seens=[]):
         """
         :param cnode: Child node to add
         :type Node:
+        :param seens: List of seen node names
+        :type [str]:
         """
-        if cnode.name == self.name:
-            return  # Do not add self.
+        if not seens:
+            seens = [self.name] + list(self.get_child_names())
 
-        if cnode.name not in self.list_child_names():
-            self.children.append(cnode)
-            self.childnames.add(cnode.name)
+        if cnode.name in seens:
+            return  # Avoid circular references
 
-            if not self.has_children():
-                self._has_children = True
+        self.children.add(cnode)
+        self.childnames.add(cnode.name)
+
+        if not self.has_children():
+            self._has_children = True
 
     def add_children(self, diff):
         """
@@ -484,6 +440,9 @@ class Node(object):
     def is_root(self):
         return self._is_root
 
+    def is_leaf(self):
+        return not self.has_children()
+
     def make_not_root(self):
         self._is_root = False
 
@@ -491,8 +450,8 @@ class Node(object):
         return repr(self)
 
     def __repr__(self):
-        return "Node { '%s', children=[%s]}" % \
-               (self.name, pp_nodes(self.children))
+        return "Node {'%s', children=[%s]}" % \
+               (self.name, pp_nodes(list(self.children)))
 
     def __cmp__(self, other):
         return cmp(self.name, other.name)
@@ -500,12 +459,22 @@ class Node(object):
     def __eq__(self, other):
         return self.name == other.name
 
-    def to_dict(self):
-        return dict(name=self.name,
-                    children=[c.to_dict() for c in self.children])
+
+def resolv_deps(root, rreqs, acc=[]):
+    pass  # for r in rreqs.get(root)
 
 
 def make_depgraph(root, reversed=False):
+    """
+    Make a dependency graph of installed RPMs.
+
+    :param root: RPM DB top dir
+    :return: List of root nodes.
+    """
+    pass
+
+
+def make_depgraph_2(root, reversed=False):
     """
     Make a dependency graph of installed RPMs.
 
@@ -514,29 +483,58 @@ def make_depgraph(root, reversed=False):
     :return: List of root nodes.
     """
     f = make_reversed_requires_dict if reversed else make_requires_dict
-    reqs_map = f(root)  # {reqd: [req]}
+    reqs_map = f(root)  # {reqs: [reqd]} or {reqd: [reqs]} (reversed)
 
-    nodes_cache = dict()  # {name: Node n}
+    nodes = dict()  # {name: Node n}
 
-    for r, ps in reqs_map.iteritems():
-        rnode = nodes_cache.get(r, None)
+    for x, ys in reqs_map.iteritems():
+        node = nodes.get(x, None)
 
-        if rnode is None:
-            logging.debug("Create root node: name=" + r)
-            rnode = nodes_cache[r] = Node(r, [])
+        if node:
+            logging.debug("Already created as child node: " + x)
 
-        for p in ps:
-            pnode = nodes_cache.get(p, None)
+            cs_ref = node.get_child_names()
+            cs = set(ys)
 
-            if pnode is None:
-                logging.debug("Create child node: name=" + p)
-                pnode = nodes_cache[p] = Node(p, [], is_root=False)
-            else:
-                pnode.make_not_root()
+            if cs.issubset(cs_ref):
+                continue
 
-            rnode.add_child(pnode)
+            for c in cs:
+                if c not in cs_ref:
+                    logging.debug("Create child node not seen yet: " + c)
+                    cnode = nodes[c] = Node(c, [], False)
+                    node.add_child(cnode)
+        else:
+            logging.debug("Create root node: name=" + x)
+            node = nodes[x] = Node(x, [], True)
 
-    return sorted(nodes_cache.values(), key=attrgetter("name"))
+            for y in ys:
+                cnode = nodes.get(y, None)
+
+                if cnode is None:
+                    logging.debug("Create child node: " + y)
+                    cnode = nodes[y] = Node(y, [], False)
+                else:
+                    cnode.make_not_root()
+
+                node.add_child(cnode)
+
+    return sorted(nodes.values(), key=attrgetter("name"))
+
+
+def find_all_paths(graph, start, end, path=[]):
+    path = path + [start]
+    if start == end:
+        return [path]
+    if not graph.has_key(start):
+        return []
+    paths = []
+    for node in graph[start]:
+        if node not in path:
+            newpaths = find_all_paths(graph, node, end, path)
+            for newpath in newpaths:
+                paths.append(newpath)
+    return paths
 
 
 def traverse_node_g(node, rank=0):
@@ -566,21 +564,8 @@ def traverse_node_g(node, rank=0):
         yield nodes_list
 
         to_traverse.extendleft(((cur_rank + 1, c) for c in
-                               cur_node.list_children_g()))
+                               cur_node.get_children()))
         last_rank = cur_rank
-
-
-def _node_to_yaml_s_g(node, indent=0):
-    _indent = ' ' * indent
-    yield _indent + "- name: " + node.name
-    _indent += "  "
-
-    if node.has_children():
-        yield _indent + "children:"
-
-        for c in node.list_children_g():
-            for s in _node_to_yaml_s_g(c, indent + 2):
-                yield s
 
 
 # vim:sw=4:ts=4:et:
