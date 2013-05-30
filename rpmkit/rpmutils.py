@@ -357,6 +357,101 @@ def make_reversed_requires_dict(root):
 sys.setrecursionlimit(1000)
 
 
+def walk(visited, list_children, is_leaf, seens, topdown=True):
+    """
+    Like os.walk, walk tree from given ``nodes_visited`` and yields 3-tuple
+    (visited_nodes, next_nodes_to_visit, leaf_nodes).
+
+    :param visited_nodes: Path from root to the current node :: [node]
+    :param list_children: Function to list next children nodes
+    :param is_leaf: Function to check if the node is leaf
+    :param seens: Seen nodes to avoid infinite circular walking
+    :param topdown: Yields result tuples before these children.
+    """
+    children = list_children(visited)
+    leaves = [c for c in children if is_leaf(c, seens)]
+    next_nodes = [c for c in children if c not in leaves]
+
+    if topdown:
+        yield (visited, next_nodes, leaves)
+
+    for node in next_nodes:
+        visited.append(node)
+
+        if node in seens:
+            logging.info("Detect circular walking at " + node)
+        else:
+            for x in walk(visited, list_children, is_leaf, seens, topdown):
+                yield x
+
+    if not topdown:
+        yield (visited, next_nodes, leaves)
+
+
+def walk_depgraph(visited, rreqs, leaves, seens=[], topdown=False):
+    """
+    Walk dependency tree from given root RPM name recursively and yields a
+    3-tuple (path, names_of_rpms_requiring_others, names_of_leave_rpms).
+
+    :param path: Path from root RPM to the current RPM
+    :param rreqs: Dependency map, {required: [requires]}.
+    :param leaves: RPMs not required by other RPMs.
+    :param seens: Seen RPM names to avoid walking circular depdendency trees.
+    :param topdown: Yields tuples before these children.
+    """
+    list_children = lambda visited: rreqs.get(visited[-1], [])
+    is_leaf = lambda visited, seens: visited[-1] in leaves
+
+    for v, ns, ls in walk(visited, list_children, is_leaf, seens, topdown):
+        yield (v, ns, ls)
+        seens = list(set(seens + [visited[-1]] + ns + ls))
+
+
+def make_dependency_trees(root=None):
+    """
+    :param root: root dir of RPM Database
+    :return: {name_required: [name_requires ...]}
+    """
+    reqs = make_requires_dict(root)  # p -> [required]
+    rreqs = make_requires_dict(root, True)  # required -> [p]
+
+    # NOTE: roots require no other RPMs and no other RPMs require leaves.
+    roots = [p for p, rs in reqs.iteritems() if not rs]
+    leaves = [r for r, ps in rreqs.iteritems() if not ps]
+
+    return (roots, leaves)
+
+
+def traverse_node_g(node, rank=0):
+    """
+    Yields list of nodes traversing children of given node.
+
+    :param node: Node object
+    """
+    to_traverse = deque()
+    nodes_list = []
+    last_rank = cur_rank = rank
+
+    to_traverse.append((cur_rank, node))
+
+    while to_traverse:
+        logging.debug("to_traverse=" + str(to_traverse))
+        (cur_rank, cur_node) = to_traverse.popleft()
+
+        while last_rank and last_rank >= cur_rank:
+            nodes_list.pop()
+            logging.debug("nodes_list=" + str(nodes_list) +
+                          ", ranks: last=%d, cur=%d" % (last_rank, cur_rank))
+            last_rank -= 1
+
+        nodes_list.append(cur_node.name)
+        logging.debug("(nodes_list to yield: " + str(nodes_list))
+        yield nodes_list
+
+        to_traverse.extendleft(((cur_rank + 1, c) for c in
+                               cur_node.get_children()))
+        last_rank = cur_rank
+
 def pp_nodes(ns, limit=None):
     """
     Pretty print list of nodes.
