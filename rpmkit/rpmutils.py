@@ -323,16 +323,21 @@ def make_requires_dict(root=None, reversed=False):
         {RPM: [RPM_required]} if True.
 
     :return: Requirements relation map, {p: [required]} or {required: [p]}
+
+    NOTEs:
+     * X.required_packages returns RPMs required to install it (X instance).
+       e.g. gc (X) requires libgcc
+
+       where X = yum.rpmsack.RPMInstalledPackage
+
+     * X.requiring_packages returns RPMs requiring it (X instance).
+       e.g. libgcc (X) is required by gc
+
+     * yum.rpmsack.RPMInstalledPackage goes away in DNF so that 
+       I have to find similar function in DNF.
+
+       (see also: http://fedoraproject.org/wiki/Features/DNF)
     """
-    # NOTE:
-    # * X.required_packages returns RPMs required to install it (X instance).
-    #   e.g. gc (X) requires libgcc
-    #
-    # * X.requiring_packages returns RPMs requiring it (X instance).
-    #   e.g. libgcc (X) is required by gc
-    #
-    #   where X = yum.rpmsack.RPMInstalledPackage
-    #
     def list_reqs(p):
         fn = "requiring_packages" if reversed else "required_packages"
         return sorted(x.name for x in getattr(p, fn)())
