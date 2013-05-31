@@ -37,33 +37,29 @@ class Node(object):
 
 
 def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
-         topdown=True, recur_count=0, recur_max=-1):
+         topdown=True):
     """
-    Like os.walk, walk tree from given ``visited`` and yields 3-tuple
-    (visited_nodes, next_nodes_to_visit, leaf_nodes).
+    Like os.walk, walk tree from given ``visited`` and yields list of visited
+    nodes list from root to leaves.
 
     :param visited: Path from root to the current node :: [node]
     :param list_children: Function to list next children nodes
-    :param is_leaf: Function to check if the node is leaf
+    :param is_leaf: Function to check if the node is leaf :: node -> bool
     :param leaves: List of known leaf nodes
     :param seens: List of seen nodes
-    :param topdown: Yields result tuples before these children.
+    :param topdown: Yields result tuples before walking children.
     """
-    recur_count += 1
-
-    if recur_max > 0:
-        if recur_count > recur_max:
-            raise StopIteration("Max recursion limit exceeded: " + str(node))
-
     if is_leaf is None:
         is_leaf = lambda node: not list_children(node)
 
     children = list_children(visited[-1])
+
     immediate_leaves = [c for c in children if is_leaf(c)]
     next_nodes = [c for c in children if c not in immediate_leaves]
 
     if topdown:
-        yield (visited, next_nodes, immediate_leaves)
+        for leaf in immediate_leaves:
+            yield visited + [leaf]
 
     for node in next_nodes:
         visited.append(node)
@@ -74,11 +70,12 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
 
         seens = list(set(seens + visited + children))
         for x in walk(visited, list_children, is_leaf, leaves, seens,
-                      topdown, recur_count, recur_max):
+                      topdown):
             yield x
 
     if not topdown:
-        yield (visited, next_nodes, immediate_leaves)
+        for leaf in immediate_leaves:
+            yield visited + [leaf]
 
 
 # vim:sw=4:ts=4:et:
