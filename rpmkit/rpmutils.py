@@ -314,7 +314,7 @@ def find_updates_g(all_packages, packages):
                 yield sorted(updates)
 
 
-def make_requires_dict(root=None, reversed=False):
+def _make_requires_dict(root=None, reversed=False):
     """
     Returns RPM dependency relations map.
 
@@ -346,6 +346,9 @@ def make_requires_dict(root=None, reversed=False):
     return dict((p.name, list_reqs(p)) for p in yum_list_installed(root))
 
 
+make_requires_dict = memoize(_make_requires_dict)
+
+
 def make_reversed_requires_dict(root):
     """
     :param root: root dir of RPM Database
@@ -371,7 +374,7 @@ def walk_dependency_graph_0(root_name, rreqs, leaves, seens=[], topdown=False):
     """
     list_children = lambda node: rreqs.get(node, [])
 
-    return [p for p in walk([root_name], list_children, leaves=leaves)]
+    return [p for p in walk([root_name], list_children, leaves=leaves) if p]
 
 
 def walk_dependency_graph(root=None):
