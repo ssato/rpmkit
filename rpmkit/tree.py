@@ -33,7 +33,7 @@ class Node(object):
         return self._name == other.name()
 
     def __repr__(self):
-        return "Node(%s)" % self.name
+        return "Node(%s)" % self.name()
 
 
 def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
@@ -56,10 +56,7 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
             raise StopIteration("Max recursion limit exceeded: " + str(node))
 
     if is_leaf is None:
-        is_leaf = lambda node: node in leaves or node in seens
-        next_is_leaf = None
-    else:
-        next_is_leaf = is_leaf
+        is_leaf = lambda node: not list_children(node)
 
     children = list_children(visited[-1])
     immediate_leaves = [c for c in children if is_leaf(c)]
@@ -76,7 +73,7 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
             continue
 
         seens = list(set(seens + visited + children))
-        for x in walk(visited, list_children, next_is_leaf, leaves, seens,
+        for x in walk(visited, list_children, is_leaf, leaves, seens,
                       topdown, recur_count, recur_max):
             yield x
 
