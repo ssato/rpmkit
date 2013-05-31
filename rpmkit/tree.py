@@ -4,6 +4,8 @@
 #
 # License: MIT
 #
+from itertools import izip
+
 import logging
 import os
 import sys
@@ -82,6 +84,44 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
     if not topdown:
         for leaf in immediate_leaves:
             yield visited + [leaf]
+
+
+def make_hierarchical_nested_dicts_from_paths(paths, nodes={}, leaves=[]):
+    """
+    Make hierarchical tree of dicts from path in the paths list made
+    by the above 'walk' function.
+
+    :param paths: List of paths of which root (path[0]) is same
+    :return: dict(name: [, children: <node>])
+    """
+    if leaves:
+        for leaf in leaves:
+            if leaf not in nodes:
+                nodes[leaf] = dict(name=leaf)
+
+    assert paths != [[]], "Empty a list of a list was given!"
+
+    for path in paths:
+        rpath = list(reversed(path))
+        assert rpath
+
+        # This is a leaf:
+        head = rpath[0]
+        if nodes.get(head, None) is None:
+            nodes[head] = dict(name=head)
+
+        for node, child in izip(rpath[1:], rpath):
+            x = nodes.get(node, None)
+            c = nodes.get(child, dict(name=child))
+
+            if x is None:
+                nodes[node] = dict(name=node, children=[c])
+            else:
+                cs = nodes[node]["children"]
+                if c not in cs:
+                    nodes[node]["children"].append(c)
+
+    return nodes[paths[0][0]]
 
 
 # vim:sw=4:ts=4:et:
