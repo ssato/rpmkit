@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.memoize import memoize
+from rpmkit.tree import walk
 from rpmkit.utils import concat, uniq
 
 from collections import deque
@@ -353,64 +354,30 @@ def make_reversed_requires_dict(root):
     return make_requires_dict(root, True)
 
 
-## The followings are very experimental...
+## The followings are experimental...
 sys.setrecursionlimit(1000)
 
 
-def walk(visited, list_children, is_leaf, seens, topdown=True):
+def walk_dependency_graph_0(root_name, rreqs, leaves, seens=[], topdown=False):
     """
-    Like os.walk, walk tree from given ``nodes_visited`` and yields 3-tuple
-    (visited_nodes, next_nodes_to_visit, leaf_nodes).
+    Walk RPM dependency tree from given root RPM name recursively and yields a
+    all paths to leaves.
 
-    :param visited_nodes: Path from root to the current node :: [node]
-    :param list_children: Function to list next children nodes
-    :param is_leaf: Function to check if the node is leaf
-    :param seens: Seen nodes to avoid infinite circular walking
-    :param topdown: Yields result tuples before these children.
-    """
-    children = list_children(visited)
-    leaves = [c for c in children if is_leaf(c, seens)]
-    next_nodes = [c for c in children if c not in leaves]
-
-    if topdown:
-        yield (visited, next_nodes, leaves)
-
-    for node in next_nodes:
-        visited.append(node)
-
-        if node in seens:
-            logging.info("Detect circular walking at " + node)
-        else:
-            for x in walk(visited, list_children, is_leaf, seens, topdown):
-                yield x
-
-    if not topdown:
-        yield (visited, next_nodes, leaves)
-
-
-def walk_depgraph(visited, rreqs, leaves, seens=[], topdown=False):
-    """
-    Walk dependency tree from given root RPM name recursively and yields a
-    3-tuple (path, names_of_rpms_requiring_others, names_of_leave_rpms).
-
-    :param path: Path from root RPM to the current RPM
+    :param root_name: Root RPM name
     :param rreqs: Dependency map, {required: [requires]}.
     :param leaves: RPMs not required by other RPMs.
     :param seens: Seen RPM names to avoid walking circular depdendency trees.
     :param topdown: Yields tuples before these children.
     """
-    list_children = lambda visited: rreqs.get(visited[-1], [])
-    is_leaf = lambda visited, seens: visited[-1] in leaves
+    list_children = lambda node: rreqs.get(node, [])
 
-    for v, ns, ls in walk(visited, list_children, is_leaf, seens, topdown):
-        yield (v, ns, ls)
-        seens = list(set(seens + [visited[-1]] + ns + ls))
+    return [p for p in walk([root_name], list_children, leaves=leaves)]
 
 
-def make_dependency_trees(root=None):
+def walk_dependency_graph(root=None):
     """
     :param root: root dir of RPM Database
-    :return: {name_required: [name_requires ...]}
+    :return: List of path of dependency graph
     """
     reqs = make_requires_dict(root)  # p -> [required]
     rreqs = make_requires_dict(root, True)  # required -> [p]
@@ -419,219 +386,7 @@ def make_dependency_trees(root=None):
     roots = [p for p, rs in reqs.iteritems() if not rs]
     leaves = [r for r, ps in rreqs.iteritems() if not ps]
 
-    return (roots, leaves)
-
-
-def traverse_node_g(node, rank=0):
-    """
-    Yields list of nodes traversing children of given node.
-
-    :param node: Node object
-    """
-    to_traverse = deque()
-    nodes_list = []
-    last_rank = cur_rank = rank
-
-    to_traverse.append((cur_rank, node))
-
-    while to_traverse:
-        logging.debug("to_traverse=" + str(to_traverse))
-        (cur_rank, cur_node) = to_traverse.popleft()
-
-        while last_rank and last_rank >= cur_rank:
-            nodes_list.pop()
-            logging.debug("nodes_list=" + str(nodes_list) +
-                          ", ranks: last=%d, cur=%d" % (last_rank, cur_rank))
-            last_rank -= 1
-
-        nodes_list.append(cur_node.name)
-        logging.debug("(nodes_list to yield: " + str(nodes_list))
-        yield nodes_list
-
-        to_traverse.extendleft(((cur_rank + 1, c) for c in
-                               cur_node.get_children()))
-        last_rank = cur_rank
-
-def pp_nodes(ns, limit=None):
-    """
-    Pretty print list of nodes.
-
-    :param ns: List of nodes
-    :param limit: Limit items to print
-    :return: Pretty printed list string
-    """
-    if limit is None:
-        limit = len(ns) + 1
-
-    return ", ".join(n.name for n in ns[:limit])
-
-
-class Node(object):
-
-    def __init__(self, name, children=[], is_root=False):
-        """
-        :param name: Name :: str
-        :param children: Child nodes :: [Node]
-        :param is_root: Is this node root ?
-        """
-        self.name = name
-        self._is_root = is_root
-
-        self.children = set(children)
-        self.childnames = set(c.name for c in children)
-        self._has_children = bool(self.childnames)
-
-    def get_children(self):
-        return self.children
-
-    def get_child_names(self):
-        return self.childnames
-
-    def has_children(self):
-        return self._has_children
-
-    def add_child(self, cnode, seens=[]):
-        """
-        :param cnode: Child node to add
-        :type Node:
-        :param seens: List of seen node names
-        :type [str]:
-        """
-        if not seens:
-            seens = [self.name] + list(self.get_child_names())
-
-        if cnode.name in seens:
-            return  # Avoid circular references
-
-        self.children.add(cnode)
-        self.childnames.add(cnode.name)
-
-        if not self.has_children():
-            self._has_children = True
-
-    def add_children(self, diff):
-        """
-        :param diff: Node list
-        :type [Node]:
-        """
-        for c in diff:
-            self.add_child(c)
-
-    def is_root(self):
-        return self._is_root
-
-    def is_leaf(self):
-        return not self.has_children()
-
-    def make_not_root(self):
-        self._is_root = False
-
-    def __str__(self):
-        return repr(self)
-
-    def __repr__(self):
-        return "Node {'%s', children=[%s]}" % \
-               (self.name, pp_nodes(list(self.children)))
-
-    def __cmp__(self, other):
-        return cmp(self.name, other.name)
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-
-def make_depgraph_2(root, reversed=False):
-    """
-    Make a dependency graph of installed RPMs.
-
-    :param root: RPM DB top dir
-    :param reversed: Try to make reversed dependency graph (very experimental).
-    :return: List of root nodes.
-    """
-    f = make_reversed_requires_dict if reversed else make_requires_dict
-    reqs_map = f(root)  # {reqs: [reqd]} or {reqd: [reqs]} (reversed)
-
-    nodes = dict()  # {name: Node n}
-
-    for x, ys in reqs_map.iteritems():
-        node = nodes.get(x, None)
-
-        if node:
-            logging.debug("Already created as child node: " + x)
-
-            cs_ref = node.get_child_names()
-            cs = set(ys)
-
-            if cs.issubset(cs_ref):
-                continue
-
-            for c in cs:
-                if c not in cs_ref:
-                    logging.debug("Create child node not seen yet: " + c)
-                    cnode = nodes[c] = Node(c, [], False)
-                    node.add_child(cnode)
-        else:
-            logging.debug("Create root node: name=" + x)
-            node = nodes[x] = Node(x, [], True)
-
-            for y in ys:
-                cnode = nodes.get(y, None)
-
-                if cnode is None:
-                    logging.debug("Create child node: " + y)
-                    cnode = nodes[y] = Node(y, [], False)
-                else:
-                    cnode.make_not_root()
-
-                node.add_child(cnode)
-
-    return sorted(nodes.values(), key=attrgetter("name"))
-
-
-def find_all_paths(graph, start, end, path=[]):
-    path = path + [start]
-    if start == end:
-        return [path]
-    if not start in graph:
-        return []
-    paths = []
-    for node in graph[start]:
-        if node not in path:
-            newpaths = find_all_paths(graph, node, end, path)
-            for newpath in newpaths:
-                paths.append(newpath)
-    return paths
-
-
-def traverse_node_g(node, rank=0):
-    """
-    Yields list of nodes traversing children of given node.
-
-    :param node: Node object
-    """
-    to_traverse = deque()
-    nodes_list = []
-    last_rank = cur_rank = rank
-
-    to_traverse.append((cur_rank, node))
-
-    while to_traverse:
-        logging.debug("to_traverse=" + str(to_traverse))
-        (cur_rank, cur_node) = to_traverse.popleft()
-
-        while last_rank and last_rank >= cur_rank:
-            nodes_list.pop()
-            logging.debug("nodes_list=" + str(nodes_list) +
-                          ", ranks: last=%d, cur=%d" % (last_rank, cur_rank))
-            last_rank -= 1
-
-        nodes_list.append(cur_node.name)
-        logging.debug("(nodes_list to yield: " + str(nodes_list))
-        yield nodes_list
-
-        to_traverse.extendleft(((cur_rank + 1, c) for c in
-                               cur_node.get_children()))
-        last_rank = cur_rank
+    return [walk_dependency_graph_0(rn, rreqs, leaves) for rn in roots]
 
 
 # vim:sw=4:ts=4:et:
