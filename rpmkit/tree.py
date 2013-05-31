@@ -13,8 +13,31 @@ import sys
 sys.setrecursionlimit(1000)
 
 
+class Node(object):
+
+    def __init__(self, name, children=[]):
+        self._name = name
+        self._children = children
+
+    def name(self):
+        return self._name
+
+    def list_children(self):
+        return self._children
+
+    def add_child(self, cnode):
+        if cnode not in self.list_children():
+            self._children.append(cnode)
+
+    def __eq__(self, other):
+        return self._name == other.name()
+
+    def __repr__(self):
+        return "Node(%s)" % self.name
+
+
 def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
-         topdown=True):
+         topdown=True, recur_count=0, recur_max=-1):
     """
     Like os.walk, walk tree from given ``visited`` and yields 3-tuple
     (visited_nodes, next_nodes_to_visit, leaf_nodes).
@@ -26,10 +49,19 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
     :param seens: List of seen nodes
     :param topdown: Yields result tuples before these children.
     """
+    recur_count += 1
+
+    if recur_max > 0:
+        if recur_count > recur_max:
+            raise StopIteration("Max recursion limit exceeded: " + str(node))
+
     if is_leaf is None:
         is_leaf = lambda node: node in leaves or node in seens
+        next_is_leaf = None
+    else:
+        next_is_leaf = is_leaf
 
-    children = list_children(visited)
+    children = list_children(visited[-1])
     immediate_leaves = [c for c in children if is_leaf(c)]
     next_nodes = [c for c in children if c not in immediate_leaves]
 
@@ -40,11 +72,12 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
         visited.append(node)
 
         if node in seens:
-            logging.info("Detect circular walking at " + node)
+            logging.info("Detect circular walking")
             continue
 
         seens = list(set(seens + visited + children))
-        for x in walk(visited, list_children, is_leaf, leaves, seens, topdown):
+        for x in walk(visited, list_children, next_is_leaf, leaves, seens,
+                      topdown, recur_count, recur_max):
             yield x
 
     if not topdown:
