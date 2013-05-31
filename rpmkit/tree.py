@@ -66,11 +66,11 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
             yield visited + [leaf]
 
     for node in next_nodes:
-        visited.append(node)
-
-        if node in seens:
-            logging.info("Detect circular walking")
+        if node in seens or node in visited:
+            logging.warn("Detect circular walking: " + node)
             continue
+
+        visited.append(node)
 
         if aggressive:
             seens = list(set(seens + visited + children))
