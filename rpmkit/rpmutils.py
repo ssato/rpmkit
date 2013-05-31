@@ -16,13 +16,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.memoize import memoize
-from rpmkit.tree import walk
 from rpmkit.utils import concat, uniq
 
 from collections import deque
 from itertools import groupby
 from operator import itemgetter, attrgetter
 from yum.rpmsack import RPMDBPackageSack
+
+import rpmkit.tree as RT
 
 import logging
 import os
@@ -361,6 +362,18 @@ def make_reversed_requires_dict(root):
 sys.setrecursionlimit(1000)
 
 
+def _get_leaves(root=None):
+    """
+    :param root: root dir of RPM Database
+    :return: List of RPM names which is not required by any other RPMs
+    """
+    rreqs = make_requires_dict(root, True)  # required -> [p]
+    return [r for r, ps in rreqs.iteritems() if not ps]
+
+
+get_leaves = memoize(_get_leaves)
+
+
 def walk_dependency_graph_0(root_name, rreqs, leaves, seens=[], topdown=False):
     """
     Walk RPM dependency tree from given root RPM name recursively and yields a
@@ -374,7 +387,7 @@ def walk_dependency_graph_0(root_name, rreqs, leaves, seens=[], topdown=False):
     """
     list_children = lambda node: rreqs.get(node, [])
 
-    return [p for p in walk([root_name], list_children, leaves=leaves) if p]
+    return [p for p in RT.walk([root_name], list_children, leaves=leaves) if p]
 
 
 def walk_dependency_graph(root=None):
@@ -387,9 +400,24 @@ def walk_dependency_graph(root=None):
 
     # NOTE: roots require no other RPMs and no other RPMs require leaves.
     roots = [p for p, rs in reqs.iteritems() if not rs]
-    leaves = [r for r, ps in rreqs.iteritems() if not ps]
+    leaves = get_leaves(root)
 
-    return [walk_dependency_graph_0(rn, rreqs, leaves) for rn in roots]
+    pss = [walk_dependency_graph_0(rn, rreqs, leaves) for rn in roots]
+    return [ps for ps in pss if ps]  # Remove empty lists
+
+
+def make_dependency_graph(root=None):
+    """
+    :param root: root dir of RPM Database
+    :return: List of path of dependency graph
+    """
+    pss = walk_dependency_graph(root)
+    leaves = get_leaves(root)
+
+    f = RT.make_hierarchical_nested_dicts_from_paths
+    trees = [f(ps, leaves=leaves) for ps in pss]
+
+    return dict(name="<rpmlib>", children=trees)
 
 
 # vim:sw=4:ts=4:et:
