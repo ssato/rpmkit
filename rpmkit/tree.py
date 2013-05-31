@@ -37,7 +37,7 @@ class Node(object):
 
 
 def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
-         topdown=True):
+         topdown=True, aggressive=False):
     """
     Like os.walk, walk tree from given ``visited`` and yields list of visited
     nodes list from root to leaves.
@@ -48,6 +48,8 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
     :param leaves: List of known leaf nodes
     :param seens: List of seen nodes
     :param topdown: Yields result tuples before walking children.
+    :param aggressive: Cut branches aggressively, that is, seen nodes in
+        siblings and these children are also considered as virtual leaves.
     """
     if is_leaf is None:
         is_leaf = lambda node: not list_children(node)
@@ -68,7 +70,11 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
             logging.info("Detect circular walking")
             continue
 
-        seens = list(set(seens + visited + children))
+        if aggressive:
+            seens = list(set(seens + visited + children))
+        else:
+            seens = visited + [node]
+
         for x in walk(visited, list_children, is_leaf, leaves, seens,
                       topdown):
             yield x
