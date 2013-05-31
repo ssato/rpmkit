@@ -16,14 +16,16 @@ class Test_00_pure_functions(unittest.TestCase):
         tree = TT.Node("foo")
 
         ret = [t for t in TT.walk([tree], list_children)]
-        print ret
+        self.assertEquals(ret, [])
 
     def test_01_walk__nodes(self):
         tree = TT.Node("foo", [TT.Node("bar"),
                                TT.Node("baz", [TT.Node("aaa")])])
 
         ret = [t for t in TT.walk([tree], list_children)]
-        print ret
+
+        self.assertEquals([n.name() for n in ret[0]], ["foo", "bar"])
+        self.assertEquals([n.name() for n in ret[1]], ["foo", "baz", "aaa"])
 
 
 # vim:sw=4 ts=4 et:
