@@ -99,7 +99,7 @@ def make_hierarchical_nested_dicts_from_paths(paths, nodes={}, leaves=[]):
             if leaf not in nodes:
                 nodes[leaf] = dict(name=leaf)
 
-    assert paths != [[]], "Empty a list of a list was given!"
+    assert paths != [[]], "Empty list of list was given!"
 
     for path in paths:
         rpath = list(reversed(path))
