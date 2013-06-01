@@ -75,7 +75,7 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
         if aggressive:
             seens = list(set(seens + visited + children))
         else:
-            seens = visited + [node]
+            seens = list(set(seens + visited))
 
         for x in walk(visited, list_children, is_leaf, leaves, seens,
                       topdown):
@@ -86,7 +86,7 @@ def walk(visited, list_children, is_leaf=None, leaves=[], seens=[],
             yield visited + [leaf]
 
 
-def make_hierarchical_nested_dicts_from_paths(paths, nodes={}, leaves=[]):
+def make_tree_from_path(paths, leaves=[], acyclic=True):
     """
     Make hierarchical tree of dicts from path in the paths list made
     by the above 'walk' function.
@@ -94,6 +94,8 @@ def make_hierarchical_nested_dicts_from_paths(paths, nodes={}, leaves=[]):
     :param paths: List of paths of which root (path[0]) is same
     :return: dict(name: [, children: <node>])
     """
+    nodes = dict()
+
     if leaves:
         for leaf in leaves:
             if leaf not in nodes:
@@ -101,25 +103,35 @@ def make_hierarchical_nested_dicts_from_paths(paths, nodes={}, leaves=[]):
 
     assert paths != [[]], "Empty list of list was given!"
 
+    # sort paths by its legth
+    paths = sorted(paths, key=len, reverse=True)
+
     for path in paths:
         rpath = list(reversed(path))
         assert rpath
 
-        # This is a leaf:
+        # This node is a leaf:
         head = rpath[0]
         if nodes.get(head, None) is None:
             nodes[head] = dict(name=head)
 
         for node, child in izip(rpath[1:], rpath):
             x = nodes.get(node, None)
-            c = nodes.get(child, dict(name=child))
+            c = nodes[child]  # This node should be created before.
 
             if x is None:
                 nodes[node] = dict(name=node, children=[c])
-            else:
-                cs = nodes[node]["children"]
+                continue
+
+            logging.debug("The node was created in another path: " + node)
+            cs = x.get("children", [])
+            if cs:
+                logging.debug("The node has another children: " + node)
                 if c not in cs:
                     nodes[node]["children"].append(c)
+            else:
+                logging.debug("The node was a leaf: " + node)
+                nodes[node]["children"] = [c]
 
     return nodes[paths[0][0]]
 
