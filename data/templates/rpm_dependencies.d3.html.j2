@@ -1,26 +1,37 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<style>
-
-.node circle {
-  fill: #fff;
-  stroke: steelblue;
-  stroke-width: 1.5px;
-}
-
-.node {
-  font: 10px sans-serif;
-}
-
-.link {
-  fill: none;
-  stroke: #ccc;
-  stroke-width: 1.5px;
-}
-
-</style>
-<body>
-<script src="http://d3js.org/d3.v3.min.js"></script>
-<script src="js/d3-svg.js.j2"></script>
-</body>
+<html lang="en">
+  <head>
+    <title>RPM Dependency Graph</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" type="text/css" media="screen" href="css/d3.css" />
+    <!-- <script src="http://d3js.org/d3.v3.min.js"></script> -->
+    <script src="js/d3.v3.min.js"></script>
+    <script src="js/d3-svg.js.j2"></script>
+    <script>
+      {% for svgid, jsonfile, diameter in d3datasets -%}
+      render_graph("{{ svgid }}", "{{ jsonfile }}", diameter);
+{% endfor %}
+    </script>
+  </head>
+  <body>
+    <div id="wrap">
+      <div id="svg_charts">
+        {% for svgid, jsonfile, diameter in d3datasets -%}
+        <svg id="{{ svgid }}" width="{{ diameter }}" height="{{ diameter }}"/>
+{% endfor %}
+    <!--
+      <div class="controller" >
+        <div class="current_scale"><span id="current_scale"/>scale = 1.0</div>
+        <input type="submit" id="zoom_in" value="+"/>
+        <input type="submit" id="zoom_out" value="-"/>
+        <input type="submit" id="reset_zoom" value="reset"/>
+        <input type="submit" id="switch_to_highlight_update_rpms" value="Highlight update RPMs"/>
+        <input type="submit" id="reset_hightlights" value="Reset highlights"/>
+      </div>
+    -->
+      </div>
+    </div>
+  </body>
 </html>
+<!-- vim:sw=2:ts=2:et:
+-->
