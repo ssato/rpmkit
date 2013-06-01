@@ -442,6 +442,20 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
+def renderfile(f, ctx={}, subdir=None, tpaths=template_paths):
+    if subdir:
+        subdir = os.path.join(workdir, subdir)
+        if not os.path.exists(subdir):
+            os.makedirs(subdir)
+
+        dst = os.path.join(subdir, f[:-3])
+    else:
+        dst = os.path.join(workdir, f[:-3])
+
+    s = render(f, ctx, tpaths, ask=True)
+    open(dst, 'w').write(s)
+
+
 def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
                  engine="twopi"):
     """
@@ -471,6 +485,36 @@ def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
     open(errlog, 'w').write(err)
 
 
+def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS):
+    """
+    Generate dependency graph to be rendered with d3.js.
+
+    :param root: Root dir where 'var/lib/rpm' exists
+    :param workdir: Working dir to dump the result
+    :param template_paths: Template path list
+    :param engine: Graphviz rendering engine to choose, e.g. neato
+    """
+    trees = RU.make_dependency_graph(root)
+
+    def __name(tree):
+        return tree["name"].replace('-', "_")
+
+    def __make_ds(tree):
+        svgid = __name(tree)
+        jsonfile = os.path.join(workdir, "data", "%s.json" % svgid)
+        diameter = 1200
+
+        return (svgid, jsonfile, diameter)
+
+    datasets = [(t, __make_ds(t)) for t in trees]
+    ctx = dict(d3datasets=[ds for _, ds in datasets])
+
+    renderfile("rpm_dependencies.html.j2", ctx)
+
+    for tree, (svgid, jsonfile, diameter) in d3datasets:
+        json.dump(tree, open(jsonfile, 'w'))
+
+
 def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
     """
     Generate HTML report of RPMs.
@@ -484,20 +528,14 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
     if not os.path.exists(jsdir):
         os.makedirs(jsdir)
 
-    def renderfile(f, subdir=None, tpaths=template_paths):
-        if subdir:
-            dst = os.path.join(workdir, subdir, f[:-3])
-        else:
-            dst = os.path.join(workdir, f[:-3])
-
-        s = render(f, {}, tpaths, ask=True)
-        open(dst, 'w').write(s)
-
     renderfile("rpm_dependencies.html.j2")
 
     js_tpaths = [os.path.join(t, "js") for t in template_paths]
-    for f in ("graphviz-svg.js.j2", "jquery.js.j2"):
+    for f in ("graphviz-svg.js.j2", "jquery.js.j2", "d3-svg.js.j2",
+              "d3.v3.min.js"):
         renderfile(f, "js", js_tpaths)
+
+    gen_depgraph_d3(root, workdir, template_paths)
 
 
 def modmain(ppath, workdir=None, offline=False, errata_details=False,
