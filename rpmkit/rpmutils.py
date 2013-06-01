@@ -364,6 +364,8 @@ sys.setrecursionlimit(1000)
 
 def _get_leaves(root=None):
     """
+    Get leaves which no other RPMs require.
+
     :param root: root dir of RPM Database
     :return: List of RPM names which is not required by any other RPMs
     """
@@ -398,7 +400,7 @@ def walk_dependency_graph(root=None):
     reqs = make_requires_dict(root)  # p -> [required]
     rreqs = make_requires_dict(root, True)  # required -> [p]
 
-    # NOTE: roots require no other RPMs and no other RPMs require leaves.
+    # NOTE: roots require no other RPMs
     roots = [p for p, rs in reqs.iteritems() if not rs]
     leaves = get_leaves(root)
 
@@ -411,13 +413,14 @@ def make_dependency_graph(root=None):
     :param root: root dir of RPM Database
     :return: List of path of dependency graph
     """
-    pss = walk_dependency_graph(root)
+    maxlen = lambda paths: max(len(p) for p in paths)
+
+    pss = sorted(walk_dependency_graph(root), key=maxlen)
     leaves = get_leaves(root)
 
-    f = RT.make_hierarchical_nested_dicts_from_paths
-    trees = [f(ps, leaves=leaves) for ps in pss]
+    trees = [RT.make_tree_from_path(ps, leaves=leaves) for ps in pss]
 
-    return dict(name="<rpmlib>", children=trees)
+    return trees
 
 
 # vim:sw=4:ts=4:et:
