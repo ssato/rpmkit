@@ -2,13 +2,19 @@
  * Based on http://bl.ocks.org/mbostock/4063550.
  */
 /*
+ * Render Reingold–Tilford Tree.
+ * @see http://bl.ocks.org/mbostock/4063550
+ *
  * @param svgid: ID of div to render svg
  * @param jsonfile: JSON data file
  * @param diameter: Diameter of Reingold–Tilford Tree graph
  */
-function render_graph(svgid, jsonfile, diameter) {
+function render_tree(svgid, jsonfile, diameter, with_label) {
     if (typeof diameter === 'undefined')
         var diameter = 1400;
+
+    if (typeof with_label === 'undefined')
+        var with_label = false;
 
     var tree = d3.layout.tree()
         .size([360, diameter / 2 - 120])
@@ -43,15 +49,79 @@ function render_graph(svgid, jsonfile, diameter) {
       node.append("circle")
           .text(function(d) { return d.name; });
 
-{% if with_label %}      node.append("text")
-          .attr("dy", ".31em")
-          .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
-          .attr("transform", function(d) { return d.x < 180 ? "translate(8)" : "rotate(180)translate(-8)"; })
-          .text(function(d) { return d.name; });{% endif %}
+      if (with_label) {
+          node.append("text")
+              .attr("dy", ".31em")
+              .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
+              .attr("transform", function(d) { return d.x < 180 ? "translate(8)" : "rotate(180)translate(-8)"; })
+              .text(function(d) { return d.name; });
+      }
     });
 
     // d3.select(self.frameElement).style("height", diameter - 150 + "px");
 }
 
+/*
+ * Render Cluster Dendrogram.
+ * @see http://bl.ocks.org/mbostock/4063570
+ *
+ * @param svgid: ID of div to render svg
+ * @param jsonfile: JSON data file
+ * @param width: Width of output chart
+ * @param height: Height of output chart
+ */
+function render_dendrogram(svgid, jsonfile, width, height, with_label) {
+    if (typeof width === 'undefined')
+        var width = 960;
+
+    if (typeof height === 'undefined')
+        var height = 2200;
+
+    if (typeof with_label === 'undefined')
+        var with_label = true;
+
+    var cluster = d3.layout.cluster()
+        .size([height, width - 160]);
+
+    var diagonal = d3.svg.diagonal()
+        .projection(function(d) { return [d.y, d.x]; });
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+      .append("g")
+        .attr("transform", "translate(40,0)");
+
+    d3.json(jsonfile, function(error, root) {
+      var nodes = cluster.nodes(root),
+          links = cluster.links(nodes);
+
+      var link = svg.selectAll(".link")
+          .data(links)
+        .enter().append("path")
+          .attr("class", "link")
+          .attr("d", diagonal);
+
+      var node = svg.selectAll(".node")
+          .data(nodes)
+        .enter().append("g")
+          .attr("class", "node")
+          .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; })
+
+      node.append("circle")
+          .attr("r", 4.5);
+
+      node.append("circle")
+          .text(function(d) { return d.name; });
+
+      if (with_label) {
+          node.append("text")
+              .attr("dx", function(d) { return d.children ? -8 : 8; })
+              .attr("dy", 3)
+              .style("text-anchor", function(d) { return d.children ? "end" : "start"; })
+              .text(function(d) { return d.name; });
+      }
+    });
+}
 /* vim:sw=4:ts=4:et:ft=javascript:
  */
