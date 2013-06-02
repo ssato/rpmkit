@@ -526,7 +526,7 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
         os.makedirs(cssdir)
 
     css_tpaths = [os.path.join(t, "css") for t in template_paths]
-    renderfile("d3.css", workdir, {}, "css", css_tpaths)
+    renderfile("d3.css.j2", workdir, {}, "css", css_tpaths)
 
     for tree, (svgid, jsonfile, diameter) in datasets:
         try:
