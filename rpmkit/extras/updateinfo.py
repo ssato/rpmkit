@@ -26,6 +26,7 @@ import rpmkit.utils as U
 import rpmkit.swapi as SW
 import rpmkit.yum_surrogate as YS
 
+import codecs
 import logging
 import optparse
 import os
@@ -442,18 +443,19 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
-def renderfile(f, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS):
+def renderfile(tmpl, workdir, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS,
+               encoding="utf-8"):
     if subdir:
         subdir = os.path.join(workdir, subdir)
         if not os.path.exists(subdir):
             os.makedirs(subdir)
 
-        dst = os.path.join(subdir, f[:-3])
+        dst = os.path.join(subdir, tmpl[:-3])
     else:
-        dst = os.path.join(workdir, f[:-3])
+        dst = os.path.join(workdir, tmpl[:-3])
 
-    s = render(f, ctx, tpaths, ask=True)
-    open(dst, 'w').write(s)
+    s = render(tmpl, ctx, tpaths, ask=True)
+    codecs.open(dst, "w", encoding).write(s)
 
 
 def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
@@ -485,7 +487,8 @@ def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
     open(errlog, 'w').write(err)
 
 
-def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS):
+def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
+                    with_label=True):
     """
     Generate dependency graph to be rendered with d3.js.
 
@@ -494,25 +497,47 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS):
     :param template_paths: Template path list
     :param engine: Graphviz rendering engine to choose, e.g. neato
     """
-    trees = RU.make_dependency_graph(root)
+    datadir = os.path.join(workdir, "data")
+    cssdir = os.path.join(workdir, "css")
 
     def __name(tree):
         return tree["name"].replace('-', "_")
 
     def __make_ds(tree):
         svgid = __name(tree)
-        jsonfile = os.path.join(workdir, "data", "%s.json" % svgid)
+        jsonfile = os.path.join(datadir, "%s.json" % svgid)
         diameter = 1200
 
         return (svgid, jsonfile, diameter)
 
+    trees = RU.make_dependency_graph(root)
+
     datasets = [(t, __make_ds(t)) for t in trees]
     ctx = dict(d3datasets=[ds for _, ds in datasets])
 
-    renderfile("rpm_dependencies.html.j2", ctx)
+    renderfile("rpm_dependencies.d3.html.j2", workdir, ctx)
 
-    for tree, (svgid, jsonfile, diameter) in d3datasets:
-        json.dump(tree, open(jsonfile, 'w'))
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
+
+    if not os.path.exists(cssdir):
+        os.makedirs(cssdir)
+
+    css_tpaths = [os.path.join(t, "css") for t in template_paths]
+    renderfile("d3.css", workdir, {}, "css", css_tpaths)
+
+    jsctx = dict(with_label=with_label)
+    js_tpaths = [os.path.join(t, "js") for t in template_paths]
+    renderfile("d3-svg.js.j2", workdir, jsctx, "js", js_tpaths)
+
+    for tree, (svgid, jsonfile, diameter) in datasets:
+        try:
+            json.dump(tree, open(jsonfile, 'w'))
+        except RuntimeError, e:
+            logging.warn("Could not dump JSON data: " + jsonfile)
+            logging.warn("Reason: " + str(e))
+            json.dump({"name": "Failed to make acyclic tree"},
+                      open(jsonfile, 'w'))
 
 
 def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
@@ -528,18 +553,23 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
     if not os.path.exists(jsdir):
         os.makedirs(jsdir)
 
-    renderfile("rpm_dependencies.html.j2")
+    renderfile("rpm_dependencies.html.j2", workdir)
 
     js_tpaths = [os.path.join(t, "js") for t in template_paths]
-    for f in ("graphviz-svg.js.j2", "jquery.js.j2", "d3-svg.js.j2",
-              "d3.v3.min.js"):
-        renderfile(f, "js", js_tpaths)
+    for f in ("graphviz-svg.js.j2", "jquery.js.j2", "d3.v3.min.js"):
+        renderfile(f, workdir, {}, "js", js_tpaths)
 
     gen_depgraph_d3(root, workdir, template_paths)
 
 
+_WARN_ERRATA_DETAILS_NOT_AVAIL = """\
+Detailed errata information of the detected distribution %s is not
+supported. So it will disabled this feature."""
+
+
 def modmain(ppath, workdir=None, offline=False, errata_details=False,
-            report=False, template_paths=_TEMPLATE_PATHS):
+            report=False, template_paths=_TEMPLATE_PATHS,
+            warn_errata_details_msg=_WARN_ERRATA_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
@@ -549,6 +579,12 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
     """
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
+
+    if errata_details:
+        dist = YS.detect_dist()
+        if dist != "rhel":
+            logging.warn(warn_errata_details_msg % dist)
+            errata_details = False
 
     ppath = os.path.normpath(ppath)
     root = YS.setup_root(ppath, force=True)
