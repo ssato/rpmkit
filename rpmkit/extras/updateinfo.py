@@ -516,7 +516,8 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
     ctx = dict(d3datasets=[ds for _, ds in datasets],
                with_label=("true" if with_label else "false"))
 
-    renderfile("rpm_dependencies.d3.html.j2", workdir, ctx)
+    renderfile("rpm_dependencies.d3.html.j2", workdir, ctx,
+               tpaths=template_paths)
 
     if not os.path.exists(datadir):
         os.makedirs(datadir)
@@ -550,7 +551,7 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
     if not os.path.exists(jsdir):
         os.makedirs(jsdir)
 
-    renderfile("rpm_dependencies.html.j2", workdir)
+    renderfile("rpm_dependencies.html.j2", workdir, tpaths=template_paths)
 
     js_tpaths = [os.path.join(t, "js") for t in template_paths]
     for f in ("graphviz-svg.js.j2", "jquery.js.j2", "d3.v3.min.js.j2",
