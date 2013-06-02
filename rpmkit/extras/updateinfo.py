@@ -458,7 +458,7 @@ def renderfile(tmpl, workdir, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS):
         dst = os.path.join(workdir, tmpl[:-3])
 
     s = render(tmpl, ctx, tpaths, ask=True)
-    open(dst, "w").write(s)
+    copen(dst, "w").write(s)
 
 
 def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
