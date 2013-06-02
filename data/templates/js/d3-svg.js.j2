@@ -40,11 +40,14 @@ function render_graph(svgid, jsonfile, diameter) {
       node.append("circle")
           .attr("r", 4.5);
 
-      node.append("text")
+      node.append("circle")
+          .text(function(d) { return d.name; });
+
+{% if with_label %}      node.append("text")
           .attr("dy", ".31em")
           .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
           .attr("transform", function(d) { return d.x < 180 ? "translate(8)" : "rotate(180)translate(-8)"; })
-          .text(function(d) { return d.name; });
+          .text(function(d) { return d.name; });{% endif %}
     });
 
     // d3.select(self.frameElement).style("height", diameter - 150 + "px");
