@@ -68,7 +68,7 @@ _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 _TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
 
 
-def open(path, flag='r', **kwargs):
+def copen(path, flag='r', **kwargs):
     return codecs.open(path, flag, "utf-8")
 
 
@@ -140,7 +140,7 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE):
     rpms = export_rpm_list(root)
     logging.debug("%d installed rpms found in %s" % (len(rpms), root))
 
-    json.dump(rpms, open(rpm_list_path(workdir, filename), 'w'))
+    json.dump(rpms, copen(rpm_list_path(workdir, filename), 'w'))
 
 
 def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
@@ -179,7 +179,7 @@ def dump_errata_summary(root, workdir, filename=_ERRATA_SUMMARY_FILE,
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
-    json.dump(es, open(errata_summary_path(workdir, filename), 'w'))
+    json.dump(es, copen(errata_summary_path(workdir, filename), 'w'))
 
 
 def _swapicall(api, offline=False, args=[]):
@@ -266,7 +266,7 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
             errata_cves_map = mk_errata_map(offline)
 
             logging.info("Dumping errata - cve - cvss map data from RHN...")
-            json.dump(errata_cves_map, open(cve_ref_path, 'w'))
+            json.dump(errata_cves_map, copen(cve_ref_path, 'w'))
             #assert bool(errata_cves_map), "errata_cache=" + errata_cache
 
     adv = errata["advisory"]
@@ -320,7 +320,7 @@ def dump_errata_list(workdir, offline=False,
             yield get_errata_details(ref_e, workdir, offline)
 
     errata = sorted((e for e in _g(es)), key=itemgetter("advisory"))
-    json.dump(errata, open(errata_list_path(workdir), 'w'))
+    json.dump(errata, copen(errata_list_path(workdir), 'w'))
 
 
 def _make_dataset(list_data, headers=None, title=None):
@@ -376,7 +376,7 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
     us = sorted(updates.values(), key=itemgetter("name"))
     data = dict(updates=us)
 
-    json.dump(data, open(updates_file_path(workdir), 'w'))
+    json.dump(data, copen(updates_file_path(workdir), 'w'))
 
 
 _DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
@@ -478,7 +478,7 @@ def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
                         template_paths, ask=True)
     src = os.path.join(workdir, "rpm_dependencies.graphviz")
 
-    open(src, 'w').write(depgraph_s)
+    copen(src, 'w').write(depgraph_s)
 
     output = src + ".svg"
     (outlog, errlog) = (os.path.join(workdir, "graphviz_out.log"),
@@ -486,8 +486,8 @@ def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     (out, err, rc) = YS.run("%s -Tsvg -o %s %s" % (engine, output, src))
 
-    open(outlog, 'w').write(out)
-    open(errlog, 'w').write(err)
+    copen(outlog, 'w').write(out)
+    copen(errlog, 'w').write(err)
 
 
 def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
@@ -528,12 +528,12 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     for tree, (svgid, jsonfile, jsonpath, diameter) in datasets:
         try:
-            json.dump(tree, open(jsonpath, 'w'))
+            json.dump(tree, copen(jsonpath, 'w'))
         except RuntimeError, e:
             logging.warn("Could not dump JSON data: " + jsonpath)
             logging.warn("Reason: " + str(e))
             json.dump({"name": "Failed to make acyclic tree"},
-                      open(jsonpath, 'w'))
+                      copen(jsonpath, 'w'))
 
     ctx = dict(d3datasets=[(s, f, d) for _, (s, f, d, _p) in datasets],
                with_label=("true" if with_label else "false"))
