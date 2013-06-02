@@ -442,7 +442,7 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
-def renderfile(f, ctx={}, subdir=None, tpaths=template_paths):
+def renderfile(f, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS):
     if subdir:
         subdir = os.path.join(workdir, subdir)
         if not os.path.exists(subdir):
