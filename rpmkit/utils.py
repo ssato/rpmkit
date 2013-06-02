@@ -17,7 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from rpmkit.memoize  import memoize
+from rpmkit.memoize import memoize
+from itertools import izip, takewhile
 
 import datetime
 import itertools
@@ -191,6 +192,50 @@ def timeit(f, *args, **kwargs):
     ret = f(*args, **kwargs)
     end = datetime.datetime.now()
     return (ret, end - start)
+
+
+def all_eq(xs):
+    """
+    True if all items in iterable ``xs`` (list or generator) equals each other.
+
+    >>> all_eq([])
+    False
+    >>> all_eq(["a", "a", "a"])
+    True
+    >>> all_eq(c for c in "")
+    False
+    >>> all_eq(c for c in "aaba")
+    False
+    >>> all_eq(c for c in "aaaa")
+    True
+    >>> all_eq([c for c in "aaaa"])
+    True
+    """
+    if not isinstance(xs, list):
+        xs = list(xs)  # xs may be a generator...
+
+    return all(x == xs[0] for x in xs[1:]) if xs else False
+
+
+def longest_common_prefix(*xss):
+    """
+    Variant of LCS = Longest Common Sub-strings.
+
+    For LCS, see http://en.wikipedia.org/wiki/Longest_common_substring_problem
+
+    :param: List of list of any objects which is an instance of Eq type class.
+    :return: Common prefix list of given lists.
+
+    >>> longest_common_prefix("abc", "ab", "abcd")
+    ['a', 'b']
+    >>> longest_common_prefix("abc", "bc")
+    []
+    >>> longest_common_prefix([1, 2, 3], [1, 2])
+    [1, 2]
+    >>> longest_common_prefix([1, 2, 3], [])
+    []
+    """
+    return [x[0] for x in takewhile(all_eq, izip(*xss))]
 
 
 # vim:sw=4:ts=4:et:
