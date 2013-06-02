@@ -68,6 +68,10 @@ _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 _TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
 
 
+def open(path, flag, **kwargs):
+    return codecs.open(path, flag, "utf-8")
+
+
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
     """
     :param workdir: Working dir to dump the result
@@ -443,8 +447,7 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
-def renderfile(tmpl, workdir, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS,
-               encoding="utf-8"):
+def renderfile(tmpl, workdir, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS):
     if subdir:
         subdir = os.path.join(workdir, subdir)
         if not os.path.exists(subdir):
@@ -455,7 +458,7 @@ def renderfile(tmpl, workdir, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS,
         dst = os.path.join(workdir, tmpl[:-3])
 
     s = render(tmpl, ctx, tpaths, ask=True)
-    codecs.open(dst, "w", encoding).write(s)
+    open(dst, "w").write(s)
 
 
 def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
