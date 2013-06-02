@@ -505,19 +505,14 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     def __make_ds(tree):
         svgid = __name(tree)
-        jsonfile = os.path.join(datadir, "%s.json" % svgid)
+        jsonfile = os.path.join("data", "%s.json" % svgid)
+        jsonpath = os.path.join(datadir, "%s.json" % svgid)
         diameter = 1200
 
-        return (svgid, jsonfile, diameter)
+        return (svgid, jsonfile, diameter, jsonpath)
 
     trees = RU.make_dependency_graph(root)
-
     datasets = [(t, __make_ds(t)) for t in trees]
-    ctx = dict(d3datasets=[ds for _, ds in datasets],
-               with_label=("true" if with_label else "false"))
-
-    renderfile("rpm_dependencies.d3.html.j2", workdir, ctx,
-               tpaths=template_paths)
 
     if not os.path.exists(datadir):
         os.makedirs(datadir)
@@ -528,14 +523,20 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
     css_tpaths = [os.path.join(t, "css") for t in template_paths]
     renderfile("d3.css.j2", workdir, {}, "css", css_tpaths)
 
-    for tree, (svgid, jsonfile, diameter) in datasets:
+    for tree, (svgid, jsonfile, jsonpath, diameter) in datasets:
         try:
-            json.dump(tree, open(jsonfile, 'w'))
+            json.dump(tree, open(jsonpath, 'w'))
         except RuntimeError, e:
-            logging.warn("Could not dump JSON data: " + jsonfile)
+            logging.warn("Could not dump JSON data: " + jsonpath)
             logging.warn("Reason: " + str(e))
             json.dump({"name": "Failed to make acyclic tree"},
-                      open(jsonfile, 'w'))
+                      open(jsonpath, 'w'))
+
+    ctx = dict(d3datasets=[(s, f, d) for _, (s, f, d, _p) in datasets],
+               with_label=("true" if with_label else "false"))
+
+    renderfile("rpm_dependencies.d3.html.j2", workdir, ctx,
+               tpaths=template_paths)
 
 
 def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
