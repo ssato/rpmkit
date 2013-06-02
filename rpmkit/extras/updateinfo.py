@@ -513,7 +513,8 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
     trees = RU.make_dependency_graph(root)
 
     datasets = [(t, __make_ds(t)) for t in trees]
-    ctx = dict(d3datasets=[ds for _, ds in datasets])
+    ctx = dict(d3datasets=[ds for _, ds in datasets],
+               with_label=("true" if with_label else "false")
 
     renderfile("rpm_dependencies.d3.html.j2", workdir, ctx)
 
@@ -525,10 +526,6 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     css_tpaths = [os.path.join(t, "css") for t in template_paths]
     renderfile("d3.css", workdir, {}, "css", css_tpaths)
-
-    jsctx = dict(with_label=with_label)
-    js_tpaths = [os.path.join(t, "js") for t in template_paths]
-    renderfile("d3-svg.js.j2", workdir, jsctx, "js", js_tpaths)
 
     for tree, (svgid, jsonfile, diameter) in datasets:
         try:
@@ -556,7 +553,8 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
     renderfile("rpm_dependencies.html.j2", workdir)
 
     js_tpaths = [os.path.join(t, "js") for t in template_paths]
-    for f in ("graphviz-svg.js.j2", "jquery.js.j2", "d3.v3.min.js"):
+    for f in ("graphviz-svg.js.j2", "jquery.js.j2", "d3.v3.min.js.j2",
+              "d3-svg.js.j2"):
         renderfile(f, workdir, {}, "js", js_tpaths)
 
     gen_depgraph_d3(root, workdir, template_paths)
