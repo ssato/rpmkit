@@ -29,7 +29,7 @@
     <!-- It seems that d3 cannot wait the entire DOM is ready. -->
     <script>
       {% for svgid, jsonfile, diameter in d3datasets -%}
-      render_graph("{{ svgid }}", "{{ jsonfile }}", {{ diameter }});
+      render_tree("{{ svgid }}", "{{ jsonfile }}", {{ diameter }}, {{ with_label }});
 {% endfor %}
     </script>
   </body>
