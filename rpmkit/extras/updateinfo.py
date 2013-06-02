@@ -68,7 +68,7 @@ _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 _TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
 
 
-def open(path, flag, **kwargs):
+def open(path, flag='r', **kwargs):
     return codecs.open(path, flag, "utf-8")
 
 
