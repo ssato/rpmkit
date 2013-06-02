@@ -526,7 +526,7 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
     css_tpaths = [os.path.join(t, "css") for t in template_paths]
     renderfile("d3.css.j2", workdir, {}, "css", css_tpaths)
 
-    for tree, (svgid, jsonfile, jsonpath, diameter) in datasets:
+    for tree, (svgid, jsonfile, diameter, jsonpath) in datasets:
         try:
             json.dump(tree, copen(jsonpath, 'w'))
         except RuntimeError, e:
@@ -534,6 +534,10 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
             logging.warn("Reason: " + str(e))
             json.dump({"name": "Failed to make acyclic tree"},
                       copen(jsonpath, 'w'))
+        except:
+            logging.warn("Could not dump JSON data: " + jsonpath)
+            logging.warn("tree=" + str(tree))
+            raise
 
     ctx = dict(d3datasets=[(s, f, d) for _, (s, f, d, _p) in datasets],
                with_label=("true" if with_label else "false"))
