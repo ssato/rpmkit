@@ -7,11 +7,6 @@
     <!-- <script src="http://d3js.org/d3.v3.min.js"></script> -->
     <script src="js/d3.v3.min.js"></script>
     <script src="js/d3-svg.js.j2"></script>
-    <script>
-      {% for svgid, jsonfile, diameter in d3datasets -%}
-      render_graph("{{ svgid }}", "{{ jsonfile }}", diameter);
-{% endfor %}
-    </script>
   </head>
   <body>
     <div id="wrap">
@@ -31,6 +26,12 @@
     -->
       </div>
     </div>
+    <!-- It seems that d3 cannot wait the entire DOM is ready. -->
+    <script>
+      {% for svgid, jsonfile, diameter in d3datasets -%}
+      render_graph("{{ svgid }}", "{{ jsonfile }}", {{ diameter }});
+{% endfor %}
+    </script>
   </body>
 </html>
 <!-- vim:sw=2:ts=2:et:
