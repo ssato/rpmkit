@@ -139,13 +139,13 @@ def list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False):
         return sorted((p2d(p) for p in yum_list_installed(root)),
                       key=itemgetter(*keys))
     else:
-        if rpmdb_dir:
-            rpm.addMacro("_dbpath", rpmdb_dir)
+        if root:
+            rpm.addMacro("_dbpath", root)
 
         ts = rpm.TransactionSet()
         mi = ts.dbMatch()
 
-        if rpmdb_dir:
+        if root:
             rpm.delMacro("_dbpath")
 
         ps = [h2nvrea(h, keys) for h in mi]
