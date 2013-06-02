@@ -514,7 +514,7 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     datasets = [(t, __make_ds(t)) for t in trees]
     ctx = dict(d3datasets=[ds for _, ds in datasets],
-               with_label=("true" if with_label else "false")
+               with_label=("true" if with_label else "false"))
 
     renderfile("rpm_dependencies.d3.html.j2", workdir, ctx)
 
