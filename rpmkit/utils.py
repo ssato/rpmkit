@@ -238,4 +238,42 @@ def longest_common_prefix(*xss):
     return [x[0] for x in takewhile(all_eq, izip(*xss))]
 
 
+def longest_common_subsequence(s, t):
+    """
+    Longest common sub string of ``s`` and ``t``.
+
+    >>> longest_common_subsequence("abcde", "acdebf")
+    ['a', 'c', 'd', 'e']
+    >>> longest_common_subsequence("12340", "01224533324")
+    ['1', '2', '3', '4']
+    >>> longest_common_subsequence([c for c in "abcde"], [c for c in "acdebf"])
+    ['a', 'c', 'd', 'e']
+    """
+    n = len(s)
+    m = len(t)
+    dp = [[0 for j in range(m + 1)] for i in range(n + 1)]
+
+    for i, si in enumerate(s):
+        for j, tj in enumerate(t):
+            if si == tj:
+                dp[i + 1][j + 1] = dp[i][j] + 1
+            else:
+                dp[i + 1][j + 1] = max(dp[i][j + 1], dp[i + 1][j])
+
+    result = []
+    (x, y) = (n, m)
+
+    while x != 0 and y != 0:
+        if dp[x][y] == dp[x - 1][y]:
+            x -= 1
+        elif dp[x][y] == dp[x][y - 1]:
+            y -= 1
+        else:
+            assert s[x - 1] == t[y - 1]
+            result = [s[x - 1]] + result
+            x -= 1
+            y -= 1
+
+    return result
+
 # vim:sw=4:ts=4:et:
