@@ -392,19 +392,22 @@ def walk_dependency_graph_0(root_name, rreqs, leaves, seens=[], topdown=False):
     return [p for p in RT.walk([root_name], list_children, leaves=leaves) if p]
 
 
-def walk_dependency_graph(root=None):
+def walk_dependency_graph(root=None, root_rpms=None):
     """
     :param root: root dir of RPM Database
+    :param root_rpms: Root RPMs to make graph
     :return: List of path of dependency graph
     """
     reqs = make_requires_dict(root)  # p -> [required]
     rreqs = make_requires_dict(root, True)  # required -> [p]
 
-    # NOTE: roots require no other RPMs
-    roots = [p for p, rs in reqs.iteritems() if not rs]
+    if not root_rpms:
+        # NOTE: roots require no other RPMs
+        root_rpms = [p for p, rs in reqs.iteritems() if not rs]
+
     leaves = get_leaves(root)
 
-    pss = [walk_dependency_graph_0(rn, rreqs, leaves) for rn in roots]
+    pss = [walk_dependency_graph_0(rn, rreqs, leaves) for rn in root_rpms]
     return [ps for ps in pss if ps]  # Remove empty lists
 
 
