@@ -445,8 +445,13 @@ def list_required_rpms_not_required_by_others(rpmname, root=None):
         return [r for r in reqs.get(p, []) if r not in seen and
                 all(x in seen for x in rreqs.get(r, []))]
 
+    if not all(y in result for y in rreqs.get(rpmname, [])):
+        return []  # Given RPM is not a leaf.
+
     while targets:
         targets = uniq(concat(get_cs(p, result) for p in targets))
+        logging.debug("targets=%s, result=%s" % (str(targets), str(result)))
+
         if targets:
             result += targets
 
