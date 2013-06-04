@@ -426,4 +426,30 @@ def make_dependency_graph(root=None):
     return trees
 
 
+def list_required_rpms_not_required_by_others(rpmname, root=None):
+    """
+    :param rpmname: Name of target RPM to get result
+    :param root: RPM Database root dir
+    :return: List of result RPMs
+    """
+    result = [rpmname]
+    targets = [rpmname]
+
+    reqs = make_requires_dict(root)  # p -> [required]
+    rreqs = make_reversed_requires_dict(root)  # r -> [requires]
+
+    def get_cs(p, seen=[]):
+        if p not in seen:
+            seen.append(p)
+
+        return [r for r in reqs.get(p, []) if r not in seen and
+                all(x in seen for x in rreqs.get(r, []))]
+
+    while targets:
+        targets = uniq(concat(get_cs(p, result) for p in targets))
+        if targets:
+            result += targets
+
+    return result
+
 # vim:sw=4:ts=4:et:
