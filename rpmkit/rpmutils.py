@@ -352,6 +352,8 @@ make_requires_dict = memoize(_make_requires_dict)
 
 def make_reversed_requires_dict(root):
     """
+    An alias to make_requires_dict(..., reversed=True).
+
     :param root: root dir of RPM Database
     :return: {name_required: [name_requires]}
     """
@@ -394,6 +396,9 @@ def walk_dependency_graph_0(root_name, rreqs, leaves, seens=[], topdown=False):
 
 def walk_dependency_graph(root=None, root_rpms=None):
     """
+    Walk through dependency graph from root_rpms to leaves and returns all
+    possible path list.
+
     :param root: root dir of RPM Database
     :param root_rpms: Root RPMs to make graph
     :return: List of path of dependency graph
@@ -413,6 +418,8 @@ def walk_dependency_graph(root=None, root_rpms=None):
 
 def make_dependency_graph(root=None):
     """
+    Make dependency trees from roots which do not requiring other RPMs.
+
     :param root: root dir of RPM Database
     :return: List of path of dependency graph
     """
@@ -428,6 +435,18 @@ def make_dependency_graph(root=None):
 
 def list_required_rpms_not_required_by_others(rpmname, root=None):
     """
+    List RPMs required by given RPM ``rpmname`` which is not required by other
+    RPMs have no relationship (dependency) to that RPM and listed RPMs.
+
+    Examples:
+
+    * [A, B, C] if given X is required by no any RPMs and A, B, C have no RPMs
+      requiring these RPMs other than themselves.
+
+    * [] if given X is required by any RPMs.
+
+    It works like a safe but greedy version of 'yum remove ``rpmname``'.
+
     :param rpmname: Name of target RPM to get result
     :param root: RPM Database root dir
     :return: List of result RPMs
