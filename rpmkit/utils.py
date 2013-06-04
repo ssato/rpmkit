@@ -293,7 +293,8 @@ def longest_common_prefix(*xss):
 
 def longest_common_substring(*xss):
     """
-    Longest common sub-strings generalized for any iterables.
+    Longest common sub "strings" (continuous sequencial items) generalized for
+    any iterables.
 
     >>> longest_common_substring("abcde", "acdebf", "cdeag")
     'cde'
@@ -330,7 +331,10 @@ def longest_common_substring(*xss):
 
 def longest_common_subsequence(s, t):
     """
-    Longest common sub string of ``s`` and ``t``.
+    Longest common sub sequence (maybe non-continous sequencial items) of ``s``
+    and ``t``.
+
+    See also the above ``longest_common_substring`` function.
 
     >>> longest_common_subsequence("abcde", "acdebf")
     'acde'
