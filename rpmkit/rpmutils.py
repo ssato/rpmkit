@@ -360,6 +360,20 @@ def make_reversed_requires_dict(root):
     return make_requires_dict(root, True)
 
 
+def make_adjacency_list_of_dependency_graph(root, reversed=False):
+    """
+    Make adjacency list of RPM dependency relations graph.
+
+    :param root: RPM Database root dir or None (use /var/lib/rpm).
+    :param reversed: Returns a dict such
+        {required_RPM: [RPM_requires]} instead of a dict such
+        {RPM: [RPM_required]} if True.
+
+    :return: Requirements relation map, {p: [required]} or {required: [p]}
+    """
+    return [dict(k=v) for k, v in make_requires_dict(root, reversed)]
+
+
 ## The followings are experimental...
 sys.setrecursionlimit(1000)
 
