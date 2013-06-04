@@ -333,9 +333,9 @@ def longest_common_subsequence(s, t):
     Longest common sub string of ``s`` and ``t``.
 
     >>> longest_common_subsequence("abcde", "acdebf")
-    ['a', 'c', 'd', 'e']
+    'acde'
     >>> longest_common_subsequence("12340", "01224533324")
-    ['1', '2', '3', '4']
+    '1234'
     >>> longest_common_subsequence([c for c in "abcde"], [c for c in "acdebf"])
     ['a', 'c', 'd', 'e']
     """
@@ -364,6 +364,6 @@ def longest_common_subsequence(s, t):
             x -= 1
             y -= 1
 
-    return result
+    return ''.join(result) if isinstance(s, str) else result
 
 # vim:sw=4:ts=4:et:
