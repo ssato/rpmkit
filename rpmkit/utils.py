@@ -217,6 +217,59 @@ def all_eq(xs):
     return all(x == xs[0] for x in xs[1:]) if xs else False
 
 
+def is_subseq(sseq, tseq):
+    """
+    Sequence ``sseq`` is a sub sequence of ``tseq``.
+
+    >>> is_subseq([], [1, 2])
+    False
+    >>> is_subseq([1, 2], [1, 2, 3])
+    True
+    >>> is_subseq([1, 2], [0, 1, 2, 3])
+    True
+    >>> is_subseq([1, 2], [1, 3, 5])
+    False
+    >>> is_subseq("bcd", "abcde")
+    True
+    >>> is_subseq((c for c in "bcd"), (c for c in "abcde"))
+    True
+    """
+    # Special optimization for str instances.
+    if isinstance(sseq, str):
+        if not isinstance(tseq, str):
+            tseq = ''.join(tseq)
+
+        return sseq in tseq
+
+    # Convert generators and iterators to lists.
+    if not isinstance(sseq, list):
+        sseq = list(sseq)
+
+    if not isinstance(tseq, list):
+        tseq = list(tseq)
+
+    if not sseq or len(sseq) > len(tseq):
+        return False
+
+    head = sseq[0]
+
+    if head not in tseq:
+        return False
+
+    while True:
+        try:
+            idx = tseq.index(head)
+            tseq = tseq[idx + 1:]
+
+        except ValueError:  # ``head`` isn't found in the rest of ``tseq``.
+            return False
+
+        if all(x == y for x, y in izip(sseq[1:], tseq)):
+            return True
+
+    return False
+
+
 def longest_common_prefix(*xss):
     """
     Variant of LCS = Longest Common Sub-strings.
@@ -236,6 +289,43 @@ def longest_common_prefix(*xss):
     []
     """
     return [x[0] for x in takewhile(all_eq, izip(*xss))]
+
+
+def longest_common_substring(*xss):
+    """
+    Longest common sub-strings generalized for any iterables.
+
+    >>> longest_common_substring("abcde", "acdebf", "cdeag")
+    'cde'
+    >>> longest_common_substring([c for c in "abcde"], [c for c in "acdebf"])
+    ['c', 'd', 'e']
+    >>> longest_common_substring((c for c in "abcde"), (c for c in "acdebf"))
+    ['c', 'd', 'e']
+    >>> longest_common_substring("", "acdebf", "cdeag")
+    []
+    """
+    # Ensure any item in xss is a list or a str; convert each items to a list
+    # if needed.
+    xss = [(xs if isinstance(xs, (list, str)) else list(xs)) for xs in xss]
+
+    assert len(xss) > 1, "only an arg found. mulitple strings must be passed."
+
+    def is_substring(ss, xss):
+        return ss and all(is_subseq(ss, xs) for xs in xss)
+
+    ss = []
+
+    if not xss[0] or not xss[1]:
+        return ss
+
+    for i in range(len(xss[0])):
+        for j in range(len(xss[0]) - i + 1):
+            candidate = xss[0][i:i + j]
+
+            if j > len(ss) and is_substring(candidate, xss):
+                ss = candidate
+
+    return ss
 
 
 def longest_common_subsequence(s, t):
