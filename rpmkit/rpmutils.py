@@ -33,11 +33,6 @@ import sys
 import rpm
 import yum
 
-try:
-    import networkx as NX
-except ImportError:
-    NX = None
-
 
 RPM_BASIC_KEYS = ("name", "version", "release", "epoch", "arch")
 
@@ -494,24 +489,5 @@ def list_required_rpms_not_required_by_others(rpmname, root=None):
             result += targets
 
     return result
-
-
-if NX:
-    def make_dependency_graph_with_nx(root, reversed=True):
-        """
-        Make RPM dependency graph with using Networkx.DiGraph for given root.
-
-        :param root: RPM Database root dir
-        :param reversed: Resolve reversed dependency from required to requires
-        :return: networkx.DiGraph instance
-        """
-        G = NX.DiGraph()
-        rreqs = make_requires_dict(root, reversed)
-
-        G.add_nodes_from(rreqs.keys())
-        for k, vs in rreqs.iteritems():
-            G.add_edges_from([(k, v) for v in vs])
-
-        return G
 
 # vim:sw=4:ts=4:et:
