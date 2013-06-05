@@ -497,14 +497,16 @@ def list_required_rpms_not_required_by_others(rpmname, root=None):
 
 
 if NX:
-    def make_dependency_graph_with_nx(root):
+    def make_dependency_graph_with_nx(root, reversed=True):
         """
         Make RPM dependency graph with using Networkx.DiGraph for given root.
 
         :param root: RPM Database root dir
+        :param reversed: Resolve reversed dependency from required to requires
         :return: networkx.DiGraph instance
         """
         G = NX.DiGraph()
+        rreqs = make_requires_dict(root, reversed)
 
         G.add_nodes_from(rreqs.keys())
         for k, vs in rreqs.iteritems():
