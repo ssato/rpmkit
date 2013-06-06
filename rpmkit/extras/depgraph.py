@@ -116,10 +116,22 @@ def _degenerate_nodes(G, nodes, reqs, rreqs, sep='|'):
 
 
 def list_root_nodes(G):
+    """
+    List root nodes of given graph ``G``.
+
+    Alternative: [n for n,d in G.in_degree().items() if d == 0]
+
+    :param G: networkx.DiGraph instance
+    """
     return [n for n in G if not G.predecessors(n) and G.successors(n)]
 
 
 def list_standalone_nodes(G):
+    """
+    List standalone nodes don't connect to any nodes in given graph ``G``.
+
+    :param G: networkx.DiGraph instance
+    """
     return [n for n in G if not G.predecessors(n) and not G.successors(n)]
 
 
@@ -168,7 +180,7 @@ def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
         G = _degenerate_nodes(G, cns, reqs, rreqs, ',')
 
     assert NX.is_directed_acyclic_graph(G), \
-           "I'm still missing something to make it dag..."
+           "I'm still missing something to make depgraph to dag..."
 
     return G
 
