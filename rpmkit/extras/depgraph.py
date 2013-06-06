@@ -16,10 +16,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.memoize import memoize
+from itertools import count
 
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
+
+import logging
 import networkx as NX
+import networkx.readwrite.json_graph as JS
 
 
 def _make_dependency_graph_with_nx(root, reversed=True, rreqs=None):
@@ -128,7 +132,7 @@ def list_root_nodes(G):
 
 def list_standalone_nodes(G):
     """
-    List standalone nodes don't connect to any nodes in given graph ``G``.
+    List standalone nodes don't have any edges and not connected to others.
 
     :param G: networkx.DiGraph instance
     """
@@ -183,5 +187,75 @@ def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
            "I'm still missing something to make depgraph to dag..."
 
     return G
+
+
+_ID_CNTR = count()
+
+
+def _clone_nodeid(node, counter=_ID_CNTR):
+    return "%s__%d" % (node, counter.next())
+
+
+def tree_from_dag(G, root_node, serialized=False):
+    """
+    Make tree from DAG ``G``.
+
+    :param G: networkx.DiGraph instance of DAG, direct acyclic graph.
+    :param root_node: Root node
+    :param serialized: Return JSON-serialized data instead of graph obj.
+
+    :return: networkx.DiGraph instance or its JSON representation.
+    """
+    assert NX.is_directed_acyclic_graph(G), "Given graph is not DAG."
+
+    g = NX.DiGraph()
+    g.add_node(root_node, name=root_node)
+
+    visited = set([root_node])
+    parents = [root_node]
+
+    while parents:
+        next_parents = set()
+
+        for parent in parents:
+            successors = G.successors(parent)
+
+            for s in successors:
+                if s in visited:
+                    news = _clone_nodeid(s)
+                    logging.warn("Duplicated node=%s, cloned=%s" % (s, news))
+
+                    g.add_node(news, name=s)
+                    g.add_edge(parent, news)
+                else:
+                    logging.warn("Node=" + s)
+                    visited.add(s)
+                    next_parents.add(s)
+
+                    g.add_node(s, name=s)
+                    g.add_edge(parent, s)
+
+        parents = next_parents
+
+    return JS.tree_data(g, root_node) if serialized else g
+
+
+def make_rpm_dependencies_trees(root, serialized=False):
+    """
+    Make dependency trees of RPMs.
+
+    :param root: RPM Database root dir
+    :param serialized: Return JSON-serialized data instead of graph obj.
+
+    :return: List of networkx.DiGraph instance or its JSON representation.
+    """
+    g = make_rpm_dependencies_dag(root)
+    root_nodes = list_root_nodes(g)
+
+    logging.debug("%d nodes, %d edges and %d roots" %
+                  (g.number_of_nodes(), g.number_of_edges(), len(root_nodes)))
+
+    return [tree_from_dag(g, rn, serialized) for rn in root_nodes]
+
 
 # vim:sw=4:ts=4:et:
