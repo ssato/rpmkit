@@ -115,6 +115,10 @@ def _degenerate_nodes(G, nodes, reqs, rreqs, sep='|'):
     return G
 
 
+def list_root_nodes(G):
+    return [n for n in G if not G.predecessors(n) and G.successors(n)]
+
+
 def list_standalone_nodes(G):
     return [n for n in G if not G.predecessors(n) and not G.successors(n)]
 
