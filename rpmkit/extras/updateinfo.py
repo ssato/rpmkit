@@ -587,12 +587,6 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
 
-    if errata_details:
-        dist = YS.detect_dist()
-        if dist != "rhel":
-            logging.warn(warn_errata_details_msg % dist)
-            errata_details = False
-
     ppath = os.path.normpath(ppath)
     root = YS.setup_root(ppath, force=True)
 
@@ -610,8 +604,13 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
     dump_errata_summary(root, workdir)
 
     if errata_details:
-        logging.info("Dump Errata details...")
-        dump_errata_list(workdir, offline)
+        dist = YS.detect_dist()
+
+        if dist == "rhel":
+            logging.info("Dump Errata details...")
+            dump_errata_list(workdir, offline)
+        else:
+            logging.warn(warn_errata_details_msg % dist)
 
     logging.info("Dump update RPM list from errata data...")
     dump_updates_list(workdir)
