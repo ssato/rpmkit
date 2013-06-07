@@ -513,7 +513,7 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     def __make_ds(tree):
         svgid = __name(tree)
-        jsonfile = os.path.join("data", "%s.json" % svgid)
+        jsonfile = os.path.join("..", "%s.json" % svgid)
         jsonpath = os.path.join(datadir, "%s.json" % svgid)
         diameter = 20 + tree.get("size", 2) // 2  # TODO: Optimize this.
 
@@ -533,7 +533,18 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     for tree, (svgid, jsonfile, diameter, jsonpath) in datasets:
         try:
+            root_node = tree["name"]
+            logging.info("Dump tree data: root=%s, path=%s" %
+                         (root_node, jsonpath))
             json.dump(tree, copen(jsonpath, 'w'))
+
+            ctx = dict(svgid=svgid, jsonfile=jsonfile, diameter=diameter,
+                       with_label=("true" if with_label else "false"),
+                       root=root_node)
+
+            renderfile("rpm_dependencies.d3.html.j2", workdir, ctx,
+                       "data/" + svgid, tpaths=template_paths)
+
         except RuntimeError, e:
             logging.warn("Could not dump JSON data: " + jsonpath)
             logging.warn("Reason: " + str(e))
@@ -543,12 +554,6 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
             logging.warn("Could not dump JSON data: " + jsonpath)
             logging.warn("tree=" + str(tree))
             raise
-
-    ctx = dict(d3datasets=[(s, f, d) for _, (s, f, d, _p) in datasets],
-               with_label=("true" if with_label else "false"))
-
-    renderfile("rpm_dependencies.d3.html.j2", workdir, ctx,
-               tpaths=template_paths)
 
 
 def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS,
