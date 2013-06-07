@@ -26,7 +26,11 @@ import networkx as NX
 import networkx.readwrite.json_graph as JS
 
 
-def _make_dependency_graph_with_nx(root, reversed=True, rreqs=None):
+_E_ATTRS = dict(weight=1.0, )
+
+
+def _make_dependency_graph_with_nx(root, reversed=True, rreqs=None,
+                                   edge_attrs=_E_ATTRS):
     """
     Make RPM dependency graph with using Networkx.DiGraph for given root.
 
@@ -34,89 +38,74 @@ def _make_dependency_graph_with_nx(root, reversed=True, rreqs=None):
     :param reversed: Resolve reversed dependency from required to requires
     :param rreqs: A dict represents RPM dependencies;
         {x: [package_requires_x]} or {x: [package_required_by_x]}.
+    :param edge_attrs: Default edge attributes :: dict
 
     :return: networkx.DiGraph instance
     """
-    G = NX.DiGraph()
+    g = NX.DiGraph()
 
     if rreqs is None:
-        rreqs = RU.make_requires_dict(root, reversed) 
+        rreqs = RU.make_requires_dict(root, reversed)
 
-    G.add_nodes_from(rreqs.keys())
     for k, vs in rreqs.iteritems():
-        G.add_edges_from([(k, v) for v in vs])
+        g.add_node(k, names=[k])
+        g.add_edges_from([(k, v, edge_attrs) for v in vs])
 
-    return G
+    return g
 
 
 make_dependency_graph_with_nx = memoize(_make_dependency_graph_with_nx)
 
 
-def list_strongly_connected_rpms(root, limit=1, reversed=True, rreqs=None):
+def _degenerate_node(nodes, reason):
     """
-    :param root: RPM Database root dir
-    :param limit: Results of which length of list of RPM names less than this
-        ``limit`` + 1 will be ignored.
-    :param reversed: Resolve reversed dependency from required to requires
-    :param rreqs: A dict represents RPM dependencies;
-        {x: [package_requires_x]} or {x: [package_required_by_x]}.
+    :param nodes: List of nodes to degenerate :: [str]
+    :param reason: Reason to degenerate nodes
 
-    :return: [[rpm_name]]; Each list represents strongly connected RPMs.
+    :return: Degenerated node, (name :: str, attr :: dict)
     """
-    G = make_dependency_graph_with_nx(root, reversed, rreqs)
-    return [xs for xs in NX.strongly_connected_components(G) if len(xs) > 1]
+    assert nodes, "Empty node list was given!"
+
+    return ("%s..." % nodes[0], dict(names=nodes, reason=reason))
 
 
-def list_rpms_having_cyclic_dependencies(root, reversed=True, rreqs=None):
-    """
-    :param root: RPM Database root dir
-    :param reversed: Resolve reversed dependency from required to requires
-    :param rreqs: A dict represents RPM dependencies;
-        {x: [package_requires_x]} or {x: [package_required_by_x]}.
-
-    :return: [[rpm_name]]; Each list represents strongly connected RPMs.
-    """
-    G = make_dependency_graph_with_nx(root, reversed, rreqs)
-    return NX.simple_cycles(G)
-
-
-def _degenerate_node(nodes, sep='|'):
-    """
-    :param nodes: List of strongly connected nodes :: [str]
-    :return: Degenerated node :: str
-    """
-    return sep.join(nodes)
-
-
-def _degenerate_nodes(G, nodes, reqs, rreqs, sep='|'):
+def _degenerate_nodes(G, nodes, reason, edge_attrs=_E_ATTRS):
     """
     For each node, remove edges from/to that node and the node from the graph
     ``G`` and then add newly 'degenerated' node and relevant edges again.
 
-    :param G: Dependency graph of nodes
-    :param nodes: Node (name) list
+    Note: This is effectful function, that is, given graph ``G`` will be
+    modified.
+
+    :param G: Dependency graph of nodes :: NX.DiGraph
+    :param nodes: Node list :: [str]
+    :param reason: Reason to degenerate nodes
+    :param edge_attrs: Default edge attributes :: dict
     """
+    if not nodes or len(nodes) == 1:
+        return  # do nothing with empty or single item list.
+
+    (dnode, attrs) = _degenerate_node(nodes, reason)
+    G.add_node(dnode, **attrs)
+
+    ucat = U.uconcat
+    successors = ucat([s for s in G.successors_iter(n) if s not in nodes]
+                      for n in nodes)
+    predecessors = ucat([p for p in G.predecessors_iter(n) if p not in nodes]
+                        for n in nodes)
+
+    if successors:
+        G.add_edges_from([(dnode, s, edge_attrs) for s in successors])
+
+    if predecessors:
+        G.add_edges_from([(p, dnode, edge_attrs) for p in predecessors])
+
+    # Remove old edges and nodes:
     for node in nodes:
-        G.remove_edges_from([(node, p) for p in rreqs.get(node, [])])
-        G.remove_edges_from([(r, node) for r in reqs.get(node, [])])
+        G.remove_edges_from([(node, s) for s in G.successors_iter(node)])
+        G.remove_edges_from([(p, node) for p in G.predecessors_iter(node)])
 
     G.remove_nodes_from(nodes)
-
-    dnode = _degenerate_node(nodes)
-    G.add_node(dnode)
-
-    dnode_rreqs = U.uconcat([p for p in rreqs.get(node, []) if p not in nodes]
-                            for node in nodes)
-    dnode_reqs = U.uconcat([r for r in reqs.get(node, []) if r not in nodes]
-                           for node in nodes)
-
-    if dnode_rreqs:
-        G.add_edges_from([(dnode, p) for p in dnode_rreqs])
-
-    if dnode_reqs:
-        G.add_edges_from([(r, dnode) for r in dnode_reqs])
-
-    return G
 
 
 def list_root_nodes(G):
@@ -126,22 +115,14 @@ def list_root_nodes(G):
     Alternative: [n for n,d in G.in_degree().items() if d == 0]
 
     :param G: networkx.DiGraph instance
+    :return: List of nodes :: [str]
     """
     return [n for n in G if not G.predecessors(n) and G.successors(n)]
 
 
-def list_standalone_nodes(G):
-    """
-    List standalone nodes don't have any edges and not connected to others.
-
-    :param G: networkx.DiGraph instance
-    """
-    return [n for n in G if not G.predecessors(n) and not G.successors(n)]
-
-
 def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
     """
-    Make direct acyclic graph from RPM dependencies.
+    Make directed acyclic graph of RPM dependencies.
 
     see also:
 
@@ -149,8 +130,8 @@ def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
     * http://en.wikipedia.org/wiki/Strongly_connected_component
 
     :param root: RPM Database root dir
-    :param rreqs: A dict represents RPM dependencies;
-        {x: [package_requires_x]} or {x: [package_required_by_x]}.
+    :param reqs: A dict represents RPM deps, {x: [package_requires_x]}.
+    :param rreqs: A dict represents RPM deps, {x: [package_required_by_x]}.
 
     :return: networkx.DiGraph instance represents the dag of rpm deps.
     """
@@ -167,95 +148,129 @@ def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
 
     # Degenerate strongly connected components:
     for scc in NX.strongly_connected_components(G):
-        scc = sorted(U.uniq(scc))
+        scc = sorted(U.uniq(scc))  # TODO: Is this needed?
 
         if len(scc) == 1:  # Ignore sccs of which length is 1.
             continue
 
-        G = _degenerate_nodes(G, scc, reqs, rreqs, '|')
+        _degenerate_nodes(G, scc, "Strongly Connected Components")
 
     # Degenerate cyclic nodes:
     for cns in NX.simple_cycles(G):
-        cns = sorted(U.uniq(cns))
+        cns = sorted(U.uniq(cns))  # TODO: Likewise
 
         # Should not happen as selc cyclic nodes were removed in advance.
         assert len(cns) != 1, "Self cyclic node: " + cns[0]
 
-        G = _degenerate_nodes(G, cns, reqs, rreqs, ',')
+        _degenerate_nodes(G, cns, "Cyclic nodes")
 
     assert NX.is_directed_acyclic_graph(G), \
-           "I'm still missing something to make depgraph to dag..."
+           "I'm still missing something to make graph to dag..."
 
     return G
 
 
-_ID_CNTR = count()
+def _clone_nodeid(node, ids):
+    return "%s__%d" % (node, ids.get(node, count()).next())
 
 
-def _clone_nodeid(node, counter=_ID_CNTR):
-    return "%s__%d" % (node, counter.next())
-
-
-def tree_from_dag(G, root_node, serialized=False):
+def tree_from_dag(G, root_node, fmt=False, edge_attrs=_E_ATTRS):
     """
     Make tree from DAG ``G``.
 
     :param G: networkx.DiGraph instance of DAG, direct acyclic graph.
     :param root_node: Root node
-    :param serialized: Return JSON-serialized data instead of graph obj.
+    :param fmt: Return data in tree format that is suitable for JSON
+        serialization.
+    :param edge_attrs: Default edge attributes :: dict
 
     :return: networkx.DiGraph instance or its JSON representation.
     """
     assert NX.is_directed_acyclic_graph(G), "Given graph is not DAG."
 
+    nsattrs = NX.get_node_attributes(G, "names")
+
     g = NX.DiGraph()
-    g.add_node(root_node, name=root_node)
+    g.add_node(root_node, name=root_node,
+               names=nsattrs.get(root_node, [root_node]))
 
     visited = set([root_node])
     parents = [root_node]
+
+    ids = {root_node: count()}
 
     while parents:
         next_parents = set()
 
         for parent in parents:
-            successors = G.successors(parent)
+            for s in G.successors_iter(parent):
+                names = nsattrs.get(s, [s])
 
-            for s in successors:
                 if s in visited:
-                    news = _clone_nodeid(s)
-                    logging.warn("Duplicated node=%s, cloned=%s" % (s, news))
+                    new_s = _clone_nodeid(s, ids)
+                    logging.debug("Duplicated node=%s, cloned=%s" % (s, new_s))
 
-                    g.add_node(news, name=s)
-                    g.add_edge(parent, news)
+                    g.add_node(new_s, name=s, names=names)
+                    g.add_edge(parent, new_s, edge_attrs)
                 else:
-                    logging.warn("Node=" + s)
+                    logging.debug("Node=" + s)
                     visited.add(s)
                     next_parents.add(s)
+                    ids[s] = count()
 
-                    g.add_node(s, name=s)
-                    g.add_edge(parent, s)
+                    g.add_node(s, name=s, names=names)
+                    g.add_edge(parent, s, edge_attrs)
 
         parents = next_parents
 
-    return JS.tree_data(g, root_node) if serialized else g
+    return JS.tree_data(g, root_node) if fmt else g
 
 
-def make_rpm_dependencies_trees(root, serialized=False):
+def _tree_size(tree):
+    """
+    Returns max length of longest paths of tree graph.
+
+    Warning: This function needs a lot of computation and very slow.
+
+    :param tree: NX.DiGraph instance of tree.
+    """
+    rnode = [n for n in tree if not tree.predecessors(n)][0]
+    leaves = [n for n in tree if not tree.successors(n)]
+    _paths = lambda leaf: NX.all_simple_paths(tree, rnode, leaf)
+
+    return max(len(list(_paths(leaf))[0]) for leaf in leaves)
+
+
+tree_size = memoize(_tree_size)
+
+
+def make_rpm_dependencies_trees(root, fmt=False, compute_size=False):
     """
     Make dependency trees of RPMs.
 
     :param root: RPM Database root dir
-    :param serialized: Return JSON-serialized data instead of graph obj.
+    :param fmt: Return data in tree format that is suitable for JSON
+        serialization.
+    :param compute_size: Compute size from all paths in the tree
 
     :return: List of networkx.DiGraph instance or its JSON representation.
     """
     g = make_rpm_dependencies_dag(root)
     root_nodes = list_root_nodes(g)
 
+    def _get_tree(graph, root_node, fmt):
+        tree = tree_from_dag(graph, root_node, False)  # tree :: nx.DiGraph
+        if fmt:
+            size = tree_size(tree) if compute_size else tree.size()
+            tree = JS.tree_data(tree, root_node)  # tree :: ! nx.DiGraph
+            tree["size"] = size
+
+        return tree
+
     logging.debug("%d nodes, %d edges and %d roots" %
                   (g.number_of_nodes(), g.number_of_edges(), len(root_nodes)))
 
-    return [tree_from_dag(g, rn, serialized) for rn in root_nodes]
+    return [_get_tree(g, rn, fmt) for rn in root_nodes]
 
 
 # vim:sw=4:ts=4:et:
