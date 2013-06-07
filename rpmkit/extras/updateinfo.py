@@ -25,6 +25,7 @@ import rpmkit.rpmutils as RU
 import rpmkit.utils as U
 import rpmkit.swapi as SW
 import rpmkit.yum_surrogate as YS
+import rpmkit.extras.depgraph as RD
 
 import codecs
 import logging
@@ -66,6 +67,10 @@ _ERRATA_KEYS = ("advisory", "type", "severity")
 _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 
 _TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
+
+_COLLECT_MODE = "collect"
+_ANALYSIS_MODE = "analysis"
+_MODES = [_COLLECT_MODE, _ANALYSIS_MODE]
 
 
 def copen(path, flag='r', **kwargs):
@@ -510,11 +515,11 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
         svgid = __name(tree)
         jsonfile = os.path.join("data", "%s.json" % svgid)
         jsonpath = os.path.join(datadir, "%s.json" % svgid)
-        diameter = 1200
+        diameter = 20 + tree.get("size", 2) // 2  # TODO: Optimize this.
 
         return (svgid, jsonfile, diameter, jsonpath)
 
-    trees = RU.make_dependency_graph(root)
+    trees = RD.make_rpm_dependencies_trees(root, True)
     datasets = [(t, __make_ds(t)) for t in trees]
 
     if not os.path.exists(datadir):
@@ -546,24 +551,20 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
                tpaths=template_paths)
 
 
-def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
+def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS,
+                    legacy=False):
     """
     Generate HTML report of RPMs.
 
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
     """
-    gen_depgraph(root, workdir, template_paths)
-
     jsdir = os.path.join(workdir, "js")
     if not os.path.exists(jsdir):
         os.makedirs(jsdir)
 
-    renderfile("rpm_dependencies.html.j2", workdir, tpaths=template_paths)
-
     js_tpaths = [os.path.join(t, "js") for t in template_paths]
-    for f in ("graphviz-svg.js.j2", "jquery.js.j2", "d3.v3.min.js.j2",
-              "d3-svg.js.j2"):
+    for f in ("jquery.js.j2", "d3.v3.min.js.j2", "d3-svg.js.j2"):
         renderfile(f, workdir, {}, "js", js_tpaths)
 
     gen_depgraph_d3(root, workdir, template_paths)
@@ -574,15 +575,18 @@ Detailed errata information of the detected distribution %s is not
 supported. So it will disabled this feature."""
 
 
-def modmain(ppath, workdir=None, offline=False, errata_details=False,
-            report=False, template_paths=_TEMPLATE_PATHS,
+def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
+            errata_details=False, report=False, dist=None,
+            template_paths=_TEMPLATE_PATHS,
             warn_errata_details_msg=_WARN_ERRATA_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
+    :param mode: Running mode: collect data (0) or data analysis mode (1).
     :param offline: True if get results only from local cache
     :param errata_details: True if detailed errata info is needed
     :param report: True if report to be generated
+    :param dist: Specify target distribution explicitly
     """
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
@@ -597,30 +601,33 @@ def modmain(ppath, workdir=None, offline=False, errata_details=False,
         logging.info("Creating working dir: " + workdir)
         os.makedirs(workdir)
 
-    logging.info("Dump RPM list...")
-    dump_rpm_list(root, workdir)
+    if mode == _COLLECT_MODE:
+        logging.info("Dump RPM list...")
+        dump_rpm_list(root, workdir)
 
-    logging.info("Dump Errata summaries...")
-    dump_errata_summary(root, workdir)
+        logging.info("Dump Errata summaries...")
+        dump_errata_summary(root, workdir)
 
-    if errata_details:
-        dist = YS.detect_dist()
+    else:
+        if errata_details:
+            if not dist:
+                dist = YS.detect_dist()
 
-        if dist == "rhel":
-            logging.info("Dump Errata details...")
-            dump_errata_list(workdir, offline)
-        else:
-            logging.warn(warn_errata_details_msg % dist)
+            if dist == "rhel":
+                logging.info("Dump Errata details...")
+                dump_errata_list(workdir, offline)
+            else:
+                logging.warn(warn_errata_details_msg % dist)
 
-    logging.info("Dump update RPM list from errata data...")
-    dump_updates_list(workdir)
+        logging.info("Dump update RPM list from errata data...")
+        dump_updates_list(workdir)
 
-    logging.info("Dump dataset file from RPMs and Errata data...")
-    dump_datasets(workdir, errata_details)
+        logging.info("Dump dataset file from RPMs and Errata data...")
+        dump_datasets(workdir, errata_details)
 
-    if report:
-        logging.info("Dump depgraph and generating HTML reports...")
-        gen_html_report(root, workdir, template_paths)
+        if report:
+            logging.info("Dump depgraph and generating HTML reports...")
+            gen_html_report(root, workdir, template_paths)
 
 
 def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
@@ -643,13 +650,14 @@ def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
         return default  # Ignore given paths string.
 
 
-def option_parser(template_paths=_TEMPLATE_PATHS):
+def option_parser(template_paths=_TEMPLATE_PATHS, modes=_MODES):
     """
     :param defaults: Option value defaults
     :param usage: Usage text
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    report=False, template_paths="", verbose=False)
+                    report=False, mode=modes[0], dist=None,
+                    template_paths="", verbose=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -659,11 +667,16 @@ def option_parser(template_paths=_TEMPLATE_PATHS):
     p.set_defaults(**defaults)
 
     p.add_option("-w", "--workdir", help="Working dir [%default]")
-    p.add_option("-d", "--details", action="store_true",
+    p.add_option("-m", "--mode", choices=modes,
+                 help="Select from 'collect'data or data 'analysis' "
+                      "mode [%default]")
+    p.add_option("", "--details", action="store_true",
                  help="Get errata details also from RHN / Satellite")
-    p.add_option("", "--offline", action="store_true", help="Offline mode")
+    p.add_option("", "--offline", action="store_true",
+                 help="Run swapi on offline mode")
     p.add_option("", "--report", action="store_true",
                  help="Generate summarized report in HTML format")
+    p.add_option("", "--dist", help="Specify distribution")
     p.add_option("-T", "--tpaths",
                  help="':' separated additional template search path "
                       "list [%s]" % ':'.join(template_paths))
@@ -692,8 +705,8 @@ def main():
                          "reporting function is disabled.")
         options.report = False
 
-    modmain(ppath, options.workdir, options.offline, options.details,
-            options.report, tpaths)
+    modmain(ppath, options.workdir, options.mode, options.offline,
+            options.details, options.report, options.dist, tpaths)
 
 
 if __name__ == '__main__':
