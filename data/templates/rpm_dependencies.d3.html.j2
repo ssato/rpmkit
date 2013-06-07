@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>RPM Dependency Graph</title>
+    <title>RPM Dependency Graph: root = {{ root }}</title>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" type="text/css" media="screen" href="css/d3.css" />
+    <link rel="stylesheet" type="text/css" media="screen" href="../../css/d3.css" />
     <!-- <script src="http://d3js.org/d3.v3.min.js"></script> -->
-    <script src="js/d3.v3.min.js"></script>
-    <script src="js/d3-svg.js"></script>
+    <script src="../../js/d3.v3.min.js"></script>
+    <script src="../../js/d3-svg.js"></script>
   </head>
   <body>
     <div id="wrap">
       <div id="svg_charts">
-        {% for svgid, jsonfile, diameter in d3datasets -%}
         <svg id="{{ svgid }}" width="{{ diameter }}" height="{{ diameter }}"/>
-{% endfor %}
+      </div>
     <!--
       <div class="controller" >
         <div class="current_scale"><span id="current_scale"/>scale = 1.0</div>
@@ -24,13 +23,10 @@
         <input type="submit" id="reset_hightlights" value="Reset highlights"/>
       </div>
     -->
-      </div>
     </div>
     <!-- It seems that d3 cannot wait the entire DOM is ready. -->
     <script>
-      {% for svgid, jsonfile, diameter in d3datasets -%}
       render_tree("{{ svgid }}", "{{ jsonfile }}", {{ diameter }}, {{ with_label }});
-{% endfor %}
     </script>
   </body>
 </html>
