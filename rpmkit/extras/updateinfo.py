@@ -479,6 +479,8 @@ def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
     reqs_map = RU.make_requires_dict(root)
     ctx = dict(dependencies=[(r, ps) for r, ps in reqs_map.iteritems()])
 
+    renderfile("rpm_dependencies.html.j2", workdir, ctx, tpaths=template_paths)
+
     depgraph_s = render("rpm_dependencies.graphviz.j2", ctx,
                         template_paths, ask=True)
     src = os.path.join(workdir, "rpm_dependencies.graphviz")
@@ -556,8 +558,7 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
             raise
 
 
-def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS,
-                    legacy=False):
+def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
     """
     Generate HTML report of RPMs.
 
@@ -569,9 +570,11 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS,
         os.makedirs(jsdir)
 
     js_tpaths = [os.path.join(t, "js") for t in template_paths]
-    for f in ("jquery.js.j2", "d3.v3.min.js.j2", "d3-svg.js.j2"):
+    for f in ("jquery.js.j2", "d3.v3.min.js.j2", "d3-svg.js.j2",
+              "graphviz-svg.js.j2"):
         renderfile(f, workdir, {}, "js", js_tpaths)
 
+    gen_depgraph(root, workdir, template_paths, "sfdp")
     gen_depgraph_d3(root, workdir, template_paths)
 
 
