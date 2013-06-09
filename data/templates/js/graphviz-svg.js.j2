@@ -74,15 +74,15 @@ function get_highlight_color(update) {
     $.each(update["advisories"], function (idx, adv) {
         if (adv.startsWith("RHSA")) {
             console.log("RHSA: " + adv + " in update " + update["name"]);
-            color = "#ee0000";
+            color = "#ff0000";
             return false;
         } else if (adv.startsWith("RHBA")) {
             console.log("RHBA: " + adv + " in update " + update["name"]);
-            color = "#ffff44";
+            color = "#ffff11";
         } else if (adv.startsWith("RHEA")) {
             console.log("RHEA: " + adv + " in update " + update["name"]);
             if (color != "yellow")
-                color = "#0099CC";
+                color = "#000099";
         } else {
             console.log("Unknown: " + adv + " in update " + update["name"]);
             if (color != "bug" || color != "enhancement")
