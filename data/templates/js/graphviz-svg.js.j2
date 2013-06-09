@@ -74,15 +74,15 @@ function get_highlight_color(update) {
     $.each(update["advisories"], function (idx, adv) {
         if (adv.startsWith("RHSA")) {
             console.log("RHSA: " + adv + " in update " + update["name"]);
-            color = "red";
+            color = "#ee0000";
             return false;
         } else if (adv.startsWith("RHBA")) {
             console.log("RHBA: " + adv + " in update " + update["name"]);
-            color = "yellow";
+            color = "#ffff44";
         } else if (adv.startsWith("RHEA")) {
             console.log("RHEA: " + adv + " in update " + update["name"]);
             if (color != "yellow")
-                color = "blue";
+                color = "#0099CC";
         } else {
             console.log("Unknown: " + adv + " in update " + update["name"]);
             if (color != "bug" || color != "enhancement")
@@ -139,7 +139,7 @@ $(document).ready(function() {
     $("#zoom_in").bind("click", function() { zoom_in(); });
     $("#zoom_out").bind("click", function() { zoom_out(); });
     $("#reset_zoom").bind("click", function() { reset_zoom(); });
-    $("#switch_to_hilight_update_rpms").bind("click", function() { highlight_rpms_having_updates([], "red", updates); });
+    $("#highlight_update_rpms").bind("click", function() { highlight_rpms_having_updates([], "red", updates); });
     $("#reset_highlights").bind("click", function() { reset_highlight_rpms_having_updates([], "red", updates); });
 /*
     var scale = 1;
