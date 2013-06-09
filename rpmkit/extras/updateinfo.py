@@ -72,6 +72,8 @@ _COLLECT_MODE = "collect"
 _ANALYSIS_MODE = "analysis"
 _MODES = [_COLLECT_MODE, _ANALYSIS_MODE]
 
+_GV_ENGINE = "sfdp"   # or neato, twopi, ...
+
 
 def copen(path, flag='r', **kwargs):
     return codecs.open(path, flag, "utf-8")
@@ -466,8 +468,8 @@ def renderfile(tmpl, workdir, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS):
     copen(dst, "w").write(s)
 
 
-def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
-                 engine="twopi"):
+def gen_depgraph_gv(root, workdir, template_paths=_TEMPLATE_PATHS,
+                    engine=_GV_ENGINE):
     """
     Generate dependency graph with using graphviz.
 
@@ -476,8 +478,14 @@ def gen_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
     :param template_paths: Template path list
     :param engine: Graphviz rendering engine to choose, e.g. neato
     """
-    reqs_map = RU.make_requires_dict(root)
-    ctx = dict(dependencies=[(r, ps) for r, ps in reqs_map.iteritems()])
+    reqs = RU.make_requires_dict(root)
+
+    # Set virtual root for root rpms:
+    for p, rs in reqs.iteritems():
+        if not rs:  # This is a root RPM:
+            reqs[p] = ["<rpmlibs>"]
+
+    ctx = dict(dependencies=[(r, ps) for r, ps in reqs.iteritems()])
 
     renderfile("rpm_dependencies.html.j2", workdir, ctx, tpaths=template_paths)
 
@@ -505,7 +513,6 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
     :param template_paths: Template path list
-    :param engine: Graphviz rendering engine to choose, e.g. neato
     """
     datadir = os.path.join(workdir, "data")
     cssdir = os.path.join(workdir, "css")
@@ -558,12 +565,15 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
             raise
 
 
-def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
+def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS,
+                    engine=_GV_ENGINE):
     """
     Generate HTML report of RPMs.
 
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
+    :param template_paths: Template path list
+    :param engine: Graphviz rendering engine to choose, e.g. neato
     """
     jsdir = os.path.join(workdir, "js")
     if not os.path.exists(jsdir):
@@ -574,7 +584,7 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS):
               "graphviz-svg.js.j2"):
         renderfile(f, workdir, {}, "js", js_tpaths)
 
-    gen_depgraph(root, workdir, template_paths, "sfdp")
+    gen_depgraph_gv(root, workdir, template_paths, engine)
     gen_depgraph_d3(root, workdir, template_paths)
 
 
@@ -585,7 +595,7 @@ supported. So it will disabled this feature."""
 
 def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
             errata_details=False, report=False, dist=None,
-            template_paths=_TEMPLATE_PATHS,
+            template_paths=_TEMPLATE_PATHS, engine=_GV_ENGINE,
             warn_errata_details_msg=_WARN_ERRATA_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
@@ -595,6 +605,8 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
     :param errata_details: True if detailed errata info is needed
     :param report: True if report to be generated
     :param dist: Specify target distribution explicitly
+    :param template_paths: Template path list
+    :param engine: Graphviz rendering engine to choose, e.g. neato
     """
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
@@ -635,7 +647,7 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
 
         if report:
             logging.info("Dump depgraph and generating HTML reports...")
-            gen_html_report(root, workdir, template_paths)
+            gen_html_report(root, workdir, template_paths, engine)
 
 
 def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
@@ -658,14 +670,17 @@ def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
         return default  # Ignore given paths string.
 
 
-def option_parser(template_paths=_TEMPLATE_PATHS, modes=_MODES):
+def option_parser(template_paths=_TEMPLATE_PATHS, modes=_MODES,
+                  engine=_GV_ENGINE):
     """
     :param defaults: Option value defaults
     :param usage: Usage text
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    report=False, mode=modes[0], dist=None,
-                    template_paths="", verbose=False)
+                    report=False, mode=modes[0], dist=None, template_paths="",
+                    engine=engine, verbose=False)
+
+    gv_es = ("dot", "neato", "twopi", "circo", "fdp", "sfdp")
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -688,6 +703,9 @@ def option_parser(template_paths=_TEMPLATE_PATHS, modes=_MODES):
     p.add_option("-T", "--tpaths",
                  help="':' separated additional template search path "
                       "list [%s]" % ':'.join(template_paths))
+    p.add_option("", "--engine", choices=gv_es,
+                 help="Graphviz Layout engine to render dependency graph. "
+                      "Choicec: " + ', '.join(gv_es) + " [%default]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -714,7 +732,8 @@ def main():
         options.report = False
 
     modmain(ppath, options.workdir, options.mode, options.offline,
-            options.details, options.report, options.dist, tpaths)
+            options.details, options.report, options.dist, tpaths,
+            options.engine)
 
 
 if __name__ == '__main__':
