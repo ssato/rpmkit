@@ -5,11 +5,17 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" type="text/css" media="screen" href="../../css/d3.css" />
     <!-- <script src="http://d3js.org/d3.v3.min.js"></script> -->
+    <!-- <script src="../../js/jquery.js"></script> -->
     <script src="../../js/d3.v3.min.js"></script>
     <script src="../../js/d3-svg.js"></script>
   </head>
   <body>
     <div id="wrap">
+      <!-- <div class="controller">
+        <form>
+          <input type="button" id="hlayout" value="Cluster Dendrogram"/>
+        <form>
+      </div> -->
       <div id="svg_charts">
         <svg id="{{ svgid }}" width="{{ diameter }}" height="{{ diameter }}"/>
       </div>
@@ -26,7 +32,11 @@
     </div>
     <!-- It seems that d3 cannot wait the entire DOM is ready. -->
     <script>
-      render_tree("{{ svgid }}", "{{ jsonfile }}", {{ diameter }}, {{ with_label }});
+/* render_rt_tree("{{ svgid }}", "{{ jsonfile }}", {{ diameter }}, {{ with_label }}); */
+render_dendrogram_wrapper("{{ svgid }}", "{{ jsonfile }}", {{ diameter }}, {{ with_label }});
+/* $("#hlayout").click (function() {
+  render_dendrogram_wrapper("{{ svgid }}", "{{ jsonfile }}", {{ diameter }}, {{ with_label }});
+}); */
     </script>
   </body>
 </html>
