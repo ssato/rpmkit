@@ -505,20 +505,21 @@ def gen_depgraph_gv(root, workdir, template_paths=_TEMPLATE_PATHS,
     copen(errlog, 'w').write(err)
 
 
-def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
+def __name(tree):
+    return tree["name"].replace('-', "_")
+
+
+def gen_depgraph_d3(trees, workdir, template_paths=_TEMPLATE_PATHS,
                     with_label=True):
     """
     Generate dependency graph to be rendered with d3.js.
 
-    :param root: Root dir where 'var/lib/rpm' exists
+    :param trees: JSON-formatted RPM dependency trees
     :param workdir: Working dir to dump the result
     :param template_paths: Template path list
     """
     datadir = os.path.join(workdir, "data")
     cssdir = os.path.join(workdir, "css")
-
-    def __name(tree):
-        return tree["name"].replace('-', "_")
 
     def __make_ds(tree):
         svgid = __name(tree)
@@ -526,9 +527,11 @@ def gen_depgraph_d3(root, workdir, template_paths=_TEMPLATE_PATHS,
         jsonpath = os.path.join(datadir, "%s.json" % svgid)
         diameter = 20 + tree.get("size", 2) // 2  # TODO: Optimize this.
 
+        if diameter < 500:
+            diameter = 500
+
         return (svgid, jsonfile, diameter, jsonpath)
 
-    trees = RD.make_rpm_dependencies_trees(root, True)
     datasets = [(t, __make_ds(t)) for t in trees]
 
     if not os.path.exists(datadir):
@@ -584,8 +587,14 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS,
               "graphviz-svg.js.j2"):
         renderfile(f, workdir, {}, "js", js_tpaths)
 
+    trees = RD.make_rpm_dependencies_trees(root, True)
+
+    renderfile("updateinfo.html.j2", workdir,
+               dict(d3_charts=[(__name(t), t["name"]) for t in trees], ),
+               tpaths=template_paths)
+
     gen_depgraph_gv(root, workdir, template_paths, engine)
-    gen_depgraph_d3(root, workdir, template_paths)
+    gen_depgraph_d3(trees, workdir, template_paths)
 
 
 _WARN_ERRATA_DETAILS_NOT_AVAIL = """\
