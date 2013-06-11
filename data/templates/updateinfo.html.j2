@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" type="text/css" href="css/d3.css">
+  </head>
+  <body>
+    <div id="wrap">
+      <h1>Update info</h1>
+      <ul>
+        <li><a href="packages_and_errata_summary.xls">Packages and Errata Summary List (Excel file)</a></li>
+        <li><a href="rpm_dependencies.html">RPM Dependency Chart (graphviz)</a></li>
+        <li>RPM Dependency Charts (D3js):
+          <ul>{% for subdir, root_rpm in d3_charts %}
+            <li><a href="data/{{ subdir }}/rpm_dependencies.d3.html">Root RPM: {{ root_rpm }}</a></li>{% endfor %}
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>
