@@ -9,7 +9,7 @@
  * @param jsonfile: JSON data file
  * @param diameter: Diameter of Reingold–Tilford Tree graph
  */
-function render_tree(svgid, jsonfile, diameter, with_label) {
+function render_rt_tree(svgid, jsonfile, diameter, with_label) {
     if (typeof diameter === 'undefined')
         var diameter = 1400;
 
@@ -18,14 +18,16 @@ function render_tree(svgid, jsonfile, diameter, with_label) {
 
     var tree = d3.layout.tree()
         .size([360, diameter / 2 - 120])
-        .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
+        .separation(function(a, b) { return (a.parent == b.parent ? 2 : 4) / a.depth; });
 
     var diagonal = d3.svg.diagonal.radial()
         .projection(function(d) { return [d.y, d.x / 180 * Math.PI]; });
 
     // @see https://github.com/mbostock/d3/wiki/Selections
     // @see http://ja.d3js.info/mike/selection/
-    var svg = d3.select("svg#" + svgid);
+    var svg = d3.select("svg#" + svgid)
+        .append("g")
+        .attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")");
 
     d3.json(jsonfile, function(error, root) {
       var nodes = tree.nodes(root),
@@ -44,10 +46,14 @@ function render_tree(svgid, jsonfile, diameter, with_label) {
           .attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; });
 
       node.append("circle")
-          .attr("r", 4.5);
-
-      node.append("circle")
+          .attr("r", 3.0)
           .text(function(d) { return d.name; });
+
+      // node.append("circle")
+      //    .text(function(d) { return d.name; });
+
+      node.append("title")
+          .text(function(d) { return d.names.join(","); });
 
       if (with_label) {
           node.append("text")
@@ -72,10 +78,10 @@ function render_tree(svgid, jsonfile, diameter, with_label) {
  */
 function render_dendrogram(svgid, jsonfile, width, height, with_label) {
     if (typeof width === 'undefined')
-        var width = 960;
+        var width = 1600;
 
     if (typeof height === 'undefined')
-        var height = 2200;
+        var height = 1200;
 
     if (typeof with_label === 'undefined')
         var with_label = true;
@@ -122,6 +128,9 @@ function render_dendrogram(svgid, jsonfile, width, height, with_label) {
               .text(function(d) { return d.name; });
       }
     });
+}
+function render_dendrogram_wrapper(svgid, jsonfile, size, with_label) {
+    render_dendrogram(svgid, jsonfile, size, size, with_label);
 }
 /* vim:sw=4:ts=4:et:ft=javascript:
  */
