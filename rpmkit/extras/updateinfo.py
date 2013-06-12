@@ -41,15 +41,6 @@ except ImportError:
     import simplejson as json
 
 try:
-    from jinja2_cli.render import render
-    _JINJA2_CLI = True
-except ImportError:
-    def render(*args, **kwargs):
-        pass
-
-    _JINJA2_CLI = False
-
-try:
     from tablib import Dataset, Databook
 except ImportError:
     Dataset = Databook = None
@@ -66,13 +57,9 @@ _RPM_KEYS = ("name", "version", "release", "epoch", "arch", "buildhost")
 _ERRATA_KEYS = ("advisory", "type", "severity")
 _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 
-_TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
-
 _COLLECT_MODE = "collect"
 _ANALYSIS_MODE = "analysis"
 _MODES = [_COLLECT_MODE, _ANALYSIS_MODE]
-
-_GV_ENGINE = "sfdp"   # or neato, twopi, ...
 
 
 def copen(path, flag='r', **kwargs):
@@ -161,17 +148,26 @@ def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
     return d
 
 
-def dump_errata_summary(root, workdir, filename=_ERRATA_SUMMARY_FILE,
-                        ekeys=_ERRATA_KEYS):
+def fetch_and_dump_errata_summary(root, workdir, dist=None, repos=[],
+                                  filename=_ERRATA_SUMMARY_FILE,
+                                  ekeys=_ERRATA_KEYS):
     """
     :param root: RPM DB top dir
     :param workdir: Working dir to dump the result
+    :param dist: Specify target distribution explicitly
+    :param repos: List of yum repos to fetch errata info
     :param filename: Output file basename
     """
     logfiles = (os.path.join(workdir, "errata_summary_output.log"),
                 os.path.join(workdir, "errata_summary_error.log"))
 
-    es = sorted((e for e in YS.list_errata_g(root, logfiles=logfiles)),
+    if repos:
+        repos_s = ' '.join("--enablerepo='%s'" % r for r in repos)
+        opts = "--disablerepo='*' " + repos_s
+    else:
+        opts = ""
+
+    es = sorted((e for e in YS.list_errata_g(root, dist, logfiles, opts)),
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
@@ -449,7 +445,7 @@ supported. So it will disabled this feature."""
 
 
 def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
-            errata_details=False, dist=None, template_paths=_TEMPLATE_PATHS,
+            errata_details=False, dist=None, repos=[],
             warn_errata_details_msg=_WARN_ERRATA_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
@@ -458,7 +454,7 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
     :param offline: True if get results only from local cache
     :param errata_details: True if detailed errata info is needed
     :param dist: Specify target distribution explicitly
-    :param template_paths: Template path list
+    :param repos: Specify yum repos to fetch errata and updates info
     """
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
@@ -478,7 +474,7 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
         dump_rpm_list(root, workdir)
 
         logging.info("Dump Errata summaries...")
-        dump_errata_summary(root, workdir)
+        fetch_and_dump_errata_summary(root, workdir, dist, repos)
 
     else:
         if errata_details:
@@ -498,35 +494,13 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
         dump_datasets(workdir, errata_details)
 
 
-def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
-    """
-    :param tpaths_s: ':' separated template path list
-
-    >>> default = _TEMPLATE_PATHS
-    >>> default == mk_template_paths("")
-    True
-    >>> ["/a/b"] + default == mk_template_paths("/a/b")
-    True
-    >>> ["/a/b", "/c"] + default == mk_template_paths("/a/b:/c")
-    True
-    """
-    tpaths = tpaths_s.split(sep) if tpaths_s else None
-
-    if tpaths:
-        return tpaths + default
-    else:
-        return default  # Ignore given paths string.
-
-
-def option_parser(template_paths=_TEMPLATE_PATHS, modes=_MODES,
-                  engine=_GV_ENGINE):
+def option_parser(modes=_MODES):
     """
     :param defaults: Option value defaults
     :param usage: Usage text
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    mode=modes[0], dist=None, template_paths="",
-                    verbose=False)
+                    mode=modes[0], dist=None, repos="", verbose=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -544,9 +518,10 @@ def option_parser(template_paths=_TEMPLATE_PATHS, modes=_MODES,
     p.add_option("", "--offline", action="store_true",
                  help="Run swapi on offline mode")
     p.add_option("", "--dist", help="Specify distribution")
-    p.add_option("-T", "--tpaths",
-                 help="':' separated additional template search path "
-                      "list [%s]" % ':'.join(template_paths))
+    p.add_option("", "--repos",
+                 help="Comma separated yum repos to fetch errata info, "
+                      "e.g. 'rhel-x86_64-server-6'. Please note that any "
+                      "other repos are disabled if this option was set.")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -565,10 +540,10 @@ def main():
 
     assert os.path.exists(ppath), "RPM DB file looks not exist"
 
-    tpaths = mk_template_paths(options.tpaths)
+    repos = options.repos.split(',')
 
     modmain(ppath, options.workdir, options.mode, options.offline,
-            options.details, options.dist, tpaths)
+            options.details, options.dist, repos)
 
 
 if __name__ == '__main__':
