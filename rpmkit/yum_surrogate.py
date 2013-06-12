@@ -309,7 +309,7 @@ def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':'):
                 release=release, arch=arch)
 
 
-def list_errata_g(root, dist=None, logfiles=None):
+def list_errata_g(root, dist=None, logfiles=None, opts=None):
     """
     A generator to return errata found in the output result of 'yum list-sec'
     one by one.
@@ -318,11 +318,14 @@ def list_errata_g(root, dist=None, logfiles=None):
                  exists, e.g. /root/host_a/
     :param dist: Distribution name or None
     :param logfiles: Pair of command's output and error log files
+    :param opts: Extra options for yum, e.g. "--enablerepo='...' ..."
     """
     if not dist:
         dist = detect_dist()
 
-    result = surrogate_operation(root, "list-sec", logfiles)
+    yum_args = opts + " list-sec" if opts else "list-sec"
+    result = surrogate_operation(root, yum_args, logfiles)
+
     if result[-1] == 0:
         for line in result[0].splitlines():
             if _is_errata_line(line, dist):
@@ -330,7 +333,7 @@ def list_errata_g(root, dist=None, logfiles=None):
             else:
                 logging.debug("Not errata line: " + line)
     else:
-        failure("list-sec", result)
+        failure(yum_args, result)
 
 
 def parse_update_line(line):
