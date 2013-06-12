@@ -23,6 +23,7 @@ import rpmkit.rpmutils as RU
 import rpmkit.yum_surrogate as YS
 import rpmkit.extras.depgraph as RD
 
+import codecs
 import logging
 import optparse
 import os
@@ -39,6 +40,10 @@ from jinja2_cli.render import render
 
 _TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
 _GV_ENGINE = "sfdp"   # or neato, twopi, ...
+
+
+def copen(path, flag='r', **kwargs):
+    return codecs.open(path, flag, "utf-8")
 
 
 def renderfile(tmpl, workdir, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS):
@@ -155,16 +160,24 @@ def gen_depgraph_d3(trees, workdir, template_paths=_TEMPLATE_PATHS,
             raise
 
 
-def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS,
-                    engine=_GV_ENGINE):
+def modmain(ppath, workdir=None, template_paths=_TEMPLATE_PATHS,
+            engine=_GV_ENGINE):
     """
-    Generate HTML report of RPMs.
-
-    :param root: Root dir where 'var/lib/rpm' exists
+    :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
     :param template_paths: Template path list
     :param engine: Graphviz rendering engine to choose, e.g. neato
     """
+    if not ppath:
+        ppath = raw_input("Path to the RPM DB 'Packages' > ")
+
+    ppath = os.path.normpath(ppath)
+    root = YS.setup_root(ppath, force=True)
+
+    if not workdir:
+        workdir = root
+
+    logging.info("Dump depgraph and generating HTML reports...")
     jsdir = os.path.join(workdir, "js")
     if not os.path.exists(jsdir):
         os.makedirs(jsdir)
@@ -183,18 +196,6 @@ def gen_html_report(root, workdir, template_paths=_TEMPLATE_PATHS,
     gen_depgraph_gv(root, workdir, template_paths, engine)
     gen_depgraph_d3(trees, workdir, template_paths)
 
-
-def modmain(workdir=None, template_paths=_TEMPLATE_PATHS, engine=_GV_ENGINE):
-    """
-    :param workdir: Working dir to dump the result
-    :param template_paths: Template path list
-    :param engine: Graphviz rendering engine to choose, e.g. neato
-    """
-    if not workdir:
-        workdir = root
-
-    logging.info("Dump depgraph and generating HTML reports...")
-    gen_html_report(root, workdir, template_paths, engine)
 
 
 def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
@@ -221,13 +222,18 @@ def option_parser(template_paths=_TEMPLATE_PATHS, engine=_GV_ENGINE):
     """
     Option parser.
     """
-    defaults = dict(template_paths="", engine=engine, verbose=False)
+    defaults = dict(workdir=None, template_paths="", engine=engine,
+                    verbose=False)
 
     gv_es = ("dot", "neato", "twopi", "circo", "fdp", "sfdp")
 
-    p = optparse.OptionParser("%prog [Options...] WORKDIR")
+    p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
+
+    where RPMDB_PATH = the path to 'Packages' RPM DB file taken from
+                       '/var/lib/rpm' on the target host""")
     p.set_defaults(**defaults)
 
+    p.add_option("-w", "--workdir", help="Working dir [%default]")
     p.add_option("-T", "--tpaths",
                  help="':' separated additional template search path "
                       "list [%s]" % ':'.join(template_paths))
@@ -246,15 +252,15 @@ def main():
     logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
 
     if args:
-        workdir = args[0]
+        ppath = args[0]
     else:
-        workdir = raw_input("Path to dir holding errata and updatea data  > ")
+        ppath = raw_input("Path to the 'Packages' RPM DB file > ")
 
-    assert os.path.exists(workdir), "Specified data dir looks not exist"
+    assert os.path.exists(ppath), "RPM DB file looks not exist"
 
     tpaths = mk_template_paths(options.tpaths)
 
-    modmain(workdir, tpaths, options.engine)
+    modmain(ppath, options.workdir, tpaths, options.engine)
 
 
 if __name__ == '__main__':
