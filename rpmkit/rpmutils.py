@@ -23,8 +23,6 @@ from itertools import groupby
 from operator import itemgetter, attrgetter
 from yum.rpmsack import RPMDBPackageSack
 
-import rpmkit.tree as RT
-
 import logging
 import os
 import random
@@ -374,10 +372,6 @@ def make_adjacency_list_of_dependency_graph(root, reversed=False):
     return [dict(k=v) for k, v in make_requires_dict(root, reversed)]
 
 
-## The followings are experimental...
-sys.setrecursionlimit(1000)
-
-
 def _get_leaves(root=None):
     """
     Get leaves which no other RPMs require.
@@ -390,61 +384,6 @@ def _get_leaves(root=None):
 
 
 get_leaves = memoize(_get_leaves)
-
-
-def walk_dependency_graph_0(root_name, rreqs, leaves, seens=[], topdown=False):
-    """
-    Walk RPM dependency tree from given root RPM name recursively and yields a
-    all paths to leaves.
-
-    :param root_name: Root RPM name
-    :param rreqs: Dependency map, {required: [requires]}.
-    :param leaves: RPMs not required by other RPMs.
-    :param seens: Seen RPM names to avoid walking circular depdendency trees.
-    :param topdown: Yields tuples before these children.
-    """
-    list_children = lambda node: rreqs.get(node, [])
-
-    return [p for p in RT.walk([root_name], list_children, leaves=leaves) if p]
-
-
-def walk_dependency_graph(root=None, root_rpms=None):
-    """
-    Walk through dependency graph from root_rpms to leaves and returns all
-    possible path list.
-
-    :param root: root dir of RPM Database
-    :param root_rpms: Root RPMs to make graph
-    :return: List of path of dependency graph
-    """
-    reqs = make_requires_dict(root)  # p -> [required]
-    rreqs = make_requires_dict(root, True)  # required -> [p]
-
-    if not root_rpms:
-        # NOTE: roots require no other RPMs
-        root_rpms = [p for p, rs in reqs.iteritems() if not rs]
-
-    leaves = get_leaves(root)
-
-    pss = [walk_dependency_graph_0(rn, rreqs, leaves) for rn in root_rpms]
-    return [ps for ps in pss if ps]  # Remove empty lists
-
-
-def make_dependency_graph(root=None):
-    """
-    Make dependency trees from roots which do not requiring other RPMs.
-
-    :param root: root dir of RPM Database
-    :return: List of path of dependency graph
-    """
-    maxlen = lambda paths: max(len(p) for p in paths)
-
-    pss = sorted(walk_dependency_graph(root), key=maxlen)
-    leaves = get_leaves(root)
-
-    trees = [RT.make_tree_from_path(ps, leaves=leaves) for ps in pss]
-
-    return trees
 
 
 def list_required_rpms_not_required_by_others(rpmname, root=None):
