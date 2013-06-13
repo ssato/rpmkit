@@ -20,6 +20,7 @@
 from rpmkit.memoize import memoize
 from itertools import izip, takewhile
 
+import codecs
 import datetime
 import itertools
 import operator
@@ -40,6 +41,11 @@ except AttributeError:
                 yield element
 
     chain_from_iterable = _from_iterable
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
 
 
 def typecheck(obj, expected_type_or_class):
@@ -369,5 +375,19 @@ def longest_common_subsequence(s, t):
             y -= 1
 
     return ''.join(result) if isinstance(s, str) else result
+
+
+def copen(path, flag='r', **kwargs):
+    return codecs.open(path, flag, "utf-8")
+
+
+def json_dump(data, filepath):
+    """
+    Dump given ``data`` into ``filepath`` in JSON format.
+
+    :param data: Data to dump
+    :param filepath: Output file path
+    """
+    json.dump(data, copen(filepath, 'w'))
 
 # vim:sw=4:ts=4:et:
