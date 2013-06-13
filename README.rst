@@ -277,6 +277,9 @@ TODO
 NOTES
 ========
 
+* sqlminus.py (rpmkit.extras.sqlminus) was removed from this dist and now
+  maintained at https://gist.github.com/ssato/5773239 instead.
+
 * filelist2rpm.py and xpack.py were removed as these are replaced with its
   successor, pmaker.py
 

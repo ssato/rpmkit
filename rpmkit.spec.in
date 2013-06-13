@@ -32,7 +32,6 @@ Requires:       python-matplotlib
 Requires:       python-tablib
 Requires:       python-jinja2-cli
 Requires:       graphviz
-#Requires:       cx_Oracle
 
 %description    extras
 This package provides experimental modules and tools of %{name}.
@@ -108,6 +107,7 @@ rm -rf $RPM_BUILD_ROOT
 - [yum-surrogate] other misc related fixes and enhancements
 - [updateinfo] add new command to get update info with using yum-surrogate
 - related small fixes and enhancements in rpmkit.rpmutils, etc.
+- removed rpmkit.extras.sqlminus
 
 * Fri May 10 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11-1
 - [yum-surrogate] Add to surrogate running yum on hosts have access to yum
