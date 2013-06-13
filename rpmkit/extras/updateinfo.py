@@ -25,7 +25,6 @@ import rpmkit.rpmutils as RU
 import rpmkit.utils as U
 import rpmkit.swapi as SW
 import rpmkit.yum_surrogate as YS
-import rpmkit.extras.depgraph as RD
 
 import codecs
 import logging
