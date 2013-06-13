@@ -26,18 +26,12 @@ import rpmkit.utils as U
 import rpmkit.swapi as SW
 import rpmkit.yum_surrogate as YS
 
-import codecs
 import logging
 import optparse
 import os
 import os.path
 import re
 import sys
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
 
 try:
     from tablib import Dataset, Databook
@@ -59,10 +53,6 @@ _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 _COLLECT_MODE = "collect"
 _ANALYSIS_MODE = "analysis"
 _MODES = [_COLLECT_MODE, _ANALYSIS_MODE]
-
-
-def copen(path, flag='r', **kwargs):
-    return codecs.open(path, flag, "utf-8")
 
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
@@ -122,7 +112,7 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE, rpmkeys=_RPM_KEYS):
     rpms = RU.list_installed_rpms(root, rpmkeys)
     logging.debug("%d installed rpms found in %s" % (len(rpms), root))
 
-    json.dump(rpms, copen(rpm_list_path(workdir, filename), 'w'))
+    U.json_dump(rpms, rpm_list_path(workdir, filename))
 
 
 def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
@@ -170,7 +160,7 @@ def fetch_and_dump_errata_summary(root, workdir, dist=None, repos=[],
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
-    json.dump(es, copen(errata_summary_path(workdir, filename), 'w'))
+    U.json.dump(es, errata_summary_path(workdir, filename))
 
 
 def _swapicall(api, offline=False, args=[]):
@@ -257,7 +247,7 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
             errata_cves_map = mk_errata_map(offline)
 
             logging.info("Dumping errata - cve - cvss map data from RHN...")
-            json.dump(errata_cves_map, copen(cve_ref_path, 'w'))
+            U.json.dump(errata_cves_map, cve_ref_path)
             #assert bool(errata_cves_map), "errata_cache=" + errata_cache
 
     adv = errata["advisory"]
@@ -311,7 +301,7 @@ def dump_errata_list(workdir, offline=False,
             yield get_errata_details(ref_e, workdir, offline)
 
     errata = sorted((e for e in _g(es)), key=itemgetter("advisory"))
-    json.dump(errata, copen(errata_list_path(workdir), 'w'))
+    U.json.dump(errata, errata_list_path(workdir))
 
 
 def _make_dataset(list_data, headers=None, title=None):
@@ -367,7 +357,7 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
     us = sorted(updates.values(), key=itemgetter("name"))
     data = dict(updates=us)
 
-    json.dump(data, copen(updates_file_path(workdir), 'w'))
+    U.json.dump(data, updates_file_path(workdir))
 
 
 _DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
