@@ -19,6 +19,7 @@
 #
 from logging import DEBUG, INFO
 
+import bsddb
 import logging
 import optparse
 import os
@@ -151,8 +152,43 @@ def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
             copyfile(src, dst, force, copy)
 
 
+def is_bsd_hashdb(dbpath):
+    """FIXME"""
+    try:
+        bsddb.hashopen(dbpath, 'r')
+    except:
+        return False
+
+    return True
+
+
+def find_Packages_rpmdb(topdir):
+    """
+    Find the path to 'Packages' rpm database file under ``topdir``.
+
+    :param topdir: top dir to start finding the rpm database file
+    :return: Path of 'Packages' rpm database file :: str
+    """
+    pname = "Packages"
+
+    dirs = [t[0] for t in os.walk(topdir) if pname in t[-1]]
+    candidates = sorted(os.path.join(d, pname) for d in dirs)
+
+    if not candidates:
+        m = "RPM database file '%s' not found under %s" % (pname, topdir)
+        raise RuntimeError(m)
+
+    p = candidates[0]
+
+    if not is_bsd_hashdb(p):
+        raise RuntimeError("Found but it was not BSD DB file: " + p)
+
+    return p
+
+
 def setup_root(ppath, root=None, force=False, copy=False,
-               refer_other_rpmdb=True, subdir=_RPMDB_SUBDIR):
+               refer_other_rpmdb=True, subdir=_RPMDB_SUBDIR,
+               find=True):
     """
     :param ppath: The path to RPM DB 'Packages' of the target host, may not be
         under ``subdir``.
@@ -160,8 +196,14 @@ def setup_root(ppath, root=None, force=False, copy=False,
     :param force: Force overwrite the rpmdb file previously copied.
     :param copy: Copy RPM db files instead of symlinks
     :param refer_other_rpmdb: True If other rpm dabase files are refered.
+    :param find: Find RPM DB 'Packages' under ``ppath``.
+
     :return: Root path
     """
+    if find and not ppath.endswith("Packages"):
+        ppath = find_Packages_rpmdb(ppath)
+        logging.info("Adjust ppath to " + ppath)
+
     ppath = os.path.normpath(ppath)
 
     if root:
