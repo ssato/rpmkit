@@ -165,7 +165,7 @@ def _unique(xs, cmp=cmp, key=None):
     return ret
 
 
-def uniq(iterable, cmp=cmp, key=None):
+def uniq(iterable, cmp=cmp, key=None, sort=False):
     """
     Safer version of the above.
     """
@@ -174,7 +174,7 @@ def uniq(iterable, cmp=cmp, key=None):
         if x not in acc:
             acc.append(x)
 
-    return acc
+    return sorted(acc) if sort else acc
 
 
 def uconcat(xss):
