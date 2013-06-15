@@ -160,7 +160,7 @@ def fetch_and_dump_errata_summary(root, workdir, dist=None, repos=[],
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
-    U.json.dump(es, errata_summary_path(workdir, filename))
+    U.json_dump(es, errata_summary_path(workdir, filename))
 
 
 def _swapicall(api, offline=False, args=[]):
@@ -247,7 +247,7 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
             errata_cves_map = mk_errata_map(offline)
 
             logging.info("Dumping errata - cve - cvss map data from RHN...")
-            U.json.dump(errata_cves_map, cve_ref_path)
+            U.json_dump(errata_cves_map, cve_ref_path)
             #assert bool(errata_cves_map), "errata_cache=" + errata_cache
 
     adv = errata["advisory"]
@@ -301,7 +301,7 @@ def dump_errata_list(workdir, offline=False,
             yield get_errata_details(ref_e, workdir, offline)
 
     errata = sorted((e for e in _g(es)), key=itemgetter("advisory"))
-    U.json.dump(errata, errata_list_path(workdir))
+    U.json_dump(errata, errata_list_path(workdir))
 
 
 def _make_dataset(list_data, headers=None, title=None):
@@ -357,7 +357,7 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
     us = sorted(updates.values(), key=itemgetter("name"))
     data = dict(updates=us)
 
-    U.json.dump(data, updates_file_path(workdir))
+    U.json_dump(data, updates_file_path(workdir))
 
 
 _DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
