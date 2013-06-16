@@ -448,15 +448,15 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
 
-    ppath = os.path.normpath(ppath)
-    root = YS.setup_root(ppath, force=True)
+    if workdir:
+        if not os.path.exists(workdir):
+            logging.info("Creating working dir: " + workdir)
+            os.makedirs(workdir)
 
-    if not workdir:
+        root = YS.setup_root(ppath, workdir, force=True)
+    else:
+        root = YS.setup_root(ppath, force=True)
         workdir = root
-
-    if not os.path.exists(workdir):
-        logging.info("Creating working dir: " + workdir)
-        os.makedirs(workdir)
 
     if mode == _COLLECT_MODE:
         logging.info("Dump RPM list...")
