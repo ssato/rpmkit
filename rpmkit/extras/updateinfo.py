@@ -241,7 +241,7 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
         cve_ref_path = errata_cve_map_path(workdir)
 
         if os.path.exists(cve_ref_path):
-            errata_cves_map = json.load(open(cve_ref_path))
+            errata_cves_map = U.json_load(cve_ref_path)
         else:
             logging.info("Make up errata - cve - cvss map data from RHN...")
             errata_cves_map = mk_errata_map(offline)
@@ -294,7 +294,7 @@ def dump_errata_list(workdir, offline=False,
     :param ref_filename: Errata summary list as a reference
     :param filename: Output file basename
     """
-    es = json.load(open(errata_summary_path(workdir, ref_filename)))
+    es = U.json_load(errata_summary_path(workdir, ref_filename))
 
     def _g(es):
         for ref_e in es:
@@ -335,7 +335,7 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
     :param workdir: Working dir to dump the result
     :param format: Output format: xls, xlsx or ods
     """
-    errata = json.load(open(errata_summary_path(workdir)))
+    errata = U.json_load(errata_summary_path(workdir))
     updates = dict()
     p2k = itemgetter(*rpmkeys)
 
@@ -380,7 +380,7 @@ def _fmt_cvess(cves):
 
 
 def _detailed_errata_list_g(workdir):
-    es = json.load(open(errata_list_path(workdir)))
+    es = U.json_load(errata_list_path(workdir))
 
     for e in es:
         if e["severity"] is None:
@@ -395,7 +395,7 @@ def _detailed_errata_list_g(workdir):
 
 
 def _updates_list_g(workdir, ukeys=_UPDATE_KEYS):
-    data = json.load(open(updates_file_path(workdir)))
+    data = U.json_load(updates_file_path(workdir))
 
     for u in data["updates"]:
         u["advisories"] = ", ".join(u["advisories"])
@@ -408,8 +408,8 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
     """
     :param workdir: Working dir to dump the result
     """
-    rpms = json.load(open(rpm_list_path(workdir)))
-    errata = json.load(open(errata_summary_path(workdir)))
+    rpms = U.json_load(rpm_list_path(workdir))
+    errata = U.json_load(errata_summary_path(workdir))
     updates = [u for u in _updates_list_g(workdir, ukeys)]
 
     datasets = [_make_dataset(rpms, rpmkeys, "Installed RPMs"),
