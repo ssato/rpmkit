@@ -377,8 +377,17 @@ def longest_common_subsequence(s, t):
     return ''.join(result) if isinstance(s, str) else result
 
 
-def copen(path, flag='r', **kwargs):
-    return codecs.open(path, flag, "utf-8")
+def copen(path, flag='r', encoding="utf-8", **kwargs):
+    return codecs.open(path, flag, encoding)
+
+
+def json_load(data, filepath, encoding="utf-8"):
+    """
+    Load ``filepath`` in JSON format and return data.
+
+    :param filepath: Output file path
+    """
+    return json.load(copen(filepath, encoding=encoding))
 
 
 def json_dump(data, filepath):
