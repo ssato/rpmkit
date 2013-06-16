@@ -381,7 +381,7 @@ def copen(path, flag='r', encoding="utf-8", **kwargs):
     return codecs.open(path, flag, encoding)
 
 
-def json_load(data, filepath, encoding="utf-8"):
+def json_load(filepath, encoding="utf-8"):
     """
     Load ``filepath`` in JSON format and return data.
 
