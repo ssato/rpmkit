@@ -62,8 +62,8 @@ class Test_05_find_Packages_rpmdb(unittest.TestCase):
         self.assertEquals(TT.find_Packages_rpmdb(self.workdir), path)
 
 
-def setup_Packages(topdir):
-    path = os.path.join(topdir, "var", "lib", "rpm", "Packages")
+def setup_Packages(topdir, subdir=TT._RPMDB_SUBDIR):
+    path = os.path.join(topdir, subdir, "Packages")
     os.makedirs(os.path.dirname(path))
 
     bsddb.hashopen(path)
@@ -94,9 +94,16 @@ class Test_06_setup_root(unittest.TestCase):
         self.assertEquals(TT.setup_root(self.workdir, refer_other_rpmdb=False),
                           os.path.abspath(self.workdir))
 
-    def test_20_setup_root__w_root(self):
+    def test_20_setup_root__w_pivot_root(self):
         ppath = setup_Packages(self.workdir)
         root = os.path.join(self.workdir, "pivot_root")
+
+        self.assertEquals(TT.setup_root(ppath, root, refer_other_rpmdb=False),
+                          root)
+
+    def test_30_setup_root__w_root(self):
+        ppath = setup_Packages(self.workdir)
+        root = self.workdir
 
         self.assertEquals(TT.setup_root(ppath, root, refer_other_rpmdb=False),
                           root)
