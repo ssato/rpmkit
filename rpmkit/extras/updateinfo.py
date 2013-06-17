@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from logging import DEBUG, INFO
-from operator import itemgetter
+from operator import attrgetter, itemgetter
 
 import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
@@ -109,7 +109,9 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE, rpmkeys=_RPM_KEYS):
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
     """
-    rpms = RU.list_installed_rpms(root, rpmkeys)
+    logging.debug("Get rpms for the root: " + root)
+    rpms = [dict(zip(rpmkeys, attrgetter(*rpmkeys)(p))) for p in
+            RU.yum_list_installed(root)]
     logging.debug("%d installed rpms found in %s" % (len(rpms), root))
 
     U.json_dump(rpms, rpm_list_path(workdir, filename))
@@ -489,6 +491,7 @@ def option_parser(modes=_MODES):
     :param defaults: Option value defaults
     :param usage: Usage text
     """
+        #print "ppath=%s, new_ppath=%s" % (ppath, new_ppath)
     defaults = dict(path=None, workdir=None, details=False, offline=False,
                     mode=modes[0], dist=None, repos="", force=False,
                     verbose=False)
