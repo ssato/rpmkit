@@ -112,11 +112,11 @@ def copyfile(src, dst, force, copy=False):
         os.symlink(src, dst)
 
 
-def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
-               rpmdb_filenames=_RPM_DB_FILENAMES, rpmdb_subdir=_RPMDB_SUBDIR):
+def setup_data(ppath, root, force=False, copy=False, refer_other_rpmdb=True,
+               rpmdb_filenames=_RPM_DB_FILENAMES, subdir=_RPMDB_SUBDIR):
     """
-    :param path: Path to the 'Packages' rpm database originally came from
-                 /var/lib/rpm on the target host, not under ``rpmdb_subdir``.
+    :param ppath: Path to the 'Packages' rpm database originally came from
+                 /var/lib/rpm on the target host, not under ``subdir``.
     :param root: The temporal root directry to put the rpm database.
     :param force: Force overwrite the rpmdb file previously copied.
     :param copy: Copy RPM db files instead of symlinks
@@ -124,21 +124,24 @@ def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
     """
     assert root != "/"
 
-    rpmdb_dir = os.path.join(root, rpmdb_subdir)
-    rpmdb_Packages_path = os.path.join(rpmdb_dir, "Packages")
+    rpmdb_dir = os.path.join(root, subdir)
+    new_ppath = os.path.join(rpmdb_dir, "Packages")
 
-    assert os.path.exists(path)
+    assert os.path.exists(ppath)
 
     if not os.path.exists(rpmdb_dir):
         logging.debug("Creating rpmdb dir: " + rpmdb_dir)
         os.makedirs(rpmdb_dir)
 
-    copyfile(path, rpmdb_Packages_path, force, copy)
+    if ppath == new_ppath:
+        logging.warn("Copying destination is same as source: " + ppath)
+    else:
+        copyfile(ppath, new_ppath, force, copy)
 
     if refer_other_rpmdb:
-        srcdir = os.path.dirname(path)
+        srcdir = os.path.dirname(ppath)
 
-        if not rpmdb_files_exist(path, rpmdb_filenames):
+        if not rpmdb_files_exist(ppath, rpmdb_filenames):
             RuntimeError("Some RPM Database files not exist in " + srcdir)
 
         for f in rpmdb_filenames:
@@ -149,7 +152,10 @@ def setup_data(path, root, force=False, copy=False, refer_other_rpmdb=True,
                 logging.warn("File not exists. Skipped: " + src)
                 continue
 
-            copyfile(src, dst, force, copy)
+            if src == dst:
+                logging.warn("Copying destination is same as source: " + src)
+            else:
+                copyfile(src, dst, force, copy)
 
 
 def is_bsd_hashdb(dbpath):
@@ -206,12 +212,13 @@ def setup_root(ppath, root=None, force=False, copy=False,
         logging.info(m + " to " + ppath)
 
     ppath = os.path.normpath(ppath)
+    prelpath = os.path.join(subdir, "Packages")
 
     if root:
-        setup_data(ppath, root, force, copy, refer_other_rpmdb)
+        root = os.path.normpath(root)
+        if root != os.path.dirname(ppath.replace(prelpath, "")):
+            setup_data(ppath, root, force, copy, refer_other_rpmdb)
     else:
-        prelpath = os.path.join(subdir, "Packages")
-
         if ppath.endswith(prelpath):
             root = ppath.replace(prelpath, "")
         else:
