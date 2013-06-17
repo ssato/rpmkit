@@ -126,7 +126,7 @@ def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
     ...       {u'advisory': u'RHSA-2013:0771', u'arch': u'x86_64',
     ...        u'epoch': u'0', u'name': u'libcurl', u'release': u'36.el6_4',
     ...        u'severity': u'Moderate', u'type': u'Security',
-    ...        u'version': u'7.19.7'}])
+    ...        u'version': u'7.19.7'}]
     >>> d = _mkedic(e, ps)
     """
     pkeys = ("name", "version", "release", "epoch", "arch")
@@ -513,8 +513,8 @@ def option_parser(modes=_MODES):
                  help="Comma separated yum repos to fetch errata info, "
                       "e.g. 'rhel-x86_64-server-6'. Please note that any "
                       "other repos are disabled if this option was set.")
-     p.add_option("-f", "--force", action="store_true",
-                  help="Force overwrite RPM DB files even if exists already")
+    p.add_option("-f", "--force", action="store_true",
+                 help="Force overwrite RPM DB files even if exists already")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
