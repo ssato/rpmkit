@@ -434,7 +434,7 @@ supported. So it will disabled this feature."""
 
 
 def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
-            errata_details=False, dist=None, repos=[],
+            errata_details=False, dist=None, repos=[], force=False,
             warn_errata_details_msg=_WARN_ERRATA_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
@@ -444,6 +444,7 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
     :param errata_details: True if detailed errata info is needed
     :param dist: Specify target distribution explicitly
     :param repos: Specify yum repos to fetch errata and updates info
+    :param force: Force overwrite the rpmdb file previously copied
     """
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
@@ -453,9 +454,9 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
             logging.info("Creating working dir: " + workdir)
             os.makedirs(workdir)
 
-        root = YS.setup_root(ppath, workdir, force=True)
+        root = YS.setup_root(ppath, workdir, force=force)
     else:
-        root = YS.setup_root(ppath, force=True)
+        root = YS.setup_root(ppath, force=force)
         workdir = root
 
     if mode == _COLLECT_MODE:
@@ -489,7 +490,8 @@ def option_parser(modes=_MODES):
     :param usage: Usage text
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    mode=modes[0], dist=None, repos="", verbose=False)
+                    mode=modes[0], dist=None, repos="", force=False,
+                    verbose=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -511,6 +513,8 @@ def option_parser(modes=_MODES):
                  help="Comma separated yum repos to fetch errata info, "
                       "e.g. 'rhel-x86_64-server-6'. Please note that any "
                       "other repos are disabled if this option was set.")
+     p.add_option("-f", "--force", action="store_true",
+                  help="Force overwrite RPM DB files even if exists already")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -532,7 +536,7 @@ def main():
     repos = options.repos.split(',')
 
     modmain(ppath, options.workdir, options.mode, options.offline,
-            options.details, options.dist, repos)
+            options.details, options.dist, repos, options.force)
 
 
 if __name__ == '__main__':
