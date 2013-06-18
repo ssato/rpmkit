@@ -111,7 +111,7 @@ def h2nvrea(h, keys=RPM_BASIC_KEYS):
     return dict(zip(keys, [h[k] for k in keys]))
 
 
-def yum_list_installed(root=None):
+def _yum_list_installed(root=None):
     """
     :param root: RPM DB root dir
     :return: List of yum.rpmsack.RPMInstalledPackage objects
@@ -125,8 +125,8 @@ def yum_list_installed(root=None):
     return sack.returnPackages()  # NOTE: 'gpg-pubkey' is not in this list.
 
 
-def list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
-                        subdir=RPMDB_SUBDIR):
+def _list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
+                         subdir=RPMDB_SUBDIR):
     """
     :param root: RPM DB root dir
     :param keys: RPM Package dict keys
@@ -152,6 +152,10 @@ def list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
         del mi, ts
 
         return sorted(ps, key=itemgetter(*keys))
+
+
+yum_list_installed = memoize(_yum_list_installed)
+list_installed_rpms = memoize(_list_installed_rpms)
 
 
 def guess_rhel_version(root, maybe_rhel_4=False):
