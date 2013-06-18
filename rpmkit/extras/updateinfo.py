@@ -332,16 +332,16 @@ def _make_dataset(list_data, headers=None, title=None):
 _MIN_RPM_KEYS = ("name", "version", "release", "epoch", "arch")
 
 
-def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
+def errata_to_updates_list(errata_list, rpmkeys=_MIN_RPM_KEYS):
     """
-    :param workdir: Working dir to dump the result
-    :param format: Output format: xls, xlsx or ods
+    Make a list of package updates from errata list.
+
+    :param errata_list: Errata list
     """
-    errata = U.json_load(errata_summary_path(workdir))
     updates = dict()
     p2k = itemgetter(*rpmkeys)
 
-    for e in errata:
+    for e in errata_list:
         adv = e["advisory"]
 
         for p in e["packages"]:
@@ -355,8 +355,18 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
                 if adv not in x_seen:
                     x_seen["advisories"].append(adv)
 
+    return sorted(updates.values(), key=itemgetter("name"))
+
+
+def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
+    """
+    :param workdir: Working dir to dump the result
+    :param format: Output format: xls, xlsx or ods
+    """
+    es = U.json_load(errata_summary_path(workdir))
+    us = errata_to_updates_list(es, rpmkeys)
+
     # Make it valid JSON data. (It seems simple array isn't valid.)
-    us = sorted(updates.values(), key=itemgetter("name"))
     data = dict(updates=us)
 
     U.json_dump(data, updates_file_path(workdir))
