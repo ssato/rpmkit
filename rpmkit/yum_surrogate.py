@@ -143,7 +143,9 @@ def run2(cmd, ofunc=_id, efunc=_id, timeout=None):
         try:
             oline = outq.get_nowait()
         except Q.Empty:
-            logging.debug("No output from stdout of #%d yet" % p.pid)
+            # TODO: Too verbose.
+            #logging.debug("No output from stdout of #%d yet" % p.pid)
+            pass
         else:
             ofunc(oline)
             outs.append(oline)
@@ -151,7 +153,9 @@ def run2(cmd, ofunc=_id, efunc=_id, timeout=None):
         try:
             eline = errq.get_nowait()
         except Q.Empty:
-            logging.debug("No output from stderr of #%d yet" % p.pid)
+            # TODO: Too verbose.
+            #logging.debug("No output from stderr of #%d yet" % p.pid)
+            pass
         else:
             efunc(eline)
             errs.append(eline)
@@ -162,7 +166,7 @@ def run2(cmd, ofunc=_id, efunc=_id, timeout=None):
     for t in oets:
         t.join()
 
-    return (outs, errs, p.returncode or -1)
+    return (outs, errs, -1 if p.returncode is None else p.returncode)
 
 
 def copyfile(src, dst, force, copy=False):
@@ -477,7 +481,7 @@ def list_errata_g(root, dist=None, logfiles=None, opts=None):
     result = surrogate_operation2(root, yum_args, logfiles)
 
     if result[-1] == 0:
-        for line in result[0].splitlines():
+        for line in result[0]:
             if _is_errata_line(line, dist):
                 yield parse_errata_line(line)
             else:
