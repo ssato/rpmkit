@@ -437,6 +437,7 @@ supported. So it will disabled this feature."""
 
 def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
             errata_details=False, dist=None, repos=[], force=False,
+            verbose=False,
             warn_errata_details_msg=_WARN_ERRATA_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
@@ -448,6 +449,8 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
     :param repos: Specify yum repos to fetch errata and updates info
     :param force: Force overwrite the rpmdb file previously copied
     """
+    logging.getLogger().setLevel(DEBUG if verbose else INFO)
+
     if not ppath:
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
 
