@@ -19,6 +19,7 @@
 #
 from logging import DEBUG, INFO
 
+import Queue as Q
 import bsddb
 import logging
 import optparse
@@ -28,6 +29,8 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
+import time
 
 try:
     import json
@@ -79,6 +82,19 @@ Examples:
 """
 
 
+def enqueue_output(outfd, queue):
+    """
+    :param outfd: Output FD to read results
+    :param queue: Queue to enqueue results read from ``outfd``
+    """
+    for line in iter(outfd.readline, b''):
+        queue.put(line)
+
+
+def _id(x):
+    return x
+
+
 def run(cmd):
     """
     :param cmd: Command string
@@ -89,6 +105,64 @@ def run(cmd):
                          stdout=subprocess.PIPE)
     (out, err) = p.communicate()
     return (out, err, p.returncode)
+
+
+def run2(cmd, ofunc=_id, efunc=_id, timeout=None):
+    """
+    Non-blocking version of the above ``run`` function.
+
+    see also: http://bit.ly/VoKhdS
+
+    :param cmd: Command string
+    :param ofunc: Function to process output line by line :: str => line -> ...
+    :param efunc: Function to process error line by line :: str => line -> ...
+    :param timeout: Timeout to wait execution of ``cmd`` in seconds or None
+        (wait forever)
+
+    :return: (output :: [str] ,err_output :: [str], exitcode :: Int)
+    """
+    logging.debug("Run command: " + cmd)
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, bufsize=1, close_fds=True)
+    outq = Q.Queue()
+    errq = Q.Queue()
+
+    oets = [threading.Thread(target=enqueue_output, args=(p.stdout, outq)),
+            threading.Thread(target=enqueue_output, args=(p.stderr, errq))]
+
+    for t in oets:
+        t.setDaemon(True)
+        t.start()
+
+    if timeout is not None:
+        threading.Thread(target=p.kill)
+
+    outs = errs = []
+
+    while True:
+        try:
+            oline = outq.get_nowait()
+        except Q.Empty:
+            logging.debug("No output from stdout of #%d yet" % p.pid)
+        else:
+            ofunc(oline)
+            outs.append(oline)
+
+        try:
+            eline = errq.get_nowait()
+        except Q.Empty:
+            logging.debug("No output from stderr of #%d yet" % p.pid)
+        else:
+            efunc(eline)
+            errs.append(eline)
+
+        if p.poll() is not None:
+            break
+
+    for t in oets:
+        t.join()
+
+    return (outs, errs, p.returncode or -1)
 
 
 def copyfile(src, dst, force, copy=False):
@@ -270,6 +344,32 @@ def surrogate_operation(root, operation, logfiles=None):
     return (out, err, rc)
 
 
+def surrogate_operation2(root, operation, logfiles=None):
+    """
+    Surrogates yum operation (command) which utilizes ``run2`` function.
+
+    :param root: Pivot root dir where var/lib/rpm/Packages of the target host
+        exists, e.g. /root/host_a/
+    :param operation: Yum operation (command), e.g. 'list-sec'
+    :param logfiles: Pair of output and error log files,
+        e.g. ('./tmp/out.log', '/tmp/err.log')
+    """
+    root = os.path.abspath(root)
+    cs = ["yum", ("" if root == "/" else "--installroot=" + root), operation]
+
+    cmd = ' '.join(cs)
+
+    if logfiles and len(logfiles) == 2:
+        (outlog, errlog) = logfiles
+
+        with open(outlog, 'w') as olog, open(errlog, 'w') as elog:
+            (out, err, rc) = run2(cmd, olog.write, elog.write)
+    else:
+        (out, err, rc) = run2(cmd)
+
+    return (out, err, rc)
+
+
 def _is_errata_line(line, dist):
     if dist == "fedora":
         reg = re.compile(r"^FEDORA-")
@@ -374,7 +474,7 @@ def list_errata_g(root, dist=None, logfiles=None, opts=None):
         dist = detect_dist()
 
     yum_args = opts + " list-sec" if opts else "list-sec"
-    result = surrogate_operation(root, yum_args, logfiles)
+    result = surrogate_operation2(root, yum_args, logfiles)
 
     if result[-1] == 0:
         for line in result[0].splitlines():
