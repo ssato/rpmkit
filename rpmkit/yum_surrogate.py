@@ -355,7 +355,7 @@ def surrogate_operation2(root, operation, logfiles=None):
         e.g. ('./tmp/out.log', '/tmp/err.log')
     """
     root = os.path.abspath(root)
-    cs = ["yum", ("" if root == "/" else "--installroot=" + root), operation]
+    cs = ["yum", "" if root == "/" else "--installroot=" + root, operation]
 
     cmd = ' '.join(cs)
 
