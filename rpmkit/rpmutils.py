@@ -154,6 +154,52 @@ def list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
         return sorted(ps, key=itemgetter(*keys))
 
 
+def guess_rhel_version(root, maybe_rhel_4=False):
+    """
+    Guess RHEL major version from RPM database based on
+    rpmkit.rpms2sqldb.PackageMetadata.guess_rhel_version.
+
+    - RHEL 3 => rpm.RPMTAG_RPMVERSION = '4.2.x' where x = 1,2,3
+        or '4.2' or '4.3.3' (comps-*3AS-xxx) or '4.1.1' (comps*-3[aA][Ss])
+    - RHEL 4 => rpm.RPMTAG_RPMVERSION = '4.3.3'
+    - RHEL 5 => rpm.RPMTAG_RPMVERSION = '4.4.2' or '4.4.2.3'
+    - RHEL 6 (beta) => rpm.RPMTAG_RPMVERSION = '4.7.0-rc1'
+
+    :param root: RPM DB root dir
+    :param maybe_rhel_4:
+    """
+    ps = yum_list_installed(root)
+    assert ps, "No packages found for the root: " + root
+
+    is_rhel_4 = False
+
+    if maybe_rhel_4:
+        for p in ps:
+            if p.name in ("comps", "comps-extras"):
+                if p.version.startswith('4'):
+                    is_rhel_4 = True
+                    break
+
+    rpmver = ps[0].rpmversion
+    irpmver = int(''.join(rpmver.split('.')[:3])[:3])
+
+    # Handle special cases at first:
+    if is_rhel_4:
+        osver = 4
+    elif (irpmver >= 421 and irpmver <= 423) or irpmver == 42:
+        osver = 3
+    elif irpmver in (433, 432, 431):
+        osver = 4
+    elif irpmver == 442:
+        osver = 5
+    elif irpmver >= 470:  # 471, 472, 480, etc.
+        osver = 6
+    else:
+        osver = 0
+
+    return osver
+
+
 def pcmp(p1, p2):
     """Compare packages by NVRAEs.
 
