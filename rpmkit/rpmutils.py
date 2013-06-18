@@ -33,6 +33,7 @@ import yum
 
 
 RPM_BASIC_KEYS = ("name", "version", "release", "epoch", "arch")
+RPMDB_SUBDIR = "var/lib/rpm"
 
 
 def rpm_header_from_rpmfile(rpmfile):
@@ -124,7 +125,8 @@ def yum_list_installed(root=None):
     return sack.returnPackages()  # NOTE: 'gpg-pubkey' is not in this list.
 
 
-def list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False):
+def list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
+                        subdir=RPMDB_SUBDIR):
     """
     :param root: RPM DB root dir
     :param keys: RPM Package dict keys
@@ -138,7 +140,7 @@ def list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False):
                       key=itemgetter(*keys))
     else:
         if root:
-            rpm.addMacro("_dbpath", root)
+            rpm.addMacro("_dbpath", os.path.join(root, subdir))
 
         ts = rpm.TransactionSet()
         mi = ts.dbMatch()
