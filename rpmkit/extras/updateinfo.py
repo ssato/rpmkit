@@ -299,6 +299,46 @@ def dump_errata_list(workdir, offline=False,
     U.json_dump(errata, errata_list_path(workdir))
 
 
+def dump_detailed_packages_list(workdir, offline=False, chans=[],
+                                ref_filename=_RPM_LIST_FILE):
+    """
+    FIXME: How to distinguish between RH and non-RH RPMs.
+
+    :param workdir: Working dir to dump the result
+    :param offline: True if get results only from local cache
+    :param chans: List of channels (yum repos) to fetch pkg info
+    :param ref_filename: Package summary list as a reference
+    """
+    ps = U.json_load(rpm_list_path(workdir, ref_filename))
+    ref_ps = []
+
+    for chan in chans:
+        try:
+            ref = swapicall("channel.software.listLatestPackages",
+                            offline, chan)
+            for p in ref:
+                if p not in ref_ps:
+                    ref_ps.append(p)
+        except:
+            pass
+
+    names = U.uniq(p["name"] for p in ref_ps)
+    new_ps = []
+
+    for p in ps:
+        if p["name"] in names:
+            p["originally_from"] = "RH"
+        else:
+            p["originally_from"] = "Uknown"
+
+        new_ps.append(p)
+
+    # Backup original:
+    os.rename(rpm_list_path(workdir), rpm_list_path(workdir) + ".save")
+
+    U.json_dump(new_ps, rpm_list_path(workdir))
+
+
 def _make_dataset(list_data, headers=None, title=None):
     """
     :param list_data: List of data
@@ -479,6 +519,9 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
         if dist == "rhel":
             logging.info("Dump Errata details...")
             dump_errata_list(workdir, offline)
+
+            logging.info("Update package list...")
+            dump_detailed_packages_list(workdir, offline, repos)
         else:
             logging.warn(warn_details_msg % dist)
 
