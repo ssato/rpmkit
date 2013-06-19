@@ -47,10 +47,6 @@ _RPM_KEYS = ("name", "version", "release", "epoch", "arch", "summary",
 _ERRATA_KEYS = ("advisory", "type", "severity")
 _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 
-_COLLECT_MODE = "collect"
-_ANALYSIS_MODE = "analysis"
-_MODES = [_COLLECT_MODE, _ANALYSIS_MODE]
-
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
     """
@@ -442,14 +438,12 @@ Detailed errata and packages information of the detected distribution %s
 is not supported. So it will disabled this feature."""
 
 
-def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
-            details=False, dist=None, repos=[], force=False,
-            rpmkeys=_RPM_KEYS, verbose=False,
+def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
+            repos=[], force=False, rpmkeys=_RPM_KEYS, verbose=False,
             warn_details_msg=_WARN_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
-    :param mode: Running mode: collect data (0) or data analysis mode (1).
     :param offline: True if get results only from local cache
     :param details: True if detailed errata and packages info is needed
     :param dist: Specify target distribution explicitly
@@ -472,40 +466,35 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
         root = YS.setup_root(ppath, force=force)
         workdir = root
 
-    if mode == _COLLECT_MODE:
-        logging.info("Dump RPM list...")
-        dump_rpm_list(root, workdir, rpmkeys=rpmkeys)
+    logging.info("Dump RPM list...")
+    dump_rpm_list(root, workdir, rpmkeys=rpmkeys)
 
-        logging.info("Dump Errata summaries...")
-        fetch_and_dump_errata_summary(root, workdir, dist, repos)
+    logging.info("Dump Errata summaries...")
+    fetch_and_dump_errata_summary(root, workdir, dist, repos)
 
-    else:
-        if details:
-            if not dist:
-                dist = YS.detect_dist()
+    if details:
+        if not dist:
+            dist = YS.detect_dist()
 
-            if dist == "rhel":
-                logging.info("Dump Errata details...")
-                dump_errata_list(workdir, offline)
-            else:
-                logging.warn(warn_details_msg % dist)
+        if dist == "rhel":
+            logging.info("Dump Errata details...")
+            dump_errata_list(workdir, offline)
+        else:
+            logging.warn(warn_details_msg % dist)
 
-        logging.info("Dump update RPM list from errata data...")
-        dump_updates_list(workdir)
+    logging.info("Dump update RPM list from errata data...")
+    dump_updates_list(workdir)
 
-        logging.info("Dump dataset file from RPMs and Errata data...")
-        dump_datasets(workdir, details)
+    logging.info("Dump dataset file from RPMs and Errata data...")
+    dump_datasets(workdir, details)
 
 
-def option_parser(modes=_MODES):
+def option_parser():
     """
-    :param defaults: Option value defaults
-    :param usage: Usage text
+    Option parser.
     """
-        #print "ppath=%s, new_ppath=%s" % (ppath, new_ppath)
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    mode=modes[0], dist=None, repos="", force=False,
-                    verbose=False)
+                    dist=None, repos="", force=False, verbose=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -515,9 +504,6 @@ def option_parser(modes=_MODES):
     p.set_defaults(**defaults)
 
     p.add_option("-w", "--workdir", help="Working dir [%default]")
-    p.add_option("-m", "--mode", choices=modes,
-                 help="Select from 'collect'data or data 'analysis' "
-                      "mode [%default]")
     p.add_option("", "--details", action="store_true",
                  help="Get errata details also from RHN / Satellite")
     p.add_option("", "--offline", action="store_true",
@@ -549,8 +535,8 @@ def main():
 
     repos = options.repos.split(',')
 
-    modmain(ppath, options.workdir, options.mode, options.offline,
-            options.details, options.dist, repos, options.force)
+    modmain(ppath, options.workdir, options.offline, options.details,
+            options.dist, repos, options.force)
 
 
 if __name__ == '__main__':
