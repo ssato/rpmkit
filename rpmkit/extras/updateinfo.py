@@ -46,7 +46,8 @@ _ERRATA_CVE_MAP_FILE = "errata_cve_map.json"
 _UPDATES_FILE = "updates.json"
 _XLS_FILE = "packages_and_errata_summary.xls"
 
-_RPM_KEYS = ("name", "version", "release", "epoch", "arch", "buildhost")
+_RPM_KEYS = ("name", "version", "release", "epoch", "arch", "summary",
+             "vendor", "buildhost")
 _ERRATA_KEYS = ("advisory", "type", "severity")
 _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 
@@ -108,10 +109,10 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE, rpmkeys=_RPM_KEYS):
     :param root: RPM DB top dir
     :param workdir: Working dir to dump the result
     :param filename: Output file basename
+    :param rpmkeys: RPM keys to get info of package
     """
     logging.debug("Get rpms for the root: " + root)
-    rpms = [dict(zip(rpmkeys, attrgetter(*rpmkeys)(p))) for p in
-            RU.yum_list_installed(root)]
+    rpms = RU.list_installed_rpms(root, yum=True, keys=rpmkeys)
     logging.debug("%d installed rpms found in %s" % (len(rpms), root))
 
     U.json_dump(rpms, rpm_list_path(workdir, filename))
@@ -440,24 +441,25 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
-_WARN_ERRATA_DETAILS_NOT_AVAIL = """\
-Detailed errata information of the detected distribution %s is not
-supported. So it will disabled this feature."""
+_WARN_DETAILS_NOT_AVAIL = """\
+Detailed errata and packages information of the detected distribution %s
+is not supported. So it will disabled this feature."""
 
 
 def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
-            errata_details=False, dist=None, repos=[], force=False,
-            verbose=False,
-            warn_errata_details_msg=_WARN_ERRATA_DETAILS_NOT_AVAIL):
+            details=False, dist=None, repos=[], force=False,
+            rpmkeys=_RPM_KEYS, verbose=False,
+            warn_details_msg=_WARN_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
     :param mode: Running mode: collect data (0) or data analysis mode (1).
     :param offline: True if get results only from local cache
-    :param errata_details: True if detailed errata info is needed
+    :param details: True if detailed errata and packages info is needed
     :param dist: Specify target distribution explicitly
     :param repos: Specify yum repos to fetch errata and updates info
     :param force: Force overwrite the rpmdb file previously copied
+    :param rpmkeys: RPM keys to get info of package
     """
     logging.getLogger().setLevel(DEBUG if verbose else INFO)
 
@@ -476,13 +478,13 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
 
     if mode == _COLLECT_MODE:
         logging.info("Dump RPM list...")
-        dump_rpm_list(root, workdir)
+        dump_rpm_list(root, workdir, rpmkeys=rpmkeys)
 
         logging.info("Dump Errata summaries...")
         fetch_and_dump_errata_summary(root, workdir, dist, repos)
 
     else:
-        if errata_details:
+        if details:
             if not dist:
                 dist = YS.detect_dist()
 
@@ -490,13 +492,13 @@ def modmain(ppath, workdir=None, mode=_COLLECT_MODE, offline=False,
                 logging.info("Dump Errata details...")
                 dump_errata_list(workdir, offline)
             else:
-                logging.warn(warn_errata_details_msg % dist)
+                logging.warn(warn_details_msg % dist)
 
         logging.info("Dump update RPM list from errata data...")
         dump_updates_list(workdir)
 
         logging.info("Dump dataset file from RPMs and Errata data...")
-        dump_datasets(workdir, errata_details)
+        dump_datasets(workdir, details)
 
 
 def option_parser(modes=_MODES):
