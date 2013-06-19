@@ -32,11 +32,7 @@ import os
 import os.path
 import re
 import sys
-
-try:
-    from tablib import Dataset, Databook
-except ImportError:
-    Dataset = Databook = None
+import tablib
 
 
 _RPM_LIST_FILE = "packages.json"
@@ -313,7 +309,7 @@ def _make_dataset(list_data, headers=None, title=None):
     :param headers: Dataset headers to be used as column headers
     :param headers: Dataset title to be used as worksheet's name
     """
-    dataset = Dataset()
+    dataset = tablib.Dataset()
 
     if title:
         dataset.title = title
@@ -433,9 +429,9 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         des = [x for x in _detailed_errata_list_g(workdir)]
         des_dataset = _make_dataset(des, dekeys, "Errata Details")
 
-        book = Databook(datasets + [des_dataset])
+        book = tablib.Databook(datasets + [des_dataset])
     else:
-        book = Databook(datasets)
+        book = tablib.Databook(datasets)
 
     with open(dataset_file_path(workdir), 'wb') as out:
         out.write(book.xls)
