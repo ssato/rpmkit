@@ -165,20 +165,25 @@ def _unique(xs, cmp=cmp, key=None):
     return ret
 
 
-def uniq(iterable, cmp=cmp, key=None, sort=False):
+def uniq2(iterable, cmp=cmp, key=None, reverse=False, sort=True):
     """
     Safer version of the above.
+
+    >>> uniq2([])
+    []
+    >>> uniq2([0, 3, 1, 2, 1, 0, 4, 5])
+    [0, 1, 2, 3, 4, 5]
+    >>> uniq2([0, 3, 1, 2, 1, 0, 4, 5], reverse=True)
+    [5, 4, 3, 2, 1, 0]
+    >>> uniq2([0, 3, 1, 2, 1, 0, 4, 5], sort=False)
+    [0, 3, 1, 2, 4, 5]
     """
     acc = []
     for x in iterable:
         if x not in acc:
             acc.append(x)
 
-    return sorted(acc) if sort else acc
-
-
-def uconcat(xss):
-    return uniq(concat(xss))
+    return sorted(acc, cmp, key, reverse) if sort else acc
 
 
 def groupby_key(xs, keyfunc):
@@ -191,6 +196,10 @@ concat = _concat
 flatten = _flatten
 unique = _unique
 uniq = _unique
+
+
+def uconcat(xss):
+    return uniq(concat(xss))
 
 
 def timeit(f, *args, **kwargs):
