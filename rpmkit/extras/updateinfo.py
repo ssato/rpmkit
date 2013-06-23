@@ -262,12 +262,9 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
                     for cve in cves:
                         dcve = swapicall("swapi.cve.getCvss", offline, cve)[0]
                         if dcve:
-                            log_prefix = "Got detailed info: "
                             dcves.append(dcve)
                         else:
-                            log_prefix = "Could not get detailed info: "
-
-                        logging.debug(log_prefix + cve)
+                            logging.warn("Couldn't get details of " + cve)
 
                 errata["cves"] = dcves if dcves else cves
 
