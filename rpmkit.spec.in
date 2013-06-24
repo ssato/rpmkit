@@ -99,7 +99,7 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
-* Mon May 27 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11.999-1
+* Mon Jun 24 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.12-1
 - [yum-surrogate] promoted from extras to main
 - [yum-surrogate] some fixes around 'Packages' path and root processing
 - [yum-surrogate] make root and dist computed automatically if not given
