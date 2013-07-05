@@ -120,6 +120,16 @@ def list_root_nodes(G):
     return [n for n in G if not G.predecessors(n) and G.successors(n)]
 
 
+def list_leaf_nodes(g):
+    """
+    List leaf nodes of given graph ``g``.
+
+    :param g: networkx.DiGraph instance
+    :return: List of nodes
+    """
+    return [n for n in g if not g.successors(n)]
+
+
 def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
     """
     Make directed acyclic graph of RPM dependencies.
