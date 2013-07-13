@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2012 Satoru SATOH <satoru.satoh@gmail.com>
+# Copyright (C) 2012, 2013 Satoru SATOH <satoru.satoh@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 def memoize(fn):
     """memoization decorator.
     """
+    assert callable(fn), "Given object is not callable!: " + repr(fn)
     cache = {}
 
     def wrapped(*args, **kwargs):
@@ -26,6 +27,7 @@ def memoize(fn):
 
         return cache[key]
 
+    wrapped.__doc__ = fn.__doc__
     return wrapped
 
 
