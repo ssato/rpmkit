@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Satoru SATOH <ssato at redhat.com>
+# Copyright (C) 2011 - 2013 Satoru SATOH <ssato at redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,20 +14,32 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.memoize as M
+from inspect import getdoc
+
+import rpmkit.memoize as TT
 import unittest
 
 
-class TestMemoize(unittest.TestCase):
+class Test_00_Memoize(unittest.TestCase):
 
-    def test_memoize(self):
+    def test_00_simple_case(self):
         x = 0
         f = lambda _x: x
 
-        f = M.memoize(f)
+        f = TT.memoize(f)
         x = 1
 
         self.assertEquals(f(0), f(1))
 
+    def test_10_doc_string_is_kept(self):
+        def t():
+            """Always returns True."""
+            return True
+
+        t2 = TT.memoize(t)
+        self.assertEquals(getdoc(t), getdoc(t2))
+
+    def test_20_not_callable_object_is_passed(self):
+        self.assertRaises(AssertionError, TT.memoize, None)
 
 # vim:sw=4:ts=4:et:
