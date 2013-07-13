@@ -69,15 +69,15 @@ def _degenerate_node(nodes, reason):
     return ("%s..." % nodes[0], dict(names=nodes, reason=reason))
 
 
-def _degenerate_nodes(G, nodes, reason, edge_attrs=_E_ATTRS):
+def _degenerate_nodes(g, nodes, reason, edge_attrs=_E_ATTRS):
     """
     For each node, remove edges from/to that node and the node from the graph
-    ``G`` and then add newly 'degenerated' node and relevant edges again.
+    ``g`` and then add newly 'degenerated' node and relevant edges again.
 
-    Note: This is effectful function, that is, given graph ``G`` will be
+    Note: This is effectful function, that is, given graph ``g`` will be
     modified.
 
-    :param G: Dependency graph of nodes :: NX.DiGraph
+    :param g: Dependency graph of nodes :: NX.DiGraph
     :param nodes: Node list :: [str]
     :param reason: Reason to degenerate nodes
     :param edge_attrs: Default edge attributes :: dict
@@ -86,38 +86,38 @@ def _degenerate_nodes(G, nodes, reason, edge_attrs=_E_ATTRS):
         return  # do nothing with empty or single item list.
 
     (dnode, attrs) = _degenerate_node(nodes, reason)
-    G.add_node(dnode, **attrs)
+    g.add_node(dnode, **attrs)
 
     ucat = U.uconcat
-    successors = ucat([s for s in G.successors_iter(n) if s not in nodes]
+    successors = ucat([s for s in g.successors_iter(n) if s not in nodes]
                       for n in nodes)
-    predecessors = ucat([p for p in G.predecessors_iter(n) if p not in nodes]
+    predecessors = ucat([p for p in g.predecessors_iter(n) if p not in nodes]
                         for n in nodes)
 
     if successors:
-        G.add_edges_from([(dnode, s, edge_attrs) for s in successors])
+        g.add_edges_from([(dnode, s, edge_attrs) for s in successors])
 
     if predecessors:
-        G.add_edges_from([(p, dnode, edge_attrs) for p in predecessors])
+        g.add_edges_from([(p, dnode, edge_attrs) for p in predecessors])
 
     # Remove old edges and nodes:
     for node in nodes:
-        G.remove_edges_from([(node, s) for s in G.successors_iter(node)])
-        G.remove_edges_from([(p, node) for p in G.predecessors_iter(node)])
+        g.remove_edges_from([(node, s) for s in g.successors_iter(node)])
+        g.remove_edges_from([(p, node) for p in g.predecessors_iter(node)])
 
-    G.remove_nodes_from(nodes)
+    g.remove_nodes_from(nodes)
 
 
-def list_root_nodes(G):
+def list_root_nodes(g):
     """
-    List root nodes of given graph ``G``.
+    List root nodes of given graph ``g``.
 
-    Alternative: [n for n,d in G.in_degree().items() if d == 0]
+    Alternative: [n for n,d in g.in_degree().items() if d == 0]
 
-    :param G: networkx.DiGraph instance
+    :param g: networkx.DiGraph instance
     :return: List of nodes :: [str]
     """
-    return [n for n in G if not G.predecessors(n) and G.successors(n)]
+    return [n for n in g if not g.predecessors(n) and g.successors(n)]
 
 
 def list_leaf_nodes(g):
@@ -151,44 +151,44 @@ def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
     if reqs is None:
         reqs = RU.make_requires_dict(root)
 
-    G = make_dependency_graph_with_nx(root, rreqs=rreqs)
+    g = make_dependency_graph_with_nx(root, rreqs=rreqs)
 
     # Remove edges of self cyclic nodes:
-    G.remove_edges_from(G.selfloop_edges())
+    g.remove_edges_from(g.selfloop_edges())
 
     # Degenerate strongly connected components:
-    for scc in NX.strongly_connected_components(G):
+    for scc in NX.strongly_connected_components(g):
         scc = sorted(U.uniq(scc))  # TODO: Is this needed?
 
         if len(scc) == 1:  # Ignore sccs of which length is 1.
             continue
 
-        _degenerate_nodes(G, scc, "Strongly Connected Components")
+        _degenerate_nodes(g, scc, "Strongly Connected Components")
 
     # Degenerate cyclic nodes:
-    for cns in NX.simple_cycles(G):
+    for cns in NX.simple_cycles(g):
         cns = sorted(U.uniq(cns))  # TODO: Likewise
 
         # Should not happen as selc cyclic nodes were removed in advance.
         assert len(cns) != 1, "Self cyclic node: " + cns[0]
 
-        _degenerate_nodes(G, cns, "Cyclic nodes")
+        _degenerate_nodes(g, cns, "Cyclic nodes")
 
-    assert NX.is_directed_acyclic_graph(G), \
-           "I'm still missing something to make graph to dag..."
+    assert NX.is_directed_acyclic_graph(g), \
+        "I'm still missing something to make graph to dag..."
 
-    return G
+    return g
 
 
 def _clone_nodeid(node, ids):
     return "%s__%d" % (node, ids.get(node, count()).next())
 
 
-def tree_from_dag(G, root_node, fmt=False, edge_attrs=_E_ATTRS):
+def tree_from_dag(g, root_node, fmt=False, edge_attrs=_E_ATTRS):
     """
-    Make tree from DAG ``G``.
+    Make tree from DAG ``g``.
 
-    :param G: networkx.DiGraph instance of DAG, direct acyclic graph.
+    :param g: networkx.DiGraph instance of DAG, direct acyclic graph.
     :param root_node: Root node
     :param fmt: Return data in tree format that is suitable for JSON
         serialization.
@@ -196,9 +196,9 @@ def tree_from_dag(G, root_node, fmt=False, edge_attrs=_E_ATTRS):
 
     :return: networkx.DiGraph instance or its JSON representation.
     """
-    assert NX.is_directed_acyclic_graph(G), "Given graph is not DAG."
+    assert NX.is_directed_acyclic_graph(g), "Given graph is not DAG."
 
-    nsattrs = NX.get_node_attributes(G, "names")
+    nsattrs = NX.get_node_attributes(g, "names")
 
     g = NX.DiGraph()
     g.add_node(root_node, name=root_node,
@@ -213,7 +213,7 @@ def tree_from_dag(G, root_node, fmt=False, edge_attrs=_E_ATTRS):
         next_parents = set()
 
         for parent in parents:
-            for s in G.successors_iter(parent):
+            for s in g.successors_iter(parent):
                 names = nsattrs.get(s, [s])
 
                 if s in visited:
