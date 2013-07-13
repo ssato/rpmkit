@@ -41,7 +41,7 @@ _ERRATA_SUMMARY_FILE = "errata_summary.json"
 _ERRATA_LIST_FILE = "errata.json"
 _ERRATA_CVE_MAP_FILE = "errata_cve_map.json"
 _UPDATES_FILE = "updates.json"
-_XLS_FILE = "packages_and_errata_summary.xls"
+_XLS_FILE = "errata_summary.xls"
 
 _RPM_KEYS = ("name", "version", "release", "epoch", "arch", "summary",
              "vendor", "buildhost")
