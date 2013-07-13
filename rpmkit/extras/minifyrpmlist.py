@@ -32,7 +32,30 @@ import os.path
 import sys
 
 
-_SPECIAL_GROUPS = ["core", "base"]
+def init_repoquery():
+    """
+    p = RQ.oparser()  # options.pkgnarrow == "repos"
+    (opts, args) = p.parse_args(shlex.split("--tempcache --quiet --cache --whatrequires bash"))
+    repoq = RQ.YumBaseQuery([], ["whatrequires"], opts)
+    repoq.repos.setCache(1)
+    repoq.runQuery("bash")
+    """
+    pass
+
+
+def _list_requires_1(provs, sacks):
+    """
+    List package requiring ``proves`` non-recursively.
+
+    Based on repoquery.YumBaseQuery.fmt_whatrequires.
+
+    :param provs: Provider (package) names :: [str]
+    :param sacks: List of instances of yum.packageSack.PackageSackBase
+    """
+    for prov in provs:
+        for sack in sacks:
+            for pkg in sack.searchRequires(prov):
+                yield pkg
 
 
 def package_and_group_pairs(gps):

@@ -92,7 +92,7 @@ setup(name=PACKAGE,
         "rpmkit.rhncachedb",
         "rpmkit.tests",
     ],
-    scripts=glob("src/*"),
+    scripts=glob("tools/*"),
     data_files=data_files,
     cmdclass={
         "srpm": SrpmCommand,
