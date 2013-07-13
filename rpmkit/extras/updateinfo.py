@@ -1,4 +1,3 @@
-#! /usr/bin/python -tt
 # updateinfo.py - collect info of update and errata applicable to given rpm db
 # with utilizing swapi and yum-surrogate.
 #

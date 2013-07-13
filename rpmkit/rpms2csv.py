@@ -1,4 +1,3 @@
-#! /usr/bin/python 
 #
 # Author: Satoru SATOH <ssato@redhat.com>
 # License: MIT
