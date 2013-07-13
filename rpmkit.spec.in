@@ -148,7 +148,7 @@ rm -rf $RPM_BUILD_ROOT
 - Bug fix release
 - Fixes and enhancements around rpmkit.shell.do_task by Masatake YAMATO <yamato@redhat.com>
 
-* Sun May 28 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10-1
+* Sun May 27 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10-1
 - New upstream
 - Exported myrepo to another package to reduce extra dependencies
 
@@ -165,7 +165,7 @@ rm -rf $RPM_BUILD_ROOT
 * Sat Mar  3 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6.20120303-1
 - Switched to multiprocessing module to avoid deadlock in threads
 
-* Thu Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6-2
+* Wed Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6-2
 - Fixed a myrepo bug that default template search path list is not set
 - Moved some common parts from rpmkit.myrepo.* to rpmkit.{globals,utils}
 
