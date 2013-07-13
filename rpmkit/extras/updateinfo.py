@@ -1,5 +1,7 @@
-# updateinfo.py - collect info of update and errata applicable to given rpm db
-# with utilizing swapi and yum-surrogate.
+#
+# updateinfo.py - collect info of updates and errata applicable to the target
+# system with referering its rpm database files and utilizing swapi and
+# yum-surrogate.
 #
 # Copyright (C) 2013 Satoru SATOH <ssato@redhat.com>
 #
