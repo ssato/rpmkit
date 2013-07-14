@@ -99,6 +99,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Sun Jul 14 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.12.999-1
+- [buildsrpm] make it run standalone
+
 * Mon Jun 24 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.12-1
 - [yum-surrogate] promoted from extras to main
 - [yum-surrogate] some fixes around 'Packages' path and root processing
