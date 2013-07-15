@@ -136,12 +136,14 @@ def download_src0(rpmspec, url, out):
         download(url, out)
 
 
-def do_buildsrpm(rpmspec, workdir):
+def do_buildsrpm(rpmspec, workdir, timeout=None):
     """
     Build the source rpm.
 
     :param rpmspec: Path to the RPM SPEC file
     :param workdir: Working dir to make RPM files
+    :param timeout: Timeout in seconds to wait for the completion of build job.
+        None means it will wait forever.
     """
     cs = ["rpmbuild", "--define \"_srcrpmdir %(workdir)s\"",
           "--define \"_sourcedir %(workdir)s\"",
@@ -150,17 +152,20 @@ def do_buildsrpm(rpmspec, workdir):
     cmd = ' '.join(cs) % dict(workdir=workdir, spec=rpmspec)
 
     logging.info("Creating src.rpm from %s in %s" % (rpmspec, workdir))
-    run(cmd, workdir=workdir, stop_on_error=True)
+    run(cmd, workdir=workdir, timeout=timeout, stop_on_error=True)
 
 
 def main(argv=sys.argv):
-    defaults = dict(debug=False, workdir=None)
+    defaults = dict(debug=False, workdir=None, timeout=None)
 
     p = optparse.OptionParser("%prog [Options...] RPM_SPEC")
     p.set_defaults(**defaults)
 
     p.add_option("-D", "--debug", action="store_true", help="Debug mode")
     p.add_option("-w", "--workdir", help="Working dir to search source0")
+    p.add_option("-T", "--timeout",
+                 help="Timeout in seconds or None (wait for the completion "
+                      "of build forever")
 
     (options, args) = p.parse_args(argv[1:])
 
@@ -176,6 +181,9 @@ def main(argv=sys.argv):
     if options.workdir is None:
         options.workdir = os.path.dirname(rpmspec)
 
+    if options.timeout is not None:
+        options.timeout = int(options.timeout)
+
     logging.info("Set workdir to " + options.workdir)
 
     (url, src0) = get_source0_url_from_rpmspec(rpmspec)
@@ -188,7 +196,7 @@ def main(argv=sys.argv):
     if not os.path.exists(s0):
         download_src0(rpmspec, url, s0)
 
-    do_buildsrpm(rpmspec, options.workdir)
+    do_buildsrpm(rpmspec, options.workdir, options.timeout)
 
 
 if __name__ == '__main__':
