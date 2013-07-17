@@ -55,6 +55,14 @@ class Test_10_run(unittest.TestCase):
         self.assertTrue(TT.run("true"))
         self.assertTrue(TT.run("false"))
 
+    def test_20_run__if_interrupted(self):
+        """TODO: Implement test cases of keyboard interruption."""
+        return
+
+        TT.run("sleep 3 && kill -s INT %d" % os.getpid())
+
+        self.assertFalse(TT.run("sleep 1000"))
+
 
 class Test_20_prun(unittest.TestCase):
 

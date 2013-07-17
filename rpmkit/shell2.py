@@ -147,16 +147,23 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir,
         raised if stop_on_error is True
     """
     job = run_async(cmd, user, host, workdir, timeout)
-    job.join(timeout.exec_timeout())
 
-    if not job.successful():
-        if stop_on_error:
-            raise RuntimeError("Failed: " + cmd)
+    try:
+        job.join(timeout.exec_timeout())
 
-        logging.warn("Failed: " + cmd)
+        if not job.successful():
+            if stop_on_error:
+                raise RuntimeError("Failed: " + cmd)
+
+            logging.warn("Failed: " + cmd)
+            return False
+
+        return True
+    except KeyboardInterrupt as e:
+        logging.warn("Command execution was interrupted: " + cmd)
+        job.kill()
+
         return False
-
-    return True
 
 
 def prun_async(list_of_args):
