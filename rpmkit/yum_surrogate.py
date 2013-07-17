@@ -95,23 +95,9 @@ def _id(x):
     return x
 
 
-def run(cmd):
+def run(cmd, ofunc=_id, efunc=_id, timeout=None):
     """
-    :param cmd: Command string
-    :return: (output :: str ,err_output :: str, exitcode :: Int)
-    """
-    logging.debug("Run command: " + cmd)
-    p = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE,
-                         stdout=subprocess.PIPE)
-    (out, err) = p.communicate()
-    return (out, err, p.returncode)
-
-
-def run2(cmd, ofunc=_id, efunc=_id, timeout=None):
-    """
-    Non-blocking version of the above ``run`` function.
-
-    see also: http://bit.ly/VoKhdS
+    Run commands without blocking I/O. See also http://bit.ly/VoKhdS.
 
     :param cmd: Command string
     :param ofunc: Function to process output line by line :: str => line -> ...
@@ -337,28 +323,6 @@ def surrogate_operation(root, operation, logfiles=None):
         e.g. ('./tmp/out.log', '/tmp/err.log')
     """
     root = os.path.abspath(root)
-    cs = ["yum", ("" if root == "/" else "--installroot=" + root), operation]
-
-    (out, err, rc) = run(' '.join(cs))
-    if logfiles:
-        (outlog, errlog) = logfiles
-        open(outlog, 'w').write(out)
-        open(errlog, 'w').write(err)
-
-    return (out, err, rc)
-
-
-def surrogate_operation2(root, operation, logfiles=None):
-    """
-    Surrogates yum operation (command) which utilizes ``run2`` function.
-
-    :param root: Pivot root dir where var/lib/rpm/Packages of the target host
-        exists, e.g. /root/host_a/
-    :param operation: Yum operation (command), e.g. 'list-sec'
-    :param logfiles: Pair of output and error log files,
-        e.g. ('./tmp/out.log', '/tmp/err.log')
-    """
-    root = os.path.abspath(root)
     cs = ["yum", "" if root == "/" else "--installroot=" + root, operation]
 
     cmd = ' '.join(cs)
@@ -367,9 +331,9 @@ def surrogate_operation2(root, operation, logfiles=None):
         (outlog, errlog) = logfiles
 
         with open(outlog, 'w') as olog, open(errlog, 'w') as elog:
-            (out, err, rc) = run2(cmd, olog.write, elog.write)
+            (out, err, rc) = run(cmd, olog.write, elog.write)
     else:
-        (out, err, rc) = run2(cmd)
+        (out, err, rc) = run(cmd)
 
     return (out, err, rc)
 
@@ -478,7 +442,7 @@ def list_errata_g(root, dist=None, logfiles=None, opts=None):
         dist = detect_dist()
 
     yum_args = opts + " list-sec" if opts else "list-sec"
-    result = surrogate_operation2(root, yum_args, logfiles)
+    result = surrogate_operation(root, yum_args, logfiles)
 
     if result[-1] == 0:
         for line in result[0]:
