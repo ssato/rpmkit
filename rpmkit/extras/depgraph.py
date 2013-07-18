@@ -424,7 +424,11 @@ def option_parser(root=_RPM_ROOT, tpaths=_TEMPLATE_PATHS, engine=_GV_ENGINE,
                     tpaths=tpaths, engine=engine, html=True,
                     verbose=False)
 
-    p = optparse.OptionParser("%prog [Options...]")
+    p = optparse.OptionParser("""%prog [Options...]
+
+Examples:
+ # RPM database files exist in ./target_systems/www-server-101/var/lib/rpm/.
+ %prog -w ./depgraph.out -v -r ./target_systems/www-server-101""")
     p.set_defaults(**defaults)
 
     p.add_option("-r", "--root", help="RPM database root dir [%default]")
