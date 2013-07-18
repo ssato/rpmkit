@@ -323,7 +323,7 @@ def dump_gv_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
     ctx = dict(dependencies=[(r, ps) for r, ps in reqs.iteritems()])
 
     depgraph_s = render("rpmdep_graph_gv.j2", ctx, template_paths, ask=True)
-    src = os.path.join(workdir, "rpmdep_graph." + engine)
+    src = os.path.join(workdir, "rpmdep_graph.dot")
     U.copen(src, 'w').write(depgraph_s)
 
     output = src + ".svg"
