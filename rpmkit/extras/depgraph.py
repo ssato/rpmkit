@@ -398,6 +398,8 @@ def dump_graphs(root, workdir, tpaths=_TEMPLATE_PATHS, html=True):
         f = os.path.join(workdir, "rpmdep_tree_%(name)s.json" % tree)
         U.copen(f, 'w').write(str(tree))
 
+    # Render dependency graph w/ d3.js (force directed layout).
+    # see also: https://github.com/mbostock/d3/wiki/Force-Layout
     if html:
         logging.info("Generate HTML graph files")
         t = "rpmdep_graph_d3_force_directed_graph.html.j2"
