@@ -64,6 +64,9 @@ def _make_dependency_graph(root, reversed=True, rreqs=None,
         g.add_node(k, names=[k])
         g.add_edges_from([(k, v, edge_attrs) for v in vs])
 
+    # Remove edges of self cyclic nodes:
+    g.remove_edges_from(g.selfloop_edges())
+
     return g
 
 
@@ -170,9 +173,6 @@ def make_dependencies_dag(root, reqs=None, rreqs=None):
         reqs = RU.make_requires_dict(root)
 
     g = make_dependency_graph(root, rreqs=rreqs)
-
-    # Remove edges of self cyclic nodes:
-    g.remove_edges_from(g.selfloop_edges())
 
     # Degenerate strongly connected components:
     for scc in NX.strongly_connected_components(g):
@@ -334,7 +334,9 @@ def dump_gv_depgraph(root, workdir, tpaths=_TEMPLATE_PATHS,
         if not rs:  # This is a root RPM:
             reqs[p] = ["<rpmlibs>"]  # Set virtual root for this root rpm.
 
-    ctx = dict(dependencies=[(r, ps) for r, ps in reqs.iteritems()])
+    # Remove self dependency refs:
+    ctx = dict(dependencies=[(r, [p for p in ps if p != r]) for r, ps in
+                             reqs.iteritems()])
 
     depgraph_s = render("rpmdep_graph_gv.j2", ctx, tpaths, ask=True)
     src = os.path.join(workdir, "rpmdep_graph.dot")
