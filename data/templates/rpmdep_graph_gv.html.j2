@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/graphviz-svg.js"></script>
+    <style>
+#wrap { margin: 3em; }
+.node circle, .node ellipse { fill: #fff; stroke: steelblue; stroke-width: 1.5px; }
+.node { font: 10px sans-serif; }
+.link { fill: none; stroke: #ccc; stroke-width: 1.5px; }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="controller" >
+        <div class="current_scale"><span id="current_scale"/>scale = 1.0</div>
+        <input type="submit" id="zoom_in" value="+"/>
+        <input type="submit" id="zoom_out" value="-"/>
+        <input type="submit" id="reset_zoom" value="reset"/>
+        {% if highlight is defined %}<input type="submit" id="highlight_update_rpms" value="Highlight update RPMs"/>{% endif %}
+        <!-- <input type="submit" id="reset_hightlights" value="Reset highlights"/> -->
+      </div>
+    </div>
+    <div>
+      <object type="image/svg+xml" data="rpmdep_graph.dot.svg" height="800px" width="800px" id="svg_graph"></object>
+    </div>
+  </body>
+</html>
