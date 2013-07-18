@@ -85,7 +85,8 @@ def _degenerate_node(nodes, reason, cntr=_DGNODE_CTR):
     assert nodes, "Empty node list was given!"
 
     label = "%s %d" % (reason, cntr.next())
-    logging.debug("Create degenerate node: " + label)
+    nodes_s = "[%s...]" % ', '.join(n for n in nodes[:5])
+    logging.debug("Create degenerate node: %s %s" % (label, nodes_s))
 
     return (label, dict(names=nodes, reason=reason))
 
@@ -295,7 +296,7 @@ def make_dependencies_trees(root, fmt=False, compute_size=False):
 
         return tree
 
-    logging.debug("%d nodes, %d edges and %d roots" %
+    logging.debug("Trees: %d nodes, %d edges and %d roots" %
                   (g.number_of_nodes(), g.number_of_edges(), len(root_nodes)))
 
     return [_get_tree(g, rn, fmt) for rn in root_nodes]
