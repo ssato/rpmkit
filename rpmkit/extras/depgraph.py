@@ -301,8 +301,21 @@ def make_dependencies_trees(root, fmt=False, compute_size=False):
     return [_get_tree(g, rn, fmt) for rn in root_nodes]
 
 
-def dump_gv_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
-                     engine=_GV_ENGINE):
+def _renderfile(workdir, tmpl, ctx={}, tpaths=_TEMPLATE_PATHS):
+    if os.path.sep in tmpl:
+        subdir = os.path.dirname(tmpl)
+        d = os.path.join(workdir, subdir)
+        tpaths = [os.path.join(t, subdir) for t in tpaths]
+
+        if not os.path.exists(d):
+            os.makedirs(d)
+
+    s = render(tmpl, ctx, tpaths, ask=True)
+    U.copen(os.path.join(workdir, tmpl[:-3]), 'w').write(s)
+
+
+def dump_gv_depgraph(root, workdir, tpaths=_TEMPLATE_PATHS,
+                     engine=_GV_ENGINE, html=True):
     """
     Generate dependency graph with graphviz.
 
@@ -310,8 +323,9 @@ def dump_gv_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     :param root: Root dir where 'var/lib/rpm' exists
     :param workdir: Working dir to dump the result
-    :param template_paths: Template path list
+    :param tpaths: Template path list
     :param engine: Graphviz rendering engine to choose, e.g. neato
+    :param html: Generate HTML graph files if True
     """
     reqs = RU.make_requires_dict(root)
 
@@ -322,20 +336,28 @@ def dump_gv_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     ctx = dict(dependencies=[(r, ps) for r, ps in reqs.iteritems()])
 
-    depgraph_s = render("rpmdep_graph_gv.j2", ctx, template_paths, ask=True)
+    depgraph_s = render("rpmdep_graph_gv.j2", ctx, tpaths, ask=True)
     src = os.path.join(workdir, "rpmdep_graph.dot")
     U.copen(src, 'w').write(depgraph_s)
 
     output = src + ".svg"
     SH.run("%s -Tsvg -o %s %s" % (engine, output, src), workdir=workdir)
 
+    if html:
+        logging.info("Generate HTML files for graphviz outputs")
+        for t in ("js/graphviz-svg.js.j2", "js/jquery.js.j2",
+                  "rpmdep_graph_gv.html.j2"):
+            _renderfile(workdir, t, ctx={}, tpaths=tpaths)
 
-def dump_graphs(root, workdir):
+
+def dump_graphs(root, workdir, tpaths=_TEMPLATE_PATHS, html=True):
     """
     Make and dump RPM dependency graphs.
 
     :param root: RPM Database root dir
     :param workdir: Working directory to dump results
+    :param tpaths: Template path list
+    :param html: Generate HTML graph files if True
     """
     g = make_dependency_graph(root)
     dag = make_dependencies_dag(root)
@@ -351,8 +373,10 @@ def dump_graphs(root, workdir):
     g_data = dict()
     g_data["name"] = "RPM Dependency graph: root=%s" % root
     g_data["nodes"] = [dict(name=n, group=1) for n in g]
-    g_data["links"] = [dict(source=e[0], target=e[1], value=1) for e in
-                       g.edges_iter()]
+
+    nodeids = dict((n["name"], i) for i, n in enumerate(g_data["nodes"]))
+    g_data["links"] = [dict(source=nodeids[e[0]], target=nodeids[e[1]],
+                            value=1) for e in g.edges_iter()]
 
     U.json_dump(g_data, os.path.join(workdir, "rpmdep_graph.json"))
 
@@ -361,8 +385,10 @@ def dump_graphs(root, workdir):
     dag_data = dict()
     dag_data["name"] = "RPM Dependency DAG: root=%s" % root
     dag_data["nodes"] = [dict(name=n, group=1) for n in dag]
-    dag_data["links"] = [dict(source=e[0], target=e[1], value=1) for e in
-                         dag.edges_iter()]
+
+    nodeids = dict((n["name"], i) for i, n in enumerate(dag_data["nodes"]))
+    dag_data["links"] = [dict(source=nodeids[e[0]], target=nodeids[e[1]],
+                              value=1) for e in dag.edges_iter()]
 
     U.json_dump(dag_data, os.path.join(workdir, "rpmdep_dag.json"))
 
@@ -372,19 +398,26 @@ def dump_graphs(root, workdir):
         f = os.path.join(workdir, "rpmdep_tree_%(name)s.json" % tree)
         U.copen(f, 'w').write(str(tree))
 
+    if html:
+        logging.info("Generate HTML graph files")
+        t = "rpmdep_graph_d3_force_directed_graph.html.j2"
+        _renderfile(workdir, t, dict(root=root, graph_type="graph"), tpaths)
+        _renderfile(workdir, t, dict(root=root, graph_type="daga"), tpaths)
+
 
 def option_parser(root=_RPM_ROOT, tpaths=_TEMPLATE_PATHS, engine=_GV_ENGINE,
                   engines=_GV_ENGINES):
     """
     Command line option parser.
 
-    :param template_paths:
+    :param tpaths: Template search paths
     :param engine: Graphviz engine for rendering
     :param engines: Graphviz engine choices
     """
     timestamp = datetime.datetime.now().strftime("%Y%m%d")
     defaults = dict(root=root, workdir="rk_depgraph_output_%s" % timestamp,
-                    tpaths=tpaths, engine=engine, verbose=False)
+                    tpaths=tpaths, engine=engine, html=True,
+                    verbose=False)
 
     p = optparse.OptionParser("%prog [Options...]")
     p.set_defaults(**defaults)
@@ -394,6 +427,8 @@ def option_parser(root=_RPM_ROOT, tpaths=_TEMPLATE_PATHS, engine=_GV_ENGINE,
     p.add_option("-T", "--tpaths", action="append",
                  help="Specify template search paths one by one. Default "
                       "paths are: " + ', '.join(tpaths))
+    p.add_option("", "--no-html", action="store_false", dest="html",
+                 help="Do not generate HTML graph files")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     gog = optparse.OptionGroup(p, "Graphviz options")
@@ -410,11 +445,11 @@ def main(argv=sys.argv):
     (options, args) = p.parse_args(argv[1:])
 
     logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
-    dump_graphs(options.root, options.workdir)
+    dump_graphs(options.root, options.workdir, options.tpaths, options.html)
 
     logging.info("Make dependency graph and dump it with graphviz")
     dump_gv_depgraph(options.root, options.workdir, options.tpaths,
-                     options.engine)
+                     options.engine, options.html)
 
 
 if __name__ == '__main__':
