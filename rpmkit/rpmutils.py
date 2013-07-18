@@ -111,7 +111,7 @@ def h2nvrea(h, keys=RPM_BASIC_KEYS):
     return dict(zip(keys, [h[k] for k in keys]))
 
 
-def _yum_list_installed(root=None):
+def _yum_list_installed(root=None, cachedir=None, persistdir=None):
     """
     :param root: RPM DB root dir
     :return: List of yum.rpmsack.RPMInstalledPackage objects
@@ -119,8 +119,11 @@ def _yum_list_installed(root=None):
     if root is None:
         root = "/var/lib/rpm"
 
+    if persistdir is None:
+        persistdir = root
+
     sack = RPMDBPackageSack(root, cachedir=os.path.join(root, "cache"),
-                            persistdir=root)
+                            persistdir=persistdir)
 
     return sack.returnPackages()  # NOTE: 'gpg-pubkey' is not in this list.
 
