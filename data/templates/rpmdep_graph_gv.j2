@@ -26,10 +26,10 @@ node_{{ index }}_{{ subindex }}
 {% endmacro %}
 
 digraph rpm_dependencies {
-    node [ fillcolor="white", color="steelblue", shape="point", style="filled", id="\N", width="0.5" ]
+    node [ fillcolor="white", color="steelblue", shape="point", style="filled", id="\N", width="0.3" ]
     /* edge [ arrowhead="none", w="10", len="1000", id="\T_._\H" ] */
     edge [ color="gray30", w="10", len="1000", id="\T_._\H", weight = "0.1", arrowsize="0.6", penwidth="1.2" ]
-    overlap="false"; ranksep=3.0; nodesep=2.0;
+    overlap="false" /* or "scale" */; ranksep=1.5; nodesep=1.5;
 
 {% for reqd, reqs in dependencies -%}{% set index = loop.index0 -%}
 {# {{ gen_subgraph_and_rel_map(reqd, reqs, loop.index0) }} -#}
