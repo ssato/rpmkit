@@ -15,22 +15,35 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from rpmkit.memoize import memoize
+from logging import DEBUG, INFO
 from itertools import count
+from rpmkit.memoize import memoize
+from jinja2_cli.render import render
 
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
+import rpmkit.shell2 as SH
 
+import datetime
 import logging
 import networkx as NX
 import networkx.readwrite.json_graph as JS
+import optparse
+import os
+import os.path
+import sys
 
 
 _E_ATTRS = dict(weight=1.0, )
 
+_RPM_ROOT = "/var/lib/rpm"
+_TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
+_GV_ENGINE = "sfdp"   # or neato, twopi, ...
+_GV_ENGINES = ("dot", "neato", "twopi", "circo", "fdp", "sfdp")
 
-def _make_dependency_graph_with_nx(root, reversed=True, rreqs=None,
-                                   edge_attrs=_E_ATTRS):
+
+def _make_dependency_graph(root, reversed=True, rreqs=None,
+                           edge_attrs=_E_ATTRS):
     """
     Make RPM dependency graph with using Networkx.DiGraph for given root.
 
@@ -54,10 +67,12 @@ def _make_dependency_graph_with_nx(root, reversed=True, rreqs=None,
     return g
 
 
-make_dependency_graph_with_nx = memoize(_make_dependency_graph_with_nx)
+make_dependency_graph = memoize(_make_dependency_graph)
+
+_DGNODE_CTR = count()
 
 
-def _degenerate_node(nodes, reason):
+def _degenerate_node(nodes, reason, cntr=_DGNODE_CTR):
     """
     :param nodes: List of nodes to degenerate :: [str]
     :param reason: Reason to degenerate nodes
@@ -66,7 +81,10 @@ def _degenerate_node(nodes, reason):
     """
     assert nodes, "Empty node list was given!"
 
-    return ("%s..." % nodes[0], dict(names=nodes, reason=reason))
+    label = "%s %d" % (reason, cntr.next())
+    logging.debug("Create degenerate node: " + label)
+
+    return (label, dict(names=nodes, reason=reason))
 
 
 def _degenerate_nodes(g, nodes, reason, edge_attrs=_E_ATTRS):
@@ -130,7 +148,7 @@ def list_leaf_nodes(g):
     return [n for n in g if not g.successors(n)]
 
 
-def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
+def make_dependencies_dag(root, reqs=None, rreqs=None):
     """
     Make directed acyclic graph of RPM dependencies.
 
@@ -151,7 +169,7 @@ def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
     if reqs is None:
         reqs = RU.make_requires_dict(root)
 
-    g = make_dependency_graph_with_nx(root, rreqs=rreqs)
+    g = make_dependency_graph(root, rreqs=rreqs)
 
     # Remove edges of self cyclic nodes:
     g.remove_edges_from(g.selfloop_edges())
@@ -175,7 +193,7 @@ def make_rpm_dependencies_dag(root, reqs=None, rreqs=None):
         _degenerate_nodes(g, cns, "Cyclic nodes")
 
     assert NX.is_directed_acyclic_graph(g), \
-        "I'm still missing something to make graph to dag..."
+        "I'm still missing something to make the dep. graph to dag..."
 
     return g
 
@@ -218,7 +236,7 @@ def tree_from_dag(g, root_node, fmt=False, edge_attrs=_E_ATTRS):
 
                 if s in visited:
                     new_s = _clone_nodeid(s, ids)
-                    logging.debug("Duplicated node=%s, cloned=%s" % (s, new_s))
+                    logging.debug("Clone visited node %s to %s" % (s, new_s))
 
                     g.add_node(new_s, name=s, names=names)
                     g.add_edge(parent, new_s, edge_attrs)
@@ -254,7 +272,7 @@ def _tree_size(tree):
 tree_size = memoize(_tree_size)
 
 
-def make_rpm_dependencies_trees(root, fmt=False, compute_size=False):
+def make_dependencies_trees(root, fmt=False, compute_size=False):
     """
     Make dependency trees of RPMs.
 
@@ -265,7 +283,7 @@ def make_rpm_dependencies_trees(root, fmt=False, compute_size=False):
 
     :return: List of networkx.DiGraph instance or its JSON representation.
     """
-    g = make_rpm_dependencies_dag(root)
+    g = make_dependencies_dag(root)
     root_nodes = list_root_nodes(g)
 
     def _get_tree(graph, root_node, fmt):
@@ -282,5 +300,124 @@ def make_rpm_dependencies_trees(root, fmt=False, compute_size=False):
 
     return [_get_tree(g, rn, fmt) for rn in root_nodes]
 
+
+def dump_gv_depgraph(root, workdir, template_paths=_TEMPLATE_PATHS,
+                     engine=_GV_ENGINE):
+    """
+    Generate dependency graph with graphviz.
+
+    TODO: Utilize graph, DAG and trees generated w/ ``dump_graphs``.
+
+    :param root: Root dir where 'var/lib/rpm' exists
+    :param workdir: Working dir to dump the result
+    :param template_paths: Template path list
+    :param engine: Graphviz rendering engine to choose, e.g. neato
+    """
+    reqs = RU.make_requires_dict(root)
+
+    # Set virtual root for root rpms:
+    for p, rs in reqs.iteritems():
+        if not rs:  # This is a root RPM:
+            reqs[p] = ["<rpmlibs>"]  # Set virtual root for this root rpm.
+
+    ctx = dict(dependencies=[(r, ps) for r, ps in reqs.iteritems()])
+
+    depgraph_s = render("rpmdep_graph_gv.j2", ctx, template_paths, ask=True)
+    src = os.path.join(workdir, "rpmdep_graph." + engine)
+    U.copen(src, 'w').write(depgraph_s)
+
+    output = src + ".svg"
+    SH.run("%s -Tsvg -o %s %s" % (engine, output, src), workdir=workdir)
+
+
+def dump_graphs(root, workdir):
+    """
+    Make and dump RPM dependency graphs.
+
+    :param root: RPM Database root dir
+    :param workdir: Working directory to dump results
+    """
+    g = make_dependency_graph(root)
+    dag = make_dependencies_dag(root)
+    trees = make_dependencies_trees(root, True)
+
+    if os.path.exists(workdir):
+        assert os.path.isdir(workdir)
+    else:
+        os.makedirs(workdir)
+
+    # see also: http://bl.ocks.org/mbostock/4062045.
+    logging.info("Make dependency graph and dump it")
+    g_data = dict()
+    g_data["name"] = "RPM Dependency graph: root=%s" % root
+    g_data["nodes"] = [dict(name=n, group=1) for n in g]
+    g_data["links"] = [dict(source=e[0], target=e[1], value=1) for e in
+                       g.edges_iter()]
+
+    U.json_dump(g_data, os.path.join(workdir, "rpmdep_graph.json"))
+
+    # Likewise.
+    logging.info("Make dependency DAG and dump it")
+    dag_data = dict()
+    dag_data["name"] = "RPM Dependency DAG: root=%s" % root
+    dag_data["nodes"] = [dict(name=n, group=1) for n in dag]
+    dag_data["links"] = [dict(source=e[0], target=e[1], value=1) for e in
+                         dag.edges_iter()]
+
+    U.json_dump(dag_data, os.path.join(workdir, "rpmdep_dag.json"))
+
+    # see also: http://bl.ocks.org/mbostock/4063550 (flare.json)
+    logging.info("Make dependency trees and dump them")
+    for tree in trees:
+        f = os.path.join(workdir, "rpmdep_tree_%(name)s.json" % tree)
+        U.copen(f, 'w').write(str(tree))
+
+
+def option_parser(root=_RPM_ROOT, tpaths=_TEMPLATE_PATHS, engine=_GV_ENGINE,
+                  engines=_GV_ENGINES):
+    """
+    Command line option parser.
+
+    :param template_paths:
+    :param engine: Graphviz engine for rendering
+    :param engines: Graphviz engine choices
+    """
+    timestamp = datetime.datetime.now().strftime("%Y%m%d")
+    defaults = dict(root=root, workdir="rk_depgraph_output_%s" % timestamp,
+                    tpaths=tpaths, engine=engine, verbose=False)
+
+    p = optparse.OptionParser("%prog [Options...]")
+    p.set_defaults(**defaults)
+
+    p.add_option("-r", "--root", help="RPM database root dir [%default]")
+    p.add_option("-w", "--workdir", help="Working (output) dir")
+    p.add_option("-T", "--tpaths", action="append",
+                 help="Specify template search paths one by one. Default "
+                      "paths are: " + ', '.join(tpaths))
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+
+    gog = optparse.OptionGroup(p, "Graphviz options")
+    gog.add_option("", "--engine", choices=engines,
+                   help="Graphviz Layout engine to render dependency graph. "
+                        "Choicec: " + ', '.join(engines) + " [%default]")
+    p.add_option_group(gog)
+
+    return p
+
+
+def main(argv=sys.argv):
+    p = option_parser()
+    (options, args) = p.parse_args(argv[1:])
+
+    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
+    dump_graphs(options.root, options.workdir)
+
+    logging.info("Make dependency graph and dump it with graphviz")
+    dump_gv_depgraph(options.root, options.workdir, options.tpaths,
+                     options.engine)
+
+
+if __name__ == '__main__':
+    main()
 
 # vim:sw=4:ts=4:et:
