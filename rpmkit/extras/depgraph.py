@@ -17,9 +17,9 @@
 #
 from logging import DEBUG, INFO
 from itertools import count
-from rpmkit.memoize import memoize
 from jinja2_cli.render import render
 
+import rpmkit.memoize as RM
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
 import rpmkit.shell2 as SH
@@ -70,7 +70,7 @@ def _make_dependency_graph(root, reversed=True, rreqs=None,
     return g
 
 
-make_dependency_graph = memoize(_make_dependency_graph)
+make_dependency_graph = RM.memoize(_make_dependency_graph)
 
 _DGNODE_CTR = count()
 
@@ -270,7 +270,7 @@ def _tree_size(tree):
     return max(len(list(_paths(leaf))[0]) for leaf in leaves)
 
 
-tree_size = memoize(_tree_size)
+tree_size = RM.memoize(_tree_size)
 
 
 def make_dependencies_trees(root, fmt=False, compute_size=False):
