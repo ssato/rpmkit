@@ -49,67 +49,44 @@ def _validate_timeout(timeout):
     ...     _validate_timeout(-1)
     ... except AssertionError:
     ...     pass
+
+    :param timeout: Time value :: Int or None
     """
     assert timeout is None or int(timeout) >= 0, \
         "Invalid timeout: " + str(timeout)
 
 
-class Timeout(object):
+def _validate_timeouts(*timeouts):
     """
+    A variant of the above function to validate multiple timeout values.
 
-    >>> timeo = Timeout(10, 10)
-    >>> timeo.exec_timeout() == 10
-    True
-    >>> timeo.set_exec_timeout(None)
-    >>> timeo.exec_timeout() != 10
-    True
-    >>> timeo.exec_timeout() is None
-    True
+    :param timeouts: List of timeout values :: [Int | None]
     """
-
-    def __init__(self, exec_timeout=None, conn_timeout=None):
-        _validate_timeout(exec_timeout)
-        _validate_timeout(conn_timeout)
-
-        self._exec_to = exec_timeout
-        self._conn_to = conn_timeout
-
-    def exec_timeout(self):
-        return self._exec_to
-
-    def conn_timeout(self):
-        return self._conn_to
-
-    def set_exec_timeout(self, val):
-        _validate_timeout(val)
-        self._exec_to = val
-
-    def set_conn_timeout(self, val):
-        _validate_timeout(val)
-        self._conn_to = val
-
-    def validate(self):
-        _validate_timeout(self._exec_to)
-        _validate_timeout(self._conn_to)
+    for to in timeouts:
+        _validate_timeout(to)
 
 
-_TIMEOUT = Timeout(None, 10)
+# Connection timeout and Timeout to wait completion of runnign command in
+# seconds. None or -1 means that it will wait forever.
+_RUN_TO = None
+_CONN_TO = 10
 
 
 def run_async(cmd, user=None, host="localhost", workdir=os.curdir,
-              timeout=_TIMEOUT, **kwargs):
+              timeout=_RUN_TO, conn_timeout=_CONN_TO, **kwargs):
     """
-    Run command asyncronously.
+    Run command ``cmd`` asyncronously.
 
     :param cmd: Command string
-    :param user: User to run command
-    :param host: Host to run command
+    :param user: Run command as this user
+    :param host: Host on which command runs
     :param workdir: Working directory in which command runs
-    :param timeout: Timeout object
+    :param timeout: Command execution timeout in seconds or None
+    :param conn_timeout: Connection timeout in seconds or None
 
     :return: greenlet instance
     """
-    timeout.validate()
+    _validate_timeouts(timeout, conn_timeout)
 
     if _is_local(host):
         if "~" in workdir:
@@ -118,10 +95,10 @@ def run_async(cmd, user=None, host="localhost", workdir=os.curdir,
         if user is None:
             user = E.get_username()
 
-        if timeout.conn_timeout() is None:
+        if conn_timeout is None:
             toopt = ""
         else:
-            toopt = "-o ConnectTimeout=%d" % timeout.conn_timeout()
+            toopt = '' "-o ConnectTimeout=%d" % conn_timeout
 
         cmd = "ssh %s %s@%s 'cd %s && %s'" % (toopt, user, host, workdir, cmd)
         logging.debug("Remote host. Rewrote cmd to " + cmd)
@@ -131,25 +108,26 @@ def run_async(cmd, user=None, host="localhost", workdir=os.curdir,
     return gevent.spawn(subprocess.Popen, cmd, cwd=workdir, shell=True)
 
 
-def run(cmd, user=None, host="localhost", workdir=os.curdir,
-        timeout=_TIMEOUT, stop_on_error=False, **kwargs):
+def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=_RUN_TO,
+        conn_timeout=_CONN_TO, stop_on_error=False, **kwargs):
     """
-    Run command.
+    Run command ``cmd``.
 
     :param cmd: Command string
     :param user: User to run command
     :param host: Host to run command
     :param workdir: Working directory in which command runs
-    :param timeout: Timeout object
+    :param timeout: Command execution timeout in seconds or None
+    :param conn_timeout: Connection timeout in seconds or None
     :param stop_on_error: Stop and raise exception if any error occurs
 
     :return: True if job was sucessful else False or RuntimeError exception
         raised if stop_on_error is True
     """
-    job = run_async(cmd, user, host, workdir, timeout)
+    job = run_async(cmd, user, host, workdir, timeout, conn_timeout)
 
     try:
-        job.join(timeout.exec_timeout())
+        job.join(timeout)
 
         if not job.successful():
             if stop_on_error:
@@ -159,8 +137,9 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir,
             return False
 
         return True
+
     except KeyboardInterrupt as e:
-        logging.warn("Command execution was interrupted: " + cmd)
+        logging.warn("Interrupted: " + cmd)
         job.kill()
 
         return False
@@ -173,7 +152,7 @@ def prun_async(list_of_args):
     :param list_of_args: List of arguments (:: [([arg], dict(kwarg=...))]) for
         each job will be passed to ``run_async`` function.
 
-    :return: List of greenlet instance
+    :return: List of greenlet instances
     """
     return [run_async(*args, **kwargs) for args, kwargs in list_of_args]
 
