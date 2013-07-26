@@ -30,16 +30,17 @@ Summary:        Extra and experimental modules and tools in %{name}
 Requires:       %{name} = %{version}-%{release}
 Requires:       graphviz
 Requires:       python-jinja2-cli
-Requires:       python-matplotlib
 Requires:       python-networkx
-Requires:       python-tablib
+# Commented to avoid rpmlint error 'E: explicit-lib-dependency':
+#Requires:       python-matplotlib
+#Requires:       python-tablib
 
 %description    extras
 This package provides experimental modules and tools of %{name}.
 
 
 %package        sqldb
-Summary:        rpms2sqldb and related tools in %{name}
+Summary:        Rpms2sqldb and related tools in %{name}
 Requires:       %{name} = %{version}-%{release}
 Requires:       sqlite
 
@@ -100,6 +101,11 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Jul 26 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.14-1
+- changed internal API of rpmkit.shell2.*(): removed Timeout class and just
+  make multiple timeouts passed one by one in args
+- Fixed some rpmlint errors and warnings
+
 * Thu Jul 18 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.13-1
 - [buildsrpm] make it run standalone
 - [buildsrpm] add --timeout option

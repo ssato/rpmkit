@@ -10,7 +10,7 @@ curdir = os.getcwd()
 sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
-VERSION = "0.2.10.13"
+VERSION = "0.2.10.14"
 
 # For daily snapshot versioning mode:
 if os.environ.get("_SNAPSHOT_BUILD", None) is not None:
