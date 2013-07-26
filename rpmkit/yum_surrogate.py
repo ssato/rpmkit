@@ -1,4 +1,4 @@
-#! /usr/bin/python -tt
+#
 # yum_surrogate.py - Surrogate yum execution for other hosts have no or
 # insufficient access to any yum repositories provide updates
 #
