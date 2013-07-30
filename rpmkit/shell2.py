@@ -21,6 +21,7 @@ import gevent
 import logging
 import os
 import os.path
+import signal
 import subprocess
 
 
@@ -72,6 +73,13 @@ _RUN_TO = None
 _CONN_TO = 10
 
 
+# FIXME: A class wrapping gevent.Greenlet to join/kill/timeout subprocess
+# processes, must be implemented.
+class CommandRunner(gevent.Greenlet):
+
+    pass
+
+
 def run_async(cmd, user=None, host="localhost", workdir=os.curdir,
               timeout=_RUN_TO, conn_timeout=_CONN_TO, **kwargs):
     """
@@ -105,6 +113,8 @@ def run_async(cmd, user=None, host="localhost", workdir=os.curdir,
 
         workdir = os.curdir
 
+    gevent.signal(signal.SIGQUIT, gevent.shutdown)
+
     return gevent.spawn(subprocess.Popen, cmd, cwd=workdir, shell=True)
 
 
@@ -125,24 +135,32 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=_RUN_TO,
         raised if stop_on_error is True
     """
     job = run_async(cmd, user, host, workdir, timeout, conn_timeout)
+    timer = gevent.Timeout.start_new(timeout)
 
     try:
-        job.join(timeout)
+        job.join(timeout=timer)
 
-        if not job.successful():
-            if stop_on_error:
-                raise RuntimeError("Failed: " + cmd)
+        if job.successful():
+            return True
 
-            logging.warn("Failed: " + cmd)
-            return False
+        reason = "unknown"
 
-        return True
+        if stop_on_error:
+            gevent.shutdown()
+            raise RuntimeError(m)
+
+    # FIXME: This does not work and Timeout exception never be raised for
+    # subprocess's process actually.
+    except gevent.Timeout:
+        reason = "timeout"
 
     except KeyboardInterrupt as e:
-        logging.warn("Interrupted: " + cmd)
+        reason = "interrupted"
         job.kill()
 
-        return False
+    gevent.shutdown()
+    logging.warn("Failed (%s): %s" % (reason, cmd))
+    return False
 
 
 def prun_async(list_of_args):

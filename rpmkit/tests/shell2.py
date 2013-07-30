@@ -55,13 +55,24 @@ class Test_10_run(unittest.TestCase):
         self.assertTrue(TT.run("true"))
         self.assertTrue(TT.run("false"))
 
-    def test_20_run__if_interrupted(self):
-        """TODO: Implement test cases of keyboard interruption."""
+    def test_20_run__if_timeout(self):
+        """FIXME: Timeout function for gevent.Greenlet/subprocess combination
+        must be implemented.
+        """
         return
 
-        TT.run("sleep 3 && kill -s INT %d" % os.getpid())
+        self.assertFalse(TT.run("sleep 10", timeout=1))
 
-        self.assertFalse(TT.run("sleep 1000"))
+    def test_30_run__if_interrupted(self):
+        """TODO: Implement test cases of keyboard interruption."""
+
+        def emit_KeybordInterrupt():
+            raise KeyboardInterrupt("Fake Ctrl-C !")
+
+        job = TT.run_async("sleep 5")
+        TT.gevent.spawn(emit_KeybordInterrupt).join()
+
+        self.assertFalse(job.join())
 
 
 class Test_20_prun(unittest.TestCase):
