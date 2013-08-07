@@ -138,7 +138,8 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=_RUN_TO,
     timer = gevent.Timeout.start_new(timeout)
 
     try:
-        job.join(timeout=timer)
+        #job.join(timeout=timer)
+        job.join()  # It will block!
 
         if job.successful():
             return True
