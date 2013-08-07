@@ -331,11 +331,11 @@ def surrogate_operation(root, operation, logfiles=None):
         (outlog, errlog) = logfiles
 
         with open(outlog, 'w') as olog, open(errlog, 'w') as elog:
-            (out, err, rc) = run(cmd, olog.write, elog.write)
+            (outs, errs, rc) = run(cmd, olog.write, elog.write)
     else:
-        (out, err, rc) = run(cmd)
+        (outs, errs, rc) = run(cmd)
 
-    return (out, err, rc)
+    return (outs, errs, rc)
 
 
 def _is_errata_line(line, dist):
@@ -442,16 +442,16 @@ def list_errata_g(root, dist=None, logfiles=None, opts=None):
         dist = detect_dist()
 
     yum_args = opts + " list-sec" if opts else "list-sec"
-    result = surrogate_operation(root, yum_args, logfiles)
+    res = (outs, errs, rc) = surrogate_operation(root, yum_args, logfiles)
 
-    if result[-1] == 0:
-        for line in result[0]:
+    if rc == 0:
+        for line in outs:
             if _is_errata_line(line, dist):
                 yield parse_errata_line(line)
             else:
                 logging.debug("Not errata line: " + line)
     else:
-        failure(yum_args, result)
+        failure(yum_args, res)
 
 
 def parse_update_line(line):
@@ -499,13 +499,15 @@ def list_updates_g(root, logfiles=None, *args):
                  exists, e.g. /root/host_a/
     :param logfiles: Pair of command's output and error log files
     """
+    res = (outs, errs, rc) = surrogate_operation(root, "check-update",
+                                                 logfiles=logfiles)
+
     # NOTE: 'yum check-update' looks returning non-zero exit code (e.g. 100)
     # when there are any updates found.
-    result = surrogate_operation(root, "check-update", logfiles=logfiles)
-    if result[0]:
+    if outs:
         # It seems that yum prints out an empty line before listing updates.
         in_list = False
-        for line in result[0].splitlines():
+        for line in outs:
             if line:
                 if in_list:
                     yield parse_update_line(line)
@@ -516,15 +518,16 @@ def list_updates_g(root, logfiles=None, *args):
 
 
 def run_yum_cmd(root, yum_args, logfiles, *args):
-    result = surrogate_operation(root, yum_args, logfiles)
-    if result[-1] == 0:
-        print result[0]
+    res = (outs, errs, rc) = surrogate_operation(root, yum_args, logfiles)
+
+    if rc == 0:
+        print ''.join(outs)
     else:
         # FIXME: Ugly code based on heuristics.
         if "check-update" in yum_args or "--downloadonly" in yum_args:
-            print result[0]
+            print ''.join(outs)
         else:
-            failure(yum_args, result)
+            failure(yum_args, res)
 
 
 _FORMATABLE_COMMANDS = {"check-update": list_updates_g,
