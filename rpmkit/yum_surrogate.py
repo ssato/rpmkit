@@ -506,13 +506,9 @@ def list_updates_g(root, logfiles=None, *args):
     # when there are any updates found.
     if outs:
         # It seems that yum prints out an empty line before listing updates.
-        in_list = False
         for line in outs:
             if line:
-                if in_list:
-                    yield parse_update_line(line)
-            else:
-                in_list = True
+                yield parse_update_line(line)
     else:
         failure("check-update", result)
 
