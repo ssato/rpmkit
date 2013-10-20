@@ -8,7 +8,9 @@
 #
 from logging import INFO, DEBUG
 
+import datetime
 import itertools
+import locale
 import logging
 import optparse
 import os.path
@@ -47,6 +49,16 @@ def rstrip_seps(path, sep=os.path.sep):
                 path = path[:-1]
             else:
                 return path
+
+
+def timestamp(dtobj=datetime.datetime.now()):
+    """
+    >>> dtobj = datetime.datetime(2013, 10, 20, 12, 11, 59, 345135)
+    >>> timestamp(dtobj)
+    'Sun Oct 20 2013'
+    """
+    locale.setlocale(locale.LC_TIME, "C")
+    return dtobj.strftime("%a %b %_d %Y")
 
 
 _MAKEFILE_AM_DISTDATA_TMPL = """pkgdata%(i)ddir = %(dir)s
