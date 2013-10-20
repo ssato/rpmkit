@@ -6,6 +6,8 @@
 # Copyright (C) 2013 Satoru SATOH <satoru.satoh @ gmail.com>
 # License: MIT
 #
+from logging import INFO, DEBUG
+
 import itertools
 import logging
 import optparse
@@ -185,9 +187,8 @@ def main(argv=sys.argv):
         p.print_usage()
         sys.exit(0)
 
-    logging.getLogger().setLevel(logging.DEBUG if options.verbose
-                                 else logging.INFO)
-
+    logging.basicConfig(level=(DEBUG if options.verbose else INFO),
+                        format="%(asctime)s [%(levelname)s] %(message)s")
     topdir = args[0]
 
     if not options.name:
