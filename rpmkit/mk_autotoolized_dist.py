@@ -82,6 +82,7 @@ def mk_Makefile_am_distdata_snippets_g(topdir, destdir='',
               in files]
 
         if not fs:
+            logging.info("No files in this dir. Skipped: " + root)
             continue
 
         if destdir:
