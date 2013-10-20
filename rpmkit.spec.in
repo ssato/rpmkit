@@ -75,6 +75,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/buildsrpm
 %{_bindir}/identrpm
 %{_bindir}/rpm2json
+%{_bindir}/rpmfy
 %{_bindir}/rpms2csv
 %{_bindir}/swapi
 %{_bindir}/yum-surrogate
@@ -101,6 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Sun Oct 20 2013 Satoru SATOH <satoru.satoh@gmail.com> - 0.2.10.15-1
+- Add new command 'rpmfy' and module 'rpmkit.rpmfy' to make [S]RPMs easily
+
 * Fri Jul 26 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.14-1
 - changed internal API of rpmkit.shell2.*(): removed Timeout class and just
   make multiple timeouts passed one by one in args
