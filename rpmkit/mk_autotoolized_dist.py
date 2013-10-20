@@ -74,6 +74,7 @@ def mk_Makefile_am_distdata_snippets_g(topdir, destdir='',
         if root == topdir:
             continue  # Skip files in topdir.
 
+        logging.debug("%d files in the dir %s" % (len(files), root))
         reldir = os.path.relpath(root, topdir)
         fs = [os.path.relpath(os.path.join(root, f), topdir) for f
               in files]
@@ -83,6 +84,8 @@ def mk_Makefile_am_distdata_snippets_g(topdir, destdir='',
 
         if destdir:
             reldir = reldir.replace(destdir, '', 1)
+
+        logging.debug("reldir=" + reldir)
 
         yield tmpl % dict(i=ig.next(), dir=to_abspath(reldir),
                           fs=" \\\n".join(f for f in fs))
@@ -135,9 +138,11 @@ def gen_autotools_files(topdir, name, version, destdir='', workdir=None,
                               shell=True)
         topdir = workdir
 
+    logging.info("Generating Makefile.am in " + topdir)
     c = gen_Makefile_am(topdir, destdir)
     open(os.path.join(topdir, "Makefile.am"), 'w').write(c)
 
+    logging.info("Generating configure.ac in " + topdir)
     c = gen_configure_ac(name, version)
     open(os.path.join(topdir, "configure.ac"), 'w').write(c)
 
@@ -168,6 +173,7 @@ def option_parser(defaults=_DEFAULTS):
                       "into this directory before making src distribution.")
     p.add_option("", "--makedist", action="store_true",
                  help="Make src distribution")
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
     return p
 
 
@@ -178,6 +184,9 @@ def main(argv=sys.argv):
     if not args:
         p.print_usage()
         sys.exit(0)
+
+    logging.getLogger().setLevel(logging.DEBUG if options.verbose
+                                 else logging.INFO)
 
     topdir = args[0]
 
