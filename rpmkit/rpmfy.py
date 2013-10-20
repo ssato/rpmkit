@@ -1,7 +1,9 @@
 #! /usr/bin/python
 #
 # Quick hacked script to generate files to make autotoolized source
-# distribution of files under given dir.
+# distribution and [S]RPM of files under given dir.
+#
+# A kind of subset of packagemaker, https://github.com/ssato/packagemaker.
 #
 # Copyright (C) 2013 Satoru SATOH <satoru.satoh @ gmail.com>
 # License: MIT
