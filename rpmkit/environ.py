@@ -105,7 +105,7 @@ def get_fullname():
             logging.warn("get_fullname: " + str(e))
             pass
 
-    return os.environ.get("FM.LNAME", get_username())
+    return os.environ.get("FULLNAME", get_username())
 
 
 @M.memoize
