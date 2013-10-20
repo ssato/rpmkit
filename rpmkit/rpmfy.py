@@ -56,6 +56,7 @@ Summary:        Packaged data of %%{name}
 License:        Commercial
 URL:            http://example.com
 Source0:        %%{name}-%%{version}.tar.xz
+%(noarch)s
 
 %%description
 Packaged data of %%{name}
@@ -216,7 +217,7 @@ def gen_configure_ac(name, version, tmpl=_CONFIGURE_AC_TMPL):
     return tmpl % dict(name=name, version=version)
 
 
-def gen_rpmspec(topdir, name, version, packager=None, email=None,
+def gen_rpmspec(topdir, name, version, packager=None, email=None, arch=False,
                 tmpl=_RPMSPEC_TMPL):
     """
     """
@@ -226,8 +227,10 @@ def gen_rpmspec(topdir, name, version, packager=None, email=None,
     if email is None:
         email = get_email()
 
+    noarch = '' if arch else "BuildArch:      noarch"
+
     return tmpl % dict(name=name, version=version, timestamp=timestamp(),
-                       packager=packager, email=email)
+                       packager=packager, email=email, noarch=noarch)
 
 
 def make_dist(workdir, makesrpm=False):
@@ -251,7 +254,7 @@ def tweak_topdir(topdir, workdir=None):
 
 def gen_autotools_files(topdir, name, version, destdir='', packager=None,
                         email=None, rpmspec_tmpl=None, rpmmk_tmpl=_RPMMK_TMPL,
-                        makedist=False, makesrpm=False,
+                        makedist=False, makesrpm=False, arch=False,
                         rpmspec_tmpl_s=_RPMSPEC_TMPL):
     """
     :param topdir: Path to the top dir to package files under
@@ -276,7 +279,7 @@ def gen_autotools_files(topdir, name, version, destdir='', packager=None,
     open(os.path.join(topdir, "configure.ac"), 'w').write(c)
 
     logging.info("Generating the RPM SPEC and aux files in " + topdir)
-    c = gen_rpmspec(topdir, name, version, packager, email, rpmspec_tmpl)
+    c = gen_rpmspec(topdir, name, version, packager, email, arch, rpmspec_tmpl)
     open(os.path.join(topdir, "%s.spec" % name), 'w').write(c)
     open(os.path.join(topdir, "rpm.mk"), 'w').write(rpmmk_tmpl)
 
@@ -286,7 +289,7 @@ def gen_autotools_files(topdir, name, version, destdir='', packager=None,
 
 _DEFAULTS = dict(destdir='', workdir=None, name=None, version="0.0.1",
                  packager=None, email=None, rpmspec_tmpl=None,
-                 makedist=False, makesrpm=False)
+                 makedist=False, makesrpm=False, arch=False)
 
 
 def option_parser(defaults=_DEFAULTS):
@@ -315,6 +318,9 @@ def option_parser(defaults=_DEFAULTS):
     p.add_option("", "--makedist", action="store_true",
                  help="Make src distribution")
     p.add_option("", "--makesrpm", action="store_true", help="Make srpm")
+    p.add_option("", "--arch", action="store_true",
+                 help="Make arch-dependent RPM. Specify this if some of "
+                      "packaging files are architecture dependent.")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
     return p
 
@@ -337,7 +343,8 @@ def main(argv=sys.argv):
 
     gen_autotools_files(topdir, options.name, options.version, options.destdir,
                         options.packager, options.email, options.rpmspec_tmpl,
-                        makedist=options.makedist, makesrpm=options.makesrpm)
+                        makedist=options.makedist, makesrpm=options.makesrpm,
+                        arch=options.arch)
 
 
 if __name__ == '__main__':
