@@ -19,6 +19,22 @@ import subprocess
 import sys
 
 
+_MAKEFILE_AM_DISTDATA_TMPL = """pkgdata%(i)ddir = %(dir)s
+dist_pkgdata%(i)d_DATA = \\
+%(fs)s
+"""
+
+_CONFIGURE_AC_TMPL = """\
+AC_INIT([%(name)s],[%(version)s])
+AM_INIT_AUTOMAKE([dist-xz foreign subdir-objects tar-pax])
+
+m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+"""
+
+
 def to_abspath(path):
     """
     >>> to_abspath("/a/b/c")
@@ -59,12 +75,6 @@ def timestamp(dtobj=datetime.datetime.now()):
     """
     locale.setlocale(locale.LC_TIME, "C")
     return dtobj.strftime("%a %b %_d %Y")
-
-
-_MAKEFILE_AM_DISTDATA_TMPL = """pkgdata%(i)ddir = %(dir)s
-dist_pkgdata%(i)d_DATA = \\
-%(fs)s
-"""
 
 
 def mk_Makefile_am_distdata_snippets_g(topdir, destdir='',
@@ -114,17 +124,6 @@ def gen_Makefile_am(topdir, destdir=''):
     :param destdir: DESTDIR to strip from the front of each file paths
     """
     return '\n'.join(mk_Makefile_am_distdata_snippets_g(topdir, destdir))
-
-
-_CONFIGURE_AC_TMPL = """\
-AC_INIT([%(name)s],[%(version)s])
-AM_INIT_AUTOMAKE([dist-xz foreign subdir-objects tar-pax])
-
-m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
-
-AC_CONFIG_FILES([Makefile])
-AC_OUTPUT
-"""
 
 
 def gen_configure_ac(name, version, tmpl=_CONFIGURE_AC_TMPL):
