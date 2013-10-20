@@ -47,7 +47,7 @@ def rstrip_seps(path, sep=os.path.sep):
                 return path
 
 
-_MAKEFILE_AM_DISTDATA_TMPL = """pkgdata%(i)ddir=%(dir)s
+_MAKEFILE_AM_DISTDATA_TMPL = """pkgdata%(i)ddir = %(dir)s
 dist_pkgdata%(i)d_DATA = \\
 %(fs)s
 """
