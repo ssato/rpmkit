@@ -230,9 +230,11 @@ def gen_rpmspec(topdir, name, version, packager=None, email=None,
                        packager=packager, email=email)
 
 
-def make_dist(workdir):
-    subprocess.check_call("autoreconf -vfi", cwd=workdir, shell=True)
-    subprocess.check_call("./configure && make dist", cwd=workdir, shell=True)
+def make_dist(workdir, makesrpm=False):
+    run = lambda c: subprocess.check_call(c, cwd=workdir, shell=True)
+
+    run("autoreconf -vfi")
+    run("./configure && make " + "srpm" if makesrpm else "dist")
 
 
 def tweak_topdir(topdir, workdir=None):
@@ -249,7 +251,8 @@ def tweak_topdir(topdir, workdir=None):
 
 def gen_autotools_files(topdir, name, version, destdir='', packager=None,
                         email=None, rpmspec_tmpl=None, rpmmk_tmpl=_RPMMK_TMPL,
-                        makedist=False, rpmspec_tmpl_s=_RPMSPEC_TMPL):
+                        makedist=False, makesrpm=False,
+                        rpmspec_tmpl_s=_RPMSPEC_TMPL):
     """
     :param topdir: Path to the top dir to package files under
     :param name: Package name
@@ -277,13 +280,13 @@ def gen_autotools_files(topdir, name, version, destdir='', packager=None,
     open(os.path.join(topdir, "%s.spec" % name), 'w').write(c)
     open(os.path.join(topdir, "rpm.mk"), 'w').write(rpmmk_tmpl)
 
-    if makedist:
-        make_dist(topdir)
+    if makedist or makesrpm:
+        make_dist(topdir, makesrpm)
 
 
 _DEFAULTS = dict(destdir='', workdir=None, name=None, version="0.0.1",
                  packager=None, email=None, rpmspec_tmpl=None,
-                 makedist=False)
+                 makedist=False, makesrpm=False)
 
 
 def option_parser(defaults=_DEFAULTS):
@@ -311,6 +314,7 @@ def option_parser(defaults=_DEFAULTS):
                  help="Specify the path to alternative RPM SPEC template file")
     p.add_option("", "--makedist", action="store_true",
                  help="Make src distribution")
+    p.add_option("", "--makesrpm", action="store_true", help="Make srpm")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
     return p
 
@@ -333,7 +337,7 @@ def main(argv=sys.argv):
 
     gen_autotools_files(topdir, options.name, options.version, options.destdir,
                         options.packager, options.email, options.rpmspec_tmpl,
-                        makedist=options.makedist)
+                        makedist=options.makedist, makesrpm=options.makesrpm)
 
 
 if __name__ == '__main__':
