@@ -1,0 +1,124 @@
+ssato@localhost% rm -rf /tmp/m2_host                                                                                           ~/repos/public/github.com/ssato/rpmkit.git
+ssato@localhost% find ~/Desktop/m2/host -type f                                                                                ~/repos/public/github.com/ssato/rpmkit.git
+/home/ssato/Desktop/m2/host/usr/libexec/miniascape/guest_network_register.sh
+/home/ssato/Desktop/m2/host/usr/libexec/miniascape/register_libvirt_network.sh
+/home/ssato/Desktop/m2/host/usr/libexec/miniascape/default/fixup_software_bridge.sh
+/home/ssato/Desktop/m2/host/usr/libexec/miniascape/default/create_lio_iscsi_lun.sh
+/home/ssato/Desktop/m2/host/usr/share/miniascape/networks.d/service.xml
+/home/ssato/Desktop/m2/host/usr/share/miniascape/networks.d/openstack-private.xml
+/home/ssato/Desktop/m2/host/usr/share/miniascape/networks.d/service.yml
+/home/ssato/Desktop/m2/host/usr/share/miniascape/networks.d/openstack-private.yml
+/home/ssato/Desktop/m2/host/usr/share/miniascape/networks.d/default.yml
+/home/ssato/Desktop/m2/host/usr/share/miniascape/networks.d/default.xml
+/home/ssato/Desktop/m2/host/etc/modprobe.d/kvm.conf
+/home/ssato/Desktop/m2/host/etc/fence_virt.conf
+/home/ssato/Desktop/m2/host/etc/httpd/conf.d/miniascape_autoinst.conf
+/home/ssato/Desktop/m2/host/etc/auto.master.d/isos.autofs
+/home/ssato/Desktop/m2/host/etc/auto.isos
+ssato@localhost% LANG=en_US.UTF-8 PYTHONPATH=. python tools/rpmfy --makesrpm -v -w /tmp/m2_host ~/Desktop/m2/host              ~/repos/public/github.com/ssato/rpmkit.git
+2013-10-20 13:59:53,739 [INFO] Generating Makefile.am in /tmp/m2_host
+2013-10-20 13:59:53,739 [DEBUG] 0 files in the dir /tmp/m2_host/usr
+2013-10-20 13:59:53,739 [INFO] No files in this dir. Skipped: /tmp/m2_host/usr
+2013-10-20 13:59:53,739 [DEBUG] 0 files in the dir /tmp/m2_host/usr/share
+2013-10-20 13:59:53,739 [INFO] No files in this dir. Skipped: /tmp/m2_host/usr/share
+2013-10-20 13:59:53,740 [DEBUG] 0 files in the dir /tmp/m2_host/usr/share/miniascape
+2013-10-20 13:59:53,740 [INFO] No files in this dir. Skipped: /tmp/m2_host/usr/share/miniascape
+2013-10-20 13:59:53,740 [DEBUG] 6 files in the dir /tmp/m2_host/usr/share/miniascape/networks.d
+2013-10-20 13:59:53,740 [DEBUG] reldir=usr/share/miniascape/networks.d
+2013-10-20 13:59:53,740 [DEBUG] 0 files in the dir /tmp/m2_host/usr/libexec
+2013-10-20 13:59:53,740 [INFO] No files in this dir. Skipped: /tmp/m2_host/usr/libexec
+2013-10-20 13:59:53,740 [DEBUG] 2 files in the dir /tmp/m2_host/usr/libexec/miniascape
+2013-10-20 13:59:53,740 [DEBUG] reldir=usr/libexec/miniascape
+2013-10-20 13:59:53,740 [DEBUG] 2 files in the dir /tmp/m2_host/usr/libexec/miniascape/default
+2013-10-20 13:59:53,741 [DEBUG] reldir=usr/libexec/miniascape/default
+2013-10-20 13:59:53,741 [DEBUG] 2 files in the dir /tmp/m2_host/etc
+2013-10-20 13:59:53,741 [DEBUG] reldir=etc
+2013-10-20 13:59:53,741 [DEBUG] 1 files in the dir /tmp/m2_host/etc/auto.master.d
+2013-10-20 13:59:53,741 [DEBUG] reldir=etc/auto.master.d
+2013-10-20 13:59:53,741 [DEBUG] 0 files in the dir /tmp/m2_host/etc/httpd
+2013-10-20 13:59:53,741 [INFO] No files in this dir. Skipped: /tmp/m2_host/etc/httpd
+2013-10-20 13:59:53,741 [DEBUG] 1 files in the dir /tmp/m2_host/etc/httpd/conf.d
+2013-10-20 13:59:53,741 [DEBUG] reldir=etc/httpd/conf.d
+2013-10-20 13:59:53,742 [DEBUG] 1 files in the dir /tmp/m2_host/etc/modprobe.d
+2013-10-20 13:59:53,742 [DEBUG] reldir=etc/modprobe.d
+2013-10-20 13:59:53,742 [INFO] Generating configure.ac in /tmp/m2_host
+2013-10-20 13:59:53,742 [INFO] Generating the RPM SPEC and aux files in /tmp/m2_host
+autoreconf: Entering directory `.'
+autoreconf: configure.ac: not using Gettext
+autoreconf: running: aclocal --force
+autoreconf: configure.ac: tracing
+autoreconf: configure.ac: not using Libtool
+autoreconf: running: /usr/bin/autoconf --force
+autoreconf: configure.ac: not using Autoheader
+autoreconf: running: automake --add-missing --copy --force-missing
+configure.ac:2: installing './install-sh'
+configure.ac:2: installing './missing'
+autoreconf: Leaving directory `.'
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether build environment is sane... yes
+checking for a thread-safe mkdir -p... /usr/bin/mkdir -p
+checking for gawk... gawk
+checking whether make sets $(MAKE)... yes
+checking whether make supports nested variables... yes
+checking how to create a pax tar archive... gnutar
+checking whether make supports nested variables... (cached) yes
+checking that generated files are newer than configure... done
+configure: creating ./config.status
+config.status: creating Makefile
+make  dist-xz dist-gzip am__post_remove_distdir='@:'
+make[1]: Entering directory `/tmp/m2_host'
+if test -d "m2_host-0.0.1"; then find "m2_host-0.0.1" -type d ! -perm -200 -exec chmod u+w {} ';' && rm -rf "m2_host-0.0.1" || { sleep 5 && rm -rf "m2_host-0.0.1"; }; else :; fi
+test -d "m2_host-0.0.1" || mkdir "m2_host-0.0.1"
+test -n "" \
+|| find "m2_host-0.0.1" -type d ! -perm -755 \
+        -exec chmod u+rwx,go+rx {} \; -o \
+  ! -type d ! -perm -444 -links 1 -exec chmod a+r {} \; -o \
+  ! -type d ! -perm -400 -exec chmod a+r {} \; -o \
+  ! -type d ! -perm -444 -exec /bin/sh /tmp/m2_host/install-sh -c -m a+r {} {} \; \
+|| chmod -R a+r "m2_host-0.0.1"
+tardir=m2_host-0.0.1 && tar --format=posix -chf - "$tardir" | XZ_OPT=${XZ_OPT--e} xz -c >m2_host-0.0.1.tar.xz
+tardir=m2_host-0.0.1 && tar --format=posix -chf - "$tardir" | GZIP=--best gzip -c >m2_host-0.0.1.tar.gz
+make[1]: Leaving directory `/tmp/m2_host'
+if test -d "m2_host-0.0.1"; then find "m2_host-0.0.1" -type d ! -perm -200 -exec chmod u+w {} ';' && rm -rf "m2_host-0.0.1" || { sleep 5 && rm -rf "m2_host-0.0.1"; }; else :; fi
+  GEN      srpm
+ssato@localhost% ls /tmp/m2_host                                                                                               ~/repos/public/github.com/ssato/rpmkit.git
+Makefile     Makefile.in  autom4te.cache  config.status  configure.ac  install-sh                    m2_host-0.0.1.tar.gz  m2_host.spec  rpm     usr
+Makefile.am  aclocal.m4   config.log      configure      etc           m2_host-0.0.1-1.fc19.src.rpm  m2_host-0.0.1.tar.xz  missing       rpm.mk
+ssato@localhost% LANG=en_US.UTF-8 make -C /tmp/m2_host rpm                                                                     ~/repos/public/github.com/ssato/rpmkit.git
+make: Entering directory `/tmp/m2_host'
+make  dist-xz dist-gzip am__post_remove_distdir='@:'
+make[1]: Entering directory `/tmp/m2_host'
+if test -d "m2_host-0.0.1"; then find "m2_host-0.0.1" -type d ! -perm -200 -exec chmod u+w {} ';' && rm -rf "m2_host-0.0.1" || { sleep 5 && rm -rf "m2_host-0.0.1"; }; else :; fi
+test -d "m2_host-0.0.1" || mkdir "m2_host-0.0.1"
+test -n "" \
+|| find "m2_host-0.0.1" -type d ! -perm -755 \
+        -exec chmod u+rwx,go+rx {} \; -o \
+  ! -type d ! -perm -444 -links 1 -exec chmod a+r {} \; -o \
+  ! -type d ! -perm -400 -exec chmod a+r {} \; -o \
+  ! -type d ! -perm -444 -exec /bin/sh /tmp/m2_host/install-sh -c -m a+r {} {} \; \
+|| chmod -R a+r "m2_host-0.0.1"
+tardir=m2_host-0.0.1 && tar --format=posix -chf - "$tardir" | XZ_OPT=${XZ_OPT--e} xz -c >m2_host-0.0.1.tar.xz
+tardir=m2_host-0.0.1 && tar --format=posix -chf - "$tardir" | GZIP=--best gzip -c >m2_host-0.0.1.tar.gz
+make[1]: Leaving directory `/tmp/m2_host'
+if test -d "m2_host-0.0.1"; then find "m2_host-0.0.1" -type d ! -perm -200 -exec chmod u+w {} ';' && rm -rf "m2_host-0.0.1" || { sleep 5 && rm -rf "m2_host-0.0.1"; }; else :; fi
+  GEN      rpm
+configure: WARNING: unrecognized options: --disable-dependency-tracking
+configure: WARNING: unrecognized options: --disable-dependency-tracking
+make: Leaving directory `/tmp/m2_host'
+ssato@localhost% rpm -qlp /tmp/m2_host/m2_host-0.0.1-1.fc19.noarch.rpm                                                         ~/repos/public/github.com/ssato/rpmkit.git
+/etc/auto.isos
+/etc/auto.master.d/isos.autofs
+/etc/fence_virt.conf
+/etc/httpd/conf.d/miniascape_autoinst.conf
+/etc/modprobe.d/kvm.conf
+/usr/libexec/miniascape/default/create_lio_iscsi_lun.sh
+/usr/libexec/miniascape/default/fixup_software_bridge.sh
+/usr/libexec/miniascape/guest_network_register.sh
+/usr/libexec/miniascape/register_libvirt_network.sh
+/usr/share/miniascape/networks.d/default.xml
+/usr/share/miniascape/networks.d/default.yml
+/usr/share/miniascape/networks.d/openstack-private.xml
+/usr/share/miniascape/networks.d/openstack-private.yml
+/usr/share/miniascape/networks.d/service.xml
+/usr/share/miniascape/networks.d/service.yml
+ssato@localhost%                                                                                                               ~/repos/public/github.com/ssato/rpmkit.git
