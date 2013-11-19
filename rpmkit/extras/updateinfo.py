@@ -422,7 +422,7 @@ def _fmt_cvess(cves):
     :return: List of CVE strings
     """
     try:
-        fmt = '"%(cve)s (score=%(score)s, metrics=%(metrics)s, url=%(url)s)"'
+        fmt = '%(cve)s (score=%(score)s, metrics=%(metrics)s, url=%(url)s)'
         cves = [fmt % c for c in cves]
     except KeyError:
         pass
@@ -436,7 +436,7 @@ def _fmt_rhbzs(rhbzs):
     :return: List of CVE strings
     """
     try:
-        fmt = '"%(id)s (summary=%(summary)s, url=\"https://bugzilla.redhat.com/show_bug.cgi?id=%(id)s\")"'
+        fmt = 'rhbz#%(id)s: %(summary)s (https://bugzilla.redhat.com/show_bug.cgi?id=%(id)s)'
         rhbzs = [fmt % rhbz for rhbz in rhbzs]
     except KeyError:
         pass
