@@ -52,6 +52,7 @@ import pprint
 import random
 import re
 import shlex
+import subprocess
 import sys
 import time
 import urllib2
@@ -438,6 +439,7 @@ API_CACHE_EXPIRATIONS = {
     "swapi.cve.getCvss": 100,
     "swapi.cve.getAll": 1,
     "swapi.errata.getAll": 1,
+    "swapi.bugzilla.getDetails": 1,
 }
 
 VIRTUAL_APIS = dict()
@@ -836,9 +838,38 @@ def get_all_errata(raw=False):
     return [r for r in get_all_errata_g(raw)]
 
 
+_BZ_KEYS = ["bug_id", "summary", "priority", "severity"]
+
+
+def get_bugzilla_info(bzid, *keys):
+    """
+    Get bugzilla info of given ID.
+
+    :param bzid: Bugzilla ID
+    :param keys: Bugzilla fields to get info
+    """
+    default = dict()
+    if not keys:
+        keys = _BZ_KEYS
+
+    try:
+        ofs = "\n".join('%s\t%%{%s}' % (k, k) for k in keys)
+        c = "bugzilla query --bug_id=%s --outputformat='%s'" % (bzid, ofs)
+        o = subprocess.check_output(c, shell=True)
+
+        if not o:
+            return default
+
+        return dict(zip(keys, [l.split('\t', 1)[-1] for l in o.splitlines()]))
+
+    except subprocess.CalledProcessError:
+        return default
+
+
 VIRTUAL_APIS["swapi.cve.getCvss"] = get_cvss_for_cve
 VIRTUAL_APIS["swapi.cve.getAll"] = get_all_cve
 VIRTUAL_APIS["swapi.errata.getAll"] = get_all_errata
+VIRTUAL_APIS["swapi.bugzilla.getDetails"] = get_bugzilla_info
 
 
 def run(cmd_str):
