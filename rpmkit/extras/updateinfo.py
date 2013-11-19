@@ -252,6 +252,13 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
     ed = swapicall("errata.getDetails", offline, adv)[0]
     errata.update(ed)
 
+    try:
+        bzs = swapicall("errata.bugzillaFixes", offline, adv)[0]
+        errata["rhbzs"] = [dict(id=k, summary=v[2:-2]) for k, v in bzs.iteritems()]
+    except:
+        logging.warn("Could not get Red Hat Bugzilla info: " + adv)
+        errata["rhbzs"] = []
+
     if adv.startswith("RHSA"):
         # FIXME: Errata - CVE map looks sometimes incomplete.
         if use_map:
@@ -406,7 +413,7 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
 
 _DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
                          "description", "issue_date", "last_modified_date",
-                         "update_date", "url", "cves"]
+                         "update_date", "url", "cves", "rhbzs"]
 
 
 def _fmt_cvess(cves):
@@ -423,17 +430,37 @@ def _fmt_cvess(cves):
     return cves
 
 
+def _fmt_rhbzs(rhbzs):
+    """
+    :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
+    :return: List of CVE strings
+    """
+    try:
+        fmt = '"%(id)s (summary=%(summary)s, url=\"https://bugzilla.redhat.com/show_bug.cgi?id=%(id)s\")"'
+        rhbzs = [fmt % rhbz for rhbz in rhbzs]
+    except KeyError:
+        pass
+
+    return rhbzs
+
+
 def _detailed_errata_list_g(workdir):
     es = U.json_load(errata_list_path(workdir))
+    default = "N/A"
 
     for e in es:
         if e["severity"] is None:
-            e["severity"] = "N/A"
+            e["severity"] = default
 
         if e.get("cves", False):
             e["cves"] = ", ".join(_fmt_cvess(e["cves"]))
         else:
-            e["cves"] = "N/A"
+            e["cves"] = default
+
+        if e.get("rhbzs", False):
+            e["rhbzs"] = ", ".join(_fmt_rhbzs(e["rhbzs"]))
+        else:
+            e["rhbzs"] = default
 
         yield e
 
