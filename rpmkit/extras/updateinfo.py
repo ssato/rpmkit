@@ -254,7 +254,9 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
 
     try:
         bzs = swapicall("errata.bugzillaFixes", offline, adv)[0]
-        errata["rhbzs"] = [dict(id=k, summary=v[2:-2]) for k, v in bzs.iteritems()]
+        fmt = "https://bugzilla.redhat.com/show_bug.cgi?id=%s"
+        errata["rhbzs"] = [dict(id=k, summary=v[2:-2], url=fmt % k)
+                           for k, v in bzs.iteritems()]
     except:
         logging.warn("Could not get Red Hat Bugzilla info: " + adv)
         errata["rhbzs"] = []
@@ -436,8 +438,7 @@ def _fmt_rhbzs(rhbzs):
     :return: List of CVE strings
     """
     try:
-        fmt = 'rhbz#%(id)s: %(summary)s (https://bugzilla.redhat.com/show_bug.cgi?id=%(id)s)'
-        rhbzs = [fmt % rhbz for rhbz in rhbzs]
+        rhbzs = ['rhbz#%(id)s: %(summary)s (%(url)s' % rhbz for rhbz in rhbzs]
     except KeyError:
         pass
 
