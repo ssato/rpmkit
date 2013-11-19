@@ -266,7 +266,7 @@ API_CACHE_EXPIRATIONS = {
     "configchannel.lookupFileInfo": 1,
     "distchannel.listDefaultMaps": 100,
     "errata.applicableToChannels": 1,
-    "errata.bugzillaFixes": 10,
+    "errata.bugzillaFixes": 100,
     "errata.findByCve": 10,
     "errata.getDetails": 10,  # FIXME: How frequent errata updates?
     "errata.listAffectedSystems": 1,
