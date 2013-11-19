@@ -129,6 +129,7 @@ def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
 
     d = dict(zip(ekeys, errata))
     d["packages"] = [dict(zip(pkeys, itemgetter(*pkeys)(p))) for p in packages]
+    d["package_names"] = ", ".join(p["name"] for p in packages)
 
     return d
 
@@ -456,7 +457,8 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
     updates = [u for u in _updates_list_g(workdir, ukeys)]
 
     datasets = [_make_dataset(rpms, rpmkeys, "Installed RPMs"),
-                _make_dataset(errata, ekeys, "Errata"),
+                _make_dataset(errata, ekeys + ("package_names", ),
+                              "Errata"),
                 _make_dataset(updates, ukeys, "Update RPMs")]
 
     if details:
