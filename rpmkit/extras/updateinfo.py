@@ -47,6 +47,7 @@ _RPM_KEYS = ("name", "version", "release", "epoch", "arch", "summary",
              "vendor", "buildhost")
 _ERRATA_KEYS = ("advisory", "type", "severity")
 _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
+_BZ_KEYS = ("bug_id", "summary", "priority", "severity")
 
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
@@ -227,12 +228,37 @@ def mk_errata_map(offline):
     return errata_cves_map
 
 
-def get_errata_details(errata, workdir, offline=False, use_map=False):
+def get_bz_details(bzid, bzkeys=_BZ_KEYS):
+    return swapicall("swapi.bugzilla.getDetails", offline, [bzid] + bzkeys)[0]
+
+
+def get_bzs_from_errata_description_g(errata_details, offline=False,
+                                      bzkeys=_BZ_KEYS):
+    """
+    Get list of bugzilla tickets' info from errata' description w/ using some
+    heuristics.
+
+    :param errata_details: Description of target errata
+    :param offline: True if get results only from local cache
+    :param bzkeys: Bugzilla keys to get bugzilla info when details is True
+    """
+    candidates = re.findall(r"(?:RH)*(?:BZ|bz)#(\d+)", errata_details)
+    for bzid in candidates:
+        try:
+            yield get_bz_details(bzid, bzkeys)
+        except:
+            logging.warn("Failed to get info of the bz: " + bzid)
+            continue
+
+
+def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
+                       use_map=False):
     """
     Get errata details with using swapi (RHN hosted or satellite).
 
     :param errata: Basic errata info, {advisory, type, severity, ...}
     :param offline: True if get results only from local cache
+    :param bzkeys: Bugzilla keys to get bugzilla info when details is True
     """
     if use_map:
         cve_ref_path = errata_cve_map_path(workdir)
@@ -253,13 +279,17 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
     errata.update(ed)
 
     try:
-        bzs = swapicall("errata.bugzillaFixes", offline, adv)[0]
         fmt = "https://bugzilla.redhat.com/show_bug.cgi?id=%s"
-        errata["rhbzs"] = [dict(id=k, summary=v[2:-2], url=fmt % k)
+        bzs = swapicall("errata.bugzillaFixes", offline, adv)[0]
+        if not bzs:
+            bzs = list(get_bzs_from_errata_description_g(errata["description"],
+                                                         offline, bzkeys))
+
+        errata["bzs"] = [dict(id=k, summary=v[2:-2], url=fmt % k)
                            for k, v in bzs.iteritems()]
     except:
-        logging.warn("Could not get Red Hat Bugzilla info: " + adv)
-        errata["rhbzs"] = []
+        logging.warn("Failed to get related bugzilla info: " + adv)
+        errata["bzs"] = []
 
     if adv.startswith("RHSA"):
         # FIXME: Errata - CVE map looks sometimes incomplete.
@@ -288,12 +318,13 @@ def get_errata_details(errata, workdir, offline=False, use_map=False):
     return errata
 
 
-def dump_errata_list(workdir, offline=False,
+def dump_errata_list(workdir, offline=False, bzkeys=_BZ_KEYS,
                      ref_filename=_ERRATA_SUMMARY_FILE,
                      filename=_ERRATA_LIST_FILE):
     """
     :param workdir: Working dir to dump the result
     :param offline: True if get results only from local cache
+    :param bzkeys: Bugzilla keys to get bugzilla info when details is True
     :param ref_filename: Errata summary list as a reference
     :param filename: Output file basename
     """
@@ -301,7 +332,7 @@ def dump_errata_list(workdir, offline=False,
 
     def _g(es):
         for ref_e in es:
-            yield get_errata_details(ref_e, workdir, offline)
+            yield get_errata_details(ref_e, workdir, offline, bzkeys)
 
     errata = sorted((e for e in _g(es)), key=itemgetter("advisory"))
     U.json_dump(errata, errata_list_path(workdir))
@@ -415,7 +446,7 @@ def dump_updates_list(workdir, rpmkeys=_MIN_RPM_KEYS):
 
 _DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
                          "description", "issue_date", "last_modified_date",
-                         "update_date", "url", "cves", "rhbzs"]
+                         "update_date", "url", "cves", "bzs"]
 
 
 def _fmt_cvess(cves):
@@ -432,17 +463,17 @@ def _fmt_cvess(cves):
     return cves
 
 
-def _fmt_rhbzs(rhbzs):
+def _fmt_bzs(bzs):
     """
     :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
     :return: List of CVE strings
     """
     try:
-        rhbzs = ['rhbz#%(id)s: %(summary)s (%(url)s' % rhbz for rhbz in rhbzs]
+        bzs = ['bz#%(id)s: %(summary)s (%(url)s' % bz for bz in bzs]
     except KeyError:
         pass
 
-    return rhbzs
+    return bzs
 
 
 def _detailed_errata_list_g(workdir):
@@ -458,10 +489,10 @@ def _detailed_errata_list_g(workdir):
         else:
             e["cves"] = default
 
-        if e.get("rhbzs", False):
-            e["rhbzs"] = ", ".join(_fmt_rhbzs(e["rhbzs"]))
+        if e.get("bzs", False):
+            e["bzs"] = ", ".join(_fmt_bzs(e["bzs"]))
         else:
-            e["rhbzs"] = default
+            e["bzs"] = default
 
         yield e
 
@@ -507,8 +538,8 @@ is not supported. So it will disabled this feature."""
 
 
 def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
-            repos=[], force=False, rpmkeys=_RPM_KEYS, verbose=False,
-            warn_details_msg=_WARN_DETAILS_NOT_AVAIL):
+            repos=[], force=False, rpmkeys=_RPM_KEYS, bzkeys=_BZ_KEYS,
+            verbose=False, warn_details_msg=_WARN_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
@@ -518,6 +549,8 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
     :param repos: Specify yum repos to fetch errata and updates info
     :param force: Force overwrite the rpmdb file previously copied
     :param rpmkeys: RPM keys to get info of package
+    :param bzkeys: Bugzilla keys to get bugzilla info when details is True
+    :param verbose: Verbose mode
     """
     logging.getLogger().setLevel(DEBUG if verbose else INFO)
 
@@ -546,7 +579,7 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
 
         if dist == "rhel":
             logging.info("Dump Errata details...")
-            dump_errata_list(workdir, offline)
+            dump_errata_list(workdir, offline, bzkeys)
 
             logging.info("Update package list...")
             dump_detailed_packages_list(workdir, offline, repos)
