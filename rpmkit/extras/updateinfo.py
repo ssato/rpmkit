@@ -231,9 +231,10 @@ def mk_errata_map(offline):
 _BZ_URL_FMT = "https://bugzilla.redhat.com/show_bug.cgi?id=%s"
 
 
-def _update_bz(bz, fmt=_BZ_URL_FMT):
+def _update_bz(bz, fmt=_BZ_URL_FMT, heuristics=False):
     bz["id"] = bz["bug_id"]
     bz["url"] = fmt % bz["id"]
+    bz["heuristics"] = 1 if heuristics else 0
 
     return bz
 
@@ -267,14 +268,20 @@ def get_bzs_from_errata_desc_g(errata_desc, offline=False, bzkeys=_BZ_KEYS,
     for bzid in candidates:
         try:
             if bz_details:
-                yield _update_bz(get_bz_details(bzid, offline, bzkeys))
+                bz = get_bz_details(bzid, offline, bzkeys)
+                if not bz:
+                    logging.warn("Failed to get BZ info: " + bzid)
+                    continue
+
+                #print "*** bz=" + str(bz)
+                yield _update_bz(bz, heuristics=True)
             else:
-                yield dict(id=bzid, bug_id=bzid, url=urlfmt % bzid)
+                yield dict(id=bzid, bug_id=bzid, url=urlfmt % bzid,
+                           heuristics=1)
 
         except Exception as e:
-            m = "Failed to get the bz info (bz#%s), exc=%s" % (bzid, e)
+            m = " Failed to get the bz info (bz#%s), exc=%s" % (bzid, e)
             logging.warn(m)
-            continue
 
 
 def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
@@ -418,6 +425,7 @@ def dump_detailed_packages_list(workdir, offline=False, chans=[],
     # Backup original:
     os.rename(rpm_list_path(workdir), rpm_list_path(workdir) + ".save")
 
+        try:
     U.json_dump(new_ps, rpm_list_path(workdir))
 
 
@@ -650,7 +658,7 @@ def option_parser():
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
                     dist=None, repos="", force=False, verbose=False,
-                    bzkeys=[], bz_details=False)
+                    bzkeys=None, bz_details=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -670,8 +678,9 @@ def option_parser():
                       "e.g. 'rhel-x86_64-server-6'. Please note that any "
                       "other repos are disabled if this option was set.")
 
-    p.add_option("", "--bzkeys", action="append",
-                 help="Bugzilla keys: " + ','.join(_BZ_KEYS))
+    p.add_option("", "--bzkeys",
+                 help="Comma separated bugzilla keys. "
+                      "Choices are " + ','.join(_BZ_KEYS))
     p.add_option("", "--bz-details", action="store_true",
                  help="Get detailed bugzilla info relevant to each errata "
                       "if True. You should run 'bugzilla login' in advance."
@@ -696,6 +705,9 @@ def main():
         ppath = raw_input("Path to the 'Packages' RPM DB file > ")
 
     assert os.path.exists(ppath), "RPM DB file looks not exist"
+
+    if options.bzkeys:
+        options.bzkeys = options.bzkeys.split(',')
 
     repos = options.repos.split(',')
 
