@@ -425,7 +425,6 @@ def dump_detailed_packages_list(workdir, offline=False, chans=[],
     # Backup original:
     os.rename(rpm_list_path(workdir), rpm_list_path(workdir) + ".save")
 
-        try:
     U.json_dump(new_ps, rpm_list_path(workdir))
 
 
