@@ -228,8 +228,18 @@ def mk_errata_map(offline):
     return errata_cves_map
 
 
-def get_bz_details(bzid, bzkeys=_BZ_KEYS):
-    return swapicall("swapi.bugzilla.getDetails", offline, [bzid] + bzkeys)[0]
+def get_bz_details(bzid, offline=False, bzkeys=_BZ_KEYS):
+    """
+    Get bugzilla info for given `bzid` w/ using swapi's virtual API.
+
+    :param bzid: Bugzilla ID
+    :param offline: True if get results only from local cache
+    :param bzkeys: Bugzilla keys to get bugzilla info when details is True
+
+    :return: A dict contains bugzilla ticket's info :: dict
+    """
+    return swapicall("swapi.bugzilla.getDetails", offline,
+                     [bzid] + list(bzkeys))[0]
 
 
 def get_bzs_from_errata_description_g(errata_details, offline=False,
@@ -245,10 +255,20 @@ def get_bzs_from_errata_description_g(errata_details, offline=False,
     candidates = re.findall(r"(?:RH)*(?:BZ|bz)#(\d+)", errata_details)
     for bzid in candidates:
         try:
-            yield get_bz_details(bzid, bzkeys)
-        except:
-            logging.warn("Failed to get info of the bz: " + bzid)
+            yield get_bz_details(bzid, offline, bzkeys)
+        except Exception as e:
+            m = "Failed to get the bz info (bz#%s), exc=%s" % (bzid, e)
+            logging.warn(m)
             continue
+
+
+def _update_bz(bz):
+    fmt = "https://bugzilla.redhat.com/show_bug.cgi?id=%s"
+
+    bz["id"] = bz["bug_id"]
+    bz["url"] = fmt % bz["id"]
+
+    return bz
 
 
 def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
@@ -280,15 +300,26 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
 
     try:
         fmt = "https://bugzilla.redhat.com/show_bug.cgi?id=%s"
-        bzs = swapicall("errata.bugzillaFixes", offline, adv)[0]
-        if not bzs:
-            bzs = list(get_bzs_from_errata_description_g(errata["description"],
-                                                         offline, bzkeys))
+        bzs = swapicall("errata.bugzillaFixes", offline, adv)[0]  # :: dict
 
-        errata["bzs"] = [dict(id=k, summary=v[2:-2], url=fmt % k)
-                           for k, v in bzs.iteritems()]
-    except:
-        logging.warn("Failed to get related bugzilla info: " + adv)
+        # NOTE: 'errata.bugzillaFixes' may return [{}] if bugzilla tickets
+        # relevant to errata was not found.
+        if bzs:
+            # TODO: add some w/ get_bz_details.
+            bzs = [dict(id=k, bug_id=k, summary=v[2:-2], url=fmt % k)
+                   for k, v in bzs.iteritems()]
+        else:
+            m = "Failed to get bzs w/ RHN API relevant to " + adv
+            logging.debug(m + ". So try to get them by some heuristics.")
+
+            bzs = [_update_bz(bz) for bz in
+                   get_bzs_from_errata_description_g(errata["description"],
+                                                     offline, bzkeys)]
+
+        errata["bzs"] = bzs
+    except Exception as e:
+        m = "Failed to get related bugzilla info %s, exc=%s" % (adv, e)
+        logging.warn(m)
         errata["bzs"] = []
 
     if adv.startswith("RHSA"):
