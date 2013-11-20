@@ -853,14 +853,23 @@ def get_bugzilla_info(bzid, *keys):
         keys = _BZ_KEYS
 
     try:
-        ofs = "\n".join('%s\t%%{%s}' % (k, k) for k in keys)
-        c = "bugzilla query --bug_id=%s --outputformat='%s'" % (bzid, ofs)
+        ofs = "\n".join('%s %%{%s}' % (k, k) for k in keys)
+
+        # wait a little to avoid DoS attack to the server if called
+        # multiple times.
+        time.sleep(random.random() * 5)
+
+        uri = os.environ.get("BUGZILLA_URI", '')
+        bzcmd = "bugzilla --bugzilla=" + uri if uri else "bugzilla"
+
+        c = bzcmd + " query --bug_id=%s --outputformat='%s'" % (bzid, ofs)
+        logging.info(" bz: " + c[:c.rfind('\n')] + "...")
         o = subprocess.check_output(c, shell=True)
 
         if not o:
             return default
 
-        return dict(zip(keys, [l.split('\t', 1)[-1] for l in o.splitlines()]))
+        return dict(zip(keys, [l.split(' ', 1)[-1] for l in o.splitlines()]))
 
     except subprocess.CalledProcessError:
         return default
