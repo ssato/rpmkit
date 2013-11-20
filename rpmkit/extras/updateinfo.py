@@ -228,6 +228,16 @@ def mk_errata_map(offline):
     return errata_cves_map
 
 
+_BZ_URL_FMT = "https://bugzilla.redhat.com/show_bug.cgi?id=%s"
+
+
+def _update_bz(bz, fmt=_BZ_URL_FMT):
+    bz["id"] = bz["bug_id"]
+    bz["url"] = fmt % bz["id"]
+
+    return bz
+
+
 def get_bz_details(bzid, offline=False, bzkeys=_BZ_KEYS):
     """
     Get bugzilla info for given `bzid` w/ using swapi's virtual API.
@@ -242,8 +252,8 @@ def get_bz_details(bzid, offline=False, bzkeys=_BZ_KEYS):
                      [bzid] + list(bzkeys))[0]
 
 
-def get_bzs_from_errata_description_g(errata_details, offline=False,
-                                      bzkeys=_BZ_KEYS):
+def get_bzs_from_errata_desc_g(errata_desc, offline=False, bzkeys=_BZ_KEYS,
+                               bz_details=False, urlfmt=_BZ_URL_FMT):
     """
     Get list of bugzilla tickets' info from errata' description w/ using some
     heuristics.
@@ -251,34 +261,31 @@ def get_bzs_from_errata_description_g(errata_details, offline=False,
     :param errata_details: Description of target errata
     :param offline: True if get results only from local cache
     :param bzkeys: Bugzilla keys to get bugzilla info when details is True
+    :param bz_details: Get bugzilla detailed info if True
     """
-    candidates = re.findall(r"(?:RH)*(?:BZ|bz)#(\d+)", errata_details)
+    candidates = re.findall(r"(?:RH)*(?:BZ|bz)#(\d+)", errata_desc)
     for bzid in candidates:
         try:
-            yield get_bz_details(bzid, offline, bzkeys)
+            if bz_details:
+                yield _update_bz(get_bz_details(bzid, offline, bzkeys))
+            else:
+                yield dict(id=bzid, bug_id=bzid, url=urlfmt % bzid)
+
         except Exception as e:
             m = "Failed to get the bz info (bz#%s), exc=%s" % (bzid, e)
             logging.warn(m)
             continue
 
 
-def _update_bz(bz):
-    fmt = "https://bugzilla.redhat.com/show_bug.cgi?id=%s"
-
-    bz["id"] = bz["bug_id"]
-    bz["url"] = fmt % bz["id"]
-
-    return bz
-
-
 def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
-                       use_map=False):
+                       bz_details=True, use_map=False):
     """
     Get errata details with using swapi (RHN hosted or satellite).
 
     :param errata: Basic errata info, {advisory, type, severity, ...}
     :param offline: True if get results only from local cache
     :param bzkeys: Bugzilla keys to get bugzilla info when details is True
+    :param bz_details: Get bugzilla detailed info if True
     """
     if use_map:
         cve_ref_path = errata_cve_map_path(workdir)
@@ -305,18 +312,21 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
         # NOTE: 'errata.bugzillaFixes' may return [{}] if bugzilla tickets
         # relevant to errata was not found.
         if bzs:
-            # TODO: add some w/ get_bz_details.
-            bzs = [dict(id=k, bug_id=k, summary=v[2:-2], url=fmt % k)
-                   for k, v in bzs.iteritems()]
+            if bz_details:
+                bzs = [_update_bz(get_bz_details(k, offline, bzkeys)) for k
+                       in bzs.keys()]
+            else:
+                bzs = [dict(id=k, bug_id=k, summary=v[2:-2], url=fmt % k)
+                       for k, v in bzs.iteritems()]
         else:
             m = "Failed to get bzs w/ RHN API relevant to " + adv
             logging.debug(m + ". So try to get them by some heuristics.")
 
-            bzs = [_update_bz(bz) for bz in
-                   get_bzs_from_errata_description_g(errata["description"],
-                                                     offline, bzkeys)]
+            bzs = list(get_bzs_from_errata_desc_g(errata["description"],
+                                                  offline, bzkeys, bz_details))
 
         errata["bzs"] = bzs
+
     except Exception as e:
         m = "Failed to get related bugzilla info %s, exc=%s" % (adv, e)
         logging.warn(m)
@@ -349,13 +359,14 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
     return errata
 
 
-def dump_errata_list(workdir, offline=False, bzkeys=_BZ_KEYS,
+def dump_errata_list(workdir, offline=False, bzkeys=_BZ_KEYS, bz_details=True,
                      ref_filename=_ERRATA_SUMMARY_FILE,
                      filename=_ERRATA_LIST_FILE):
     """
     :param workdir: Working dir to dump the result
     :param offline: True if get results only from local cache
     :param bzkeys: Bugzilla keys to get bugzilla info when details is True
+    :param bz_details: Get bugzilla detailed info if True
     :param ref_filename: Errata summary list as a reference
     :param filename: Output file basename
     """
@@ -363,7 +374,8 @@ def dump_errata_list(workdir, offline=False, bzkeys=_BZ_KEYS,
 
     def _g(es):
         for ref_e in es:
-            yield get_errata_details(ref_e, workdir, offline, bzkeys)
+            yield get_errata_details(ref_e, workdir, offline, bzkeys,
+                                     bz_details)
 
     errata = sorted((e for e in _g(es)), key=itemgetter("advisory"))
     U.json_dump(errata, errata_list_path(workdir))
@@ -499,8 +511,14 @@ def _fmt_bzs(bzs):
     :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
     :return: List of CVE strings
     """
+    def _fmt(bz):
+        if "summary" in bz:
+            return "bz#%(id)s: %(summary)s (%(url)s"
+        else:
+            return "bz#%(id)s (%(url)s"
+
     try:
-        bzs = ['bz#%(id)s: %(summary)s (%(url)s' % bz for bz in bzs]
+        bzs = [_fmt(bz) for bz in bzs]
     except KeyError:
         pass
 
@@ -570,7 +588,8 @@ is not supported. So it will disabled this feature."""
 
 def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
             repos=[], force=False, rpmkeys=_RPM_KEYS, bzkeys=_BZ_KEYS,
-            verbose=False, warn_details_msg=_WARN_DETAILS_NOT_AVAIL):
+            bz_details=True, verbose=False,
+            warn_details_msg=_WARN_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
     :param workdir: Working dir to dump the result
@@ -581,6 +600,7 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
     :param force: Force overwrite the rpmdb file previously copied
     :param rpmkeys: RPM keys to get info of package
     :param bzkeys: Bugzilla keys to get bugzilla info when details is True
+    :param bz_details: Get bugzilla detailed info if True
     :param verbose: Verbose mode
     """
     logging.getLogger().setLevel(DEBUG if verbose else INFO)
@@ -610,7 +630,7 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
 
         if dist == "rhel":
             logging.info("Dump Errata details...")
-            dump_errata_list(workdir, offline, bzkeys)
+            dump_errata_list(workdir, offline, bzkeys, bz_details)
 
             logging.info("Update package list...")
             dump_detailed_packages_list(workdir, offline, repos)
@@ -629,7 +649,8 @@ def option_parser():
     Option parser.
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    dist=None, repos="", force=False, verbose=False)
+                    dist=None, repos="", force=False, verbose=False,
+                    bzkeys=[], bz_details=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -648,6 +669,14 @@ def option_parser():
                  help="Comma separated yum repos to fetch errata info, "
                       "e.g. 'rhel-x86_64-server-6'. Please note that any "
                       "other repos are disabled if this option was set.")
+
+    p.add_option("", "--bzkeys", action="append",
+                 help="Bugzilla keys: " + ','.join(_BZ_KEYS))
+    p.add_option("", "--bz-details", action="store_true",
+                 help="Get detailed bugzilla info relevant to each errata "
+                      "if True. You should run 'bugzilla login' in advance."
+                      "(bugzilla command is in python-bugzilla RPMs)")
+
     p.add_option("-f", "--force", action="store_true",
                  help="Force overwrite RPM DB files even if exists already")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -671,7 +700,8 @@ def main():
     repos = options.repos.split(',')
 
     modmain(ppath, options.workdir, options.offline, options.details,
-            options.dist, repos, options.force)
+            options.dist, repos, options.force, bzkeys=options.bzkeys,
+            bz_details=options.bz_details, verbose=options.verbose)
 
 
 if __name__ == '__main__':
