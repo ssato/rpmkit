@@ -1,9 +1,12 @@
 #
+# -*- coding: utf-8 -*-
+#
 # updateinfo.py - collect info of updates and errata applicable to the target
 # system with referering its rpm database files and utilizing swapi and
 # yum-surrogate.
 #
 # Copyright (C) 2013 Satoru SATOH <ssato@redhat.com>
+# Copyright (C) 2013 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,6 +44,7 @@ _ERRATA_SUMMARY_FILE = "errata_summary.json"
 _ERRATA_LIST_FILE = "errata.json"
 _ERRATA_CVE_MAP_FILE = "errata_cve_map.json"
 _UPDATES_FILE = "updates.json"
+_SUMMARY_FILE = "summary.json"
 _XLS_FILE = "errata_summary.xls"
 
 _RPM_KEYS = ("name", "version", "release", "epoch", "arch", "summary",
@@ -432,7 +436,7 @@ def _make_dataset(list_data, headers=None, title=None):
     """
     :param list_data: List of data
     :param headers: Dataset headers to be used as column headers
-    :param headers: Dataset title to be used as worksheet's name
+    :param title: Dataset title to be used as worksheet's name
     """
     dataset = tablib.Dataset()
 
@@ -561,6 +565,62 @@ def _updates_list_g(workdir, ukeys=_UPDATE_KEYS):
         yield u
 
 
+_ERRATA_TYPES_MAP = dict(SA="RHSA", BA="RHBA", EA="RHEA")
+
+
+def classify_errata(errata):
+    """Classify errata by its type, RH(SA|BA|EA).
+
+    :param errata: An errata dict
+
+    >>> assert classify_errata(dict(advisory="RHSA-2012:1236")) == "RHSA"
+    >>> assert classify_errata(dict(advisory="RHBA-2012:1224")) == "RHBA"
+    >>> assert classify_errata(dict(advisory="RHEA-2012:0226")) == "RHEA"
+    """
+    return _ERRATA_TYPES_MAP[errata["advisory"][2:4]]
+
+
+def _make_summary_dataset(workdir, rpms, errata, updates,
+                          filename=_SUMMARY_FILE):
+    """
+    :param rpms: List of RPM info.
+    :param errata: List of Errata info.
+    :param updates: List of update RPM info.
+    """
+    rhsa = [e for e in errata if classify_errata(e) == "RHSA"]
+    rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
+    rhsa_imp = [e for e in rhsa if e.get("severity") == "Important"]
+    rhba = [e for e in errata if classify_errata(e) == "RHBA"]
+    rhea = [e for e in errata if classify_errata(e) == "RHEA"]
+    rpmnames_need_updates = U.uniq(u["name"] for u in updates)
+    rpmnames = U.uniq(r["name"] for r in rpms)
+
+    U.json_dump(dict(rhsa=rhsa, rhsa_cri=rhsa_cri, rhsa_imp=rhsa_imp,
+                     rhba=rhba, rhea=rhea,
+                     rpmnames_need_updates=rpmnames_need_updates),
+                os.path.join(workdir, filename))
+
+    ds = [("# of Security Errata (critical)", len(rhsa_cri), "", ""),
+          ("# of Security Errata (important)", len(rhsa_imp), "", ""),
+          ("# of Security Errata (all)", len(rhsa), "", ""),
+          ("# of Bug Errata", len(rhba), "", ""),
+          ("# of Enhancement Errata", len(rhea), "-", ""),
+          ("# of Installed RPMs", len(rpms), "", ""),
+          ("# of RPMs (names) need to be updated",
+           len(rpmnames_need_updates), "", ""),
+          ("The rate of RPMs (names) need any updates / RPMs (names) [%]",
+           100 * len(rpmnames_need_updates) / len(rpmnames), "", "")]
+
+    dataset = tablib.Dataset()
+    dataset.title = "Summary"
+    dataset.headers = ("item", "value", "rating", "comments")
+
+    for d in ds:
+        dataset.append(d)
+
+    return dataset
+
+
 def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
                   ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
                   ukeys=_UPDATE_KEYS):
@@ -571,7 +631,8 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
     errata = U.json_load(errata_summary_path(workdir))
     updates = [u for u in _updates_list_g(workdir, ukeys)]
 
-    datasets = [_make_dataset(rpms, rpmkeys, "Installed RPMs"),
+    datasets = [_make_summary_dataset(workdir, rpms, errata, updates),
+                _make_dataset(rpms, rpmkeys, "Installed RPMs"),
                 _make_dataset(errata, ekeys + ("package_names", ),
                               "Errata"),
                 _make_dataset(updates, ukeys, "Update RPMs")]
