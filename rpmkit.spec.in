@@ -102,6 +102,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Nov 27 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.16-1
+- Add a virtual API called swapi.bugzilla.getDetails to rpmkit.swapi to get
+  Bugzilla information
+- Make bugzilla information related to errata added in errata JSON files by
+  rk-updateinfo (rpmkit.extras.updateinfo)
+
 * Sun Oct 20 2013 Satoru SATOH <satoru.satoh@gmail.com> - 0.2.10.15-1
 - Add new command 'rpmfy' and module 'rpmkit.rpmfy' to make [S]RPMs easily
 
