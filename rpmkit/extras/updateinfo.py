@@ -30,6 +30,7 @@ import rpmkit.utils as U
 import rpmkit.swapi as SW
 import rpmkit.yum_surrogate as YS
 
+import datetime
 import logging
 import optparse
 import os
@@ -621,11 +622,69 @@ def _make_summary_dataset(workdir, rpms, errata, updates,
     return dataset
 
 
+def _date_from_errata_issue_data(date_s):
+    """
+    NOTE: Errata issue_date and update_date format: month/day/year,
+        e.g. 12/16/10.
+
+    >>> _date_from_errata_issue_data("12/16/10")
+    (2010, 12, 16)
+    """
+    (m, d, y) = date_s.split('/')
+    return (int("20" + y), int(m), int(d))
+
+
+def _is_newer_errata(errata, since=None):
+    """
+    NOTE: issue_date format: month/day/year, e.g. 12/16/10
+
+    >>> e = dict(advisory="RHBA-2010:0993", issue_date="12/16/10")
+    >>> _is_newer_errata(e, None)
+    True
+    >>> _is_newer_errata(e, "2010-11-01")
+    True
+    >>> _is_newer_errata(e, "2010-12-16")
+    False
+    >>> _is_newer_errata(e, "2010-12-31")
+    False
+    """
+    if since is None:
+        return True  # Unknown
+
+    (y, m, d) = since.split('-')
+    (y, m, d) = (int(y), int(m), int(d))
+    logging.debug("Try to check the errata is newer than "
+                  "y=%d, m=%d, d=%d" % (y, m, d))
+
+    # Set to dummy and old enough date if failed to get issue_date.
+    issue_date = errata.get("issue_date", "1900-01-01")
+    (e_y, e_m, e_d) = _date_from_errata_issue_data(issue_date)
+    logging.debug("Issue date of the errata: y=%d, m=%d, d=%d" % (e_y, e_m,
+                                                                  e_d))
+
+    if e_y < y:
+        return False
+    elif e_y > y:
+        return True
+    else:
+        if e_m < m:
+            return False
+        elif e_m > m:
+            return True
+        else:
+            if e_m < m or (e_m == m and e_d <= d):
+                return False
+
+    return True
+
+
 def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
                   ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
-                  ukeys=_UPDATE_KEYS):
+                  ukeys=_UPDATE_KEYS, start_date=None):
     """
     :param workdir: Working dir to dump the result
+    :param start_date: Add an optional worksheet to list only errata newer
+        than the date ``start_date``
     """
     rpms = U.json_load(rpm_list_path(workdir))
     errata = U.json_load(errata_summary_path(workdir))
@@ -638,10 +697,18 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
                 _make_dataset(updates, ukeys, "Update RPMs")]
 
     if details:
-        des = [x for x in _detailed_errata_list_g(workdir)]
-        des_dataset = _make_dataset(des, dekeys, "Errata Details")
+        extra_ds = []
 
-        book = tablib.Databook(datasets + [des_dataset])
+        des = [x for x in _detailed_errata_list_g(workdir)]
+        extra_ds.append(_make_dataset(des, dekeys, "Errata Details"))
+
+        if start_date is not None:
+            ds = [e for e in des if _is_newer_errata(e, start_date)]
+            extra_ds.append(_make_dataset(ds, dekeys,
+                                          ("Errata Details (%s ~)" %
+                                           start_date)))
+
+        book = tablib.Databook(datasets + extra_ds)
     else:
         book = tablib.Databook(datasets)
 
@@ -656,7 +723,7 @@ is not supported. So it will disabled this feature."""
 
 def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
             repos=[], force=False, rpmkeys=_RPM_KEYS, bzkeys=_BZ_KEYS,
-            bz_details=True, verbose=False,
+            bz_details=True, start_date=None, verbose=False,
             warn_details_msg=_WARN_DETAILS_NOT_AVAIL):
     """
     :param ppath: The path to 'Packages' RPM DB file
@@ -669,6 +736,8 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
     :param rpmkeys: RPM keys to get info of package
     :param bzkeys: Bugzilla keys to get bugzilla info when details is True
     :param bz_details: Get bugzilla detailed info if True
+    :param start_date: Add an optional worksheet to list only errata newer
+        than the date ``start_date``
     :param verbose: Verbose mode
     """
     logging.getLogger().setLevel(DEBUG if verbose else INFO)
@@ -709,7 +778,7 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
     dump_updates_list(workdir)
 
     logging.info("Dump dataset file from RPMs and Errata data...")
-    dump_datasets(workdir, details)
+    dump_datasets(workdir, details, start_date=start_date)
 
 
 def option_parser():
@@ -718,7 +787,7 @@ def option_parser():
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
                     dist=None, repos="", force=False, verbose=False,
-                    bzkeys=None, bz_details=False)
+                    bzkeys=None, bz_details=False, start_date=None)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
 
@@ -745,6 +814,10 @@ def option_parser():
                  help="Get detailed bugzilla info relevant to each errata "
                       "if True. You should run 'bugzilla login' in advance."
                       "(bugzilla command is in python-bugzilla RPMs)")
+    p.add_option("", "--since",
+                 help="Specified the date in YYYY-MM-DD format to generate "
+                      "the worksheet to list only errata issued since given "
+                      "date; ex. '--since 2013-06-10'")
 
     p.add_option("-f", "--force", action="store_true",
                  help="Force overwrite RPM DB files even if exists already")
@@ -773,7 +846,8 @@ def main():
 
     modmain(ppath, options.workdir, options.offline, options.details,
             options.dist, repos, options.force, bzkeys=options.bzkeys,
-            bz_details=options.bz_details, verbose=options.verbose)
+            bz_details=options.bz_details, start_date=options.since,
+            verbose=options.verbose)
 
 
 if __name__ == '__main__':
