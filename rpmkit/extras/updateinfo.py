@@ -530,8 +530,9 @@ def _fmt_bzs(bzs):
             return "bz#%(id)s (%(url)s"
 
     try:
-        bzs = [_fmt(bz) for bz in bzs]
+        bzs = [_fmt(bz) % bz for bz in bzs]
     except KeyError:
+        logging.warn("BZ Key error: " + str(bzs))
         pass
 
     return bzs
@@ -684,7 +685,8 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
     """
     :param workdir: Working dir to dump the result
     :param start_date: Add an optional worksheet to list only errata newer
-        than the date ``start_date``
+        than the date ``start_date``. Along with this, detailed errata info
+        will be gotten if this date was not None and a valid date strings.
     """
     rpms = U.json_load(rpm_list_path(workdir))
     errata = U.json_load(errata_summary_path(workdir))
@@ -696,19 +698,25 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
                               "Errata"),
                 _make_dataset(updates, ukeys, "Update RPMs")]
 
-    if details:
+    if details or start_date is not None:
         extra_ds = []
 
-        des = [x for x in _detailed_errata_list_g(workdir)]
-        extra_ds.append(_make_dataset(des, dekeys, "Errata Details"))
+        es = [x for x in _detailed_errata_list_g(workdir)]
+        eds = _make_dataset(es, dekeys, "Errata Details")
 
-        if start_date is not None:
-            ds = [e for e in des if _is_newer_errata(e, start_date)]
-            extra_ds.append(_make_dataset(ds, dekeys,
-                                          ("Errata Details (%s ~)" %
-                                           start_date)))
+        if start_date is None:
+            book = tablib.Databook(datasets + [eds])
+        else:
+            es = [e for e in es if _is_newer_errata(e, start_date)]
+            eds2 = _make_dataset(es, dekeys,
+                                 "Errata Details (%s ~)" % start_date)
 
-        book = tablib.Databook(datasets + extra_ds)
+            es_diff = [e["advisory"] for e in es]
+            errata = [e for e in errata if e["advisory"] in es_diff]
+            es2 = _make_dataset(errata, ekeys + ("package_names", ),
+                                "Errata (%s ~)" % start_date)
+
+            book = tablib.Databook([es2, eds2] + datasets)
     else:
         book = tablib.Databook(datasets)
 
