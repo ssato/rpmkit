@@ -42,8 +42,7 @@ def main(args):
 
     p.add_option("-d", "--rpmsdir", help="Specify dir to find rpms [%default]")
     p.add_option("-T", "--tags",
-        help="Specify rpm tags separated with command ',' [%default]"
-    )
+                 help="Specify rpm tags separated with command ',' [%default]")
 
     (options, args) = p.parse_args(args[1:])
 
@@ -58,10 +57,8 @@ def main(args):
         print >> output, ", ".join(s.title() for s in tags)
         format = "%(" + ")s,%(".join(tags) + ")s"
 
-        rpms = sorted(
-            rpms_g(options.rpmsdir),
-            key=operator.itemgetter("name"),
-        )
+        rpms = sorted(rpms_g(options.rpmsdir),
+                      key=operator.itemgetter("name"))
 
         for x in rpms:
             print >> output, format % x
@@ -69,6 +66,5 @@ def main(args):
 
 if __name__ == '__main__':
     main(sys.argv)
-
 
 # vim:sw=4:ts=4:et:

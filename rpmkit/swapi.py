@@ -894,7 +894,7 @@ class Cache(object):
     """
 
     def __init__(self, domain, topdir=CACHE_DIR,
-            expirations=API_CACHE_EXPIRATIONS):
+                 expirations=API_CACHE_EXPIRATIONS):
         """Initialize domain-local caching parameters.
 
         :param domain: a str represents target domain
@@ -997,8 +997,8 @@ class RpcApi(object):
     """
 
     def __init__(self, conn_params, enable_cache=True, cachedir=CACHE_DIR,
-            debug=False, readonly=False, cacheonly=False, force=False,
-            vapis=VIRTUAL_APIS):
+                 debug=False, readonly=False, cacheonly=False, force=False,
+                 vapis=VIRTUAL_APIS):
         """
         :param conn_params: Connection parameters: server, userid, password,
             timeout, protocol.
@@ -1039,21 +1039,18 @@ class RpcApi(object):
 
     def login(self):
         try:
-            self.server = xmlrpclib.ServerProxy(
-                self.url, verbose=self.debug, use_datetime=True,
-            )
+            self.server = xmlrpclib.ServerProxy(self.url, verbose=self.debug,
+                                                use_datetime=True)
         except:
             logging.error("Failed to connect: url=" + self.url)
             raise
 
         try:
-            self.sid = self.server.auth.login(
-                self.userid, self.passwd, self.timeout,
-            )
+            self.sid = self.server.auth.login(self.userid, self.passwd,
+                                              self.timeout)
         except:
-            logging.error("Failed to auth: url=%s, userid=%s" % \
-                (self.url, self.userid)
-            )
+            logging.error("Failed to auth: "
+                          "url=%s, userid=%s" % (self.url, self.userid))
             raise
 
     def logout(self):
@@ -1072,18 +1069,17 @@ class RpcApi(object):
         for cache in self.caches:
             logging.debug(" Try the cache: " + cache.topdir)
             if not self.cacheonly and cache.needs_update(key, obj2key):
-                logging.debug(
-                    " Cached result is old and not used: " + str(key)
-                )
+                logging.debug("Cached result is old and not "
+                              "used: " + str(key))
             else:
-                logging.debug(" Loading cache: " + str(key))
+                logging.debug("Loading cache: " + str(key))
                 ret = cache.load(key)
 
                 if ret is not None:
-                    logging.info(" Found cached result for " + str(key))
+                    logging.info("Found cached result for " + str(key))
                     return ret
 
-            logging.debug(" No cached results found: " + cache.topdir)
+            logging.debug("No cached results found: " + cache.topdir)
 
         return None
 
@@ -1140,10 +1136,8 @@ class RpcApi(object):
             return ret
 
         except xmlrpclib.Fault, m:
-            raise RuntimeError(
-                "rpc: method '%s', args '%s'\nError message: %s" % \
-                    (method_name, str(args), m)
-            )
+            raise RuntimeError("rpc: method '%s', args '%s'\nError message: "
+                               "%s" % (method_name, str(args), m))
 
     def multicall(self, method_name, argsets):
         """Quick hack to implement XML-RPC's multicall like function.
@@ -1387,56 +1381,28 @@ def configure(options):
     return conf
 
 
-def option_parser(prog="swapi", tablib_found=TABLIB_FOUND):
-    defaults = dict(
-        config=None,
-        verbose=0,
-        timeout=TIMEOUT,
-        protocol=PROTO,
-        rpcdebug=False,
-        no_cache=False,
-        cachedir=CACHE_DIR,
-        readonly=False,
-        cacheonly=False,
-        force=False,
-        format=False,
-        indent=2,
-        sort="",
-        group="",
-        select="",
-        deselect="",
-        short_keys=True,
-        profile=os.environ.get("SWAPI_PROFILE", ""),
-        list=False,
-        output="stdout",
-    )
-
-    if tablib_found:
-        defaults["output_format"] = None
-        defaults["headers"] = None
-
-    p = optparse.OptionParser("""%(cmd)s [OPTION ...] RPC_API_STRING
+HELP_PRE = """%%prog [OPTION ...] RPC_API_STRING
 
 Examples:
-  %(cmd)s --args=10821 packages.listDependencies
-  %(cmd)s --list-args="10821,10822,10823" packages.getDetails
-  %(cmd)s -vv --args=10821 packages.listDependencies
-  %(cmd)s -P MySpacewalkProfile --args=rhel-x86_64-server-vt-5 \\
+  %%prog --args=10821 packages.listDependencies
+  %%prog --list-args="10821,10822,10823" packages.getDetails
+  %%prog -vv --args=10821 packages.listDependencies
+  %%prog -P MySpacewalkProfile --args=rhel-x86_64-server-vt-5 \\
     channel.software.getDetails
-  %(cmd)s -C /tmp/s.cfg -A rhel-x86_64-server-vt-5,guest \\
+  %%prog -C /tmp/s.cfg -A rhel-x86_64-server-vt-5,guest \\
     channel.software.isUserSubscribable
-  %(cmd)s -A "rhel-i386-server-5","2010-04-01 08:00:00" \\
+  %%prog -A "rhel-i386-server-5","2010-04-01 08:00:00" \\
     channel.software.listAllPackages
-  %(cmd)s -A '["rhel-i386-server-5","2010-04-01 08:00:00"]' \\
+  %%prog -A '["rhel-i386-server-5","2010-04-01 08:00:00"]' \\
     channel.software.listAllPackages
-  %(cmd)s --format "%%(label)s" channel.listSoftwareChannels
-  %(cmd)s -A 100010021 --no-cache -F "%%(hostname)s %%(description)s" \\
+  %%prog --format "%%(label)s" channel.listSoftwareChannels
+  %%prog -A 100010021 --no-cache -F "%%(hostname)s %%(description)s" \\
     system.getDetails
-  %(cmd)s -A '[1017068053,{"city": "tokyo", "rack": "rack-A-1"}]' \\
+  %%prog -A '[1017068053,{"city": "tokyo", "rack": "rack-A-1"}]' \\
     system.setDetails
 
 
-Config file example (%(config)s):
+Config file example (%s):
 --------------------------------------------------------------
 
 [DEFAULT]
@@ -1452,9 +1418,23 @@ userid = rpcusr
 password = secretpasswd
 
 --------------------------------------------------------------
-""" % {'cmd': prog, 'config': CONFIG},
-        prog=prog,
-    )
+""" % CONFIG
+
+
+def option_parser(prog="swapi", tablib_found=TABLIB_FOUND):
+    defaults = dict(config=None, verbose=0, timeout=TIMEOUT, protocol=PROTO,
+                    rpcdebug=False, no_cache=False, cachedir=CACHE_DIR,
+                    readonly=False, cacheonly=False, force=False,
+                    format=False, indent=2, sort="", group="", select="",
+                    deselect="", short_keys=True,
+                    profile=os.environ.get("SWAPI_PROFILE", ""),
+                    list=False, output="stdout")
+
+    if tablib_found:
+        defaults["output_format"] = None
+        defaults["headers"] = None
+
+    p = optparse.OptionParser(HELP_PRE, prog=prog)
     p.set_defaults(**defaults)
 
     config_help = "Config file path [%s; loaded in this order]" % \
@@ -1462,8 +1442,7 @@ password = secretpasswd
 
     p.add_option('-C', '--config', help=config_help)
     p.add_option('-P', '--profile',
-        help='Select profile (section) in config file'
-    )
+                 help='Select profile (section) in config file')
     p.add_option('-v', '--verbose', help='verbose mode', action="count")
 
     cog = optparse.OptionGroup(p, "Connect options")
@@ -1476,22 +1455,22 @@ password = secretpasswd
 
     xog = optparse.OptionGroup(p, "XML-RPC options")
     xog.add_option('',   '--rpcdebug', action="store_true",
-        help="XML-RPC Debug mode")
+                   help="XML-RPC Debug mode")
     p.add_option_group(xog)
 
     caog = optparse.OptionGroup(p, "Cache options")
-    caog.add_option('',   '--no-cache',
-        help='Do not use query result cache', action="store_true"
-    )
+    caog.add_option('',   '--no-cache', action="store_true",
+                    help='Do not use query result cache')
     caog.add_option('', '--cachedir', help="Caching directory [%default]")
     caog.add_option('', '--readonly', action="store_true",
-        help="Use read-only cache")
+                    help="Use read-only cache")
     caog.add_option('', '--cacheonly', action="store_true",
-        help="Get results only from cache w/o any access to RHNS")
+                    help="Get results only from cache w/o any access to RHNS")
     caog.add_option('', '--offline', action="store_true", dest="cacheonly",
-        help="Same as --cacheonly")
+                    help="Same as --cacheonly")
     caog.add_option('', '--force', action="store_true",
-        help="Force update caches regardless of caches expiration dates")
+                    help="Force update caches regardless of caches "
+                         "expiration dates")
     p.add_option_group(caog)
 
     oog = optparse.OptionGroup(p, "Output options")
@@ -1507,30 +1486,26 @@ password = secretpasswd
                        help="Comma separated output headers, e.g. 'aaa,bbb'")
 
     oog.add_option('-I', '--indent', type="int",
-        help="Indent for JSON output. 0 means no indent. [%default]",
-    )
+                   help="Indent for JSON output. 0 means no indent. "
+                        "[%default]")
     oog.add_option('', '--sort', help="Sort out results by given key")
     oog.add_option('', '--group', help="Group results by given key")
     oog.add_option('', '--select',
-        help="Select results by given key and value pair in format " + \
-            "key:value0,value1,..."
-    )
+                   help="Select results by given key and value pair in "
+                        "format " + "key:value0,value1,...")
     oog.add_option('', '--deselect',
-        help="Deselect results by given key and value pair in format " + \
-            "key:value0,value1,..."
-    )
+                   help="Deselect results by given key and value pair in "
+                        "format " + "key:value0,value1,...")
     oog.add_option('', '--no-short-keys', action="store_false",
-        dest="short_keys",
-        help="Do not shorten keys in results by common longest prefix " + \
-            "[not %default]",
-    )
+                   dest="short_keys",
+                   help="Do not shorten keys in results by common longest "
+                        "prefix " + "[not %default]")
     p.add_option_group(oog)
 
     aog = optparse.OptionGroup(p, "API argument options")
     aog.add_option('-A', '--args',
-        help="Api args other than session id in comma separated strings " + \
-            "or JSON expression [empty]"
-    )
+                   help="Api args other than session id in comma separated "
+                        "strings " + "or JSON expression [empty]")
     aog.add_option('', '--list-args', help='Specify list of API arguments')
     p.add_option_group(aog)
 
@@ -1623,10 +1598,11 @@ def main(argv, tablib_found=TABLIB_FOUND):
 
     # FIXME: Breaks DRY principle:
     if tablib_found:
-        if options.output_format in ("xls", "xlsx", "ods") and \
-            options.output == "stdout":
+        ofs = ("xls", "xlsx", "ods")
+        if options.output_format in ofs and options.output == "stdout":
             logging.error(" Output format '%s' requires output but not "
-                          "specified w/ --output option" % option.output_format)
+                          "specified w/ --output "
+                          "option" % option.output_format)
             return None
 
     if len(args) == 0:
@@ -1721,7 +1697,8 @@ def realmain(argv, tablib_found=TABLIB_FOUND):
                 for r in res:
                     data.append(r.values())
 
-            flg = "wb" if options.output_format in ("xls", "xlsx", "ods") else "w"
+            ofs = ("xls", "xlsx", "ods")
+            flg = "wb" if options.output_format in ofs else "w"
 
             with open(options.output, flg) as f:
                 content = getattr(data, options.output_format)

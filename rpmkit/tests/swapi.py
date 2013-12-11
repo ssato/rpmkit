@@ -145,28 +145,20 @@ class Test_99_system_tests(unittest.TestCase):
         )
 
     def test_04_api_w_arg_and_format_option(self):
-        _systest_helper(
-            "-A rhel-i386-server-5 --format '%%(channel_description)s' " + \
-                "channel.software.getDetails"
-        )
+        _systest_helper("-A rhel-i386-server-5 --format "
+                        "'%%(channel_description)s' "
+                        "channel.software.getDetails")
 
     def test_05_api_w_arg_multicall(self):
-        _systest_helper(
-            "--list-args='rhel-i386-server-5,rhel-x86_64-server-5' " + \
-                "channel.software.getDetails"
-        )
+        opt = "--list-args='rhel-i386-server-5,rhel-x86_64-server-5' "
+        _systest_helper(opt + "channel.software.getDetails")
 
     def test_06_api_w_args(self):
-        _systest_helper(
-            "-A 'rhel-i386-server-5,2010-04-01 08:00:00' " + \
-                "channel.software.listAllPackages"
-        )
+        opt = "-A 'rhel-i386-server-5,2010-04-01 08:00:00' "
+        _systest_helper(opt + "channel.software.listAllPackages")
 
     def test_07_api_w_args_as_list(self):
-        _systest_helper(
-            "-A '[\"rhel-i386-server-5\",\"2010-04-01 08:00:00\"]' " + \
-                "channel.software.listAllPackages"
-        )
-
+        opt = "-A '[\"rhel-i386-server-5\",\"2010-04-01 08:00:00\"]' "
+        _systest_helper(opt + "channel.software.listAllPackages")
 
 # vim:sw=4:ts=4:et:

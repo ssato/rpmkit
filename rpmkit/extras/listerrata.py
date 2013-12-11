@@ -128,10 +128,8 @@ def list_errata(channel, start=None, end=None, offline=False):
         "channel.software.listErrata"
     ]
 
-    return [
-        shorten(e, "errata_") for e in
-            __swapi([a for a in args if a is not None])
-    ]
+    return [shorten(e, "errata_") for e in
+            __swapi([a for a in args if a is not None])]
 
 
 _ERRATA_TYPES_MAP = dict(SA="RHSA", BA="RHBA", EA="RHEA")
@@ -187,17 +185,13 @@ def div_errata_list_by_time_resolution(es, resolution=_DAY):
 
     :return: [(resolution, [errata])] sorted by resolution
     """
-    return sorted(
-        (([int(i) for i in k.split('-')], v) for k, v in
-            groupby_key(es, __keyfunc(resolution))),
-        key=itemgetter(0)
-    )
+    return sorted((([int(i) for i in k.split('-')], v) for k, v
+                   in groupby_key(es, __keyfunc(resolution))),
+                  key=itemgetter(0))
 
 
 def barchart(title, xlabel, ylabel, dataset, output,
-        xtick_labels=(), ytick_labels=(),
-        *args, **kwargs
-    ):
+             xtick_labels=(), ytick_labels=(), *args, **kwargs):
     """
     :param title: Title of the chart
     :param xlabel: Label of X axis of the chart
@@ -312,36 +306,30 @@ def init_log(level):
 def option_parser():
     p = optparse.OptionParser("%prog [OPTION ...] SW_CHANNEL_LABEL")
 
-    defaults = dict(
-        outdir="list-errata-" + datetime.datetime.now().strftime("%Y%m%d"),
-        resolution="day", start=None, end=None, verbose=1,
-        format=_JSON_FMT, dumpcharts=False,
-    )
+    date = datetime.datetime.now().strftime("%Y%m%d")
+
+    defaults = dict(outdir="list-errata-" + date, resolution="day",
+                    start=None, end=None, verbose=1,
+                    format=_JSON_FMT, dumpcharts=False)
     p.set_defaults(**defaults)
 
     p.add_option("-o", "--outdir", help="Specify output dir [%default]")
-    p.add_option(
-        "-r", "--resolution", type="choice", choices=_TIME_RESOLUTION_S.keys(),
-        help="Specify time resolution to group errata list [%default]"
-    )
+    p.add_option("-r", "--resolution", type="choice",
+                 choices=_TIME_RESOLUTION_S.keys(),
+                 help="Specify time resolution to group errata "
+                      "list [%default]")
     p.add_option("-s", "--start",
-        help="Specify start date to list errata from"
-    )
+                 help="Specify start date to list errata from")
     p.add_option("-e", "--end", help="Specify end date to list errata to")
 
-    p.add_option(
-        "-F", "--format", type="choice", choices=_FORMAT_MAP.keys(),
-        help="Specify format type for outputs [%default]"
-    )
+    p.add_option("-F", "--format", type="choice", choices=_FORMAT_MAP.keys(),
+                 help="Specify format type for outputs [%default]")
     p.add_option("-d", "--dumpcharts", action="store_true",
-        help="File path to dump errata count charts if given"
-    )
+                 help="File path to dump errata count charts if given")
     p.add_option("-D", "--debug", action="store_const", const=0,
-        dest="verbose", help="Debug mode"
-    )
+                 dest="verbose", help="Debug mode")
     p.add_option("-q", "--quiet", action="store_const", const=2,
-        dest="verbose", help="Quiet mode"
-    )
+                 dest="verbose", help="Quiet mode")
     return p
 
 

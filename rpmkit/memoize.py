@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+
 def memoize(fn):
     """memoization decorator.
     """
@@ -29,6 +31,5 @@ def memoize(fn):
 
     wrapped.__doc__ = fn.__doc__
     return wrapped
-
 
 # vim:sw=4:ts=4:et:

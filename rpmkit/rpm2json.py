@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# SEE ALSO: http://docs.fedoraproject.org/drafts/rpm-guide-en/ch-rpm-programming-python.html
+# SEE ALSO: http://bit.ly/1bCBuLU
 #
 
 import optparse
@@ -30,7 +30,6 @@ try:
 
 except ImportError:
     import simplejson as json
-
 
 
 def json_dumps(s, human_readable=False):
@@ -55,7 +54,8 @@ def rpmheader(rpmfile):
 
 
 def rpmtags():
-    return [tag.replace('RPMTAG_','').lower() for tag in dir(rpm) if tag.startswith('RPMTAG_')]
+    return [tag.replace('RPMTAG_', '').lower() for tag in dir(rpm)
+            if tag.startswith('RPMTAG_')]
 
 
 def rpm_tag_values(rpmfile, tags):
@@ -86,24 +86,27 @@ def show_all_tags():
 
 def main():
     output = sys.stdout
-    tags = ['name','version','release','arch','epoch','sourcerpm']
+    tags = ['name', 'version', 'release', 'arch', 'epoch',
+            'sourcerpm']
 
     p = optparse.OptionParser("""%prog [OPTION ...] RPM_0 [RPM_1 ...]
 
 Examples:
-  %prog Server/cups-1.3.7-11.el5.i386.rpm 
+  %prog Server/cups-1.3.7-11.el5.i386.rpm
   %prog -T name,sourcerpm,rpmversion Server/*openjdk*.rpm
-  %prog --show-tags"""
-    )
+  %prog --show-tags""")
+
     p.add_option('', '--show-tags', default=False, action='store_true',
-        help='Show all possible rpm tags')
+                 help='Show all possible rpm tags')
     p.add_option('-o', '--output', help='output filename [stdout]')
     p.add_option('-T', '--tags', default=",".join(tags),
-        help='Comma separated rpm tag list to get or \"almost\" to get almost data dump (except for \"headerimmutable\"). [%default]')
+                 help="Comma separated rpm tag list to get or "
+                      "\"almost\" to get almost data dump (except "
+                      "for \"headerimmutable\"). [%default]")
     p.add_option('', "--blacklist", default="headerimmutable",
-        help="Comma separated tags list not to get data [%default]")
+                 help="Comma separated tags list not to get data [%default]")
     p.add_option('-H', '--human-readable', default=False, action='store_true',
-        help='Output formatted results.')
+                 help='Output formatted results.')
     (options, args) = p.parse_args()
 
     if options.show_tags:
@@ -143,6 +146,5 @@ Examples:
 
 if __name__ == '__main__':
     main()
-
 
 # vim:sw=4:ts=4:et:

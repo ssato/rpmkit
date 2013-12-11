@@ -110,7 +110,7 @@ class TaskError(Exception):
 class Task(object):
 
     def __init__(self, cmd, user=None, host="localhost", workdir=os.curdir,
-            timeout=MAX_TIMEOUT):
+                 timeout=MAX_TIMEOUT):
         """
         :param cmd: Command string
         :param user: User to run command
@@ -202,7 +202,8 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=None,
     :param stop_on_error: Do not catch exceptions of errors if true
     """
     task = Task(cmd, user, host, workdir, timeout)
-    proc = multiprocessing.Process(target=do_task, args=(task, stop_on_error, True))
+    proc = multiprocessing.Process(target=do_task,
+                                   args=(task, stop_on_error, True))
 
     try:
         proc.start()

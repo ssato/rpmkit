@@ -80,11 +80,9 @@ def option_parser():
         help="Number of RPMs to filter *out* [%default]"
     )
     p.add_option("-D", "--debug", action="store_const", const=0,
-        dest="verbose", help="Debug mode"
-    )
+                 dest="verbose", help="Debug mode")
     p.add_option("-q", "--quiet", action="store_const", const=2,
-        dest="verbose", help="Quiet mode"
-    )
+                 dest="verbose", help="Quiet mode")
     return p
 
 

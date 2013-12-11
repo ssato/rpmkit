@@ -35,7 +35,8 @@ import sys
 def init_repoquery():
     """
     p = RQ.oparser()  # options.pkgnarrow == "repos"
-    (opts, args) = p.parse_args(shlex.split("--tempcache --quiet --cache --whatrequires bash"))
+    (opts, args) = p.parse_args(shlex.split("--tempcache --quiet --cache "
+                                            "--whatrequires bash"))
     repoq = RQ.YumBaseQuery([], ["whatrequires"], opts)
     repoq.repos.setCache(1)
     repoq.runQuery("bash")
@@ -111,10 +112,8 @@ def minify_packages(requires, packages):
     for p in packages:
         # find packages required by p, member of `packages` list, and not
         # member of prs:
-        rs = uconcat((
-            [r for r in rs if r in packages and r not in reqs] \
-                for x, rs in requires if x == p
-        ))
+        rs = uconcat(([r for r in rs if r in packages and r not in reqs]
+                      for x, rs in requires if x == p))
         if rs:
             reqs += rs
             #logging.debug("Excluded as required by %s: %s" % (p, rs))
@@ -151,12 +150,10 @@ def find_groups_0(gps, ps_ref, ps_req):
     :return: [(group, found_packages_in_group, missing_packages_in_group)]
     """
     ps_all = ps_ref + ps_req
-    gps = [
-        (g,                                  # Group name.
-         [x for x in ps_all if x in ps],     # Packages found in ps.
-         [y for y in ps if y not in ps_all]  # Packages not found in
-        ) for g, ps in gps                   # both ps_ref and ps_req.
-    ]
+    gps = [(g,                                  # Group name.
+            [x for x in ps_all if x in ps],     # Packages found in ps.
+            [y for y in ps if y not in ps_all]  # Packages not found in
+            ) for g, ps in gps]                 # both ps_ref and ps_req.
 
     # filter out groups having no packages in ps_ref (t[1] => ps_found)
     #return sorted((t for t in gps if t[1]), key=key_group, reverse=True)
@@ -180,12 +177,10 @@ def try_special_groups(gps, ps_ref, ps_req, specials=_SPECIAL_GROUPS):
 
     :return: [(group, found_packages_in_group, missing_packages_in_group)]
     """
-    gps = [
-        (g,
-         [x for x in ps_all if x in ps],  # packages found in ps.
-         [y for y in ps if y not in ps_all]  # packages not found in 
-        ) for g, ps in gps                   # both ps_ref and ps_req.
-    ]
+    gps = [(g,
+            [x for x in ps_all if x in ps],     # packages found in ps.
+            [y for y in ps if y not in ps_all]  # packages not found in
+            ) for g, ps in gps]                 # both ps_ref and ps_req.
 
     # filter out groups having no packages in ps_ref (t[1] => ps_found)
     #return sorted((t for t in gps if t[1]), key=key_group, reverse=True)
@@ -218,18 +213,14 @@ def find_groups(gps, ps_ref, ps_req):
 
         candidates = sorted(gps, key=key_group, reverse=True)
         logging.debug(" *** Candidates *** ")
+        dmfmt = "Candidate group: %s, found=%d, missing=%d"
+
         for c in candidates:
-            logging.debug(
-                "Candidate group: %s, found=%d, missing=%d" % \
-                    (c[0], len(c[1]), len(c[2]))
-            )
+            logging.debug(dmfmt % (c[0], len(c[1]), len(c[2])))
 
         g = candidates[0]
         gs.append(g)
-        logging.debug(
-            "Candidate group: %s, found=%d, missing=%d" % \
-                (g[0], len(g[1]), len(g[2]))
-        )
+        logging.debug(dmfmt % (g[0], len(g[1]), len(g[2])))
 
         # filter out packages in this group `g` from `ps_ref` and `gps`:
         ps_ref = [p for p in ps_ref if p not in g[1]]
@@ -270,37 +261,29 @@ def dump(groups, packages, ps_required, output, fmt=KS_FMT):
             print >> output, "# " + p
     else:
         data = {}
-        data["groups"] = [
-            {"group": g, "found": ps_found, "missing": ps_missing} \
-                for g, ps_found, ps_missing in groups
-        ]
+        data["groups"] = [{"group": g, "found": ps_found,
+                           "missing": ps_missing}
+                          for g, ps_found, ps_missing in groups]
         data["packages"] = packages
         json.dump(data, output)
 
 
 def option_parser():
-    defaults = dict(
-        parse=False,
-        groups=False,
-        datadir=None,
-        output=None,
-        fmt=KS_FMT,
-        verbose=False,
-    )
+    defaults = dict(parse=False, groups=False, datadir=None, output=None,
+                    fmt=KS_FMT, verbose=False)
     p = optparse.OptionParser("%prog [OPTION ...] RPMS_FILE")
     p.set_defaults(**defaults)
 
     p.add_option("-P", "--parse", action="store_true",
-        help="Specify this if input is `rpm -qa` output and must be parsed."
-    )
+                 help="Specify this if input is `rpm -qa` output and "
+                      "must be parsed.")
     p.add_option("-G", "--groups", action="store_true",
-        help="Use package groups data if True"
-    )
-    p.add_option("-d", "--datadir", help="Dir in which repodata cache was saved")
+                 help="Use package groups data if True")
+    p.add_option("-d", "--datadir",
+                 help="Dir in which repodata cache was saved")
     p.add_option("-o", "--output", help="Output filename [stdout]")
     p.add_option("-f", "--fmt", choices=FORMATS,
-        help="Output format [%default]"
-    )
+                 help="Output format [%default]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p

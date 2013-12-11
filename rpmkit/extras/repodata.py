@@ -46,15 +46,11 @@ except ImportError:
 
 REPODATA_SYS_TOPDIR = "/var/lib/rpmkit/repodata"
 REPODATA_USER_TOPDIR = os.path.expanduser("~/.cache/rpmkit/repodata")
-REPODATA_TOPDIRS = [
-    REPODATA_SYS_TOPDIR,
-    REPODATA_USER_TOPDIR,
-]
+REPODATA_TOPDIRS = [REPODATA_SYS_TOPDIR, REPODATA_USER_TOPDIR]
 
 REPODATA_NAMES = ("groups", "filelists", "requires", "provides", "packages")
-REPODATA_XMLS = \
-  (REPODATA_COMPS, REPODATA_FILELISTS, REPODATA_PRIMARY) = \
-  ("comps", "filelists", "primary")
+REPODATA_XMLS = (REPODATA_COMPS, REPODATA_FILELISTS,
+                 REPODATA_PRIMARY) = ("comps", "filelists", "primary")
 
 _SPECIAL_RE = re.compile(r"^(?:config|rpmlib|kernel|rtld)([^)]+)")
 
@@ -64,9 +60,8 @@ def _true(*args):
 
 
 def _tree_from_xml(xmlfile):
-    return ET.parse(
-        gzip.open(xmlfile) if xmlfile.endswith(".gz") else open(xmlfile)
-    )
+    return ET.parse(gzip.open(xmlfile)
+                    if xmlfile.endswith(".gz") else open(xmlfile))
 
 
 def select_topdir():
@@ -135,10 +130,8 @@ def get_package_groups(xmlfile, byid=True):
     gk = "./group"
     kk = "./id" if byid else "./name"
     pk = "./packagelist/packagereq/[@type='default']"
-    gps = (
-        (g.find(kk).text, [p.text for p in g.findall(pk)]) for g in
-            _tree_from_xml(xmlfile).findall(gk)
-    )
+    gps = ((g.find(kk).text, [p.text for p in g.findall(pk)]) for g
+           in _tree_from_xml(xmlfile).findall(gk))
 
     # filter out groups having no packages as such group is useless:
     return [(g, ps) for g, ps in gps if ps]
@@ -168,12 +161,10 @@ def get_package_requires_and_provides(xmlfile, include_specials=False):
     pred = lambda y: include_specials or not _is_special(y.get("name"))
     name = lambda z: _strip_x(z.get("name"))
 
-    return [
-        (p.find(pnk).text,
-         uniq([name(x) for x in p.findall(rqk) if pred(x)]),
-         uniq([name(y) for y in p.findall(prk) if pred(y)]),
-        ) for p in _tree_from_xml(xmlfile).findall(pkk)
-    ]
+    return [(p.find(pnk).text,
+             uniq([name(x) for x in p.findall(rqk) if pred(x)]),
+             uniq([name(y) for y in p.findall(prk) if pred(y)])) for p
+            in _tree_from_xml(xmlfile).findall(pkk)]
 
 
 def get_package_files(xmlfile, packages=[]):
@@ -190,10 +181,8 @@ def get_package_files(xmlfile, packages=[]):
     fk = "./{%s}file" % ns  # file
 
     pred = (lambda p: p in packages) if packages else (lambda _: True)
-    pfs = (
-        (p.get("name"), uniq(x.text for x in p.findall(fk))) for p in
-            _tree_from_xml(xmlfile).findall(pk)
-    )
+    pfs = ((p.get("name"), uniq(x.text for x in p.findall(fk))) for p
+           in _tree_from_xml(xmlfile).findall(pk))
     return concat((izip(repeat(p), fs) for p, fs in pfs if fs and pred(p)))
 
 
@@ -282,24 +271,19 @@ def init_repodata(repodir, packages=[], resolve=False):
     if not packages:
         packages = uniq(p for p, _ in filelists)
 
-    requires = concat(
-        izip(repeat(p), rs) for p, rs in
-            [itemgetter(0, 1)(t) for t in reqs_and_provs if t[0] in packages]
-    )
-    provides = concat(
-        izip(repeat(p), prs) for p, prs in
-            [itemgetter(0, 2)(t) for t in reqs_and_provs if t[0] in packages]
-    )
+    requires = concat(izip(repeat(p), rs) for p, rs
+                      in [itemgetter(0, 1)(t) for t
+                          in reqs_and_provs if t[0] in packages])
+    provides = concat(izip(repeat(p), prs) for p, pr
+                      in [itemgetter(0, 2)(t) for t
+                          in reqs_and_provs if t[0] in packages])
 
     if resolve:
-        requires = [
-            (p, find_providing_packages(r, provides, filelists, packages)) \
-                for p, r in requires
-        ]
-        groups = [
-            (g, find_all_requires(ps, requires, packages, [])) for g, ps in
-                groups
-        ]
+        requires = [(p, find_providing_packages(r, provides, filelists,
+                                                packages)) for p, r
+                    in requires]
+        groups = [(g, find_all_requires(ps, requires, packages, []))
+                  for g, ps in groups]
 
     return (groups, filelists, requires, provides, packages)
 
@@ -318,10 +302,9 @@ def datapath(outdir, name="repodata.json"):
 
 
 def _find_requires(x, requires, packages, exceptions=[]):
-    return uconcat(
-        [r for r in rs if r != x and r in packages and r not in exceptions] \
-            for p, rs in requires if p == x
-    )
+    return uconcat([r for r in rs if r != x and r
+                    in packages and r not in exceptions] for p, rs
+                   in requires if p == x)
 
 
 #find_requires = memoize(_find_requires)
@@ -416,22 +399,15 @@ _COMMANDS = (_CMD_INIT, _CMD_SEARCH) = ("init", "search")
 
 
 def option_parser():
-    defaults = dict(
-        datadir=None,
-        requires=None,
-        provides=None,
-        files=None,
-        groups=False,
-        whatrequires=None,
-        outdir=None,
-        verbose=False,
-    )
+    defaults = dict(datadir=None, requires=None, provides=None, files=None,
+                    groups=False, whatrequires=None, outdir=None,
+                    verbose=False)
     p = optparse.OptionParser("""\
 %prog CMD [OPTION ...]
 
 Commands:
   i[nit]                  Initialize repodata cache for given repodata/ dir
-  s[earch] [PACKAGE ...]  Search packages/filelists/etc for given package[s] 
+  s[earch] [PACKAGE ...]  Search packages/filelists/etc for given package[s]
 
 Examples:
 
@@ -453,16 +429,13 @@ Examples:
 
     sog = optparse.OptionGroup(p, "'search' options")
     sog.add_option('', "--requires",
-        help="List packages on which this package depends"
-    )
+                   help="List packages on which this package depends")
     sog.add_option('', "--provides",
-        help="List capabilities on which this package provides"
-    )
+                   help="List capabilities on which this package provides")
     sog.add_option('', "--files", help="List all the files in this package")
     sog.add_option('', "--groups", action="store_true", help="List groups")
     sog.add_option('', "--whatrequires",
-        help="List packages depends on this package"
-    )
+                   help="List packages depends on this package")
     p.add_option_group(sog)
 
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")

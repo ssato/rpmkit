@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Reference: http://docs.fedoraproject.org/drafts/rpm-guide-en/ch-rpm-programming-python.html
+# Reference:
+# http://docs.fedoraproject.org/drafts/rpm-guide-en/ch-rpm-programming-python.html
 #
 # SEE Also: https://fedorahosted.org/rq/wiki
 #           rq looks more feature rich and complete solution to qeury rpm data.
@@ -35,20 +36,17 @@ import sqlite3 as sqlite
 import sys
 
 
-
 # some special dependency names.
 REQ_SPECIALS = re.compile(r'^rpmlib|rtld')
 
-
-DATABASE_SQL_DDL = \
-"""
+DATABASE_SQL_DDL = """\
 CREATE TABLE IF NOT EXISTS db_info ( dbversion INTEGER );
 CREATE TABLE IF NOT EXISTS packages (
     pid INTEGER PRIMARY KEY,
     name TEXT, version TEXT, release TEXT, arch TEXT, epoch TEXT,
     summary TEXT, description TEXT, url TEXT,
-    license TEXT, vendor TEXT, pgroup TEXT, buildhost TEXT, sourcerpm TEXT, packager TEXT,
-    size_package INTEGER, size_archive INTEGER,
+    license TEXT, vendor TEXT, pgroup TEXT, buildhost TEXT, sourcerpm TEXT,
+    packager TEXT, size_package INTEGER, size_archive INTEGER,
     srpmname TEXT
 );
 CREATE TABLE IF NOT EXISTS files (
@@ -104,19 +102,20 @@ CREATE TRIGGER IF NOT EXISTS removals AFTER DELETE ON packages
 """
 
 
-
 def zip3(xs, ys, zs):
     """
-    >>> zip3([0,3],[1,4],[2,5])
+    >>> zip3([0, 3], [1, 4], [2,5])
     [(0, 1, 2), (3, 4, 5)]
     """
-    return [(x,y,z) for (x,y),z in zip(zip(xs, ys), zs)]
+    return [(x, y, z) for (x, y), z in zip(zip(xs, ys), zs)]
 
 
 def foreach_rpms(topdir='.'):
     """Equal to `find $topdir -name '*.rpm'`
     """
-    for f in U.concat([os.path.join(dirpath, f) for f in fs if f.endswith('.rpm')] for dirpath, _dirs, fs in os.walk(topdir)):
+    for f in U.concat([os.path.join(dirpath, f) for f
+                       in fs if f.endswith('.rpm')] for dirpath, _dirs, fs
+                      in os.walk(topdir)):
         yield f
 
 
@@ -127,7 +126,8 @@ def resolve_req_pids(rn, files, packages, provides):
     @param rn: Req. name; req['name']
     @param files:  All file paths list
     @param packages:  All (unique) packages list
-    @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
+    @param provides:  Provides list to find required packages (type: [{'name',
+        'version', 'flag', 'package_name'}])
 
     @return: [pid]
     """
@@ -151,9 +151,11 @@ def resolve_req_pids(rn, files, packages, provides):
         else:
             pids = [p['pid'] for p in packages if p['name'] == rn]
             if pids:
-                logging.debug("Found '%s' in packages. pids=%s" % (rn, str(pids)))
+                dm = "Found '%s' in packages. pids=%s" % (rn, str(pids))
+                logging.debug(dm)
             else:
-                logging.warn("'%s' NOT FOUND in files, provides and packages" % rn)
+                wm = "'%s' NOT FOUND in files, provides and packages" % rn
+                logging.warn(wm)
 
     return U.unique(pids)
 
@@ -162,21 +164,24 @@ def list_reqs_1(pid, reqs, files, packages, provides, distance=1):
     """List required packages for the package of $pid.
 
     @param pid:  Package ID
-    @param reqs:  Package's requires list (type: [{'name', 'version', 'flag', ...}])
+    @param reqs:  Package's requires list
+        (type: [{'name', 'version', 'flag', ...}])
     @param files:  All file paths list
     @param packages:  All (unique) packages list
-    @param provides:  Provides list to find required packages (type: [{'name', 'version', 'flag', 'package_name'}])
+    @param provides:  Provides list to find required packages (type: [{'name',
+        'version', 'flag', 'package_name'}])
     @param distance:  Distance to requires [1]
 
-    @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID of required package)
+    @return: require list :: [{'name', 'version', 'flags', 'rpid'}] (rpid: ID
+        of required package)
     """
-    rs = U.concat((
-        [{'name':r['name'], 'flags':r['flags'], 'version':r['version'], 'pid':pid, 'distance':distance, 'rpid':rpid} \
-            for rpid in resolve_req_pids(r['name'], files, packages, provides)] for r in reqs
-    ))
+    rs = U.concat(([{'name': r['name'], 'flags': r['flags'],
+                     'version': r['version'], 'pid': pid, 'distance': distance,
+                     'rpid': rpid} for rpid
+                    in resolve_req_pids(r['name'], files, packages, provides)]
+                   for r in reqs))
 
     return rs
-
 
 
 class PackageMetadata(dict):
@@ -253,34 +258,34 @@ class PackageMetadata(dict):
         self['size_archive'] = h[rpm.RPMTAG_ARCHIVESIZE]
 
         self['os_version'] = self.guess_os_version(h)
-        self['srpmname'] = h[rpm.RPMTAG_SOURCERPM].split(h[rpm.RPMTAG_VERSION])[0][:-1]
+        self['srpmname'] = \
+            h[rpm.RPMTAG_SOURCERPM].split(h[rpm.RPMTAG_VERSION])[0][:-1]
 
         dirs = h[rpm.RPMTAG_DIRNAMES]
-        self['files'] = [
-            {'path': f, 'basename': os.path.basename(f), 'type': (f in dirs and 'd' or 'f')}
-                for f in h[rpm.RPMTAG_FILENAMES]
-        ]
+        self['files'] = [{'path': f, 'basename': os.path.basename(f),
+                          'type': (f in dirs and 'd' or 'f')} for f
+                         in h[rpm.RPMTAG_FILENAMES]]
 
-        self['conflicts'] = [
-            {'name':n, 'version':v, 'flags':f} for n,v,f in \
-                zip3(h[rpm.RPMTAG_CONFLICTS], h[rpm.RPMTAG_CONFLICTFLAGS], h[rpm.RPMTAG_CONFLICTVERSION])
-        ]
+        self['conflicts'] = [{'name': n, 'version': v, 'flags': f} for n, v, f
+                             in zip3(h[rpm.RPMTAG_CONFLICTS],
+                                     h[rpm.RPMTAG_CONFLICTFLAGS],
+                                     h[rpm.RPMTAG_CONFLICTVERSION])]
 
-        self['obsoletes'] = [
-            {'name':n, 'version':v, 'flags':f} for n,v,f in \
-                zip3(h[rpm.RPMTAG_OBSOLETES], h[rpm.RPMTAG_OBSOLETEFLAGS], h[rpm.RPMTAG_OBSOLETEVERSION])
-        ]
+        self['obsoletes'] = [{'name': n, 'version': v, 'flags': f} for n, v, f
+                             in zip3(h[rpm.RPMTAG_OBSOLETES],
+                                     h[rpm.RPMTAG_OBSOLETEFLAGS],
+                                     h[rpm.RPMTAG_OBSOLETEVERSION])]
 
-        self['provides'] = [
-            {'name':n, 'version':v, 'flags':f} for n,v,f in \
-                zip3(h[rpm.RPMTAG_PROVIDES], h[rpm.RPMTAG_PROVIDEFLAGS], h[rpm.RPMTAG_PROVIDEVERSION])
-        ]
+        self['provides'] = [{'name': n, 'version': v, 'flags': f} for n, v, f
+                            in zip3(h[rpm.RPMTAG_PROVIDES],
+                                    h[rpm.RPMTAG_PROVIDEFLAGS],
+                                    h[rpm.RPMTAG_PROVIDEVERSION])]
 
-        self['requires'] = [
-            {'name':n, 'version':v, 'flags':f, 'distance':1} for n,v,f in \
-                zip3(h[rpm.RPMTAG_REQUIRES], h[rpm.RPMTAG_REQUIREFLAGS], h[rpm.RPMTAG_REQUIREVERSION])
-        ]
-
+        self['requires'] = [{'name': n, 'version': v, 'flags': f,
+                             'distance': 1} for n, v, f
+                            in zip3(h[rpm.RPMTAG_REQUIRES],
+                                    h[rpm.RPMTAG_REQUIREFLAGS],
+                                    h[rpm.RPMTAG_REQUIREVERSION])]
 
 
 class RpmDB(object):
@@ -339,26 +344,39 @@ class RpmDB(object):
             index += 1
 
             logging.info("p=%s" % str(p))
-            cur.execute(
-                "INSERT INTO packages(pid, name, version, release, arch, epoch, summary, description, url, license, vendor, pgroup, buildhost, sourcerpm, packager, size_package, size_archive, srpmname) VALUES(:pid, :name, :version, :release, :arch, :epoch, :summary, :description, :url, :license, :vendor, :group, :buildhost, :sourcerpm, :packager, :size_package, :size_archive, :srpmname)",
-                p
-            )
+            cur.execute("INSERT INTO packages(pid, name, version, release, "
+                        "arch, epoch, summary, description, url, license, "
+                        "vendor, pgroup, buildhost, sourcerpm, packager, "
+                        "size_package, size_archive, srpmname) "
+                        "VALUES(:pid, :name, :version, :release, :arch, "
+                        ":epoch, :summary, :description, :url, :license, "
+                        ":vendor, :group, :buildhost, :sourcerpm, :packager, "
+                        ":size_package, :size_archive, :srpmname)", p)
 
-            pfs = [{'path':f['path'], 'basename':f['basename'], 'type':f['type'], 'pid':p['pid']} for f in p['files']]
-            cur.executemany("INSERT INTO files(path, basename, type, pid) VALUES(:path, :basename, :type, :pid)", pfs)
+            pfs = [{'path': f['path'], 'basename': f['basename'],
+                    'type': f['type'], 'pid': p['pid']} for f in p['files']]
+            cur.executemany("INSERT INTO files(path, basename, type, pid) "
+                            "VALUES(:path, :basename, :type, :pid)", pfs)
             p['files'] = pfs
             logging.info("pfs=%s" % str(pfs))
 
             for k in ('conflicts', 'obsoletes', 'provides'):
-                xs = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p[k]]
-                cur.executemany("INSERT INTO %s(name, flags, version, pid) VALUES(:name, :flags, :version, :pid)" % k, xs)
+                xs = [{'name': x['name'], 'flags': x['flags'],
+                       'version': x['version'], 'pid': p['pid']} for x in p[k]]
+                sql = "INSERT INTO %s(name, flags, version, pid) " % k + \
+                      "VALUES(:name, :flags, :version, :pid)"
+                cur.executemany(sql, xs)
                 p[k] = xs
                 logging.info("p[%s]=%s" % (k, str(xs)))
 
             conn.commit()
 
-            prs = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in p['requires']]
-            #p['requires'] = [{'name':x['name'], 'flags':x['flags'], 'version':x['version'], 'pid':p['pid']} for x in prs]
+            prs = [{'name': x['name'], 'flags': x['flags'],
+                    'version': x['version'], 'pid': p['pid']} for x
+                   in p['requires']]
+            #p['requires'] = [{'name': x['name'], 'flags': x['flags'],
+            #                  'version': x['version'], 'pid': p['pid']} for x
+            #                 in prs]
             p['requires'] = prs
             logging.info("p[requires]=%s" % prs)
 
@@ -371,10 +389,9 @@ class RpmDB(object):
         for p in ps:
             prs = list_reqs_1(p['pid'], p['requires'], files, ps, provs, 1)
             logging.info("prs=%s" % prs)
-            cur.executemany(
-                "INSERT INTO requires(name, flags, version, pid, rpid, distance) VALUES(:name, :flags, :version, :pid, :rpid, :distance)",
-                prs
-            )
+            cur.executemany("INSERT INTO requires(name, flags, version, pid, "
+                            "rpid, distance) VALUES(:name, :flags, :version, "
+                            ":pid, :rpid, :distance)", prs)
             conn.commit()
 
             p['requires'] = prs
@@ -382,9 +399,11 @@ class RpmDB(object):
 
         conn.close()
 
-    def dumpdb(self, destdir='./', dist_fmt='rhel-%(arch)s-%(os_version)d', force=False):
+    def dumpdb(self, destdir='./', dist_fmt='rhel-%(arch)s-%(os_version)d',
+               force=False):
         for osver in self.dists.keys():
-            label = dist_fmt % {'os_version': osver, 'arch': self.dists[osver]['arch']}
+            label = dist_fmt % {'os_version': osver,
+                                'arch': self.dists[osver]['arch']}
             db = os.path.join(destdir, "%s.sqlite" % label)
             ps = self.dists[osver]['packages']
 
@@ -394,14 +413,14 @@ class RpmDB(object):
             self.dumpdata(db, ps)
 
 
-
 def main():
     tstamp = datetime.date.today().strftime("%Y%m%d")
     outdir = "rpmdb_%s" % tstamp
 
     p = optparse.OptionParser("%prog [OPTION ...] RPMDIR_0 [RPMDIR_1 ...]")
     p.add_option('', '--outdir', default=outdir, help='Output dir. [%default]')
-    #p.add_option('', '--force', default=False, action='store_true', help='Force overwrite existing dbs. [false]')
+    #p.add_option('', '--force', default=False, action='store_true',
+    #             help='Force overwrite existing dbs. [false]')
     (options, args) = p.parse_args()
 
     if len(args) < 1:
@@ -426,6 +445,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
 # vim:sw=4:ts=4:et:

@@ -157,10 +157,8 @@ def complement_package_metadata(pkg):
         except Exception, e:
             print str(e)
 
-            logging.error(
-                "Failed to query: " + \
-                "nvr=({name}, {version}, {release})".format(**pkg)
-            )
+            logging.error("Failed to query: "
+                          "nvr=({name}, {version}, {release})".format(**pkg))
             r = pkg
             r["epoch"] = 0
             r["arch"] = "?"
@@ -173,9 +171,8 @@ def load_packages(pf):
 
     :param pf: Packages list file.
     """
-    return [
-        l.rstrip() for l in open(pf).readlines() if l and not l.startswith("#")
-    ]
+    return [l.rstrip() for l in open(pf).readlines()
+            if l and not l.startswith("#")]
 
 
 def init_log(verbose):
@@ -217,12 +214,12 @@ autoconf: A GNU tool for automatically configuring source code.
 
     p.add_option("-v", "--verbose", action="count", help="Verbose mode")
     p.add_option("-D", "--debug", action="store_const", dest="verbose",
-        const=2, help="Debug mode")
+                 const=2, help="Debug mode")
     p.add_option("-i", "--input",
-        help="Packages list file (output of 'rpm -qa')")
+                 help="Packages list file (output of 'rpm -qa')")
     p.add_option("-A", "--arch", help="Architecture of package[s] [%default]")
     p.add_option("-F", "--format",
-        help="Output format, e.g %s" % default_format)
+                 help="Output format, e.g %s" % default_format)
 
     (options, packages) = p.parse_args(argv[1:])
 

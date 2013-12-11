@@ -351,8 +351,8 @@ def failure(cmd, result):
     (outs, errs, rc) = result
 
     raise RuntimeError("Could not get the result: "
-                       "\nop='%s', rc=%d,\nout=%s\nerr=%s" % \
-                       (cmd, rc, ''.join(outs), ''.join(errs)))
+                       "\nop='%s', rc=%d,\nout=%s\n"
+                       "err=%s" % (cmd, rc, ''.join(outs), ''.join(errs)))
 
 
 _RPM_ARCHS = ("i386", "i586", "i686", "x86_64", "ppc", "ia64", "s390",
