@@ -107,9 +107,10 @@ rm -rf $RPM_BUILD_ROOT
   Bugzilla information
 - Make bugzilla information related to errata added in errata JSON files by
   rk-updateinfo (rpmkit.extras.updateinfo)
-- Add --since to generate the worksheet to only list errata issued later than
-  given date
+- Add --since option to generate the worksheet to only list errata issued
+  later than given date
 - Other various enhancements and fixes especially in rk-updateinfo
+- Fixed many PEP8 errors and warnings
 
 * Sun Oct 20 2013 Satoru SATOH <satoru.satoh@gmail.com> - 0.2.10.15-1
 - Add new command 'rpmfy' and module 'rpmkit.rpmfy' to make [S]RPMs easily
