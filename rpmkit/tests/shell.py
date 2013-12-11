@@ -120,9 +120,15 @@ class Test_20_do_task(unittest.TestCase):
             print("Skip this test because you're root.")
             return
 
-        task = SH.Task("true", workdir="/root", timeout=10)
+        # It seems that neighther 'subprocess.Popen("true",
+        # cwd="/root").wait()' nor 'subprocess.Popen("cd /root && true",
+        # shell=True).wait()' does not raise any exceptions these days:
+        #task = SH.Task("true", workdir="/root", timeout=10)
+        #task = SH.Task("cd /root && true", workdir="/root", timeout=10)
 
-        with self.assertRaises(OSError) as cm:
+        task = SH.Task("touch /root/.bashrc", timeout=10)
+
+        with self.assertRaises(SH.TaskError) as cm:
             SH.do_task(task, stop_on_error=True)
 
     def test_20_do_task__ignore_permission_denied_error(self):
@@ -130,8 +136,8 @@ class Test_20_do_task(unittest.TestCase):
             print("Skip this test because you're root.")
             return
 
-        task = SH.Task("true", workdir="/root", timeout=10)
-        self.assertEquals(SH.do_task(task, stop_on_error=False), -1)
+        task = SH.Task("touch /root/.bashrc", workdir="/root", timeout=10)
+        self.assertNotEquals(SH.do_task(task, stop_on_error=False), 0)
 
     def test_30_do_task__timeout(self):
         task = SH.Task("sleep 10", timeout=1)
