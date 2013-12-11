@@ -167,6 +167,9 @@ def find_groups_0(gps, ps_ref, ps_req):
     return gs
 
 
+_SPECIAL_GROUPS = []
+
+
 def try_special_groups(gps, ps_ref, ps_req, specials=_SPECIAL_GROUPS):
     """
     Try matching packages `ps_ref` with some special groups.
