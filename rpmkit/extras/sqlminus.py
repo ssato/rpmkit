@@ -53,15 +53,20 @@ $ ./sqlminus.py sql "SELECT DISTINCT D.NAME,B.NAME FROM RHNPACKAGEFILE A, RHNPAC
 ('libgcrypt', '/usr/lib64/libgcrypt.so.11')
 """
 
-import cx_Oracle
+import logging
 import optparse
 import os
 import pprint
 import subprocess
 import sys
 
-__version__ = '0.1.1'
+try:
+    import cx_Oracle
+except ImportError:
+    logging.error("Unable to load cx_Oracle module. Aborting...")
+    sys.exit(0)  # Make not an error.
 
+__version__ = '0.1.1'
 
 DSN = 'rhnsat/rhnsat@rhnsat'
 
