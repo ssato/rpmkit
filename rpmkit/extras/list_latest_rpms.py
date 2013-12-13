@@ -21,11 +21,11 @@ import rpmkit.swapi as RS
 
 import base64
 import datetime
+import gevent
 import logging
 import optparse
 import os
 import os.path
-import shlex
 import sys
 
 
@@ -50,7 +50,7 @@ def list_latest_packages_in_the_channel_g(channel, details=True):
             logging.info("Try to get more detailed info: pid=" + str(r["id"]))
             args = ["-A", str(r["id"]), "packages.getDetails"]
             logging.debug("swapi::args: " + str(args))
-            yield swapicall(args)
+            yield swapicall(args)[0]
         else:
             yield r
 
@@ -73,11 +73,11 @@ def download_rpm(rpminfo, outdir):
     assert "file" in rpminfo, \
         "'file' info is necessary to download RPM: " + str(rpminfo)
 
+    logging.info("Try to download the RPM: " + rpminfo["file"])
     b64s = swapicall(["-A", str(rpminfo["id"]), "packages.getPackage"])
 
-    logging.info("Try to download the RPM: " + rpminfo["file"])
     with open(os.path.join(outdir, rpminfo["file"]), 'wb') as o:
-        o.write(b64s)
+        o.write(base64.decodestring(b64s))
 
 
 def init_log(level):
@@ -117,13 +117,20 @@ def main(argv=sys.argv):
 
     channel = args[0]
 
+    if not os.path.exists(options.outdir):
+        os.makedirs(options.outdir)
+
     if options.download:
-        for rpm in list_latest_packages_in_the_channel_g(channel, True):
-            download_rpm(rpm, options.outdir)
+        def _downloads(channel=channel, outdir=options.outdir):
+            for rpm in list_latest_packages_in_the_channel_g(channel):
+                yield gevent.spawn(download_rpm, rpm, outdir)
+
+        gevent.joinall(_downloads())
     else:
-        for rpm in list_latest_packages_in_the_channel_g(channel, True):
-            for r in rpm:
-                print get_filepath_of_rpm_on_satellite(r)
+        fn = "latest_rpm_paths_on_satellite.txt"
+        with open(os.path.join(options.outdir, fn), 'w') as out:
+            for rpm in list_latest_packages_in_the_channel_g(channel):
+                out.write(get_filepath_of_rpm_on_satellite(rpm) + '\n')
 
 
 if __name__ == '__main__':
