@@ -259,12 +259,15 @@ def make_errata_xml_fragment_g(channel, tmpl=UPDATEINFO_XML_UPDATE):
 
 def make_updateinfo_xml(channel, outdir, outname="updateinfo.xml"):
     """
+    :param channel: Software channel label, e.g. rhel-x86_64-as-4.
+    :param outdir: Path to dir to save outputs
+    :param outname: Output filename
     """
     if not os.path.exists(outdir):
         logging.info("Create output dir: " + outdir)
         os.makedirs(outdir)
 
-    outpath = os.path.join(outdir, outname)
+    outpath = os.path.join(outdir, outname + ".new")
 
     if outname.endswith(".gz"):
         (opener, opener_args) = (gzip.open, (outpath, "wb"))
@@ -276,6 +279,8 @@ def make_updateinfo_xml(channel, outdir, outname="updateinfo.xml"):
     with opener(*opener_args) as out:
         for xml_fragment in make_errata_xml_fragment_g(channel):
             out.write(xml_fragment)
+
+    os.rename(outpath, os.path.join(outdir, outname))
 
 
 def init_log(level):
