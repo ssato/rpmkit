@@ -26,10 +26,8 @@ import os
 import os.path
 import re
 import sys
+import xml.sax.saxutils as XSS  # escape, quoteattr
 
-
-UPDATEINFO_XML = """<?xml version="1.0" encoding="UTF-8"?>
-<updates>%s</updates>"""
 
 # Examples:
 #
@@ -75,7 +73,7 @@ UPDATEINFO_XML = """<?xml version="1.0" encoding="UTF-8"?>
 #
 # SEE ALSO: java/code/src/com/redhat/rhn/taskomatic/task/repomd/UpdateInfoWriter.java in spacewalk,
 #   https://git.fedorahosted.org/cgit/spacewalk.git/tree/java/code/src/com/redhat/rhn/taskomatic/task/repomd/UpdateInfoWriter.java
-# 
+#
 UPDATEINFO_XML_UPDATE = """\
 <update from="%(from)s" status="%(status)s" type="%(type)s" version="%(version)s">
   <id>%(advisory_name)s</id>
@@ -98,15 +96,24 @@ UPDATEINFO_XML_UPDATE = """\
 
 # epoch: unsigned int >= 0 (0 means None)
 UPDATEINFO_XML_PACKAGE = """\
-<package name="%(name)s" version="%(version)s" release="%(release)s" epoch="%(epoch)s" arch="%(arch)s" src="%(sourcerpm)s">
-  <filename>%(file)s</filename>
-  <sum type="%(checksum_type)s">%(checksum)s</sum>
-</package>
+      <package name="%(name)s" version="%(version)s" release="%(release)s"
+               epoch="%(epoch)s" arch="%(arch)s" src="%(sourcerpm)s">
+        <filename>%(file)s</filename>
+        <sum type="%(checksum_type)s">%(checksum)s</sum>
+      </package>
 """
 
 
 class StrictTypeError(TypeError):
     pass
+
+
+def escape(s):
+    return XSS.escape(s)
+
+
+def escapeattr(s):
+    return XSS.quoteattr(XSS.escape(s))
 
 
 def swapicall(cmd):
@@ -118,7 +125,8 @@ def swapicall(cmd):
     return RS.main(cmd)[0]
 
 
-# TODO: Which is better ?  _advisory_type_to_errata_type or _advisory_to_errata_type
+# TODO: Which is better ?
+#   _advisory_type_to_errata_type or _advisory_to_errata_type
 def _advisory_type_to_errata_type(atype):
     """
     :param atype: Advisory type = (Security | Bug Fix | Product Enhancement)
@@ -132,7 +140,7 @@ def _advisory_type_to_errata_type(atype):
     'security'
     """
     assert atype.endswith(" Advisory"), "Wrong advisory_type: " + str(atype)
-    return ''.join(atype.split()[:-1]).lower()
+    return ''.join(atype.replace("Product ", '').split()[:-1]).lower()
 
 
 _ADV_ERRATA_MAP = dict(S="security", B="bugfix", E="enhancement")
@@ -152,17 +160,18 @@ def _advisory_to_errata_type(advisory, aemap=_ADV_ERRATA_MAP):
 
 def dict_to_attrs(d):
     """
-    >>> dict(a=1, b="ccc", d="Hello, world!")
+    >>> dict_to_attrs(dict(a=1, b="ccc", d="Hello, world!"))
     'a="1" b="ccc" d="Hello, world!"'
     """
-    return ' '.join("%s=%s" % (k, str(v)) for k, v in d.iteritems())
+    return ' '.join('%s=%s' % (k, escapeattr(str(v))) for k, v
+                    in d.iteritems())
 
 
 def get_references_g(advisory, cves=[], references=[]):
     """
     :param advisory: Advisory name, e.g. RHEA-2011:0141
     :param cves: List of relevant CVEs which is only available in RHSAs
-    :param references:  List of other type references such like 
+    :param references:  List of other type references such like
         'http://www.redhat.com/security/updates/classification/#important' in
         RHSAs.
     """
@@ -204,15 +213,16 @@ def list_errata_g(channel):
     :yield: A dict of errata information needed to make up udpateinfo
 
     channel.software.listErrata ::
-        (channel :: str) -> { advisory_name, e.g. RHSA-2007:0107, 
-                              advisory_type, e.g. Security Advisory, 
+        (channel :: str) -> { advisory_name, e.g. RHSA-2007:0107,
+                              advisory_type, e.g. Security Advisory,
                               issue_date, e.g. 2007-03-13 13:00:00,
-                              advisory, e.g. RHSA-2007:0107, 
-                              last_modified_date, e.g. 2007-03-15 00:06:52, 
-                              synopsis, e.g. "Important: gnupg security update", 
-                              date, e.g. "2007-03-13 13:00:00", 
-                              update_date, e.g. "2007-03-14 13:00:00", 
-                              id, e.g. 1393, 
+                              advisory, e.g. RHSA-2007:0107,
+                              last_modified_date, e.g. 2007-03-15 00:06:52,
+                              synopsis,
+                                e.g. "Important: gnupg security update",
+                              date, e.g. "2007-03-13 13:00:00",
+                              update_date, e.g. "2007-03-14 13:00:00",
+                              id, e.g. 1393,
                               advisory_synopsis, ...}
     """
     for errata in swapicall(["-A", channel, "channel.software.listErrata"]):
@@ -234,7 +244,7 @@ def list_errata_g(channel):
 
         ed = swapicall(["-A", advisory, "errata.getDetails"])[0]
         for k in ("synopsis", "description", "solution"):
-            errata[k] = ed[k]
+            errata[k] = escape(ed[k])
 
         if advisory.startswith("RHSA"):
             errata["cves"] = swapicall(["-A", advisory, "errata.listCves"])
@@ -277,8 +287,12 @@ def make_updateinfo_xml(channel, outdir, outname="updateinfo.xml"):
     logging.info("Retrieving and write data to "
                  "updateinfo.xml for " + channel)
     with opener(*opener_args) as out:
+        out.write('<?xml version="1.0" encoding="UTF-8"?>\n<updates>\n')
+
         for xml_fragment in make_errata_xml_fragment_g(channel):
             out.write(xml_fragment)
+
+        out.write("</updates>\n")
 
     os.rename(outpath, os.path.join(outdir, outname))
 
