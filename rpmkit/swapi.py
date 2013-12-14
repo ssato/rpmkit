@@ -272,9 +272,9 @@ API_CACHE_EXPIRATIONS = {
     "errata.getDetails": 10,  # FIXME: How frequent errata updates?
     "errata.listAffectedSystems": 1,
     "errata.listByDate": 1,
-    "errata.listCves": 10,
+    "errata.listCves": 100,
     "errata.listKeywords": 10,
-    "errata.listPackages": 10,
+    "errata.listPackages": 100,
     "errata.listUnpublishedErrata": 10,
     "kickstart.findKickstartForIp": 1,
     "kickstart.listAllIpRanges": 100,
