@@ -143,7 +143,7 @@ def _advisory_to_errata_type(advisory, aemap=_ADV_ERRATA_MAP):
     :param advisory: Advisory name, e.g. RHEA-2011:0141
     """
     try:
-        return aemap[re.match(r"^RH(S|B|E)A-\d{4}:\d{4}$",
+        return aemap[re.match(r"^RH(S|B|E)A-\d+:\d+$",
                               advisory).groups()[0]]
     except Exception as e:
         logging.error("exc=" + str(e))
