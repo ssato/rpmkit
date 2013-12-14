@@ -192,7 +192,7 @@ def opts_parser():
                  help='Comma separated table list or "all" (all tables).')
     p.add_option('-v', '--verbose', dest='verbose', action='store_true',
                  help='Verbose mode.', default=False)
-    return parser
+    return p
 
 
 def println(s, err=True):
