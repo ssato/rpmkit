@@ -20,6 +20,7 @@ import rpmkit.swapi as RS
 
 import codecs
 import gzip
+import hashlib
 import logging
 import optparse
 import os
@@ -181,6 +182,9 @@ def get_references_g(advisory, cves=[], references=[]):
     bzs = swapicall(["-A", advisory, "errata.bugzillaFixes"])[0]
     for bzid, bztitle in bzs.iteritems():
         url = "https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=%s" % bzid
+        if bztitle.startswith("['") and bztitle.endswith("']"):
+            bztitle = bztitle[2:-2]
+
         yield dict(href=url, type="bugzilla", title=bztitle)
 
     for cve in cves:
@@ -267,6 +271,14 @@ def make_errata_xml_fragment_g(channel, tmpl=UPDATEINFO_XML_UPDATE):
         yield tmpl % errata
 
 
+def output_path(outdir, outname="updateinfo.xml"):
+    """
+    :param outdir: Path to dir to save outputs
+    :param outname: Output filename
+    """
+    return os.path.join(outdir, outname)
+
+
 def make_updateinfo_xml(channel, outdir, outname="updateinfo.xml"):
     """
     :param channel: Software channel label, e.g. rhel-x86_64-as-4.
@@ -277,7 +289,7 @@ def make_updateinfo_xml(channel, outdir, outname="updateinfo.xml"):
         logging.info("Create output dir: " + outdir)
         os.makedirs(outdir)
 
-    outpath = os.path.join(outdir, outname + ".new")
+    outpath = output_path(outdir, outname) + ".new"
 
     if outname.endswith(".gz"):
         (opener, opener_args) = (gzip.open, (outpath, "wb"))
@@ -294,7 +306,73 @@ def make_updateinfo_xml(channel, outdir, outname="updateinfo.xml"):
 
         out.write("</updates>\n")
 
-    os.rename(outpath, os.path.join(outdir, outname))
+    os.rename(outpath, output_path(outdir, outname))
+
+
+def checksum(filepath, algo="sha256", buffsize=8192):
+    """
+    Compute and check md5 or sha1 message digest of given file path.
+
+    :param filepath: Target file to compute checksum
+    :param algo: Checksum algorithm name in hashlib module
+    :param buffsize: Buffer size to read
+    :return: Checksum value of ``filepath`` or None (means any errors)
+    """
+    try:
+        algocls = getattr(hashlib, algo)
+        m = algocls()
+    except AttributeError:
+        logging.error("No such algorithm available in hashlib: " + algo)
+        return None
+
+    try:
+        with open(filepath, 'r') as f:
+            while True:
+                data = f.read(buffsize)
+                if not data:
+                    break
+                m.update(data)
+
+        return m.hexdigest()
+
+    except EnvironmentError as e:
+        logging.error("Failed to compute the checksum: " + str(e))
+        return None
+
+
+REPOMD_XML_ADD = """\
+<data type="updateinfo">
+  <checksum type="sha256">%(xmlgz_sha256sum)s</checksum>
+  <open-checksum type="sha256">%(xml_sha256sum)s</open-checksum>
+  <location href="repodata/%(xmlgz_sha256sum)s-updateinfo.xml.gz"/>
+  <timestamp>%(timestamp)d</timestamp>
+  <size>%(size)d</size>
+  <open-size>%(open_size)d</open-size>
+</data>
+"""
+
+
+def gen_repomd_xml_add(outdir, outname="updateinfo.xml", tmpl=REPOMD_XML_ADD):
+    xmlfile = output_path(outdir, outname)
+
+    xmlgzfile = xmlfile + ".gz"
+
+    with open(xmlfile, 'r') as input:
+        with gzip.open(xmlgzfile, 'wb') as output:
+            output.write(input.read())
+
+    xmlgz_sha256sum = checksum(xmlgzfile)
+
+    d = dict(xmlgz_sha256sum=xmlgz_sha256sum, xml_sha256sum=checksum(xmlfile),
+             timestamp=int(os.path.getctime(xmlfile)),
+             size=os.stat(xmlgzfile).st_size,
+             open_size=os.stat(xmlfile).st_size)
+
+    repomd_xml_add = output_path(outdir, "repomd.xml.add")
+    open(repomd_xml_add, 'w').write(tmpl % d)
+
+    os.rename(xmlgzfile,
+              os.path.join(outdir, "%s-%s.gz" % (xmlgz_sha256sum, outname)))
 
 
 def init_log(level):
@@ -337,6 +415,7 @@ def main(argv=sys.argv):
         logging.info("Set outdir to: " + options.outdir)
 
     make_updateinfo_xml(channel, options.outdir, options.outname)
+    gen_repomd_xml_add(options.outdir, options.outname)
 
 
 if __name__ == '__main__':
