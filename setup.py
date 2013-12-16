@@ -1,4 +1,5 @@
 from distutils.core import setup, Command
+from distutils.sysconfig import get_python_lib
 from glob import glob
 
 import datetime
@@ -26,6 +27,9 @@ data_files = [
     ("share/rpmkit/templates", list_files("data/templates/")),
     ("share/rpmkit/templates/css", list_files("data/templates/css")),
     ("share/rpmkit/templates/js", list_files("data/templates/js")),
+    ("share/rpmkit/templates/js", list_files("data/templates/js")),
+    (os.path.join(get_python_lib(), "rpmkit/locale/ja/LC_MESSAGES"),
+     ["rpmkit/locale/ja/LC_MESSAGES/rpmkit.mo"]),
 ]
 
 
@@ -48,8 +52,12 @@ class SrpmCommand(Command):
         pass
 
     def run(self):
+        self.update_mo()
         self.run_command('sdist')
         self.build_rpm()
+
+    def update_mo(self):
+        os.system("./aux/update-po.sh")
 
     def build_rpm(self):
         params = dict()

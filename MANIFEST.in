@@ -2,7 +2,7 @@ include MANIFEST.in
 include README.rst
 include rpmkit.spec.in
 include setup.py
-recursive-include rpmkit *.py
+recursive-include rpmkit *.py *.mo
 include aux/*
 include tools/*
 include examples/*

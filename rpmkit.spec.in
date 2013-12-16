@@ -15,6 +15,7 @@ Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python
+BuildRequires:  /usr/bin/pygettext.py
 Requires:       rpm-python
 Requires:       python-BeautifulSoup
 # To support 'list-sec' sub command in yum via yum-surrogate:
@@ -81,6 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/yum-surrogate
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
+%{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
 %{_localstatedir}/cache/swapi
 
 
