@@ -21,9 +21,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from logging import DEBUG, INFO
+from rpmkit.globals import DEBUG, INFO, _
 from operator import attrgetter, itemgetter
 
+import rpmkit.globals as RG
 import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
@@ -602,20 +603,20 @@ def _make_summary_dataset(workdir, rpms, errata, updates,
                      rpmnames_need_updates=rpmnames_need_updates),
                 os.path.join(workdir, filename))
 
-    ds = [("# of Security Errata (critical)", len(rhsa_cri), "", ""),
-          ("# of Security Errata (important)", len(rhsa_imp), "", ""),
-          ("# of Security Errata (all)", len(rhsa), "", ""),
-          ("# of Bug Errata", len(rhba), "", ""),
-          ("# of Enhancement Errata", len(rhea), "-", ""),
-          ("# of Installed RPMs", len(rpms), "", ""),
-          ("# of RPMs (names) need to be updated",
+    ds = [(_("# of Security Errata (critical)"), len(rhsa_cri), "", ""),
+          (_("# of Security Errata (important)"), len(rhsa_imp), "", ""),
+          (_("# of Security Errata (all)"), len(rhsa), "", ""),
+          (_("# of Bug Errata"), len(rhba), "", ""),
+          (_("# of Enhancement Errata"), len(rhea), "-", ""),
+          (_("# of Installed RPMs"), len(rpms), "", ""),
+          (_("# of RPMs (names) need to be updated"),
            len(rpmnames_need_updates), "", ""),
-          ("The rate of RPMs (names) need any updates / RPMs (names) [%]",
+          (_("The rate of RPMs (names) need any updates / RPMs (names) [%]"),
            100 * len(rpmnames_need_updates) / len(rpmnames), "", "")]
 
     dataset = tablib.Dataset()
-    dataset.title = "Summary"
-    dataset.headers = ("item", "value", "rating", "comments")
+    dataset.title = _("Summary")
+    dataset.headers = (_("item"), _("value"), _("rating"), _("comments"))
 
     for d in ds:
         dataset.append(d)
@@ -693,28 +694,28 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
     updates = [u for u in _updates_list_g(workdir, ukeys)]
 
     datasets = [_make_summary_dataset(workdir, rpms, errata, updates),
-                _make_dataset(rpms, rpmkeys, "Installed RPMs"),
+                _make_dataset(rpms, rpmkeys, _("Installed RPMs")),
                 _make_dataset(errata, ekeys + ("package_names", ),
-                              "Errata"),
-                _make_dataset(updates, ukeys, "Update RPMs")]
+                              _("Errata")),
+                _make_dataset(updates, ukeys, _("Update RPMs"))]
 
     if details or start_date is not None:
         extra_ds = []
 
         es = [x for x in _detailed_errata_list_g(workdir)]
-        eds = _make_dataset(es, dekeys, "Errata Details")
+        eds = _make_dataset(es, dekeys, _("Errata Details"))
 
         if start_date is None:
             book = tablib.Databook(datasets + [eds])
         else:
             es = [e for e in es if _is_newer_errata(e, start_date)]
             eds2 = _make_dataset(es, dekeys,
-                                 "Errata Details (%s ~)" % start_date)
+                                 _("Errata Details (%s ~)") % start_date)
 
             es_diff = [e["advisory"] for e in es]
             errata = [e for e in errata if e["advisory"] in es_diff]
             es2 = _make_dataset(errata, ekeys + ("package_names", ),
-                                "Errata (%s ~)" % start_date)
+                                _("Errata (%s ~)") % start_date)
 
             book = tablib.Databook([es2, eds2] + datasets)
     else:
@@ -751,7 +752,7 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
     logging.getLogger().setLevel(DEBUG if verbose else INFO)
 
     if not ppath:
-        ppath = raw_input("Path to the RPM DB 'Packages' > ")
+        ppath = raw_input(_("Path to the RPM DB 'Packages' > "))
 
     if workdir:
         if not os.path.exists(workdir):
