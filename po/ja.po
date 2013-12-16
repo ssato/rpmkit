@@ -1,0 +1,96 @@
+# Japanese translation of rpmkit
+# Copyright (C) 2013 Red Hat, Inc.
+# Satoru SATOH <ssato@redhat.com>, 2013.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: rpmkit 0.2.10.16\n"
+"POT-Creation-Date: 2013-12-16 22:19+JST\n"
+"PO-Revision-Date: 2013-12-16 22:18+0900\n"
+"Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
+"Language-Team: Japanese <ssato@redhat.com>\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+#: aux/..//rpmkit/extras/updateinfo.py:606
+msgid "# of Security Errata (critical)"
+msgstr "影響度 Critical のセキュリティエラータの数"
+
+#: aux/..//rpmkit/extras/updateinfo.py:607
+msgid "# of Security Errata (important)"
+msgstr "影響度 Important のセキュリティエラータの数"
+
+#: aux/..//rpmkit/extras/updateinfo.py:608
+msgid "# of Security Errata (all)"
+msgstr "すべてのセキュリティエラータの数"
+
+#: aux/..//rpmkit/extras/updateinfo.py:609
+msgid "# of Bug Errata"
+msgstr "バグ修正エラータの数"
+
+#: aux/..//rpmkit/extras/updateinfo.py:610
+msgid "# of Enhancement Errata"
+msgstr "機能拡張エラータの数"
+
+#: aux/..//rpmkit/extras/updateinfo.py:611
+msgid "# of Installed RPMs"
+msgstr "インストールされている RPM パッケージの数"
+
+#: aux/..//rpmkit/extras/updateinfo.py:612
+msgid "# of RPMs (names) need to be updated"
+msgstr "更新が必要な RPM パッケージ (名) の数"
+
+#: aux/..//rpmkit/extras/updateinfo.py:614
+msgid "The rate of RPMs (names) need any updates / RPMs (names) [%]"
+msgstr "更新が必要な RPM パッケージ (名) の割合 [%]"
+
+#: aux/..//rpmkit/extras/updateinfo.py:618
+msgid "Summary"
+msgstr "概要"
+
+#: aux/..//rpmkit/extras/updateinfo.py:619
+msgid "comments"
+msgstr "コメント"
+
+#: aux/..//rpmkit/extras/updateinfo.py:619
+msgid "item"
+msgstr "項目"
+
+#: aux/..//rpmkit/extras/updateinfo.py:619
+msgid "rating"
+msgstr "評価"
+
+#: aux/..//rpmkit/extras/updateinfo.py:619
+msgid "value"
+msgstr "値"
+
+#: aux/..//rpmkit/extras/updateinfo.py:697
+msgid "Installed RPMs"
+msgstr "インストール RPM"
+
+#: aux/..//rpmkit/extras/updateinfo.py:699
+msgid "Errata"
+msgstr "エラータ"
+
+#: aux/..//rpmkit/extras/updateinfo.py:700
+msgid "Update RPMs"
+msgstr "更新 RPM"
+
+#: aux/..//rpmkit/extras/updateinfo.py:706
+msgid "Errata Details"
+msgstr "エラータ詳細"
+
+#: aux/..//rpmkit/extras/updateinfo.py:713
+msgid "Errata Details (%s ~)"
+msgstr "エラータ詳細 (%s ~)"
+
+#: aux/..//rpmkit/extras/updateinfo.py:718
+msgid "Errata (%s ~)"
+msgstr "エラータ (%s ~)"
+
+#: aux/..//rpmkit/extras/updateinfo.py:755
+msgid "Path to the RPM DB 'Packages' > "
+msgstr "RPM データベース 'Packages' ファイルのパス > "

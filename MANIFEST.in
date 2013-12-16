@@ -6,3 +6,4 @@ recursive-include rpmkit *.py
 include aux/*
 include tools/*
 include examples/*
+include po/*.po
