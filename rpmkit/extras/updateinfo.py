@@ -456,6 +456,8 @@ def _make_dataset(list_data, headers=None, title=None):
     """
     dataset = tablib.Dataset()
 
+    # TODO: Check title as valid worksheet name, ex. len(title) <= 31. 
+    # See also xlwt.Utils.valid_sheet_name.
     if title:
         dataset.title = title
 
