@@ -434,6 +434,20 @@ def dump_detailed_packages_list(workdir, offline=False, chans=[],
     U.json_dump(new_ps, rpm_list_path(workdir))
 
 
+def _make_cell_data(x, key, default="N/A"):
+    if key == "cves":
+        cves = x.get("cves", [])
+        return ", ".join(_fmt_cvess(cves)) if cves else default
+
+    elif key == "bzs":
+        bzs = x.get("bzs", [])
+        return ", ".join(_fmt_bzs(bzs)) if bzs else default
+
+    else:
+        v = x.get(key, default)
+        return ", ".join(v) if isinstance(v, (list, tuple)) else v
+
+
 def _make_dataset(list_data, headers=None, title=None):
     """
     :param list_data: List of data
@@ -449,7 +463,7 @@ def _make_dataset(list_data, headers=None, title=None):
         dataset.headers = headers
 
         for x in list_data:
-            dataset.append([x.get(h) for h in headers])
+            dataset.append([_make_cell_data(x, h) for h in headers])
     else:
         for x in list_data:
             dataset.append(x.values())
@@ -546,16 +560,6 @@ def _detailed_errata_list_g(workdir):
     for e in es:
         if e["severity"] is None:
             e["severity"] = default
-
-        if e.get("cves", False):
-            e["cves"] = ", ".join(_fmt_cvess(e["cves"]))
-        else:
-            e["cves"] = default
-
-        if e.get("bzs", False):
-            e["bzs"] = ", ".join(_fmt_bzs(e["bzs"]))
-        else:
-            e["bzs"] = default
 
         yield e
 
@@ -680,9 +684,48 @@ def _is_newer_errata(errata, since=None):
     return True
 
 
+def cve_socre_gt(cve, score=4.0, default=False):
+    """
+    :param cve: A dict contains CVE and CVSS info.
+    :param score: Lowest score to select CVEs (float). It's Set to 4.0 (PCIDSS
+        limit) by default:
+
+        * NVD Vulnerability Severity Ratings: http://nvd.nist.gov/cvss.cfm
+        * PCIDSS: https://www.pcisecuritystandards.org
+
+    :param default: Default value if failed to get CVSS score to compare with
+        given score
+
+    :return: True if given CVE's socre is greater or equal to given score.
+    """
+    try:
+        return float(cve["score"]) >= score
+    except Exception as e:
+        logging.warn("Failed to compare CVE's score: %s, score=%.1f" % \
+            (str(cve), score))
+
+    return default
+
+
+_CVE_SECERRATA_KEYS = ["advisory", "severity", "cves", "synopsis",
+                       "issue_date", "url"]
+
+
+def make_cve_sec_errata_dataset(workdir, csekeys=_CVE_SECERRATA_KEYS,
+                                cvss_score=4.0):
+    """
+    """
+    es = U.json_load(errata_list_path(workdir))
+    cses = [e for e in es if e.get("cves", False) and
+            any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
+    cseds_title = _("Sec. Errata CVSS >= %.1f") % cvss_score
+    cseds = _make_dataset(cses, csekeys, cseds_title)
+
+
 def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
                   ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
-                  ukeys=_UPDATE_KEYS, start_date=None):
+                  ukeys=_UPDATE_KEYS, start_date=None,
+                  csekeys=_CVE_SECERRATA_KEYS, cvss_score=4.0):
     """
     :param workdir: Working dir to dump the result
     :param start_date: Add an optional worksheet to list only errata newer
@@ -705,19 +748,31 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         es = [x for x in _detailed_errata_list_g(workdir)]
         eds = _make_dataset(es, dekeys, _("Errata Details"))
 
+        cses = [e for e in es if e.get("cves", False) and
+                any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
+        cseds_title = _("Sec. Errata CVSS >= %.1f") % cvss_score
+        cseds = _make_dataset(cses, csekeys, cseds_title)
+
+        extra_ds = [eds, cseds]
+
         if start_date is None:
-            book = tablib.Databook(datasets + [eds])
+            book = tablib.Databook(datasets + extra_ds)
         else:
             es = [e for e in es if _is_newer_errata(e, start_date)]
             eds2 = _make_dataset(es, dekeys,
                                  _("Errata Details (%s ~)") % start_date)
+
+            cses = [e for e in es if e.get("cves", []) and
+                    any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
+            cseds = _make_dataset(cses, csekeys, cseds_title)
 
             es_diff = [e["advisory"] for e in es]
             errata = [e for e in errata if e["advisory"] in es_diff]
             es2 = _make_dataset(errata, ekeys + ("package_names", ),
                                 _("Errata (%s ~)") % start_date)
 
-            book = tablib.Databook([es2, eds2] + datasets)
+            extra_ds = [es2, eds2, cseds]
+            book = tablib.Databook(extra_ds + datasets)
     else:
         book = tablib.Databook(datasets)
 
