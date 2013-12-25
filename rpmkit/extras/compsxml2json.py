@@ -30,6 +30,7 @@ import os.path
 import os
 import sys
 import tempfile
+import yaml
 
 
 def _tree_from_xml(xmlfile):
@@ -90,10 +91,10 @@ def get_package_groups(xmlfile, byid=True):
            in _tree_from_xml(xmlfile).findall(gk))
 
     # filter out groups having no packages as such group is useless:
-    return [dict(group_id=g, packages=ps) for g, ps in gps if ps]
+    return [dict(group=g, packages=ps) for g, ps in gps if ps]
 
 
-def dump_package_groups(xmlfile, outdir, outfile="comps.json"):
+def dump_package_groups(xmlfile, outdir, format="json", outfile="comps.json"):
     """
     :param xmlfile: comps xml file path
     :param outdir: Output directory
@@ -105,15 +106,21 @@ def dump_package_groups(xmlfile, outdir, outfile="comps.json"):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    RU.json_dump(data, outpath)
+    if format == "yaml":
+        yaml.dump(data, open(outpath.replace(".json", ".yaml"), 'w'),
+                  encoding='utf8', allow_unicode=True)
+    else:
+        RU.json_dump(data, outpath)
 
 
 def option_parser():
-    defaults = dict(outdir=None, verbose=False, repos=[])
+    defaults = dict(outdir=None, verbose=False, repos=[], format="json")
     p = optparse.OptionParser("%prog [OPTION ...] YUM_REPO_CACHE_METADATADIR")
     p.set_defaults(**defaults)
 
     p.add_option("-O", "--outdir", help="Output dir [dynamically created]")
+    p.add_option("-f", "--format", choices=("json", "yaml"),
+                 help="Output format [%default]")
     p.add_option("-r", "--repos", action="append",
                  help="Comma separated yum repos to fetch errata info, "
                       "e.g. 'rhel-x86_64-server-6'. Please note that any "
@@ -156,7 +163,7 @@ def main():
 
         xmlfile = find_xml_file(args[0])
 
-    dump_package_groups(xmlfile, options.outdir)
+    dump_package_groups(xmlfile, options.outdir, options.format)
 
 
 if __name__ == "__main__":
