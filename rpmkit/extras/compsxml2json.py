@@ -22,14 +22,17 @@ from logging import DEBUG, INFO
 
 import rpmkit.yum_surrogate as YS
 import rpmkit.utils as RU
-import xml.etree.cElementTree as ET
+
+import datetime
 import gzip
+import locale
 import logging
 import optparse
 import os.path
 import os
 import sys
 import tempfile
+import xml.etree.cElementTree as ET
 import yaml
 
 
@@ -84,7 +87,7 @@ def get_package_groups(xmlfile, byid=True):
     """
     gk = "./group"
     kk = "./id" if byid else "./name"
-    pk = "./packagelist/packagereq/[@type='default']"
+    pk = "./packagelist/packagereq"
     p2d = lambda p: dict(name=p.text, **p.attrib)
 
     gps = ((g.find(kk).text, [p2d(p) for p in g.findall(pk)]) for g
@@ -94,13 +97,27 @@ def get_package_groups(xmlfile, byid=True):
     return [dict(group=g, packages=ps) for g, ps in gps if ps]
 
 
+def timestamp(dtobj=datetime.datetime.now()):
+    """
+    >>> dtobj = datetime.datetime(2013, 10, 20, 12, 11, 59, 345135)
+    >>> timestamp(dtobj)
+    'Sun Oct 20 2013'
+    """
+    locale.setlocale(locale.LC_TIME, "C")
+    return dtobj.strftime("%a %b %_d %Y")
+
+
 def dump_package_groups(xmlfile, outdir, format="json", outfile="comps.json"):
     """
     :param xmlfile: comps xml file path
     :param outdir: Output directory
     """
     outpath = os.path.join(outdir, outfile)
-    data = get_package_groups(xmlfile)
+
+    data = dict(comps_rpm_groups=get_package_groups(xmlfile),
+                timestamp=timestamp(),
+                version="0.0.1",
+                generator="rpmkit.extras.compsxml2json")
 
     outdir = os.path.dirname(outpath)
     if not os.path.exists(outdir):
