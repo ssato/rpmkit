@@ -1,0 +1,7 @@
+#! /usr/bin/python
+#
+from rpmkit.extras.fake_yum_remove import main
+
+main()
+
+# vim:sw=4:ts=4:et:
