@@ -18,10 +18,8 @@
 from rpmkit.memoize import memoize
 from rpmkit.utils import concat, uniq
 
-from collections import deque
 from itertools import groupby
 from operator import itemgetter, attrgetter
-from yum.rpmsack import RPMDBPackageSack
 
 import logging
 import os
@@ -30,6 +28,7 @@ import re
 import sys
 import rpm
 import yum
+import yum.rpmsack
 
 
 RPM_BASIC_KEYS = ("name", "version", "release", "epoch", "arch")
@@ -122,8 +121,9 @@ def _yum_list_installed(root=None, cachedir=None, persistdir=None):
     if persistdir is None:
         persistdir = root
 
-    sack = RPMDBPackageSack(root, cachedir=os.path.join(root, "cache"),
-                            persistdir=persistdir)
+    sack = yum.rpmsack.RPMDBPackageSack(root,
+                                        cachedir=os.path.join(root, "cache"),
+                                        persistdir=persistdir)
 
     return sack.returnPackages()  # NOTE: 'gpg-pubkey' is not in this list.
 
@@ -483,5 +483,34 @@ def list_required_rpms_not_required_by_others(rpmname, root=None):
             result += targets
 
     return result
+
+
+def _compute_removed(removes, root=None, rreqs=None, acc=[]):
+    """
+    Returns a list of RPMs if given RPM ``removes`` was uninstalled such like
+    yum does with 'remove (uninstall)' sub command.
+
+    :param removes: a list of RPMs to remove (uninstall).
+    :param root: RPM Database root dir or None (use /var/lib/rpm).
+    :param rreqs: Reversed RPM Dependency relation map
+    :param acc: Accumulator
+
+    :return: [pname], a list of RPM names to be uninstalled along with
+        ``removes`` RPMs.
+    """
+    if not rreqs:
+        rreqs = make_reversed_requires_dict(root)
+
+    acc = acc + removes if acc else removes
+    removes_next = [p for p in uniq(concat(rreqs.get(r, []) for r in removes))
+                    if p not in acc]
+
+    if removes_next:
+        return _compute_removed(removes_next, root, rreqs, acc)
+    else:
+        return acc
+
+
+compute_removed = memoize(_compute_removed)
 
 # vim:sw=4:ts=4:et:
