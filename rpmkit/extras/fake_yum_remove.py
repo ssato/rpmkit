@@ -52,11 +52,11 @@ def option_parser():
     p = optparse.OptionParser("%prog [OPTION ...] RPM_NAME_OR_PATTERNS...")
     p.set_defaults(**defaults)
 
-    p.add_option("-f", "--format", choices=("simple", "yaml"),
-                 help="Output format selected from %choices [%default]")
     p.add_option("-R", "--root",
                  help="Relative or absolute path to root dir where "
                       "var/lib/rpm exists. [/]")
+    p.add_option("-f", "--format", choices=("simple", "yaml"),
+                 help="Output format selected from %choices [%default]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
