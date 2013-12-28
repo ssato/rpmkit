@@ -16,11 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.memoize import memoize
-from rpmkit.utils import concat, uniq
-
-from itertools import groupby
 from operator import itemgetter, attrgetter
 
+import rpmkit.utils as RU
+import itertools as IT
 import logging
 import os
 import random
@@ -33,6 +32,10 @@ import yum.rpmsack
 
 RPM_BASIC_KEYS = ("name", "version", "release", "epoch", "arch")
 RPMDB_SUBDIR = "var/lib/rpm"
+
+
+def ucat(xss):
+    return RU.uniq(RU.concat(xss))
 
 
 def rpm_header_from_rpmfile(rpmfile):
@@ -280,7 +283,7 @@ def group_by_names_g(xs):
     >>> [(n, ys) for n, ys in group_by_names_g(xs)] == zs
     True
     """
-    for name, g in groupby(sort_by_names(xs), itemgetter("name")):
+    for name, g in IT.groupby(sort_by_names(xs), itemgetter("name")):
         yield (name, list(g))
 
 
@@ -476,7 +479,7 @@ def list_required_rpms_not_required_by_others(rpmname, root=None):
         return []  # Given RPM is not a leaf.
 
     while targets:
-        targets = uniq(concat(get_cs(p, result) for p in targets))
+        targets = ucat(get_cs(p, result) for p in targets)
         logging.debug("targets=%s, result=%s" % (str(targets), str(result)))
 
         if targets:
@@ -502,7 +505,7 @@ def _compute_removed(removes, root=None, rreqs=None, acc=[]):
         rreqs = make_reversed_requires_dict(root)
 
     acc = acc + removes if acc else removes
-    removes_next = [p for p in uniq(concat(rreqs.get(r, []) for r in removes))
+    removes_next = [p for p in ucat(rreqs.get(r, []) for r in removes)
                     if p not in acc]
 
     if removes_next:
