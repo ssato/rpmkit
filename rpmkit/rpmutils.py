@@ -488,7 +488,20 @@ def list_required_rpms_not_required_by_others(rpmname, root=None):
     return result
 
 
-def _compute_removed(removes, root=None, rreqs=None, acc=[]):
+def _compute_removed_1(removes, rreqs, excludes, acc):
+    for r in removes:
+        for p in rreqs.get(r, []):
+            if p in acc or p in removes:
+                continue
+
+            if p in excludes:
+                logging.debug("Excluded: " + p)
+                continue
+
+            yield p
+
+
+def _compute_removed(removes, root=None, rreqs=None, excludes=[], acc=[]):
     """
     Returns a list of RPMs if given RPM ``removes`` was uninstalled such like
     yum does with 'remove (uninstall)' sub command.
@@ -496,6 +509,8 @@ def _compute_removed(removes, root=None, rreqs=None, acc=[]):
     :param removes: a list of RPMs to remove (uninstall).
     :param root: RPM Database root dir or None (use /var/lib/rpm).
     :param rreqs: Reversed RPM Dependency relation map
+    :param excludes: RPMs which should not be removed and excluded from the
+        RPMs to be removed
     :param acc: Accumulator
 
     :return: [pname], a list of RPM names to be uninstalled along with
@@ -504,9 +519,12 @@ def _compute_removed(removes, root=None, rreqs=None, acc=[]):
     if not rreqs:
         rreqs = make_reversed_requires_dict(root)
 
+    removes = [r for r in removes if r not in excludes]
+    if excludes:
+        logging.debug("Excluded: " + ' '.join(excludes))
+
     acc = acc + removes if acc else removes
-    removes_next = [p for p in ucat(rreqs.get(r, []) for r in removes)
-                    if p not in acc]
+    removes_next = ucat(_compute_removed_1(removes, rreqs, excludes, acc))
 
     if removes_next:
         return _compute_removed(removes_next, root, rreqs, acc)

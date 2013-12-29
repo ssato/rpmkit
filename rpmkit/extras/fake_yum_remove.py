@@ -32,7 +32,7 @@ def list_rpms_installed_g(rpms, all_rpms):
             logging.warn("Given RPM does not look installed: " + r)
 
 
-def list_removed(rpms, root=None):
+def list_removed(rpms, root=None, excludes=[]):
     """
     :param rpms: The list of RPM names to remove (uninstall)
     :param root: Root dir where var/lib/rpm/ exists. '/' will be used if none
@@ -44,17 +44,19 @@ def list_removed(rpms, root=None):
     all_rpms = [p["name"] for p in RR.list_installed_rpms(root)]
     rpms = list(list_rpms_installed_g(rpms, all_rpms))
 
-    return RR.compute_removed(rpms, root)
+    return RR.compute_removed(rpms, root, excludes=excludes)
 
 
 def option_parser():
-    defaults = dict(verbose=False, root=None, format="simple")
+    defaults = dict(verbose=False, root=None, excludes=None, format="simple")
     p = optparse.OptionParser("%prog [OPTION ...] RPM_NAME_OR_PATTERNS...")
     p.set_defaults(**defaults)
 
     p.add_option("-R", "--root",
                  help="Relative or absolute path to root dir where "
                       "var/lib/rpm exists. [/]")
+    p.add_option("-x", "--excludes", 
+                 help="Comma separated RPM names to exclude from removes")
     p.add_option("-f", "--format", choices=("simple", "yaml"),
                  help="Output format selected from %choices [%default]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -72,7 +74,9 @@ def main():
         p.print_usage()
         sys.exit(1)
 
-    xs = list_removed(rpms, options.root)
+    excludes = options.excludes.split(',') if options.excludes else []
+
+    xs = list_removed(rpms, options.root, excludes)
     if options.format == "yaml":
         yaml.dump(dict(data=dict(removed=xs, ), ), sys.stdout)
     else:
