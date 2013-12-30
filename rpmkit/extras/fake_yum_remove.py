@@ -47,21 +47,47 @@ def list_removed(rpms, root=None, excludes=[]):
     return RR.compute_removed(rpms, root, excludes=excludes)
 
 
-def option_parser():
+_USAGE = """\
+%prog [OPTION ...] RPM_NAME_OR_PATTERNS_OR_FILE...
+
+Examples:
+  %prog -R ./rhel-6-client-1 libreport abrt
+  %prog -R ./rhel-6-client-1 -v /path/to/rpm_list_to_removes.txt
+  %prog -R ./rhel-6-client-1 -x ./rpm_list_to_keep.txt NetworkManager'*'"""
+
+
+def option_parser(usage=_USAGE):
     defaults = dict(verbose=False, root=None, excludes=None, format="simple")
-    p = optparse.OptionParser("%prog [OPTION ...] RPM_NAME_OR_PATTERNS...")
+    p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
 
     p.add_option("-R", "--root",
                  help="Relative or absolute path to root dir where "
                       "var/lib/rpm exists. [/]")
     p.add_option("-x", "--excludes", 
-                 help="Comma separated RPM names to exclude from removes")
+                 help="Comma separated RPM names to exclude from removes "
+                      "or path to file listing such RPM names line by line")
     p.add_option("-f", "--format", choices=("simple", "yaml"),
                  help="Output format selected from %choices [%default]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
+
+
+def load_list_from_file(filepath):
+    """
+    :param filepath: List file path
+    :return: A list of results in ``filepath``
+    """
+    return [l.rstrip() for l in open(filepath).readlines()
+            if l and not l.startswith('#')]
+
+
+def is_file(filepath):
+    """
+    :param filepath: Maybe file path :: str
+    """
+    return os.path.exists(filepath) and os.path.isfile(filepath)
 
 
 def main():
@@ -74,7 +100,16 @@ def main():
         p.print_usage()
         sys.exit(1)
 
-    excludes = options.excludes.split(',') if options.excludes else []
+    if options.excludes:
+        if is_file(options.excludes):
+            excludes = load_list_from_file(options.excludes)
+        else:
+            excludes = options.excludes.split(',')
+    else:
+        excludes = []
+
+    if len(rpms) == 1 and is_file(rpms[0]):
+        rpms = load_list_from_file(rpms[0])
 
     xs = list_removed(rpms, options.root, excludes)
     if options.format == "yaml":
