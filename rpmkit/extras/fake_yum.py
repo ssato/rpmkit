@@ -43,7 +43,9 @@ _ARGS_CMD_MAP = dict(rem=CMD_REMOVE, e=CMD_REMOVE, s=CMD_STANDALONES,
 
 
 def option_parser(usage=_USAGE):
-    defaults = dict(verbose=False, root=None, excludes=None, format="simple")
+    defaults = dict(verbose=False, root=None, excludes=None, format="simple",
+                    st_rpms=1)
+
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
 
@@ -59,6 +61,14 @@ def option_parser(usage=_USAGE):
                    help="Comma separated RPM names to exclude from removes "
                         "or path to file listing such RPM names line by line")
     p.add_option_group(rog)
+
+    sog = optparse.OptionGroup(p, "Options for standalones command")
+    sog.add_option("", "--st-nrpms", type="int",
+                   help="Number of RPMs to find standadlone RPMs. "
+                        "Only RPMs has no requires/required RPMs will be "
+                        "selected if it's 1 (default) and RPMs has N "
+                        "requires and/or required RPMs at a maximum.")
+    p.add_option_group(sog)
 
     return p
 
@@ -124,7 +134,7 @@ def main(cmd_map=_ARGS_CMD_MAP):
         data = dict(removed=xs, )
 
     elif cmd == CMD_STANDALONES:
-        xs = sorted(RR.list_standalones(root))
+        xs = sorted(RR.list_standalones(root, options.st_nrpms))
         data = dict(standalones=xs, )
     else:
         xs = sorted(RR.get_leaves(root))
