@@ -1,0 +1,144 @@
+generator: rpmkit.extras.compsxml2json + manual
+timestamp: Wed Jan  1 2014
+version: 0.0.1
+
+groups:
+- group: base-necessary
+  install_if: always
+  uninstall_if: never
+  packages:
+  - {name: at, type: mandatory, original_group: base}
+  - {name: authconfig, type: mandatory, original_group: base}
+  - {name: bc, type: mandatory, original_group: base}
+  - {name: bind-utils, type: mandatory, original_group: base}
+  - {name: crontabs, type: mandatory, original_group: base}
+  - {name: cyrus-sasl-plain, type: mandatory, original_group: base}
+  - {name: dbus, type: mandatory, original_group: base}
+  - {name: ed, type: mandatory, original_group: base}
+  - {name: file, type: mandatory, original_group: base}
+  - {name: logrotate, type: mandatory, original_group: base}
+  - {name: lsof, type: mandatory, original_group: base}
+  - {name: man, type: mandatory, original_group: base}
+  - {name: parted, type: mandatory, original_group: base}
+  - {name: pciutils, type: mandatory, original_group: base}
+  - {name: psacct, type: mandatory, original_group: base}
+  - {name: quota, type: mandatory, original_group: base}
+  - {name: redhat-indexhtml, type: mandatory, original_group: base}
+  - {name: setserial, type: mandatory, original_group: base}
+  - {name: tmpwatch, type: mandatory, original_group: base}
+  - {name: traceroute, type: mandatory, original_group: base}
+
+- group: core-necessary
+  install_if: always
+  uninstall_if: never
+  packages:
+  - {name: acl, type: mandatory, original_group: core}
+  - {name: attr, type: mandatory, original_group: core}
+  - {name: audit, type: mandatory, original_group: core}
+  - {name: basesystem, type: mandatory, original_group: core}
+  - {name: bash, type: mandatory, original_group: core}
+  - {name: coreutils, type: mandatory, original_group: core}
+  - {name: cpio, type: mandatory, original_group: core}
+  - {name: cronie, type: mandatory, original_group: core}
+  - {name: dhclient, type: mandatory, original_group: core}
+  - {name: e2fsprogs, type: mandatory, original_group: core}
+  - {name: filesystem, type: mandatory, original_group: core}
+  - {name: glibc, type: mandatory, original_group: core}
+  - {name: initscripts, type: mandatory, original_group: core}
+  - {name: iproute, type: mandatory, original_group: core}
+  - {name: iptables, type: mandatory, original_group: core}
+  - {name: iptables-ipv6, type: mandatory, original_group: core}
+  - {name: iputils, type: mandatory, original_group: core}
+  - {name: kbd, type: mandatory, original_group: core}
+  - {name: ncurses, type: mandatory, original_group: core}
+  - {name: openssh-server, type: mandatory, original_group: core}
+  - {name: passwd, type: mandatory, original_group: core}
+  - {name: policycoreutils, type: mandatory, original_group: core}
+  - {name: procps, type: mandatory, original_group: core}
+  - {name: redhat-support-tool, type: mandatory, original_group: core}
+  - {name: rhnsd, type: mandatory, original_group: core}
+  - {name: rootfiles, type: mandatory, original_group: core}
+  - {name: rpm, type: mandatory, original_group: core}
+  - {name: rsyslog, type: mandatory, original_group: core}
+  - {name: selinux-policy-targeted, type: mandatory, original_group: core}
+  - {name: setup, type: mandatory, original_group: core}
+  - {name: shadow-utils, type: mandatory, original_group: core}
+  - {name: subscription-manager, type: mandatory, original_group: core}
+  - {name: sudo, type: mandatory, original_group: core}
+  - {name: util-linux-ng, type: mandatory, original_group: core}
+  - {name: vim-minimal, type: mandatory, original_group: core}
+  - {name: yum, type: mandatory, original_group: core}
+  - {name: yum-rhn-plugin, type: mandatory, original_group: core}
+  - {name: grub, type: default, original_group: core}
+
+- group: large-systems-necessary
+  install_if: is_numa
+  uninstall_if: is_virt_guest or not is_numa
+  packages:
+  - {name: numactl, type: mandatory, original_group: large-systems}
+  - {name: numad, type: mandatory, original_group: large-systems}
+  - {name: hwloc, type: default, original_group: large-systems}
+
+- group: network-tools-necessary
+  install_if: always
+  uninstall_if: never
+  packages:
+  - {name: tcpdump, type: mandatory, original_group: network-tools}
+  - {name: nc, type: default, original_group: network-tools}
+
+- group: performance-necessary
+  install_if: always
+  uninstall_if: never
+  packages:
+  - {name: blktrace, type: mandatory, original_group: performance}
+  - {name: sysstat, type: mandatory, original_group: performance}
+  - {name: dstat, type: default, original_group: performance}
+  - {name: perf, type: default}
+
+- group: server-platform
+  install_if: always
+  uninstall_if: never
+  packages:
+  - {name: db4, type: mandatory, original_group: sever-platform}
+  - {name: dbus-libs, type: mandatory, original_group: sever-platform}
+  - {name: glibc, type: mandatory, original_group: sever-platform}
+  - {name: krb5-libs, type: mandatory, original_group: sever-platform}
+  - {name: libgcc, type: mandatory, original_group: sever-platform}
+  - {name: libitm, type: mandatory, original_group: sever-platform}
+  - {name: libstdc++, type: mandatory, original_group: sever-platform}
+  - {name: ncurses-libs, type: mandatory, original_group: sever-platform}
+  - {name: nss, type: mandatory, original_group: sever-platform}
+  - {name: openldap, type: mandatory, original_group: sever-platform}
+  - {name: openssl, type: mandatory, original_group: sever-platform}
+  - {name: pam, type: mandatory, original_group: sever-platform}
+  - {name: redhat-lsb, type: mandatory, original_group: sever-platform}
+  - {name: zlib, type: mandatory, original_group: sever-platform}
+
+- group: system-management-snmp-necessary
+  uninstall_if: not snmpd_service_enabled
+  packages:
+  - {name: net-snmp, type: mandatory, original_group: system-management-snmp}
+  - {name: net-snmp-utils, type: default, original_group: system-management-snmp}
+
+- group: kvm-host-necessary
+  install_if: is_kvm_host
+  uninstall_if: not is_kvm_host
+  packages:
+  - {name: qemu-kvm, type: mandatory, original_group: virtualization}
+  - {name: qemu-kvm-tools, type: optional, original_group: virtualization}
+
+- group: kvm-guest-necessary
+  install_if: is_kvm_guest
+  uninstall_if: not is_kvm_guest
+  packages:
+  - {name: qemu-guest-agent, type: optional, original_group: virtualization}
+
+- group: virtualization-client-necessary
+  install_if: is_virt_client
+  uninstall_if: not is_virt_client
+  packages:
+  - {name: python-virtinst, type: mandatory}
+  - {name: virt-manager, type: mandatory}
+  - {name: virt-viewer, type: mandatory}
+
+# vim:sw=2:ts=2:et:

@@ -1,0 +1,2133 @@
+# PYTHONPATH=. fakeroot python rpmkit/extras/compsxml2json.py -O /tmp/w.2 -v ~/Desktop/rpmdbs/sample_systems/rhel-6-client-1/ --repos rhel-x86_64-server-6 -f yaml
+generator: rpmkit.extras.compsxml2json
+groups:
+- group: additional-devel
+  packages:
+  - {name: GConf2-devel, type: default}
+  - {name: alsa-lib-devel, type: default}
+  - {name: audit-libs-devel, type: default}
+  - {name: binutils-devel, type: default}
+  - {name: boost-devel, type: default}
+  - {name: bzip2-devel, type: default}
+  - {name: cyrus-sasl-devel, type: default}
+  - {name: dbus-glib-devel, type: default}
+  - {name: elfutils-devel, type: default}
+  - {name: elfutils-libelf-devel, type: default}
+  - {name: evolution-data-server-devel, type: default}
+  - {name: gnome-desktop-devel, type: default}
+  - {name: gnome-keyring-devel, type: default}
+  - {name: gstreamer-devel, type: default}
+  - {name: gvfs-devel, type: default}
+  - {name: hmaccalc, type: default}
+  - {name: java-1.6.0-openjdk-devel, type: default}
+  - {name: java-1.7.0-openjdk-devel, type: default}
+  - {name: libacl-devel, type: default}
+  - {name: libattr-devel, type: default}
+  - {name: libcanberra-devel, type: default}
+  - {name: libcap-ng-devel, type: default}
+  - {name: libcgroup-devel, type: default}
+  - {name: libcurl-devel, type: default}
+  - {name: libgnome-devel, type: default}
+  - {name: libnotify-devel, type: default}
+  - {name: librsvg2-devel, type: default}
+  - {name: libselinux-devel, type: default}
+  - {name: libsoup-devel, type: default}
+  - {name: mysql-devel, type: default}
+  - {name: perl-ExtUtils-MakeMaker, type: default}
+  - {name: perl-devel, type: default}
+  - {name: polkit-devel, type: default}
+  - {name: postgresql-devel, type: default}
+  - {name: pulseaudio-libs-devel, type: default}
+  - {name: pygtk2-devel, type: default}
+  - {name: python-devel, type: default}
+  - {name: readline-devel, type: default}
+  - {name: sqlite-devel, type: default}
+  - {name: tbb-devel, type: default}
+  - {name: PyQt4-devel, type: optional}
+  - {name: SDL-devel, type: optional}
+  - {name: cups-devel, type: optional}
+  - {name: e2fsprogs-devel, type: optional}
+  - {name: expat-devel, type: optional}
+  - {name: freeglut-devel, type: optional}
+  - {name: fuse-devel, type: optional}
+  - {name: gmp-devel, type: optional}
+  - {name: gnome-python2-desktop, type: optional}
+  - {name: gnutls-devel, type: optional}
+  - {name: gstreamer-plugins-base-devel, type: optional}
+  - {name: httpd-devel, type: optional}
+  - {name: hunspell-devel, type: optional}
+  - {name: iptables-devel, type: optional}
+  - {name: junit, type: optional}
+  - {name: kdebase-devel, type: optional}
+  - {name: kdebase-workspace-devel, type: optional}
+  - {name: kdegraphics-devel, type: optional}
+  - {name: kdelibs-apidocs, type: optional}
+  - {name: kdelibs-devel, type: optional}
+  - {name: kdemultimedia-devel, type: optional}
+  - {name: kdenetwork-devel, type: optional}
+  - {name: kdepim-devel, type: optional}
+  - {name: kdepimlibs-devel, type: optional}
+  - {name: kdesdk-devel, type: optional}
+  - {name: libXau-devel, type: optional}
+  - {name: libXaw-devel, type: optional}
+  - {name: libXinerama-devel, type: optional}
+  - {name: libXmu-devel, type: optional}
+  - {name: libXpm-devel, type: optional}
+  - {name: libXrandr-devel, type: optional}
+  - {name: libaio-devel, type: optional}
+  - {name: libblkid-devel, type: optional}
+  - {name: libbonobo-devel, type: optional}
+  - {name: libcap-devel, type: optional}
+  - {name: libdrm-devel, type: optional}
+  - {name: libgcrypt-devel, type: optional}
+  - {name: libglade2-devel, type: optional}
+  - {name: libgnomeui-devel, type: optional}
+  - {name: libgudev1-devel, type: optional}
+  - {name: libhugetlbfs-devel, type: optional}
+  - {name: libibverbs-devel, type: optional}
+  - {name: libnl-devel, type: optional}
+  - {name: libtiff-devel, type: optional}
+  - {name: libtopology-devel, type: optional}
+  - {name: libudev-devel, type: optional}
+  - {name: libusb-devel, type: optional}
+  - {name: libuuid-devel, type: optional}
+  - {name: libxslt-devel, type: optional}
+  - {name: mpfr-devel, type: optional}
+  - {name: net-snmp-devel, type: optional}
+  - {name: numactl-devel, type: optional}
+  - {name: openmotif-devel, type: optional}
+  - {name: papi-devel, type: optional}
+  - {name: pcre-devel, type: optional}
+  - {name: perl-Test-Pod, type: optional}
+  - {name: perl-Test-Pod-Coverage, type: optional}
+  - {name: popt-devel, type: optional}
+  - {name: sane-backends-devel, type: optional}
+  - {name: snappy-devel, type: optional}
+  - {name: startup-notification-devel, type: optional}
+  - {name: tcl-devel, type: optional}
+  - {name: tcp_wrappers-devel, type: optional}
+  - {name: tk-devel, type: optional}
+  - {name: unique-devel, type: optional}
+  - {name: unixODBC-devel, type: optional}
+  - {name: xorg-x11-proto-devel, type: optional}
+  - {name: xz-devel, type: optional}
+- group: albanian-support
+  packages:
+  - {name: eclipse-nls-sq, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-sq, requires: hunspell, type: conditional}
+- group: amazigh-support
+  packages:
+  - {name: hunspell-ber, requires: hunspell, type: conditional}
+- group: arabic-support
+  packages:
+  - {name: dejavu-sans-fonts, type: default}
+  - {name: dejavu-sans-mono-fonts, type: default}
+  - {name: kacst-art-fonts, type: default}
+  - {name: kacst-book-fonts, type: default}
+  - {name: kacst-decorative-fonts, type: default}
+  - {name: kacst-digital-fonts, type: default}
+  - {name: kacst-farsi-fonts, type: default}
+  - {name: kacst-letter-fonts, type: default}
+  - {name: kacst-naskh-fonts, type: default}
+  - {name: kacst-office-fonts, type: default}
+  - {name: kacst-one-fonts, type: default}
+  - {name: kacst-pen-fonts, type: default}
+  - {name: kacst-poster-fonts, type: default}
+  - {name: kacst-qurn-fonts, type: default}
+  - {name: kacst-screen-fonts, type: default}
+  - {name: kacst-title-fonts, type: default}
+  - {name: kacst-titlel-fonts, type: default}
+  - {name: paktype-naqsh-fonts, type: default}
+  - {name: paktype-tehreer-fonts, type: default}
+  - {name: eclipse-nls-ar, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-ar, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Arabic, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Arabic, requires: kdelibs, type: conditional}
+- group: armenian-support
+  packages:
+  - {name: dejavu-sans-fonts, type: mandatory}
+  - {name: hunspell-hy, requires: hunspell, type: conditional}
+- group: assamese-support
+  packages:
+  - {name: lohit-assamese-fonts, type: mandatory}
+  - {name: m17n-contrib-assamese, type: mandatory}
+  - {name: m17n-db-assamese, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-as-IN, type: default}
+  - {name: iok, type: default}
+  - {name: hunspell-as, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: azerbaijani-support
+  packages:
+  - {name: hunspell-az, requires: hunspell, type: conditional}
+- group: backup-client
+  packages:
+  - {name: amanda-client, type: mandatory}
+  - {name: bacula-client, type: optional}
+- group: backup-server
+  packages:
+  - {name: amanda-server, type: mandatory}
+  - {name: mt-st, type: optional}
+  - {name: mtx, type: optional}
+- group: base
+  packages:
+  - {name: alsa-utils, type: mandatory}
+  - {name: at, type: mandatory}
+  - {name: authconfig, type: mandatory}
+  - {name: bc, type: mandatory}
+  - {name: bind-utils, type: mandatory}
+  - {name: crontabs, type: mandatory}
+  - {name: cyrus-sasl-plain, type: mandatory}
+  - {name: dbus, type: mandatory}
+  - {name: ed, type: mandatory}
+  - {name: file, type: mandatory}
+  - {name: logrotate, type: mandatory}
+  - {name: lsof, type: mandatory}
+  - {name: man, type: mandatory}
+  - {name: ntsysv, type: mandatory}
+  - {name: parted, type: mandatory}
+  - {name: pciutils, type: mandatory}
+  - {name: psacct, type: mandatory}
+  - {name: quota, type: mandatory}
+  - {name: redhat-indexhtml, type: mandatory}
+  - {name: setserial, type: mandatory}
+  - {name: tmpwatch, type: mandatory}
+  - {name: traceroute, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-en-US, type: default}
+  - {name: abrt-addon-ccpp, type: default}
+  - {name: abrt-addon-kerneloops, type: default}
+  - {name: abrt-addon-python, type: default}
+  - {name: abrt-cli, type: default}
+  - {name: acpid, type: default}
+  - {name: b43-fwcutter, type: default}
+  - {name: biosdevname, type: default}
+  - {name: blktrace, type: default}
+  - {name: bridge-utils, type: default}
+  - {name: bzip2, type: default}
+  - {name: cpuspeed, type: default}
+  - {name: cryptsetup-luks, type: default}
+  - {name: dmraid, type: default}
+  - {name: dosfstools, type: default}
+  - {name: eject, type: default}
+  - {name: ethtool, type: default}
+  - {name: fprintd-pam, type: default}
+  - {name: gnupg2, type: default}
+  - {name: hunspell, type: default}
+  - {name: hunspell-en, type: default}
+  - {name: irqbalance, type: default}
+  - {name: kexec-tools, type: default}
+  - {name: ledmon, type: default}
+  - {name: libaio, type: default}
+  - {name: lvm2, type: default}
+  - {name: man-pages, type: default}
+  - {name: man-pages-overrides, type: default}
+  - {name: mdadm, type: default}
+  - {name: microcode_ctl, type: default}
+  - {name: mlocate, type: default}
+  - {name: mtr, type: default}
+  - {name: nano, type: default}
+  - {name: ntp, type: default}
+  - {name: ntpdate, type: default}
+  - {name: openssh-clients, type: default}
+  - {name: pam_passwdqc, type: default}
+  - {name: pcmciautils, type: default}
+  - {name: pinfo, type: default}
+  - {name: plymouth, type: default}
+  - {name: pm-utils, type: default}
+  - {name: prelink, type: default}
+  - {name: rdate, type: default}
+  - {name: readahead, type: default}
+  - {name: redhat-support-tool, type: default}
+  - {name: rfkill, type: default}
+  - {name: rng-tools, type: default}
+  - {name: rsync, type: default}
+  - {name: scl-utils, type: default}
+  - {name: setuptool, type: default}
+  - {name: smartmontools, type: default}
+  - {name: sos, type: default}
+  - {name: strace, type: default}
+  - {name: sysstat, type: default}
+  - {name: system-config-firewall-tui, type: default}
+  - {name: system-config-network-tui, type: default}
+  - {name: systemtap-runtime, type: default}
+  - {name: tcpdump, type: default}
+  - {name: tcsh, type: default}
+  - {name: time, type: default}
+  - {name: unzip, type: default}
+  - {name: usbutils, type: default}
+  - {name: vconfig, type: default}
+  - {name: vim-enhanced, type: default}
+  - {name: virt-what, type: default}
+  - {name: wget, type: default}
+  - {name: which, type: default}
+  - {name: wireless-tools, type: default}
+  - {name: words, type: default}
+  - {name: xz, type: default}
+  - {name: yum-plugin-security, type: default}
+  - {name: yum-utils, type: default}
+  - {name: zip, type: default}
+  - {name: PyPAM, type: optional}
+  - {name: audispd-plugins, type: optional}
+  - {name: brltty, type: optional}
+  - {name: cpupowerutils, type: optional}
+  - {name: device-mapper-persistent-data, type: optional}
+  - {name: dos2unix, type: optional}
+  - {name: dumpet, type: optional}
+  - {name: ecryptfs-utils, type: optional}
+  - {name: edac-utils, type: optional}
+  - {name: genisoimage, type: optional}
+  - {name: gpm, type: optional}
+  - {name: kabi-yum-plugins, type: optional}
+  - {name: kernel-doc, type: optional}
+  - {name: linuxptp, type: optional}
+  - {name: logwatch, type: optional}
+  - {name: mkbootdisk, type: optional}
+  - {name: mtools, type: optional}
+  - {name: ncurses-term, type: optional}
+  - {name: nss_db, type: optional}
+  - {name: oddjob, type: optional}
+  - {name: pax, type: optional}
+  - {name: python-dmidecode, type: optional}
+  - {name: python-volume_key, type: optional}
+  - {name: rsyslog-gnutls, type: optional}
+  - {name: rsyslog-gssapi, type: optional}
+  - {name: rsyslog-relp, type: optional}
+  - {name: sgpio, type: optional}
+  - {name: sox, type: optional}
+  - {name: squashfs-tools, type: optional}
+  - {name: star, type: optional}
+  - {name: subscription-manager-migration, type: optional}
+  - {name: subscription-manager-migration-data, type: optional}
+  - {name: tboot, type: optional}
+  - {name: tunctl, type: optional}
+  - {name: udftools, type: optional}
+  - {name: unix2dos, type: optional}
+  - {name: uuidd, type: optional}
+  - {name: volume_key, type: optional}
+  - {name: wodim, type: optional}
+  - {name: x86info, type: optional}
+  - {name: yum-plugin-aliases, type: optional}
+  - {name: yum-plugin-changelog, type: optional}
+  - {name: yum-plugin-downloadonly, type: optional}
+  - {name: yum-plugin-tmprepo, type: optional}
+  - {name: yum-plugin-verify, type: optional}
+  - {name: yum-plugin-versionlock, type: optional}
+  - {name: yum-presto, type: optional}
+  - {name: zsh, type: optional}
+- group: basic-desktop
+  packages:
+  - {name: NetworkManager, type: mandatory}
+  - {name: NetworkManager-gnome, type: mandatory}
+  - {name: alsa-plugins-pulseaudio, type: mandatory}
+  - {name: at-spi, type: mandatory}
+  - {name: control-center, type: mandatory}
+  - {name: dbus, type: mandatory}
+  - {name: gdm, type: mandatory}
+  - {name: gdm-user-switch-applet, type: mandatory}
+  - {name: gnome-panel, type: mandatory}
+  - {name: gnome-power-manager, type: mandatory}
+  - {name: gnome-screensaver, type: mandatory}
+  - {name: gnome-session, type: mandatory}
+  - {name: gnome-terminal, type: mandatory}
+  - {name: gvfs-archive, type: mandatory}
+  - {name: gvfs-fuse, type: mandatory}
+  - {name: gvfs-smb, type: mandatory}
+  - {name: metacity, type: mandatory}
+  - {name: nautilus, type: mandatory}
+  - {name: notification-daemon, type: mandatory}
+  - {name: polkit-gnome, type: mandatory}
+  - {name: xdg-user-dirs-gtk, type: mandatory}
+  - {name: yelp, type: mandatory}
+  - {name: control-center-extra, type: default}
+  - {name: eog, type: default}
+  - {name: gdm-plugin-fingerprint, type: default}
+  - {name: gnome-applets, type: default}
+  - {name: gnome-media, type: default}
+  - {name: gnome-packagekit, type: default}
+  - {name: gnome-vfs2-smb, type: default}
+  - {name: gok, type: default}
+  - {name: openssh-askpass, type: default}
+  - {name: orca, type: default}
+  - {name: pulseaudio-module-gconf, type: default}
+  - {name: pulseaudio-module-x11, type: default}
+  - {name: rhn-setup-gnome, type: default}
+  - {name: subscription-manager-gui, type: default}
+  - {name: vino, type: default}
+  - {name: sabayon-apply, type: optional}
+  - {name: tigervnc-server, type: optional}
+  - {name: xguest, type: optional}
+- group: basque-support
+  packages:
+  - {name: hunspell-eu, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Basque, requires: kdelibs, type: conditional}
+- group: belarusian-support
+  packages:
+  - {name: hunspell-be, requires: hunspell, type: conditional}
+- group: bengali-support
+  packages:
+  - {name: lohit-bengali-fonts, type: mandatory}
+  - {name: m17n-contrib-bengali, type: mandatory}
+  - {name: m17n-db-bengali, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-bn-IN, type: default}
+  - {name: iok, type: default}
+  - {name: hunspell-bn, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-i18n-Bengali, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Bengali-India, requires: kdelibs, type: conditional}
+- group: bhutanese-support
+  packages:
+  - {name: jomolhari-fonts, type: mandatory}
+- group: brazilian-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-pt-BR, type: default}
+  - {name: eclipse-nls-pt_BR, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-pt, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Brazil, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Brazil, requires: kdelibs, type: conditional}
+- group: breton-support
+  packages:
+  - {name: hunspell-br, requires: hunspell, type: conditional}
+- group: british-support
+  packages:
+  - {name: kde-i18n-British, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-British, requires: kdelibs, type: conditional}
+- group: bulgarian-support
+  packages:
+  - {name: eclipse-nls-bg, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-bg, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Bulgarian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Bulgarian, requires: kdelibs, type: conditional}
+- group: burmese-support
+  packages:
+  - {name: sil-padauk-fonts, type: default}
+- group: catalan-support
+  packages:
+  - {name: eclipse-nls-ca, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-ca, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Catalan, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Catalan, requires: kdelibs, type: conditional}
+- group: chhattisgarhi-support
+  packages:
+  - {name: kde-l10n-Chhattisgarhi, requires: kdelibs, type: conditional}
+- group: chichewa-support
+  packages:
+  - {name: hunspell-ny, requires: hunspell, type: conditional}
+- group: chinese-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-zh-CN, type: default}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-zh-TW, type: default}
+  - {name: cjkuni-ukai-fonts, type: default}
+  - {name: cjkuni-uming-fonts, type: default}
+  - {name: ibus-table-cangjie, type: default}
+  - {name: ibus-table-erbi, type: default}
+  - {name: ibus-table-wubi, type: default}
+  - {name: wqy-zenhei-fonts, type: default}
+  - {name: cjkuni-fonts-ghostscript, type: optional}
+  - {name: eclipse-nls-zh, requires: eclipse-platform, type: conditional}
+  - {name: eclipse-nls-zh_TW, requires: eclipse-platform, type: conditional}
+  - {name: ibus-chewing, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: ibus-pinyin, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-i18n-Chinese, requires: kdelibs3, type: conditional}
+  - {name: kde-i18n-Chinese-Big5, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Chinese, requires: kdelibs, type: conditional}
+  - {name: kde-l10n-Chinese-Traditional, requires: kdelibs, type: conditional}
+- group: cifs-file-server
+  packages:
+  - {name: samba, type: mandatory}
+  - {name: tdb-tools, type: optional}
+- group: compat-libraries
+  packages:
+  - {name: compat-db, type: default}
+  - {name: compat-expat1, type: default}
+  - {name: compat-glibc, type: default}
+  - {name: compat-libcap1, type: default}
+  - {name: compat-libf2c-34, type: default}
+  - {name: compat-libgfortran-41, type: default}
+  - {name: compat-libstdc++-296, type: default}
+  - {name: compat-libstdc++-33, type: default}
+  - {name: compat-libtermcap, type: default}
+  - {name: compat-openldap, type: default}
+  - {name: compat-openmpi, type: default}
+  - {name: compat-openmpi-psm, type: default}
+  - {name: compat-opensm-libs, type: default}
+  - {name: compat-readline5, type: default}
+  - {name: openssl098e, type: default}
+- group: conflicts-server
+  packages:
+  - {name: cpupowerutils, type: mandatory}
+  - {name: ipa-server, type: mandatory}
+  - {name: ipa-server-selinux, type: mandatory}
+  - {name: ipa-server-trust-ad, type: mandatory}
+  - {name: libcmpiCppImpl0, type: mandatory}
+  - {name: openhpi32, type: mandatory}
+  - {name: openhpi32-libs, type: mandatory}
+  - {name: samba4, type: mandatory}
+  - {name: samba4-client, type: mandatory}
+  - {name: samba4-common, type: mandatory}
+  - {name: samba4-dc, type: mandatory}
+  - {name: samba4-dc-libs, type: mandatory}
+  - {name: samba4-devel, type: mandatory}
+  - {name: samba4-libs, type: mandatory}
+  - {name: samba4-pidl, type: mandatory}
+  - {name: samba4-python, type: mandatory}
+  - {name: samba4-swat, type: mandatory}
+  - {name: samba4-test, type: mandatory}
+  - {name: samba4-winbind, type: mandatory}
+  - {name: samba4-winbind-clients, type: mandatory}
+  - {name: samba4-winbind-krb5-locator, type: mandatory}
+- group: console-internet
+  packages:
+  - {name: elinks, type: default}
+  - {name: fetchmail, type: optional}
+  - {name: ftp, type: optional}
+  - {name: irssi, type: optional}
+  - {name: jwhois, type: optional}
+  - {name: lftp, type: optional}
+  - {name: mutt, type: optional}
+- group: coptic-support
+  packages:
+  - {name: hunspell-cop, requires: hunspell, type: conditional}
+- group: core
+  packages:
+  - {name: acl, type: mandatory}
+  - {name: attr, type: mandatory}
+  - {name: audit, type: mandatory}
+  - {name: basesystem, type: mandatory}
+  - {name: bash, type: mandatory}
+  - {name: coreutils, type: mandatory}
+  - {name: cpio, type: mandatory}
+  - {name: cronie, type: mandatory}
+  - {name: dhclient, type: mandatory}
+  - {name: e2fsprogs, type: mandatory}
+  - {name: filesystem, type: mandatory}
+  - {name: glibc, type: mandatory}
+  - {name: initscripts, type: mandatory}
+  - {name: iproute, type: mandatory}
+  - {name: iptables, type: mandatory}
+  - {name: iptables-ipv6, type: mandatory}
+  - {name: iputils, type: mandatory}
+  - {name: kbd, type: mandatory}
+  - {name: ncurses, type: mandatory}
+  - {name: openssh-server, type: mandatory}
+  - {name: passwd, type: mandatory}
+  - {name: policycoreutils, type: mandatory}
+  - {name: procps, type: mandatory}
+  - {name: redhat-support-tool, type: mandatory}
+  - {name: rhnsd, type: mandatory}
+  - {name: rootfiles, type: mandatory}
+  - {name: rpm, type: mandatory}
+  - {name: rsyslog, type: mandatory}
+  - {name: selinux-policy-targeted, type: mandatory}
+  - {name: setup, type: mandatory}
+  - {name: shadow-utils, type: mandatory}
+  - {name: subscription-manager, type: mandatory}
+  - {name: sudo, type: mandatory}
+  - {name: util-linux-ng, type: mandatory}
+  - {name: vim-minimal, type: mandatory}
+  - {name: yum, type: mandatory}
+  - {name: yum-rhn-plugin, type: mandatory}
+  - {name: aic94xx-firmware, type: default}
+  - {name: atmel-firmware, type: default}
+  - {name: b43-openfwwf, type: default}
+  - {name: bfa-firmware, type: default}
+  - {name: efibootmgr, type: default}
+  - {name: grub, type: default}
+  - {name: ipw2100-firmware, type: default}
+  - {name: ipw2200-firmware, type: default}
+  - {name: ivtv-firmware, type: default}
+  - {name: iwl100-firmware, type: default}
+  - {name: iwl1000-firmware, type: default}
+  - {name: iwl3945-firmware, type: default}
+  - {name: iwl4965-firmware, type: default}
+  - {name: iwl5000-firmware, type: default}
+  - {name: iwl5150-firmware, type: default}
+  - {name: iwl6000-firmware, type: default}
+  - {name: iwl6000g2a-firmware, type: default}
+  - {name: iwl6050-firmware, type: default}
+  - {name: kernel-firmware, type: default}
+  - {name: libertas-usb8388-firmware, type: default}
+  - {name: postfix, type: default}
+  - {name: ql2100-firmware, type: default}
+  - {name: ql2200-firmware, type: default}
+  - {name: ql23xx-firmware, type: default}
+  - {name: ql2400-firmware, type: default}
+  - {name: ql2500-firmware, type: default}
+  - {name: rt61pci-firmware, type: default}
+  - {name: rt73usb-firmware, type: default}
+  - {name: xorg-x11-drv-ati-firmware, type: default}
+  - {name: zd1211-firmware, type: default}
+  - {name: dracut-fips, type: optional}
+  - {name: dracut-network, type: optional}
+- group: croatian-support
+  packages:
+  - {name: hunspell-hr, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Croatian, requires: kdelibs, type: conditional}
+- group: czech-support
+  packages:
+  - {name: m17n-contrib-czech, type: mandatory}
+  - {name: eclipse-nls-cs, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-cs, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Czech, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Czech, requires: kdelibs, type: conditional}
+  - {name: man-pages-cs, requires: man-pages, type: conditional}
+- group: danish-support
+  packages:
+  - {name: eclipse-nls-da, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-da, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Danish, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Danish, requires: kdelibs, type: conditional}
+- group: debugging
+  packages:
+  - {name: gdb, type: mandatory}
+  - {name: kexec-tools, type: mandatory}
+  - {name: latrace, type: mandatory}
+  - {name: strace, type: mandatory}
+  - {name: systemtap-runtime, type: mandatory}
+  - {name: abrt-addon-ccpp, type: default}
+  - {name: abrt-addon-python, type: default}
+  - {name: abrt-cli, type: default}
+  - {name: cas, type: default}
+  - {name: crash, type: default}
+  - {name: crash-gcore-command, type: default}
+  - {name: crash-trace-command, type: default}
+  - {name: elfutils, type: default}
+  - {name: ltrace, type: default}
+  - {name: trace-cmd, type: default}
+  - {name: valgrind, type: default}
+  - {name: flightrecorder, type: optional}
+  - {name: gdb-gdbserver, type: optional}
+  - {name: glibc-utils, type: optional}
+  - {name: lslk, type: optional}
+  - {name: memtest86+, type: optional}
+  - {name: ps_mem, type: optional}
+  - {name: systemtap-client, type: optional}
+  - {name: systemtap-initscript, type: optional}
+- group: desktop-debugging
+  packages:
+  - {name: abrt-desktop, type: default}
+  - {name: abrt-gui, type: optional}
+  - {name: bltk, type: optional}
+  - {name: oprofile-gui, type: optional}
+  - {name: xrestop, type: optional}
+- group: desktop-platform
+  packages:
+  - {name: atk, type: mandatory}
+  - {name: cairo, type: mandatory}
+  - {name: dbus, type: mandatory}
+  - {name: dbus-libs, type: mandatory}
+  - {name: fontconfig, type: mandatory}
+  - {name: freetype, type: mandatory}
+  - {name: glib2, type: mandatory}
+  - {name: gtk2, type: mandatory}
+  - {name: libICE, type: mandatory}
+  - {name: libSM, type: mandatory}
+  - {name: libX11, type: mandatory}
+  - {name: libXext, type: mandatory}
+  - {name: libXft, type: mandatory}
+  - {name: libXi, type: mandatory}
+  - {name: libXrender, type: mandatory}
+  - {name: libXt, type: mandatory}
+  - {name: libXtst, type: mandatory}
+  - {name: libpng, type: mandatory}
+  - {name: libxml2, type: mandatory}
+  - {name: mesa-libGL, type: mandatory}
+  - {name: mesa-libGLU, type: mandatory}
+  - {name: pango, type: mandatory}
+  - {name: qt, type: mandatory}
+  - {name: qt3, type: mandatory}
+  - {name: redhat-lsb-graphics, type: mandatory}
+  - {name: redhat-lsb-printing, type: mandatory}
+  - {name: qt-mysql, type: optional}
+  - {name: qt-odbc, type: optional}
+  - {name: qt-postgresql, type: optional}
+  - {name: qt3-MySQL, type: optional}
+  - {name: qt3-ODBC, type: optional}
+  - {name: qt3-PostgreSQL, type: optional}
+- group: desktop-platform-devel
+  packages:
+  - {name: atk-devel, type: mandatory}
+  - {name: cairo-devel, type: mandatory}
+  - {name: dbus-devel, type: mandatory}
+  - {name: fontconfig-devel, type: mandatory}
+  - {name: freetype-devel, type: mandatory}
+  - {name: glib2-devel, type: mandatory}
+  - {name: gtk2-devel, type: mandatory}
+  - {name: libICE-devel, type: mandatory}
+  - {name: libSM-devel, type: mandatory}
+  - {name: libX11-devel, type: mandatory}
+  - {name: libXext-devel, type: mandatory}
+  - {name: libXft-devel, type: mandatory}
+  - {name: libXi-devel, type: mandatory}
+  - {name: libXrender-devel, type: mandatory}
+  - {name: libXt-devel, type: mandatory}
+  - {name: libXtst-devel, type: mandatory}
+  - {name: libpng-devel, type: mandatory}
+  - {name: libxml2-devel, type: mandatory}
+  - {name: mesa-libGL-devel, type: mandatory}
+  - {name: mesa-libGLU-devel, type: mandatory}
+  - {name: mesa-libGLw-devel, type: mandatory}
+  - {name: pango-devel, type: mandatory}
+  - {name: qt-devel, type: mandatory}
+  - {name: qt3-devel, type: mandatory}
+  - {name: xorg-x11-docs, type: mandatory}
+  - {name: desktop-file-utils, type: optional}
+  - {name: glade3, type: optional}
+  - {name: gnome-common, type: optional}
+  - {name: gnome-devel-docs, type: optional}
+  - {name: gtk2-devel-docs, type: optional}
+  - {name: kdesdk, type: optional}
+  - {name: qt-doc, type: optional}
+- group: development
+  packages:
+  - {name: autoconf, type: mandatory}
+  - {name: automake, type: mandatory}
+  - {name: binutils, type: mandatory}
+  - {name: bison, type: mandatory}
+  - {name: flex, type: mandatory}
+  - {name: gcc, type: mandatory}
+  - {name: gcc-c++, type: mandatory}
+  - {name: gettext, type: mandatory}
+  - {name: libtool, type: mandatory}
+  - {name: make, type: mandatory}
+  - {name: patch, type: mandatory}
+  - {name: pkgconfig, type: mandatory}
+  - {name: redhat-rpm-config, type: mandatory}
+  - {name: rpm-build, type: mandatory}
+  - {name: byacc, type: default}
+  - {name: cscope, type: default}
+  - {name: ctags, type: default}
+  - {name: cvs, type: default}
+  - {name: diffstat, type: default}
+  - {name: doxygen, type: default}
+  - {name: elfutils, type: default}
+  - {name: gcc-gfortran, type: default}
+  - {name: git, type: default}
+  - {name: indent, type: default}
+  - {name: intltool, type: default}
+  - {name: patchutils, type: default}
+  - {name: rcs, type: default}
+  - {name: subversion, type: default}
+  - {name: swig, type: default}
+  - {name: systemtap, type: default}
+  - {name: ElectricFence, type: optional}
+  - {name: ant, type: optional}
+  - {name: babel, type: optional}
+  - {name: bzr, type: optional}
+  - {name: chrpath, type: optional}
+  - {name: cmake, type: optional}
+  - {name: compat-gcc-34, type: optional}
+  - {name: compat-gcc-34-c++, type: optional}
+  - {name: compat-gcc-34-g77, type: optional}
+  - {name: cvs-inetd, type: optional}
+  - {name: dejagnu, type: optional}
+  - {name: expect, type: optional}
+  - {name: gcc-gnat, type: optional}
+  - {name: gcc-java, type: optional}
+  - {name: gcc-objc, type: optional}
+  - {name: gcc-objc++, type: optional}
+  - {name: imake, type: optional}
+  - {name: jpackage-utils, type: optional}
+  - {name: kdewebdev, type: optional}
+  - {name: ksc, type: optional}
+  - {name: libstdc++-docs, type: optional}
+  - {name: mercurial, type: optional}
+  - {name: mod_dav_svn, type: optional}
+  - {name: nasm, type: optional}
+  - {name: perltidy, type: optional}
+  - {name: python-docs, type: optional}
+  - {name: rpmdevtools, type: optional}
+  - {name: rpmlint, type: optional}
+  - {name: systemtap-sdt-devel, type: optional}
+  - {name: systemtap-server, type: optional}
+- group: dial-up
+  packages:
+  - {name: ppp, type: mandatory}
+  - {name: lrzsz, type: default}
+  - {name: minicom, type: default}
+  - {name: wvdial, type: default}
+  - {name: efax, type: optional}
+  - {name: isdn4k-utils, type: optional}
+  - {name: pptp, type: optional}
+  - {name: rp-pppoe, type: optional}
+- group: directory-client
+  packages:
+  - {name: ipa-client, type: default}
+  - {name: oddjob-mkhomedir, type: default}
+  - {name: sssd, type: default}
+  - {name: ypbind, type: default}
+  - {name: certmonger, type: optional}
+  - {name: hesinfo, type: optional}
+  - {name: krb5-appl-clients, type: optional}
+  - {name: krb5-pkinit-openssl, type: optional}
+  - {name: krb5-workstation, type: optional}
+  - {name: ldapjdk, type: optional}
+  - {name: libsss_sudo, type: optional}
+  - {name: nscd, type: optional}
+  - {name: nss-pam-ldapd, type: optional}
+  - {name: openldap-clients, type: optional}
+  - {name: pam_krb5, type: optional}
+  - {name: pam_ldap, type: optional}
+  - {name: samba-winbind, type: optional}
+- group: directory-server
+  packages:
+  - {name: krb5-server, type: optional}
+  - {name: krb5-server-ldap, type: optional}
+  - {name: migrationtools, type: optional}
+  - {name: openldap-servers, type: optional}
+  - {name: samba, type: optional}
+  - {name: ypserv, type: optional}
+- group: dutch-support
+  packages:
+  - {name: eclipse-nls-nl, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-nl, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Dutch, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Dutch, requires: kdelibs, type: conditional}
+- group: eclipse
+  packages:
+  - {name: eclipse-cdt, type: mandatory}
+  - {name: eclipse-jdt, type: mandatory}
+  - {name: eclipse-callgraph, type: default}
+  - {name: eclipse-changelog, type: default}
+  - {name: eclipse-mylyn, type: default}
+  - {name: eclipse-mylyn-java, type: default}
+  - {name: eclipse-oprofile, type: default}
+  - {name: eclipse-pde, type: default}
+  - {name: eclipse-rpm-editor, type: default}
+  - {name: eclipse-subclipse, type: default}
+  - {name: eclipse-valgrind, type: default}
+  - {name: eclipse-mylyn-cdt, type: optional}
+  - {name: eclipse-mylyn-pde, type: optional}
+  - {name: eclipse-mylyn-trac, type: optional}
+  - {name: eclipse-mylyn-webtasks, type: optional}
+  - {name: eclipse-mylyn-wikitext, type: optional}
+  - {name: eclipse-subclipse-graph, type: optional}
+- group: emacs
+  packages:
+  - {name: emacs, type: mandatory}
+  - {name: ctags-etags, type: optional}
+  - {name: emacs-auctex, type: optional}
+  - {name: emacs-gnuplot, type: optional}
+  - {name: emacs-nox, type: optional}
+- group: esperanto-support
+  packages:
+  - {name: hunspell-eo, requires: hunspell, type: conditional}
+- group: estonian-support
+  packages:
+  - {name: eclipse-nls-et, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-et, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Estonian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Estonian, requires: kdelibs, type: conditional}
+- group: ethiopic-support
+  packages:
+  - {name: abyssinica-fonts, type: default}
+- group: faroese-support
+  packages:
+  - {name: hunspell-fo, requires: hunspell, type: conditional}
+- group: fijian-support
+  packages:
+  - {name: hunspell-fj, requires: hunspell, type: conditional}
+- group: filipino-support
+  packages:
+  - {name: hunspell-tl, requires: hunspell, type: conditional}
+- group: finnish-support
+  packages:
+  - {name: eclipse-nls-fi, requires: eclipse-platform, type: conditional}
+  - {name: kde-i18n-Finnish, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Finnish, requires: kdelibs, type: conditional}
+- group: fonts
+  packages:
+  - {name: abyssinica-fonts, type: default}
+  - {name: cjkuni-uming-fonts, type: default}
+  - {name: dejavu-sans-fonts, type: default}
+  - {name: dejavu-sans-mono-fonts, type: default}
+  - {name: dejavu-serif-fonts, type: default}
+  - {name: jomolhari-fonts, type: default}
+  - {name: khmeros-base-fonts, type: default}
+  - {name: kurdit-unikurd-web-fonts, type: default}
+  - {name: liberation-mono-fonts, type: default}
+  - {name: liberation-sans-fonts, type: default}
+  - {name: liberation-serif-fonts, type: default}
+  - {name: lklug-fonts, type: default}
+  - {name: lohit-assamese-fonts, type: default}
+  - {name: lohit-bengali-fonts, type: default}
+  - {name: lohit-devanagari-fonts, type: default}
+  - {name: lohit-gujarati-fonts, type: default}
+  - {name: lohit-kannada-fonts, type: default}
+  - {name: lohit-oriya-fonts, type: default}
+  - {name: lohit-punjabi-fonts, type: default}
+  - {name: lohit-tamil-fonts, type: default}
+  - {name: lohit-telugu-fonts, type: default}
+  - {name: madan-fonts, type: default}
+  - {name: paktype-naqsh-fonts, type: default}
+  - {name: paktype-tehreer-fonts, type: default}
+  - {name: sil-padauk-fonts, type: default}
+  - {name: smc-meera-fonts, type: default}
+  - {name: stix-fonts, type: default}
+  - {name: thai-scalable-waree-fonts, type: default}
+  - {name: tibetan-machine-uni-fonts, type: default}
+  - {name: un-core-dotum-fonts, type: default}
+  - {name: vlgothic-fonts, type: default}
+  - {name: wqy-zenhei-fonts, type: default}
+  - {name: bitmap-fixed-fonts, type: optional}
+  - {name: bitmap-lucida-typewriter-fonts, type: optional}
+  - {name: cjkuni-fonts-ghostscript, type: optional}
+- group: french-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-fr-FR, type: default}
+  - {name: eclipse-nls-fr, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-fr, requires: hunspell, type: conditional}
+  - {name: kde-i18n-French, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-French, requires: kdelibs, type: conditional}
+  - {name: man-pages-fr, requires: man-pages, type: conditional}
+- group: frisian-support
+  packages:
+  - {name: hunspell-fy, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Frisian, requires: kdelibs, type: conditional}
+- group: friulian-support
+  packages:
+  - {name: hunspell-fur, requires: hunspell, type: conditional}
+- group: ftp-server
+  packages:
+  - {name: vsftpd, type: mandatory}
+  - {name: xferstats, type: optional}
+- group: gaelic-support
+  packages:
+  - {name: hunspell-gd, requires: hunspell, type: conditional}
+- group: galician-support
+  packages:
+  - {name: hunspell-gl, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Galician, requires: kdelibs, type: conditional}
+- group: general-desktop
+  packages:
+  - {name: PackageKit-gstreamer-plugin, type: default}
+  - {name: authconfig-gtk, type: default}
+  - {name: brasero-nautilus, type: default}
+  - {name: cheese, type: default}
+  - {name: compiz-gnome, type: default}
+  - {name: evince, type: default}
+  - {name: evince-dvi, type: default}
+  - {name: file-roller, type: default}
+  - {name: gcalctool, type: default}
+  - {name: gedit, type: default}
+  - {name: gnome-backgrounds, type: default}
+  - {name: gnome-bluetooth, type: default}
+  - {name: gnome-disk-utility, type: default}
+  - {name: gnome-power-manager, type: default}
+  - {name: gnome-system-monitor, type: default}
+  - {name: gnome-themes, type: default}
+  - {name: gnome-user-docs, type: default}
+  - {name: gnome-user-share, type: default}
+  - {name: gnome-utils, type: default}
+  - {name: gnote, type: default}
+  - {name: gthumb, type: default}
+  - {name: gucharmap, type: default}
+  - {name: gvfs-afc, type: default}
+  - {name: gvfs-gphoto2, type: default}
+  - {name: gvfs-obexftp, type: default}
+  - {name: mousetweaks, type: default}
+  - {name: nautilus-open-terminal, type: default}
+  - {name: nautilus-sendto, type: default}
+  - {name: rhythmbox, type: default}
+  - {name: scenery-backgrounds, type: default}
+  - {name: seahorse, type: default}
+  - {name: sound-juicer, type: default}
+  - {name: system-config-firewall, type: default}
+  - {name: system-config-users, type: default}
+  - {name: totem, type: default}
+  - {name: totem-nautilus, type: default}
+  - {name: alacarte, type: optional}
+  - {name: byzanz, type: optional}
+  - {name: dvgrab, type: optional}
+  - {name: gconf-editor, type: optional}
+  - {name: gedit-plugins, type: optional}
+  - {name: gnome-games, type: optional}
+  - {name: gnome-pilot, type: optional}
+  - {name: gnome-pilot-conduits, type: optional}
+  - {name: krb5-auth-dialog, type: optional}
+  - {name: rhythmbox-upnp, type: optional}
+  - {name: seahorse-plugins, type: optional}
+  - {name: totem-upnp, type: optional}
+  - {name: vim-X11, type: optional}
+- group: georgian-support
+  packages:
+  - {name: dejavu-sans-fonts, type: mandatory}
+  - {name: bpg-chveulebrivi-fonts, type: default}
+  - {name: bpg-courier-fonts, type: default}
+  - {name: bpg-glaho-fonts, type: default}
+  - {name: dejavu-sans-mono-fonts, type: default}
+  - {name: dejavu-serif-fonts, type: default}
+- group: german-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-de-DE, type: default}
+  - {name: eclipse-nls-de, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-de, requires: hunspell, type: conditional}
+  - {name: kde-i18n-German, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-German, requires: kdelibs, type: conditional}
+- group: graphical-admin-tools
+  packages:
+  - {name: dbus, type: mandatory}
+  - {name: authconfig-gtk, type: default}
+  - {name: gnome-disk-utility, type: default}
+  - {name: gnome-packagekit, type: default}
+  - {name: system-config-firewall, type: default}
+  - {name: system-config-kdump, type: default}
+  - {name: system-config-keyboard, type: default}
+  - {name: system-config-services, type: default}
+  - {name: system-config-users, type: default}
+  - {name: audit-viewer, type: optional}
+  - {name: firstaidkit-gui, type: optional}
+  - {name: policycoreutils-gui, type: optional}
+  - {name: sabayon, type: optional}
+  - {name: setroubleshoot, type: optional}
+  - {name: system-config-kickstart, type: optional}
+  - {name: system-config-lvm, type: optional}
+  - {name: wireshark-gnome, type: optional}
+  - {name: system-config-services-docs, requires: system-config-services, type: conditional}
+  - {name: system-config-users-docs, requires: system-config-users, type: conditional}
+- group: graphics
+  packages:
+  - {name: gimp, type: mandatory}
+  - {name: gimp-data-extras, type: default}
+  - {name: gimp-help, type: default}
+  - {name: gimp-help-browser, type: default}
+  - {name: gutenprint-plugin, type: default}
+  - {name: libsane-hpaio, type: default}
+  - {name: sane-backends-libs-gphoto2, type: default}
+  - {name: sane-frontends, type: default}
+  - {name: xsane, type: default}
+  - {name: xsane-gimp, type: default}
+  - {name: ImageMagick, type: optional}
+  - {name: dcraw, type: optional}
+  - {name: inkscape, type: optional}
+  - {name: netpbm-progs, type: optional}
+  - {name: xfig, type: optional}
+- group: greek-support
+  packages:
+  - {name: eclipse-nls-el, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-el, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Greek, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Greek, requires: kdelibs, type: conditional}
+  - {name: tex-cm-lgc, requires: texlive, type: conditional}
+  - {name: tex-kerkis, requires: texlive, type: conditional}
+- group: gujarati-support
+  packages:
+  - {name: lohit-gujarati-fonts, type: mandatory}
+  - {name: m17n-contrib-gujarati, type: mandatory}
+  - {name: m17n-db-gujarati, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-gu-IN, type: default}
+  - {name: iok, type: default}
+  - {name: samyak-gujarati-fonts, type: default}
+  - {name: hunspell-gu, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-l10n-Gujarati, requires: kdelibs, type: conditional}
+- group: hardware-monitoring
+  packages:
+  - {name: mcelog, type: default}
+  - {name: smartmontools, type: default}
+  - {name: edac-utils, type: optional}
+  - {name: i2c-tools, type: optional}
+  - {name: lm_sensors, type: optional}
+- group: hebrew-support
+  packages:
+  - {name: dejavu-sans-fonts, type: mandatory}
+  - {name: culmus-aharoni-clm-fonts, type: default}
+  - {name: culmus-caladings-clm-fonts, type: default}
+  - {name: culmus-david-clm-fonts, type: default}
+  - {name: culmus-drugulin-clm-fonts, type: default}
+  - {name: culmus-ellinia-clm-fonts, type: default}
+  - {name: culmus-frank-ruehl-clm-fonts, type: default}
+  - {name: culmus-miriam-clm-fonts, type: default}
+  - {name: culmus-miriam-mono-clm-fonts, type: default}
+  - {name: culmus-nachlieli-clm-fonts, type: default}
+  - {name: culmus-yehuda-clm-fonts, type: default}
+  - {name: eclipse-nls-he, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-he, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Hebrew, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Hebrew, requires: kdelibs, type: conditional}
+- group: hiligaynon-support
+  packages:
+  - {name: hunspell-hil, requires: hunspell, type: conditional}
+- group: hindi-support
+  packages:
+  - {name: lohit-devanagari-fonts, type: mandatory}
+  - {name: m17n-contrib-hindi, type: mandatory}
+  - {name: m17n-db-hindi, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-hi-IN, type: default}
+  - {name: iok, type: default}
+  - {name: samyak-devanagari-fonts, type: default}
+  - {name: eclipse-nls-hi, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-hi, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-i18n-Hindi, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Hindi, requires: kdelibs, type: conditional}
+- group: hungarian-support
+  packages:
+  - {name: eclipse-nls-hu, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-hu, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Hungarian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Hungarian, requires: kdelibs, type: conditional}
+- group: icelandic-support
+  packages:
+  - {name: hunspell-is, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Icelandic, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Icelandic, requires: kdelibs, type: conditional}
+- group: identity-management-server
+  packages:
+  - {name: 389-ds-base, type: default}
+  - {name: ipa-admintools, type: default}
+  - {name: ipa-pki-ca-theme, type: default}
+  - {name: ipa-pki-common-theme, type: default}
+  - {name: ipa-server, type: default}
+  - {name: mod_revocator, type: default}
+  - {name: pki-ca, type: default}
+  - {name: pki-silent, type: default}
+  - {name: nuxwdog, type: optional}
+  - {name: slapi-nis, type: optional}
+- group: indonesian-support
+  packages:
+  - {name: eclipse-nls-id, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-id, requires: hunspell, type: conditional}
+- group: infiniband
+  packages:
+  - {name: libibcm, type: mandatory}
+  - {name: libibverbs, type: mandatory}
+  - {name: libibverbs-utils, type: mandatory}
+  - {name: librdmacm, type: mandatory}
+  - {name: librdmacm-utils, type: mandatory}
+  - {name: rdma, type: mandatory}
+  - {name: dapl, type: default}
+  - {name: ibacm, type: default}
+  - {name: ibsim, type: default}
+  - {name: ibutils, type: default}
+  - {name: libcxgb3, type: default}
+  - {name: libibmad, type: default}
+  - {name: libibumad, type: default}
+  - {name: libipathverbs, type: default}
+  - {name: libmlx4, type: default}
+  - {name: libmthca, type: default}
+  - {name: libnes, type: default}
+  - {name: rds-tools, type: default}
+  - {name: compat-dapl, type: optional}
+  - {name: glusterfs-rdma, type: optional}
+  - {name: infiniband-diags, type: optional}
+  - {name: libibcommon, type: optional}
+  - {name: mstflint, type: optional}
+  - {name: opensm, type: optional}
+  - {name: perftest, type: optional}
+  - {name: qperf, type: optional}
+  - {name: srptools, type: optional}
+- group: input-methods
+  packages:
+  - {name: ibus-gtk, type: mandatory}
+  - {name: ibus-anthy, type: default}
+  - {name: ibus-chewing, type: default}
+  - {name: ibus-hangul, type: default}
+  - {name: ibus-m17n, type: default}
+  - {name: ibus-pinyin, type: default}
+  - {name: ibus-rawcode, type: default}
+  - {name: ibus-sayura, type: default}
+  - {name: ibus-table-additional, type: default}
+  - {name: m17n-contrib-assamese, type: default}
+  - {name: m17n-contrib-bengali, type: default}
+  - {name: m17n-contrib-gujarati, type: default}
+  - {name: m17n-contrib-hindi, type: default}
+  - {name: m17n-contrib-kannada, type: default}
+  - {name: m17n-contrib-maithili, type: default}
+  - {name: m17n-contrib-malayalam, type: default}
+  - {name: m17n-contrib-marathi, type: default}
+  - {name: m17n-contrib-oriya, type: default}
+  - {name: m17n-contrib-punjabi, type: default}
+  - {name: m17n-contrib-tamil, type: default}
+  - {name: m17n-contrib-telugu, type: default}
+  - {name: m17n-contrib-urdu, type: default}
+  - {name: m17n-db-sinhala, type: default}
+  - {name: m17n-db-thai, type: default}
+  - {name: gtk2-immodule-xim, requires: gtk2, type: conditional}
+  - {name: ibus-qt, requires: qt, type: conditional}
+- group: interlingua-support
+  packages:
+  - {name: hunspell-ia, requires: hunspell, type: conditional}
+- group: internet-browser
+  packages:
+  - {name: firefox, type: default}
+  - {name: nspluginwrapper, type: default}
+  - {name: totem-mozplugin, type: default}
+- group: inuktitut-support
+  packages:
+  - {name: dejavu-sans-fonts, type: mandatory}
+- group: irish-support
+  packages:
+  - {name: hunspell-ga, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Irish, requires: kdelibs, type: conditional}
+- group: italian-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-it-IT, type: default}
+  - {name: eclipse-nls-it, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-it, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Italian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Italian, requires: kdelibs, type: conditional}
+  - {name: man-pages-it, requires: man-pages, type: conditional}
+- group: japanese-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-ja-JP, type: default}
+  - {name: ipa-gothic-fonts, type: default}
+  - {name: ipa-mincho-fonts, type: default}
+  - {name: ipa-pgothic-fonts, type: default}
+  - {name: ipa-pmincho-fonts, type: default}
+  - {name: vlgothic-fonts, type: default}
+  - {name: vlgothic-p-fonts, type: default}
+  - {name: eclipse-nls-ja, requires: eclipse-platform, type: conditional}
+  - {name: ibus-anthy, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-i18n-Japanese, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Japanese, requires: kdelibs, type: conditional}
+  - {name: man-pages-ja, requires: man-pages, type: conditional}
+  - {name: poppler-data, requires: poppler, type: conditional}
+- group: java-platform
+  packages:
+  - {name: java-1.6.0-openjdk, type: mandatory}
+  - {name: java-1.7.0-openjdk, type: mandatory}
+  - {name: icedtea-web, type: optional}
+- group: kannada-support
+  packages:
+  - {name: lohit-kannada-fonts, type: mandatory}
+  - {name: m17n-contrib-kannada, type: mandatory}
+  - {name: m17n-db-kannada, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-kn-IN, type: default}
+  - {name: iok, type: default}
+  - {name: hunspell-kn, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-l10n-Kannada, requires: kdelibs, type: conditional}
+- group: kashmiri-support
+  packages:
+  - {name: lohit-devanagari-fonts, type: mandatory}
+  - {name: m17n-contrib-kashmiri, type: mandatory}
+  - {name: iok, type: default}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: kashubian-support
+  packages:
+  - {name: hunspell-csb, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Kashubian, requires: kdelibs, type: conditional}
+- group: kazakh-support
+  packages:
+  - {name: hunspell-kk, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Kazakh, requires: kdelibs, type: conditional}
+- group: kde-desktop
+  packages:
+  - {name: alsa-plugins-pulseaudio, type: mandatory}
+  - {name: kde-settings-pulseaudio, type: mandatory}
+  - {name: kdeaccessibility, type: mandatory}
+  - {name: kdeartwork-screensavers, type: mandatory}
+  - {name: kdebase, type: mandatory}
+  - {name: kdebase-workspace, type: mandatory}
+  - {name: kdelibs, type: mandatory}
+  - {name: xsettings-kde, type: mandatory}
+  - {name: NetworkManager-gnome, type: default}
+  - {name: k3b, type: default}
+  - {name: kcoloredit, type: default}
+  - {name: kdeadmin, type: default}
+  - {name: kdegames, type: default}
+  - {name: kdegraphics, type: default}
+  - {name: kdemultimedia, type: default}
+  - {name: kdenetwork, type: default}
+  - {name: kdepim, type: default}
+  - {name: kdepim-runtime, type: default}
+  - {name: kdeplasma-addons, type: default}
+  - {name: kdeutils, type: default}
+  - {name: kdm, type: default}
+  - {name: kiconedit, type: default}
+  - {name: kipi-plugins, type: default}
+  - {name: kmid, type: default}
+  - {name: konq-plugins, type: default}
+  - {name: ksig, type: default}
+  - {name: ksshaskpass, type: default}
+  - {name: pinentry-qt, type: default}
+  - {name: rhn-setup-gnome, type: default}
+  - {name: subscription-manager-gui, type: default}
+  - {name: kdebase-workspace-akonadi, type: optional}
+  - {name: kdebase-workspace-python-applet, type: optional}
+  - {name: ibus-qt, requires: ibus, type: conditional}
+- group: khmer-support
+  packages:
+  - {name: khmeros-base-fonts, type: mandatory}
+  - {name: khmeros-battambang-fonts, type: default}
+  - {name: khmeros-bokor-fonts, type: default}
+  - {name: khmeros-handwritten-fonts, type: default}
+  - {name: khmeros-metal-chrieng-fonts, type: default}
+  - {name: khmeros-muol-fonts, type: default}
+  - {name: khmeros-siemreap-fonts, type: default}
+  - {name: hunspell-km, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Khmer, requires: kdelibs, type: conditional}
+- group: kinyarwanda-support
+  packages:
+  - {name: hunspell-rw, requires: hunspell, type: conditional}
+- group: konkani-support
+  packages:
+  - {name: lohit-devanagari-fonts, type: mandatory}
+  - {name: iok, type: default}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: korean-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-ko-KR, type: default}
+  - {name: un-core-batang-fonts, type: default}
+  - {name: un-core-dinaru-fonts, type: default}
+  - {name: un-core-dotum-fonts, type: default}
+  - {name: un-core-graphic-fonts, type: default}
+  - {name: un-core-gungseo-fonts, type: default}
+  - {name: un-core-pilgi-fonts, type: default}
+  - {name: eclipse-nls-ko, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-ko, requires: hunspell, type: conditional}
+  - {name: ibus-hangul, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-i18n-Korean, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Korean, requires: kdelibs, type: conditional}
+  - {name: man-pages-ko, requires: man-pages, type: conditional}
+  - {name: poppler-data, requires: poppler, type: conditional}
+- group: kurdish-support
+  packages:
+  - {name: kurdit-unikurd-web-fonts, type: default}
+  - {name: eclipse-nls-ku, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-ku, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Kurdish, requires: kdelibs, type: conditional}
+- group: lao-support
+  packages:
+  - {name: dejavu-sans-fonts, type: mandatory}
+- group: large-systems
+  packages:
+  - {name: numactl, type: mandatory}
+  - {name: numad, type: mandatory}
+  - {name: hwloc, type: default}
+  - {name: libcgroup, type: default}
+  - {name: libhugetlbfs, type: default}
+  - {name: libhugetlbfs-utils, type: default}
+  - {name: libtopology, type: default}
+  - {name: tuna, type: optional}
+- group: latin-support
+  packages:
+  - {name: hunspell-la, requires: hunspell, type: conditional}
+- group: latvian-support
+  packages:
+  - {name: hunspell-lv, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Latvian, requires: kdelibs, type: conditional}
+- group: legacy-unix
+  packages:
+  - {name: xinetd, type: default}
+  - {name: authd, type: optional}
+  - {name: cups-lpd, type: optional}
+  - {name: dump, type: optional}
+  - {name: finger, type: optional}
+  - {name: finger-server, type: optional}
+  - {name: krb5-appl-servers, type: optional}
+  - {name: ksh, type: optional}
+  - {name: mksh, type: optional}
+  - {name: ncompress, type: optional}
+  - {name: rsh, type: optional}
+  - {name: rsh-server, type: optional}
+  - {name: rusers, type: optional}
+  - {name: rusers-server, type: optional}
+  - {name: rwho, type: optional}
+  - {name: talk, type: optional}
+  - {name: talk-server, type: optional}
+  - {name: tcp_wrappers, type: optional}
+  - {name: telnet, type: optional}
+  - {name: telnet-server, type: optional}
+  - {name: tftp, type: optional}
+- group: legacy-x
+  packages:
+  - {name: xorg-x11-fonts-100dpi, type: default}
+  - {name: xorg-x11-fonts-ISO8859-1-100dpi, type: default}
+  - {name: xorg-x11-fonts-Type1, type: default}
+  - {name: xorg-x11-fonts-misc, type: default}
+  - {name: libXmu, type: optional}
+  - {name: libXp, type: optional}
+  - {name: openmotif, type: optional}
+  - {name: openmotif22, type: optional}
+  - {name: xorg-x11-fonts-75dpi, type: optional}
+  - {name: xorg-x11-fonts-ISO8859-1-75dpi, type: optional}
+  - {name: xorg-x11-fonts-ISO8859-14-100dpi, type: optional}
+  - {name: xorg-x11-fonts-ISO8859-14-75dpi, type: optional}
+  - {name: xorg-x11-fonts-ISO8859-15-75dpi, type: optional}
+  - {name: xorg-x11-fonts-ISO8859-2-100dpi, type: optional}
+  - {name: xorg-x11-fonts-ISO8859-2-75dpi, type: optional}
+  - {name: xorg-x11-fonts-ISO8859-9-100dpi, type: optional}
+  - {name: xorg-x11-fonts-ISO8859-9-75dpi, type: optional}
+  - {name: xorg-x11-fonts-cyrillic, type: optional}
+  - {name: xorg-x11-fonts-ethiopic, type: optional}
+  - {name: xorg-x11-twm, type: optional}
+  - {name: xorg-x11-xdm, type: optional}
+  - {name: xterm, type: optional}
+- group: lithuanian-support
+  packages:
+  - {name: hunspell-lt, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Lithuanian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Lithuanian, requires: kdelibs, type: conditional}
+- group: low-saxon-support
+  packages:
+  - {name: hunspell-nds, requires: hunspell, type: conditional}
+  - {name: kde-l10n-LowSaxon, requires: kdelibs, type: conditional}
+- group: macedonian-support
+  packages:
+  - {name: hunspell-mk, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Macedonian, requires: kdelibs, type: conditional}
+- group: mail-server
+  packages:
+  - {name: dovecot, type: default}
+  - {name: postfix, type: default}
+  - {name: spamassassin, type: default}
+  - {name: cyrus-imapd, type: optional}
+  - {name: dovecot-mysql, type: optional}
+  - {name: dovecot-pgsql, type: optional}
+  - {name: dovecot-pigeonhole, type: optional}
+  - {name: mailman, type: optional}
+  - {name: sendmail, type: optional}
+  - {name: sendmail-cf, type: optional}
+- group: mainframe-access
+  packages:
+  - {name: tn5250, type: default}
+  - {name: x3270-x11, type: default}
+  - {name: x3270-text, type: optional}
+- group: maithili-support
+  packages:
+  - {name: lohit-devanagari-fonts, type: mandatory}
+  - {name: m17n-contrib-maithili, type: mandatory}
+  - {name: iok, type: default}
+  - {name: hunspell-mai, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-l10n-Maithili, requires: kdelibs, type: conditional}
+- group: malagasy-support
+  packages:
+  - {name: hunspell-mg, requires: hunspell, type: conditional}
+- group: malay-support
+  packages:
+  - {name: hunspell-ms, requires: hunspell, type: conditional}
+- group: malayalam-support
+  packages:
+  - {name: m17n-contrib-malayalam, type: mandatory}
+  - {name: m17n-db-malayalam, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-ml-IN, type: default}
+  - {name: iok, type: default}
+  - {name: lohit-malayalam-fonts, type: default}
+  - {name: samyak-malayalam-fonts, type: default}
+  - {name: smc-anjalioldlipi-fonts, type: default}
+  - {name: smc-dyuthi-fonts, type: default}
+  - {name: smc-kalyani-fonts, type: default}
+  - {name: smc-meera-fonts, type: default}
+  - {name: smc-rachana-fonts, type: default}
+  - {name: smc-raghumalayalam-fonts, type: default}
+  - {name: smc-suruma-fonts, type: default}
+  - {name: hunspell-ml, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-l10n-Malayalam, requires: kdelibs, type: conditional}
+- group: maltese-support
+  packages:
+  - {name: hunspell-mt, requires: hunspell, type: conditional}
+- group: manx-support
+  packages:
+  - {name: hunspell-gv, requires: hunspell, type: conditional}
+- group: maori-support
+  packages:
+  - {name: hunspell-mi, requires: hunspell, type: conditional}
+- group: marathi-support
+  packages:
+  - {name: lohit-devanagari-fonts, type: mandatory}
+  - {name: m17n-contrib-marathi, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-mr-IN, type: default}
+  - {name: iok, type: default}
+  - {name: samyak-devanagari-fonts, type: default}
+  - {name: hunspell-mr, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-l10n-Marathi, requires: kdelibs, type: conditional}
+- group: mongolian-support
+  packages:
+  - {name: eclipse-nls-mn, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-mn, requires: hunspell, type: conditional}
+- group: mysql
+  packages:
+  - {name: mysql-server, type: mandatory}
+  - {name: mysql-bench, type: optional}
+  - {name: mysql-test, type: optional}
+- group: mysql-client
+  packages:
+  - {name: mysql, type: mandatory}
+  - {name: MySQL-python, type: default}
+  - {name: mysql-connector-odbc, type: default}
+  - {name: libdbi-dbd-mysql, type: optional}
+  - {name: mysql-connector-java, type: optional}
+  - {name: perl-DBD-MySQL, type: optional}
+- group: nepali-support
+  packages:
+  - {name: lohit-devanagari-fonts, type: mandatory}
+  - {name: m17n-contrib-nepali, type: mandatory}
+  - {name: madan-fonts, type: mandatory}
+  - {name: hunspell-ne, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: network-file-system-client
+  packages:
+  - {name: autofs, type: default}
+  - {name: cifs-utils, type: default}
+  - {name: nfs-utils, type: default}
+  - {name: nfs4-acl-tools, type: default}
+  - {name: samba-client, type: default}
+  - {name: cachefilesd, type: optional}
+  - {name: glusterfs-fuse, type: optional}
+- group: network-server
+  packages:
+  - {name: bind, type: optional}
+  - {name: bind-chroot, type: optional}
+  - {name: bind-dyndb-ldap, type: optional}
+  - {name: dhcp, type: optional}
+  - {name: dnsmasq, type: optional}
+  - {name: freeradius, type: optional}
+  - {name: quagga, type: optional}
+  - {name: radvd, type: optional}
+  - {name: rsyslog-gnutls, type: optional}
+  - {name: rsyslog-gssapi, type: optional}
+  - {name: rsyslog-mysql, type: optional}
+  - {name: rsyslog-pgsql, type: optional}
+  - {name: rsyslog-relp, type: optional}
+  - {name: syslinux, type: optional}
+  - {name: tftp-server, type: optional}
+- group: network-tools
+  packages:
+  - {name: tcpdump, type: mandatory}
+  - {name: nc, type: default}
+  - {name: openswan, type: default}
+  - {name: NetworkManager-openswan, type: optional}
+  - {name: arptables_jf, type: optional}
+  - {name: arpwatch, type: optional}
+  - {name: dropwatch, type: optional}
+  - {name: ebtables, type: optional}
+  - {name: ipset, type: optional}
+  - {name: iptraf, type: optional}
+  - {name: iptstate, type: optional}
+  - {name: lksctp-tools, type: optional}
+  - {name: mipv6-daemon, type: optional}
+  - {name: mrtg, type: optional}
+  - {name: netlabel_tools, type: optional}
+  - {name: nmap, type: optional}
+  - {name: stunnel, type: optional}
+  - {name: wireshark, type: optional}
+- group: nfs-file-server
+  packages:
+  - {name: nfs-utils, type: mandatory}
+  - {name: nfs4-acl-tools, type: mandatory}
+- group: northern-sotho-support
+  packages:
+  - {name: hunspell-nso, requires: hunspell, type: conditional}
+- group: norwegian-support
+  packages:
+  - {name: eclipse-nls-no, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-nb, requires: hunspell, type: conditional}
+  - {name: hunspell-nn, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Norwegian, requires: kdelibs3, type: conditional}
+  - {name: kde-i18n-Norwegian-Nynorsk, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Norwegian, requires: kdelibs, type: conditional}
+  - {name: kde-l10n-Norwegian-Nynorsk, requires: kdelibs, type: conditional}
+- group: occitan-support
+  packages:
+  - {name: hunspell-oc, requires: hunspell, type: conditional}
+- group: oriya-support
+  packages:
+  - {name: lohit-oriya-fonts, type: mandatory}
+  - {name: m17n-contrib-oriya, type: mandatory}
+  - {name: m17n-db-oriya, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-or-IN, type: default}
+  - {name: iok, type: default}
+  - {name: samyak-oriya-fonts, type: default}
+  - {name: hunspell-or, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: performance
+  packages:
+  - {name: blktrace, type: mandatory}
+  - {name: sysstat, type: mandatory}
+  - {name: dstat, type: default}
+  - {name: iotop, type: default}
+  - {name: latencytop, type: default}
+  - {name: latencytop-tui, type: default}
+  - {name: oprofile, type: default}
+  - {name: perf, type: default}
+  - {name: powertop, type: default}
+  - {name: seekwatcher, type: default}
+  - {name: oprofile-jit, type: optional}
+  - {name: papi, type: optional}
+  - {name: sdparm, type: optional}
+  - {name: sg3_utils, type: optional}
+  - {name: tuned, type: optional}
+  - {name: tuned-utils, type: optional}
+- group: perl-runtime
+  packages:
+  - {name: perl, type: mandatory}
+  - {name: perl-Crypt-SSLeay, type: default}
+  - {name: perl-XML-Dumper, type: default}
+  - {name: perl-XML-Grove, type: default}
+  - {name: perl-XML-Twig, type: default}
+  - {name: perl-core, type: default}
+  - {name: perl-DBD-SQLite, type: optional}
+  - {name: perl-Date-Calc, type: optional}
+  - {name: perl-Date-Manip, type: optional}
+  - {name: perl-Frontier-RPC, type: optional}
+  - {name: perl-LDAP, type: optional}
+  - {name: perl-Mozilla-LDAP, type: optional}
+  - {name: perl-suidperl, type: optional}
+- group: persian-support
+  packages:
+  - {name: eclipse-nls-fa, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-fa, requires: hunspell, type: conditional}
+- group: php
+  packages:
+  - {name: php, type: mandatory}
+  - {name: php-gd, type: default}
+  - {name: php-pdo, type: default}
+  - {name: php-pear, type: default}
+  - {name: php-xml, type: default}
+  - {name: php-ldap, type: optional}
+  - {name: php-mysql, type: optional}
+  - {name: php-odbc, type: optional}
+  - {name: php-pecl-apc, type: optional}
+  - {name: php-pecl-memcache, type: optional}
+  - {name: php-pgsql, type: optional}
+  - {name: php-soap, type: optional}
+  - {name: php-xmlrpc, type: optional}
+- group: polish-support
+  packages:
+  - {name: eclipse-nls-pl, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-pl, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Polish, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Polish, requires: kdelibs, type: conditional}
+  - {name: man-pages-pl, requires: man-pages, type: conditional}
+- group: portuguese-support
+  packages:
+  - {name: eclipse-nls-pt, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-pt, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Portuguese, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Portuguese, requires: kdelibs, type: conditional}
+- group: postgresql
+  packages:
+  - {name: postgresql-server, type: mandatory}
+  - {name: postgresql-docs, type: default}
+  - {name: postgresql-contrib, type: optional}
+  - {name: postgresql-plperl, type: optional}
+  - {name: postgresql-plpython, type: optional}
+  - {name: postgresql-pltcl, type: optional}
+  - {name: postgresql-test, type: optional}
+  - {name: rhdb-utils, type: optional}
+- group: postgresql-client
+  packages:
+  - {name: postgresql, type: mandatory}
+  - {name: PyGreSQL, type: default}
+  - {name: postgresql-odbc, type: default}
+  - {name: python-psycopg2, type: default}
+  - {name: libdbi-dbd-pgsql, type: optional}
+  - {name: perl-DBD-Pg, type: optional}
+  - {name: postgresql-jdbc, type: optional}
+  - {name: tcl-pgtcl, type: optional}
+- group: print-client
+  packages:
+  - {name: cups, type: mandatory}
+  - {name: cups-pk-helper, type: mandatory}
+  - {name: enscript, type: mandatory}
+  - {name: printer-filters, type: mandatory}
+  - {name: foomatic, type: default}
+  - {name: foomatic-db-ppds, type: default}
+  - {name: gutenprint, type: default}
+  - {name: gutenprint-cups, type: default}
+  - {name: hpijs, type: default}
+  - {name: paps, type: default}
+  - {name: system-config-printer, type: default}
+  - {name: system-config-printer-udev, type: default}
+  - {name: hplip, type: optional}
+  - {name: hplip-gui, type: optional}
+- group: print-server
+  packages:
+  - {name: cups, type: mandatory}
+  - {name: printer-filters, type: mandatory}
+  - {name: foomatic-db-ppds, type: default}
+  - {name: gutenprint, type: default}
+  - {name: gutenprint-cups, type: default}
+  - {name: hpijs, type: default}
+  - {name: paps, type: default}
+- group: punjabi-support
+  packages:
+  - {name: lohit-punjabi-fonts, type: mandatory}
+  - {name: m17n-contrib-punjabi, type: mandatory}
+  - {name: m17n-db-punjabi, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-pa-IN, type: default}
+  - {name: iok, type: default}
+  - {name: saab-fonts, type: default}
+  - {name: hunspell-pa, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-i18n-Punjabi, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Punjabi, requires: kdelibs, type: conditional}
+- group: remote-desktop-clients
+  packages:
+  - {name: freerdp, type: optional}
+  - {name: rdesktop, type: optional}
+  - {name: spice-client, type: optional}
+  - {name: spice-xpi, type: optional}
+  - {name: tigervnc, type: optional}
+  - {name: tsclient, type: optional}
+  - {name: vinagre, type: optional}
+- group: romanian-support
+  packages:
+  - {name: terminus-fonts, type: optional}
+  - {name: eclipse-nls-ro, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-ro, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Romanian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Romanian, requires: kdelibs, type: conditional}
+- group: ruby-runtime
+  packages:
+  - {name: ruby, type: mandatory}
+  - {name: ruby-irb, type: optional}
+- group: russian-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-ru-RU, type: default}
+  - {name: eclipse-nls-ru, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-ru, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Russian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Russian, requires: kdelibs, type: conditional}
+  - {name: man-pages-ru, requires: man-pages, type: conditional}
+- group: sanskrit-support
+  packages:
+  - {name: m17n-db-sanskrit, type: mandatory}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: sardinian-support
+  packages:
+  - {name: hunspell-sc, requires: hunspell, type: conditional}
+- group: scientific
+  packages:
+  - {name: gnuplot, type: default}
+  - {name: units, type: default}
+  - {name: atlas, type: optional}
+  - {name: compat-openmpi, type: optional}
+  - {name: compat-openmpi-psm, type: optional}
+  - {name: fftw, type: optional}
+  - {name: fftw-devel, type: optional}
+  - {name: fftw-static, type: optional}
+  - {name: gsl, type: optional}
+  - {name: gsl-devel, type: optional}
+  - {name: gsl-static, type: optional}
+  - {name: lapack, type: optional}
+  - {name: mpich2, type: optional}
+  - {name: mpitests-mvapich, type: optional}
+  - {name: mpitests-mvapich2, type: optional}
+  - {name: mpitests-openmpi, type: optional}
+  - {name: mvapich, type: optional}
+  - {name: mvapich-psm-devel, type: optional}
+  - {name: mvapich-psm-static, type: optional}
+  - {name: mvapich2, type: optional}
+  - {name: mvapich2-psm-devel, type: optional}
+  - {name: numpy, type: optional}
+  - {name: openmpi, type: optional}
+  - {name: openmpi-devel, type: optional}
+  - {name: scipy, type: optional}
+- group: security-tools
+  packages:
+  - {name: aide, type: optional}
+  - {name: amtu, type: optional}
+  - {name: hmaccalc, type: optional}
+  - {name: openscap, type: optional}
+  - {name: openscap-utils, type: optional}
+  - {name: p11-kit-trust, type: optional}
+  - {name: tpm-tools, type: optional}
+  - {name: trousers, type: optional}
+- group: serbian-support
+  packages:
+  - {name: eclipse-nls-sr, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-sr, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Serbian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Serbian, requires: kdelibs, type: conditional}
+- group: server-platform
+  packages:
+  - {name: db4, type: mandatory}
+  - {name: dbus-libs, type: mandatory}
+  - {name: glibc, type: mandatory}
+  - {name: krb5-libs, type: mandatory}
+  - {name: libgcc, type: mandatory}
+  - {name: libitm, type: mandatory}
+  - {name: libstdc++, type: mandatory}
+  - {name: ncurses-libs, type: mandatory}
+  - {name: nss, type: mandatory}
+  - {name: openldap, type: mandatory}
+  - {name: openssl, type: mandatory}
+  - {name: pam, type: mandatory}
+  - {name: redhat-lsb, type: mandatory}
+  - {name: zlib, type: mandatory}
+  - {name: libatomic, type: optional}
+- group: server-platform-devel
+  packages:
+  - {name: db4-devel, type: mandatory}
+  - {name: dbus-devel, type: mandatory}
+  - {name: glibc-devel, type: mandatory}
+  - {name: krb5-devel, type: mandatory}
+  - {name: libstdc++-devel, type: mandatory}
+  - {name: libvirt-devel, type: mandatory}
+  - {name: libvirt-java-devel, type: mandatory}
+  - {name: ncurses-devel, type: mandatory}
+  - {name: nss-devel, type: mandatory}
+  - {name: openldap-devel, type: mandatory}
+  - {name: openssl-devel, type: mandatory}
+  - {name: pam-devel, type: mandatory}
+  - {name: zlib-devel, type: mandatory}
+- group: sindhi-support
+  packages:
+  - {name: lohit-devanagari-fonts, type: mandatory}
+  - {name: m17n-contrib-sindhi, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-pa-IN, type: default}
+  - {name: iok, type: default}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: sinhala-support
+  packages:
+  - {name: lklug-fonts, type: mandatory}
+  - {name: m17n-contrib-sinhala, type: mandatory}
+  - {name: m17n-db-sinhala, type: mandatory}
+  - {name: hunspell-si, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: ibus-sayura, requires: xorg-x11-server-Xorg, type: conditional}
+- group: slovak-support
+  packages:
+  - {name: eclipse-nls-sk, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-sk, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Slovak, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Slovak, requires: kdelibs, type: conditional}
+- group: slovenian-support
+  packages:
+  - {name: eclipse-nls-sl, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-sl, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Slovenian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Slovenian, requires: kdelibs, type: conditional}
+- group: smart-card
+  packages:
+  - {name: ccid, type: default}
+  - {name: coolkey, type: default}
+  - {name: esc, type: default}
+  - {name: gdm-plugin-smartcard, type: default}
+  - {name: pam_pkcs11, type: default}
+  - {name: opencryptoki, type: optional}
+- group: somali-support
+  packages:
+  - {name: hunspell-so, requires: hunspell, type: conditional}
+- group: southern-ndebele-support
+  packages:
+  - {name: hunspell-nr, requires: hunspell, type: conditional}
+- group: southern-sotho-support
+  packages:
+  - {name: hunspell-st, requires: hunspell, type: conditional}
+- group: spanish-support
+  packages:
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-es-ES, type: default}
+  - {name: eclipse-nls-es, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-es, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Spanish, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Spanish, requires: kdelibs, type: conditional}
+  - {name: man-pages-es, requires: man-pages, type: conditional}
+  - {name: man-pages-es-extra, requires: man-pages, type: conditional}
+- group: storage-client-fcoe
+  packages:
+  - {name: fcoe-utils, type: mandatory}
+  - {name: cgdcbxd, type: default}
+  - {name: fcoe-target-utils, type: default}
+  - {name: lldpad, type: default}
+- group: storage-client-iscsi
+  packages:
+  - {name: iscsi-initiator-utils, type: mandatory}
+- group: storage-client-multipath
+  packages:
+  - {name: device-mapper-multipath, type: mandatory}
+- group: storage-server
+  packages:
+  - {name: scsi-target-utils, type: default}
+  - {name: isns-utils, type: optional}
+- group: swahili-support
+  packages:
+  - {name: hunspell-sw, requires: hunspell, type: conditional}
+- group: swati-support
+  packages:
+  - {name: hunspell-ss, requires: hunspell, type: conditional}
+- group: swedish-support
+  packages:
+  - {name: eclipse-nls-sv, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-sv, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Swedish, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Swedish, requires: kdelibs, type: conditional}
+- group: system-admin-tools
+  packages:
+  - {name: conman, type: optional}
+  - {name: crypto-utils, type: optional}
+  - {name: dtach, type: optional}
+  - {name: expect, type: optional}
+  - {name: hardlink, type: optional}
+  - {name: lsscsi, type: optional}
+  - {name: mc, type: optional}
+  - {name: mgetty, type: optional}
+  - {name: pexpect, type: optional}
+  - {name: rdist, type: optional}
+  - {name: rrdtool, type: optional}
+  - {name: screen, type: optional}
+  - {name: scrub, type: optional}
+  - {name: symlinks, type: optional}
+  - {name: tree, type: optional}
+  - {name: vlock, type: optional}
+  - {name: xdelta, type: optional}
+- group: system-management
+  packages:
+  - {name: OpenIPMI, type: optional}
+  - {name: fence-agents, type: optional}
+  - {name: freeipmi, type: optional}
+  - {name: freeipmi-bmc-watchdog, type: optional}
+  - {name: freeipmi-ipmidetectd, type: optional}
+  - {name: ipmitool, type: optional}
+  - {name: openhpi, type: optional}
+  - {name: openhpi-subagent, type: optional}
+  - {name: watchdog, type: optional}
+- group: system-management-messaging-client
+  packages:
+  - {name: qpid-cpp-client, type: mandatory}
+  - {name: python-qpid, type: default}
+  - {name: python-qpid-qmf, type: default}
+  - {name: qpid-qmf, type: default}
+  - {name: qpid-tools, type: default}
+  - {name: python-saslwrapper, type: optional}
+  - {name: qpid-tests, type: optional}
+  - {name: ruby-irb, type: optional}
+  - {name: ruby-qpid-qmf, type: optional}
+- group: system-management-snmp
+  packages:
+  - {name: net-snmp, type: mandatory}
+  - {name: net-snmp-utils, type: default}
+  - {name: net-snmp-perl, type: optional}
+  - {name: net-snmp-python, type: optional}
+- group: system-management-wbem
+  packages:
+  - {name: openwsman-client, type: default}
+  - {name: sblim-sfcb, type: default}
+  - {name: sblim-wbemcli, type: default}
+  - {name: wsmancli, type: default}
+  - {name: openwsman-server, type: optional}
+  - {name: sblim-cim-client, type: optional}
+  - {name: sblim-cim-client2, type: optional}
+  - {name: sblim-cmpi-dhcp, type: optional}
+  - {name: sblim-cmpi-dns, type: optional}
+  - {name: sblim-cmpi-fsvol, type: optional}
+  - {name: sblim-cmpi-network, type: optional}
+  - {name: sblim-cmpi-nfsv3, type: optional}
+  - {name: sblim-cmpi-nfsv4, type: optional}
+  - {name: sblim-cmpi-params, type: optional}
+  - {name: sblim-cmpi-samba, type: optional}
+  - {name: sblim-cmpi-sysfs, type: optional}
+  - {name: sblim-cmpi-syslog, type: optional}
+  - {name: sblim-gather, type: optional}
+  - {name: sblim-gather-provider, type: optional}
+  - {name: sblim-indication_helper, type: optional}
+  - {name: sblim-smis-hba, type: optional}
+  - {name: sblim-tools-libra, type: optional}
+  - {name: tog-pegasus, type: optional}
+- group: tagalog-support
+  packages:
+  - {name: hunspell-tl, requires: hunspell, type: conditional}
+- group: tajik-support
+  packages:
+  - {name: dejavu-sans-fonts, type: mandatory}
+  - {name: dejavu-sans-mono-fonts, type: default}
+  - {name: dejavu-serif-fonts, type: default}
+  - {name: kde-l10n-Tajik, requires: kdelibs, type: conditional}
+- group: tamil-support
+  packages:
+  - {name: lohit-tamil-fonts, type: mandatory}
+  - {name: m17n-contrib-tamil, type: mandatory}
+  - {name: m17n-db-tamil, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-ta-IN, type: default}
+  - {name: iok, type: default}
+  - {name: samyak-tamil-fonts, type: default}
+  - {name: hunspell-ta, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-i18n-Tamil, requires: kdelibs3, type: conditional}
+- group: technical-writing
+  packages:
+  - {name: docbook-slides, type: mandatory}
+  - {name: docbook-style-xsl, type: mandatory}
+  - {name: docbook-utils, type: mandatory}
+  - {name: docbook5-schemas, type: mandatory}
+  - {name: docbook5-style-xsl, type: mandatory}
+  - {name: xmlto, type: default}
+  - {name: docbook-utils-pdf, type: optional}
+  - {name: texinfo, type: optional}
+  - {name: xmlto-tex, type: optional}
+  - {name: xmltoman, type: optional}
+- group: telugu-support
+  packages:
+  - {name: lohit-telugu-fonts, type: mandatory}
+  - {name: m17n-contrib-telugu, type: mandatory}
+  - {name: m17n-db-telugu, type: mandatory}
+  - {name: Red_Hat_Enterprise_Linux-Release_Notes-6-te-IN, type: default}
+  - {name: iok, type: default}
+  - {name: pothana2000-fonts, type: default}
+  - {name: vemana2000-fonts, type: default}
+  - {name: hunspell-te, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: tetum-support
+  packages:
+  - {name: hunspell-tet, requires: hunspell, type: conditional}
+- group: tex
+  packages:
+  - {name: tex-cm-lgc, type: mandatory}
+  - {name: texlive, type: mandatory}
+  - {name: texlive-latex, type: mandatory}
+- group: thai-support
+  packages:
+  - {name: m17n-db-thai, type: mandatory}
+  - {name: thai-scalable-garuda-fonts, type: default}
+  - {name: thai-scalable-kinnari-fonts, type: default}
+  - {name: thai-scalable-loma-fonts, type: default}
+  - {name: thai-scalable-norasi-fonts, type: default}
+  - {name: thai-scalable-purisa-fonts, type: default}
+  - {name: thai-scalable-sawasdee-fonts, type: default}
+  - {name: thai-scalable-tlwgmono-fonts, type: default}
+  - {name: thai-scalable-tlwgtypewriter-fonts, type: default}
+  - {name: thai-scalable-tlwgtypist-fonts, type: default}
+  - {name: thai-scalable-tlwgtypo-fonts, type: default}
+  - {name: thai-scalable-umpush-fonts, type: default}
+  - {name: thai-scalable-waree-fonts, type: default}
+  - {name: hunspell-th, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+  - {name: kde-l10n-Thai, requires: kdelibs, type: conditional}
+  - {name: poppler-data, requires: poppler, type: conditional}
+- group: tibetan-support
+  packages:
+  - {name: m17n-db-tibetan, type: mandatory}
+  - {name: tibetan-machine-uni-fonts, type: mandatory}
+  - {name: jomolhari-fonts, type: default}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: tsonga-support
+  packages:
+  - {name: hunspell-ts, requires: hunspell, type: conditional}
+- group: tswana-support
+  packages:
+  - {name: hunspell-tn, requires: hunspell, type: conditional}
+- group: turbogears
+  packages:
+  - {name: TurboGears2, type: mandatory}
+- group: turkish-support
+  packages:
+  - {name: eclipse-nls-tr, requires: eclipse-platform, type: conditional}
+  - {name: kde-i18n-Turkish, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Turkish, requires: kdelibs, type: conditional}
+- group: turkmen-support
+  packages:
+  - {name: hunspell-tk, requires: hunspell, type: conditional}
+- group: ukrainian-support
+  packages:
+  - {name: eclipse-nls-uk, requires: eclipse-platform, type: conditional}
+  - {name: hunspell-uk, requires: hunspell, type: conditional}
+  - {name: kde-i18n-Ukrainian, requires: kdelibs3, type: conditional}
+  - {name: kde-l10n-Ukrainian, requires: kdelibs, type: conditional}
+  - {name: man-pages-uk, requires: man-pages, type: conditional}
+- group: upper-sorbian-support
+  packages:
+  - {name: hunspell-hsb, requires: hunspell, type: conditional}
+- group: urdu-support
+  packages:
+  - {name: m17n-contrib-urdu, type: mandatory}
+  - {name: paktype-naqsh-fonts, type: mandatory}
+  - {name: paktype-tehreer-fonts, type: mandatory}
+  - {name: dejavu-sans-fonts, type: default}
+  - {name: dejavu-sans-mono-fonts, type: default}
+  - {name: nafees-web-naskh-fonts, type: default}
+  - {name: hunspell-ur, requires: hunspell, type: conditional}
+  - {name: ibus-m17n, requires: xorg-x11-server-Xorg, type: conditional}
+- group: uzbek-support
+  packages:
+  - {name: hunspell-uz, requires: hunspell, type: conditional}
+- group: venda-support
+  packages:
+  - {name: dejavu-sans-fonts, type: mandatory}
+  - {name: dejavu-sans-mono-fonts, type: mandatory}
+  - {name: dejavu-serif-fonts, type: mandatory}
+  - {name: hunspell-ve, requires: hunspell, type: conditional}
+- group: vietnamese-support
+  packages:
+  - {name: hunspell-vi, requires: hunspell, type: conditional}
+- group: virtualization
+  packages:
+  - {name: qemu-kvm, type: mandatory}
+  - {name: hypervkvpd, type: default}
+  - {name: qemu-guest-agent, type: optional}
+  - {name: qemu-kvm-tools, type: optional}
+- group: virtualization-client
+  packages:
+  - {name: python-virtinst, type: mandatory}
+  - {name: virt-manager, type: mandatory}
+  - {name: virt-viewer, type: mandatory}
+  - {name: virt-top, type: default}
+- group: virtualization-platform
+  packages:
+  - {name: libvirt, type: mandatory}
+  - {name: libvirt-client, type: mandatory}
+  - {name: virt-who, type: mandatory}
+  - {name: fence-virtd-libvirt, type: optional}
+  - {name: fence-virtd-multicast, type: optional}
+  - {name: fence-virtd-serial, type: optional}
+  - {name: libvirt-cim, type: optional}
+  - {name: libvirt-java, type: optional}
+  - {name: libvirt-snmp, type: optional}
+  - {name: perl-Sys-Virt, type: optional}
+- group: virtualization-tools
+  packages:
+  - {name: libguestfs, type: default}
+  - {name: libguestfs-java, type: optional}
+  - {name: libguestfs-tools, type: optional}
+  - {name: virt-v2v, type: optional}
+- group: walloon-support
+  packages:
+  - {name: hunspell-wa, requires: hunspell, type: conditional}
+  - {name: kde-l10n-Walloon, requires: kdelibs, type: conditional}
+- group: web-server
+  packages:
+  - {name: httpd, type: mandatory}
+  - {name: crypto-utils, type: default}
+  - {name: httpd-manual, type: default}
+  - {name: mod_perl, type: default}
+  - {name: mod_ssl, type: default}
+  - {name: mod_wsgi, type: default}
+  - {name: webalizer, type: default}
+  - {name: certmonger, type: optional}
+  - {name: libmemcached, type: optional}
+  - {name: memcached, type: optional}
+  - {name: mod_auth_kerb, type: optional}
+  - {name: mod_auth_mysql, type: optional}
+  - {name: mod_auth_pgsql, type: optional}
+  - {name: mod_authz_ldap, type: optional}
+  - {name: mod_nss, type: optional}
+  - {name: mod_revocator, type: optional}
+  - {name: perl-CGI, type: optional}
+  - {name: perl-CGI-Session, type: optional}
+  - {name: perl-Cache-Memcached, type: optional}
+  - {name: python-memcached, type: optional}
+  - {name: squid, type: optional}
+- group: web-servlet
+  packages:
+  - {name: tomcat6, type: mandatory}
+- group: welsh-support
+  packages:
+  - {name: hunspell-cy, requires: hunspell, type: conditional}
+- group: x11
+  packages:
+  - {name: xorg-x11-drivers, type: mandatory}
+  - {name: xorg-x11-server-Xorg, type: mandatory}
+  - {name: xorg-x11-xauth, type: mandatory}
+  - {name: xorg-x11-xinit, type: mandatory}
+  - {name: firstboot, type: default}
+  - {name: glx-utils, type: default}
+  - {name: hal, type: default}
+  - {name: plymouth-system-theme, type: default}
+  - {name: spice-vdagent, type: default}
+  - {name: subscription-manager-firstboot, type: default}
+  - {name: wacomexpresskeys, type: default}
+  - {name: wdaemon, type: default}
+  - {name: xorg-x11-server-utils, type: default}
+  - {name: xorg-x11-utils, type: default}
+  - {name: xvattr, type: default}
+- group: xhosa-support
+  packages:
+  - {name: hunspell-xh, requires: hunspell, type: conditional}
+- group: zulu-support
+  packages:
+  - {name: hunspell-zu, requires: hunspell, type: conditional}
+timestamp: Wed Dec 25 2013
+version: 0.0.1

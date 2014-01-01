@@ -90,6 +90,7 @@ rm -rf $RPM_BUILD_ROOT
 %files          extras
 %doc README.rst examples
 %{_bindir}/rk-*
+%{_datadir}/rpmkit/optimizer/*/*.yml
 %{_datadir}/rpmkit/templates/*.j2
 %{_datadir}/rpmkit/templates/css/*
 %{_datadir}/rpmkit/templates/js/*
