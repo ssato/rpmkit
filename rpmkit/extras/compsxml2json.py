@@ -23,6 +23,7 @@ from logging import DEBUG, INFO
 import rpmkit.yum_surrogate as YS
 import rpmkit.utils as RU
 
+import anyconfig
 import datetime
 import gzip
 import locale
@@ -107,12 +108,12 @@ def timestamp(dtobj=datetime.datetime.now()):
     return dtobj.strftime("%a %b %_d %Y")
 
 
-def dump_package_groups(xmlfile, outdir, format="json", outfile="comps.json"):
+def dump_package_groups(xmlfile, outdir, format="json", outfilename="comps"):
     """
     :param xmlfile: comps xml file path
     :param outdir: Output directory
     """
-    outpath = os.path.join(outdir, outfile)
+    outpath = os.path.join(outdir, outfilename + '.' + format)
 
     data = dict(comps_rpm_groups=get_package_groups(xmlfile),
                 timestamp=timestamp(),
@@ -123,11 +124,11 @@ def dump_package_groups(xmlfile, outdir, format="json", outfile="comps.json"):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
+    kwargs = dict()
     if format == "yaml":
-        yaml.dump(data, open(outpath.replace(".json", ".yaml"), 'w'),
-                  encoding='utf8', allow_unicode=True)
-    else:
-        RU.json_dump(data, outpath)
+        kwargs = dict(encoding='utf8', allow_unicode=True)
+
+    anyconfig.dump(data, outpath, **kwargs)
 
 
 def option_parser():
