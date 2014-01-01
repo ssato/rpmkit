@@ -447,30 +447,37 @@ def _get_leaves(root=None):
 get_leaves = memoize(_get_leaves)
 
 
-def list_standalones_g(root=None):
+def list_standalones_g(root=None, nrpms=1):
     """
     List the RPMs no other RPMs require nor no required by.
 
     :param root: root dir of RPM Database
+    :param nrpms: number of RPMs considered as standalones
     """
     reqs = make_requires_dict(root)
     rreqs = make_reversed_requires_dict(root)
+
     for r, ps in rreqs.iteritems():
-        if not ps:  # Means ``r`` required by no other RPMs.
-            logging.debug("Not required by others: " + r)
-            if not reqs.get(r, []):  # Means ``r`` requires no other RPMs.
-                logging.debug("Not requires others: " + r)
+        if not ps or len(ps) < nrpms:
+            logging.debug("%s is required by %d RPMs: %s" %
+                          (r, len(ps), ' '.join(ps)))
+
+            ps = reqs.get(r, [])
+            if not ps or len(ps) < nrpms:
+                logging.debug("%s requires %d RPMs: %s" %
+                              (r, len(ps), ' '.join(ps)))
                 yield r
 
 
-def list_standalones(root=None):
+def list_standalones(root=None, nrpms=1):
     """
     List the RPMs no other RPMs require nor no required by.
 
     :param root: root dir of RPM Database
+    :param nrpms: number of RPMs considered as standalones
     :return: List of RPM names which is not required by any other RPMs
     """
-    return list(list_standalones_g(root))
+    return list(list_standalones_g(root, nrpms))
 
 
 def list_required_rpms_not_required_by_others(rpmname, root=None):
