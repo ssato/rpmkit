@@ -27,7 +27,9 @@ WARN = logging.WARN
 INFO = logging.INFO
 DEBUG = logging.DEBUG
 
-RPMKIT_TEMPLATE_PATH = "/usr/share/%s/templates" % PACKAGE
+RPMKIT_DATADIR = "/usr/share/%s" % PACKAGE
+RPMKIT_TEMPLATE_PATH = os.path.join(RPMKIT_DATADIR, "templates")
+
 LOGGING_FORMAT = "%(asctime)s %(name)s: [%(levelname)s] %(message)s"
 
 
