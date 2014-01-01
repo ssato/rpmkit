@@ -454,7 +454,9 @@ def list_standalones_g(root=None):
     rreqs = make_reversed_requires_dict(root)
     for r, ps in rreqs.iteritems():
         if not ps:  # Means ``r`` required by no other RPMs.
+            logging.debug("Not required by others: " + r)
             if not reqs.get(r, []):  # Means ``r`` requires no other RPMs.
+                logging.debug("Not requires others: " + r)
                 yield r
 
 
