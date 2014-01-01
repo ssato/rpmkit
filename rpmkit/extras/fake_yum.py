@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013 Red Hat, Inc.
+# Copyright (C) 2013, 2014 Red Hat, Inc.
 # Author: Satoru SATOH <ssato@redhat.com>
 # License: GPLv3+
 #
@@ -9,12 +9,12 @@ from logging import DEBUG, INFO
 import rpmkit.rpmutils as RR
 import rpmkit.utils as RU
 
+import anyconfig
 import logging
 import optparse
 import os.path
 import re
 import sys
-import yaml
 
 
 _USAGE = """\
@@ -44,11 +44,14 @@ _ARGS_CMD_MAP = dict(rem=CMD_REMOVE, e=CMD_REMOVE, s=CMD_STANDALONES,
 
 
 def option_parser(usage=_USAGE):
-    defaults = dict(verbose=False, root=None, excludes=None, format="simple",
-                    st_rpms=1)
+    defaults = dict(verbose=False, root=None, excludes=None, output=None,
+                    format="simple", st_rpms=1)
 
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
+
+    fmt_choices = anyconfig.list_types() + ["simple"]
+    fmt_choices_s = ', '.join(fmt_choices)
 
     p.add_option("-R", "--root",
                  help="Relative or absolute path to root dir where "
@@ -58,8 +61,10 @@ def option_parser(usage=_USAGE):
                       "or path to file listing such RPM names line by line. "
                       "It's only effective for some sub commands such as "
                       "remove (erase) and standalones.")
-    p.add_option("-f", "--format", choices=("simple", "yaml"),
-                 help="Output format selected from %choices [%default]")
+    p.add_option("-o", "--output", help="Output file path [stdout]")
+    p.add_option("-f", "--format", choices=fmt_choices,
+                 help=("Output format selected from %s [%%default]" %
+                       fmt_choices_s))
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     sog = optparse.OptionGroup(p, "Options for standalones command")
@@ -145,11 +150,24 @@ def main(cmd_map=_ARGS_CMD_MAP):
         xs = sorted(RR.get_leaves(root))
         data = dict(leaves=xs, )
 
-    if options.format == "yaml":
-        yaml.dump(dict(data=data, ), sys.stdout)
+    output = open(options.output, 'w') if options.output else sys.stdout
+
+    if options.format != "simple":
+        if options.output:
+            anyconfig.dump(dict(data=data, ), options.output,
+                           forced_type=options.format)
+        else:
+            res = anyconfig.dumps(dict(data=data, ),
+                                  forced_type=options.format)
+            print(res)
     else:
-        for x in xs:
-            print(x)
+        if options.output:
+            with open(options.output, 'w') as out:
+                print(xs, sep='\n', file=output)
+        else:
+            print(xs)
+
+    output.close()
 
 if __name__ == "__main__":
     main()
