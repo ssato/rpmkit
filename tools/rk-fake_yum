@@ -1,6 +1,6 @@
 #! /usr/bin/python
 #
-from rpmkit.extras.fake_yum_remove import main
+from rpmkit.extras.fake_yum import main
 
 main()
 
