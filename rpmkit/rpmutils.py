@@ -531,6 +531,9 @@ compute_removed_1 = memoize(_compute_removed_1)
 
 def compute_removed_g(removes, root, rreqs=None, acc=[], excludes=[]):
     """
+    This is a derived version of :function:``compute_removed_1`` which accepts
+    multiple RPMs as ``removes``.
+
     Returns a list of RPMs if given list of RPMs ``removes`` was uninstalled
     such like yum does with 'remove (uninstall)' sub command.
 
