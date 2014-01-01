@@ -437,7 +437,7 @@ def _get_leaves(root=None):
     :param root: root dir of RPM Database
     :return: List of RPM names which is not required by any other RPMs
     """
-    rreqs = make_requires_dict(root, True)  # required -> [p]
+    rreqs = make_reversed_requires_dict(root)  # required -> [p]
     return [r for r, ps in rreqs.iteritems() if not ps]
 
 
