@@ -149,6 +149,9 @@ def _list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
             rpm.addMacro("_dbpath", os.path.join(root, subdir))
 
         ts = rpm.TransactionSet()
+        # see also: rpmUtils/transaction.py:initReadOnlyTransaction()
+        ts.setVSFlags((rpm._RPMVSF_NOSIGNATURES | rpm._RPMVSF_NODIGESTS))
+
         mi = ts.dbMatch()
 
         if root:
