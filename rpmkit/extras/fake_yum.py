@@ -8,6 +8,7 @@ from logging import DEBUG, INFO
 
 import rpmkit.rpmutils as RR
 import rpmkit.utils as RU
+
 import logging
 import optparse
 import os.path
@@ -52,15 +53,14 @@ def option_parser(usage=_USAGE):
     p.add_option("-R", "--root",
                  help="Relative or absolute path to root dir where "
                       "var/lib/rpm exists. [/]")
+    p.add_option("-x", "--excludes",
+                 help="Comma separated RPM names to exclude from results "
+                      "or path to file listing such RPM names line by line. "
+                      "It's only effective for some sub commands such as "
+                      "remove (erase) and standalones.")
     p.add_option("-f", "--format", choices=("simple", "yaml"),
                  help="Output format selected from %choices [%default]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
-
-    rog = optparse.OptionGroup(p, "Options for remvoe (erase) command")
-    rog.add_option("-x", "--excludes",
-                   help="Comma separated RPM names to exclude from removes "
-                        "or path to file listing such RPM names line by line")
-    p.add_option_group(rog)
 
     sog = optparse.OptionGroup(p, "Options for standalones command")
     sog.add_option("", "--st-nrpms", type="int",
@@ -93,7 +93,9 @@ def main(cmd_map=_ARGS_CMD_MAP):
     p = option_parser()
     (options, args) = p.parse_args()
 
-    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
+    logging.basicConfig(level=(DEBUG if options.verbose else INFO),
+                        format="%(asctime)s %(name)s: [%(levelname)s] "
+                               "%(message)s")
 
     if not args:
         p.print_usage()
@@ -108,6 +110,18 @@ def main(cmd_map=_ARGS_CMD_MAP):
         sys.exit(1)
 
     root = os.path.abspath(options.root)
+    all_rpms = [p["name"] for p in RR.list_installed_rpms(root)]
+
+    if options.excludes:
+        if is_file(options.excludes):
+            excludes = load_list_from_file(options.excludes)
+        else:
+            excludes = options.excludes.split(',')
+
+        excludes = RU.select_from_list(excludes, all_rpms)
+        logging.info("%d RPMs found in given excludes list" % len(excludes))
+    else:
+        excludes = []
 
     if cmd == CMD_REMOVE:
         if not rpms:
@@ -119,22 +133,13 @@ def main(cmd_map=_ARGS_CMD_MAP):
         if len(rpms) == 1 and is_file(rpms[0]):
             rpms = load_list_from_file(rpms[0])
 
-        if options.excludes:
-            if is_file(options.excludes):
-                excludes = load_list_from_file(options.excludes)
-            else:
-                excludes = options.excludes.split(',')
-        else:
-            excludes = []
-
-        all_rpms = [p["name"] for p in RR.list_installed_rpms(root)]
         rpms = RU.select_from_list(rpms, all_rpms)
 
         xs = RR.compute_removed(rpms, root, excludes=excludes)
         data = dict(removed=xs, )
 
     elif cmd == CMD_STANDALONES:
-        xs = sorted(RR.list_standalones(root, options.st_nrpms))
+        xs = sorted(RR.list_standalones(root, options.st_nrpms, excludes))
         data = dict(standalones=xs, )
     else:
         xs = sorted(RR.get_leaves(root))
