@@ -542,7 +542,7 @@ def _compute_removed_1(remove, root=None, rreqs=None, acc=[]):
 
     acc = acc + [remove] if acc else [remove]
     removes_next = RU.uniq2(_list_requires_g(remove, rreqs, acc))
-    logging.debug("Resolved dependency: "
+    logging.debug("Resolved (requires) dependency: "
                   "%s -> %s" % (remove, ' '.join(removes_next) or 'none'))
 
     if removes_next:
