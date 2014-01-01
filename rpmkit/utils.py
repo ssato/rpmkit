@@ -23,8 +23,10 @@ from itertools import izip, takewhile
 import codecs
 import datetime
 import itertools
+import logging
 import operator
 import os.path
+import re
 
 try:
     from functools import reduce as foldl
@@ -407,5 +409,63 @@ def json_dump(data, filepath):
     :param filepath: Output file path
     """
     json.dump(data, copen(filepath, 'w'))
+
+
+def select_from_list_g(xs, ref_xs=[]):
+    """
+    Filter out xs not in ref_xs and select only xs found in ref_xs one by one.
+
+    :param xs: The list of names, glob or regex patterns. It may contain
+        names or patterns actually not included in ``ref_xs`` list.
+    :param ref_xs: The list of all candidate xs.
+    """
+    # TODO: Find special characters in regular expressions
+    regex_cs_0 = ['^', '[', '$', '+', '?', '{']
+    regex_cs = regex_cs_0 + ['*']
+
+    is_globp = lambda s: '*' in s and not any(c in s for c in regex_cs_0)
+    is_regexp = lambda s: any(c in s for c in regex_cs)
+
+    for r in xs:
+        if r in ref_xs:
+            yield r
+
+        elif is_regexp(r):
+            logging.debug("Found a regex pattern: " + r)
+            try:
+                if is_globp(r):
+                    reg = re.compile(r.replace('*', ".*"))
+                else:
+                    reg = re.compile(r)
+            except Exception as e:  # NOTE: There's no special exc.
+                logging.warn("Not look valid regex and skipped: " + r)
+                continue
+
+            for x in ref_xs:
+                if reg.match(x):
+                    yield x
+        else:
+            logging.warn("Not found: " + r)
+
+
+def select_from_list(xs, ref_xs=[]):
+    """
+    Filter out xs not in ref_xs and select only xs found in ref_xs one by one.
+
+    :param xs: The list of names, glob or regex patterns. It may contain
+        names or patterns actually not included in ``ref_xs`` list.
+    :param ref_xs: The list of all candidate xs.
+    :return: A list of items from xs found in ref_xs
+
+    >>> select_from_list(["abc"], [])
+    []
+    >>> select_from_list(["abc", "xyz"], ["abc", "bcd"])
+    ['abc']
+    >>> select_from_list(["ab*"], ["abc", "abcd"])
+    ['abc', 'abcd']
+    >>> select_from_list(["[a-c].+", "xyz"], ["abc", "bcd", "cde", "def"])
+    ['abc', 'bcd', 'cde']
+    """
+    return list(select_from_list_g(xs, ref_xs))
 
 # vim:sw=4:ts=4:et:
