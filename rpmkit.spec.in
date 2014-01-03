@@ -64,9 +64,6 @@ rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
 
-# Remove egg files:
-rm -f $RPM_BUILD_ROOT%{python_sitelib}/rpmkit-*.egg-info
-
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -82,6 +79,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/rpms2csv
 %{_bindir}/swapi
 %{_bindir}/yum-surrogate
+%{python_sitelib}/*.egg-info
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
