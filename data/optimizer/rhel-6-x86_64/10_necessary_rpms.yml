@@ -5,7 +5,6 @@ version: 0.0.1
 groups:
 - group: base-necessary
   install_if: always
-  uninstall_if: never
   packages:
   - {name: at, type: mandatory, original_group: base}
   - {name: authconfig, type: mandatory, original_group: base}
@@ -30,7 +29,6 @@ groups:
 
 - group: core-necessary
   install_if: always
-  uninstall_if: never
   packages:
   - {name: acl, type: mandatory, original_group: core}
   - {name: attr, type: mandatory, original_group: core}
@@ -72,8 +70,7 @@ groups:
   - {name: grub, type: default, original_group: core}
 
 - group: large-systems-necessary
-  install_if: is_numa
-  uninstall_if: is_virt_guest or not is_numa
+  install_if: is_numa or not is_virt_guest
   packages:
   - {name: numactl, type: mandatory, original_group: large-systems}
   - {name: numad, type: mandatory, original_group: large-systems}
@@ -81,14 +78,12 @@ groups:
 
 - group: network-tools-necessary
   install_if: always
-  uninstall_if: never
   packages:
   - {name: tcpdump, type: mandatory, original_group: network-tools}
   - {name: nc, type: default, original_group: network-tools}
 
 - group: performance-necessary
   install_if: always
-  uninstall_if: never
   packages:
   - {name: blktrace, type: mandatory, original_group: performance}
   - {name: sysstat, type: mandatory, original_group: performance}
@@ -97,7 +92,6 @@ groups:
 
 - group: server-platform
   install_if: always
-  uninstall_if: never
   packages:
   - {name: db4, type: mandatory, original_group: sever-platform}
   - {name: dbus-libs, type: mandatory, original_group: sever-platform}
@@ -115,27 +109,24 @@ groups:
   - {name: zlib, type: mandatory, original_group: sever-platform}
 
 - group: system-management-snmp-necessary
-  uninstall_if: not snmpd_service_enabled
+  install_if: snmpd_service_enabled
   packages:
   - {name: net-snmp, type: mandatory, original_group: system-management-snmp}
   - {name: net-snmp-utils, type: default, original_group: system-management-snmp}
 
 - group: kvm-host-necessary
   install_if: is_kvm_host
-  uninstall_if: not is_kvm_host
   packages:
   - {name: qemu-kvm, type: mandatory, original_group: virtualization}
   - {name: qemu-kvm-tools, type: optional, original_group: virtualization}
 
 - group: kvm-guest-necessary
   install_if: is_kvm_guest
-  uninstall_if: not is_kvm_guest
   packages:
   - {name: qemu-guest-agent, type: optional, original_group: virtualization}
 
 - group: virtualization-client-necessary
   install_if: is_virt_client
-  uninstall_if: not is_virt_client
   packages:
   - {name: python-virtinst, type: mandatory}
   - {name: virt-manager, type: mandatory}
