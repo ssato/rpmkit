@@ -27,6 +27,7 @@ WARN = logging.WARN
 INFO = logging.INFO
 DEBUG = logging.DEBUG
 
+RPMKIT_SYSCONFDIR = "/etc/%s" % PACKAGE
 RPMKIT_DATADIR = "/usr/share/%s" % PACKAGE
 RPMKIT_TEMPLATE_PATH = os.path.join(RPMKIT_DATADIR, "templates")
 
