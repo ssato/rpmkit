@@ -30,6 +30,7 @@ RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 Summary:        Extra and experimental modules and tools in %{name}
 Requires:       %{name} = %{version}-%{release}
 Requires:       python-anyconfig
+Requires:       python-bunch
 Requires:       graphviz
 Requires:       python-jinja2-cli
 Requires:       python-networkx
