@@ -26,6 +26,8 @@ def list_files(tdir):
 data_files = [
     ("share/rpmkit/optimizer/rhel-6-x86_64",
      list_files("data/optimizer/rhel-6-x86_64/")),
+    ("/etc/rpmkit/optimizer.d/rhel-6-x86_64",
+     list_files("etc/optimizer.d/rhel-6-x86_64/")),
     ("share/rpmkit/templates", list_files("data/templates/")),
     ("share/rpmkit/templates/css", list_files("data/templates/css")),
     ("share/rpmkit/templates/js", list_files("data/templates/js")),

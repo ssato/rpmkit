@@ -64,6 +64,9 @@ rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
 
+# Dirty hack:
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/{default,rhel-6-x86_64}
+(cd $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/default && ln -s ../rhel-6-x86_64/00_server.yml ./)
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -89,6 +92,7 @@ rm -rf $RPM_BUILD_ROOT
 %files          extras
 %doc README.rst examples
 %{_bindir}/rk-*
+%{_sysconfdir}/rpmkit/optimizer.d/*/*.yml
 %{_datadir}/rpmkit/optimizer/*/*.yml
 %{_datadir}/rpmkit/templates/*.j2
 %{_datadir}/rpmkit/templates/css/*
