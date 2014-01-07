@@ -44,7 +44,7 @@ _ARGS_CMD_MAP = dict(rem=CMD_REMOVE, e=CMD_REMOVE, s=CMD_STANDALONES,
 
 
 def option_parser(usage=_USAGE):
-    defaults = dict(verbose=False, root=None, excludes=None, output=None,
+    defaults = dict(verbose=False, root='/', excludes=None, output=None,
                     format="simple", st_rpms=1)
 
     p = optparse.OptionParser(usage)
