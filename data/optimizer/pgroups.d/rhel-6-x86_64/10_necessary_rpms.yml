@@ -109,7 +109,7 @@ groups:
   - {name: zlib, type: mandatory, original_group: sever-platform}
 
 - group: system-management-snmp-necessary
-  install_if: "snmpd" in services.enabled
+  install_if: "'snmpd' in services.enabled"
   packages:
   - {name: net-snmp, type: mandatory, original_group: system-management-snmp}
   - {name: net-snmp-utils, type: default, original_group: system-management-snmp}
