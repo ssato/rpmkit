@@ -161,9 +161,11 @@ def main(cmd_map=_ARGS_CMD_MAP):
     else:
         if options.output:
             with open(options.output, 'w') as out:
-                print(xs, sep='\n', file=output)
+                for x in xs:
+                    print(x, file=output)
         else:
-            print(xs)
+            for x in xs:
+                print(x)
 
     output.close()
 
