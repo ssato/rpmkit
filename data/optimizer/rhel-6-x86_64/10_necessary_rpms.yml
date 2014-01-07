@@ -70,7 +70,7 @@ groups:
   - {name: grub, type: default, original_group: core}
 
 - group: large-systems-necessary
-  install_if: is_numa or not is_virt_guest
+  install_if: hardware.is_numa or not virtualization.is_virt_guest
   packages:
   - {name: numactl, type: mandatory, original_group: large-systems}
   - {name: numad, type: mandatory, original_group: large-systems}
@@ -109,24 +109,24 @@ groups:
   - {name: zlib, type: mandatory, original_group: sever-platform}
 
 - group: system-management-snmp-necessary
-  install_if: snmpd_service_enabled
+  install_if: "snmpd" in services.enabled
   packages:
   - {name: net-snmp, type: mandatory, original_group: system-management-snmp}
   - {name: net-snmp-utils, type: default, original_group: system-management-snmp}
 
 - group: kvm-host-necessary
-  install_if: is_kvm_host
+  install_if: virtualization.is_kvm_host
   packages:
   - {name: qemu-kvm, type: mandatory, original_group: virtualization}
   - {name: qemu-kvm-tools, type: optional, original_group: virtualization}
 
 - group: kvm-guest-necessary
-  install_if: is_kvm_guest
+  install_if: virtualization.is_kvm_guest
   packages:
   - {name: qemu-guest-agent, type: optional, original_group: virtualization}
 
 - group: virtualization-client-necessary
-  install_if: is_virt_client
+  install_if: virtualization.is_virt_client
   packages:
   - {name: python-virtinst, type: mandatory}
   - {name: virt-manager, type: mandatory}
