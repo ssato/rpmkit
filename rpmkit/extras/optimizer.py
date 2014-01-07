@@ -82,11 +82,13 @@ def load_package_groups_data_g(paths=[], data=_DATA_0,
     sysprof = bunch.bunchify(data.get(profkey, {}))
 
     for path in paths:
+        logging.debug("Loading profiles from: " + path)
         pgdata = load_profiles(path)
 
         for grp in pgdata.get("groups", []):
             instif = grp.get("install_if", '')
             grp["install_if"] = parse_install_pred(instif, sysprof, True)
+            logging.debug("install_if: %s -> %s" % (instif, grp["install_if"]))
 
             # TODO: Is 'type' of the packages (mandatory | default | optional)
             # to be checked?
@@ -104,7 +106,8 @@ def load_package_groups_data_g(paths=[], data=_DATA_0,
 _SYS_PROFILES_TOPDIR = os.path.join(G.RPMKIT_SYSCONFDIR, "optimizer.d")
 _SYS_PROFILES_DIR_DEFAULT = os.path.join(_SYS_PROFILES_TOPDIR, "default")
 
-_GRP_PKGS_TOPDIR = os.path.join(G.RPMKIT_DATADIR, "pgroups.d")
+# e.g. /usr/share/rpmkit/optimizer/pgroups.d/{default, ...}
+_GRP_PKGS_TOPDIR = os.path.join(G.RPMKIT_DATADIR, "optimizer/pgroups.d")
 _GRP_PKGS_DIR_DEFAULT = os.path.join(_GRP_PKGS_TOPDIR, "default")
 
 
@@ -133,7 +136,7 @@ def init_ppaths_and_gpaths(ppaths=[os.curdir, _SYS_PROFILES_DIR_DEFAULT],
 #
 
 
-def make_excl_packages_list(ppaths=[], gpaths=[], profkey="system_profile"):
+def make_excl_packages_list(ppaths, gpaths, profkey="system_profile"):
     """
     :param ppaths: A list of profile data dirs
     :param gpaths: A list of package group data dirs
@@ -148,6 +151,8 @@ def make_excl_packages_list(ppaths=[], gpaths=[], profkey="system_profile"):
 
     excludes = RU.uconcat(g["install_pkgs"] for g in pgrps)
     removes = RU.uconcat(g["remove_pkgs"] for g in pgrps)
+
+    logging.info("Excldues: %d, Removes: %d" % (len(excludes), len(removes)))
 
     return (excludes, removes)
 
@@ -187,13 +192,18 @@ def option_parser(usage=_USAGE):
     return p
 
 
+def init_log(level):
+    logging.getLogger().setLevel(level)
+    #anyconfig.set_loglevel(level)
+    logging.basicConfig(format="%(asctime)s %(name)s: [%(levelname)s] "
+                               "%(message)s")
+
+
 def main():
     p = option_parser()
     (options, args) = p.parse_args()
 
-    logging.basicConfig(level=(DEBUG if options.verbose else INFO),
-                        format="%(asctime)s %(name)s: [%(levelname)s] "
-                               "%(message)s")
+    init_log(DEBUG if options.verbose else INFO)
 
     if not args:
         p.print_usage()
@@ -204,20 +214,18 @@ def main():
     root = os.path.abspath(options.root)
     all_rpms = [p["name"] for p in RR.list_installed_rpms(root)]
 
-    (excludes, removes) = make_excl_packages_list(ppaths=[], gpaths=[])
+    (excludes, removes) = make_excl_packages_list(options.ppaths, options.gpaths)
     remove_candidates = RU.select_from_list(removes, all_rpms)
 
     xs = RR.compute_removed(remove_candidates, root, excludes=excludes)
-    data = dict(removed=xs, )
+    data = dict(removed=xs, excludes=excludes)
 
     output = open(options.output, 'w') if options.output else sys.stdout
 
     if options.output:
-        anyconfig.dump(dict(data=data, ), options.output,
-                       forced_type=options.format)
+        anyconfig.dump(dict(data=data, ), options.output, forced_type="yaml")
     else:
-        res = anyconfig.dumps(dict(data=data, ),
-                              forced_type=options.format)
+        res = anyconfig.dumps(dict(data=data, ), forced_type="yaml")
         print(res)
 
 if __name__ == "__main__":
