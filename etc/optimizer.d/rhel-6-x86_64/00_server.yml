@@ -1,0 +1,24 @@
+hardware:
+  is_numa: true
+
+services:
+  # TODO: Update and complement missing services normally enabled.
+  enabled:
+    - atd
+    - auditd
+    - kdump
+    - crond
+    - messagebus
+    - netfs
+    - ntpd
+    - rsyslog
+    - snmpd
+    - sshd
+    - sysstat
+
+virtualization:
+  is_kvm_host: false
+  is_kvm_guest: false
+  is_virt_client: false
+
+# vim:sw=2:ts=2:et:
