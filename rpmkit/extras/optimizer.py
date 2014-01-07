@@ -61,9 +61,11 @@ def parse_install_pred(pexp, system_profile={}, fallback=None):
     if not pexp:
         return fallback
 
-    if pexp in ("always", 1, "1", "true", "True"):
+    pexp = str(pexp).lower()
+
+    if pexp in ("always", 1, "1", "true", "yes"):
         return True
-    elif pexp in ("never", 0, "0", "false", "False"):
+    elif pexp in ("never", 0, "0", "false", "no"):
         return False
     else:
         try:
