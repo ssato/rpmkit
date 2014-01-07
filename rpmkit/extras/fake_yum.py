@@ -98,9 +98,7 @@ def main(cmd_map=_ARGS_CMD_MAP):
     p = option_parser()
     (options, args) = p.parse_args()
 
-    logging.basicConfig(level=(DEBUG if options.verbose else INFO),
-                        format="%(asctime)s %(name)s: [%(levelname)s] "
-                               "%(message)s")
+    RU.init_log(DEBUG if options.verbose else INFO)
 
     if not args:
         p.print_usage()
