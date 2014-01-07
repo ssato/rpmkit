@@ -468,4 +468,11 @@ def select_from_list(xs, ref_xs=[]):
     """
     return list(select_from_list_g(xs, ref_xs))
 
+
+def init_log(level):
+    logging.getLogger().setLevel(level)
+    #anyconfig.set_loglevel(level)
+    logging.basicConfig(format="%(asctime)s %(name)s: [%(levelname)s] "
+                        "%(message)s")
+
 # vim:sw=4:ts=4:et:

@@ -192,18 +192,11 @@ def option_parser(usage=_USAGE):
     return p
 
 
-def init_log(level):
-    logging.getLogger().setLevel(level)
-    #anyconfig.set_loglevel(level)
-    logging.basicConfig(format="%(asctime)s %(name)s: [%(levelname)s] "
-                               "%(message)s")
-
-
 def main():
     p = option_parser()
     (options, args) = p.parse_args()
 
-    init_log(DEBUG if options.verbose else INFO)
+    RU.init_log(DEBUG if options.verbose else INFO)
 
     if not args:
         p.print_usage()
