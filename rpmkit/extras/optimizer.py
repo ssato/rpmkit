@@ -71,11 +71,12 @@ def parse_install_pred(pexp, system_profile={}, fallback=None):
             return fallback
 
 
-def load_package_groups_data_g(paths=[], data=_DATA_0):
+def load_package_groups_data_g(paths=[], data=_DATA_0,
+                               profkey="system_profile"):
     """
     :param paths: A list of package group data dirs
     """
-    sysprof = bunch.bunchify(data.get("system_profile", {}))
+    sysprof = bunch.bunchify(data.get(profkey, {}))
 
     for path in paths:
         pgdata = load_profiles(path)
@@ -84,6 +85,8 @@ def load_package_groups_data_g(paths=[], data=_DATA_0):
             instif = grp.get("install_if", '')
             grp["install_if"] = parse_install_pred(instif, sysprof, True)
 
+            # TODO: Is 'type' of the packages (mandatory | default | optional)
+            # to be checked?
             inst_pkgs = RU.uniq2(p["name"] for p in grp.get("packages", [])
                                  if grp["install_if"])
             uninst_pkgs = RU.uniq2(p["name"] for p in grp.get("packages", [])
@@ -127,7 +130,7 @@ def init_ppaths_and_gpaths(ppaths=[os.curdir, _SYS_PROFILES_DIR_DEFAULT],
 #
 
 
-def make_excl_packages_list(ppaths=[], gpaths=[]):
+def make_excl_packages_list(ppaths=[], gpaths=[], profkey="system_profile"):
     """
     :param ppaths: A list of profile data dirs
     :param gpaths: A list of package group data dirs
@@ -138,8 +141,7 @@ def make_excl_packages_list(ppaths=[], gpaths=[]):
     for ppath in ppaths:
         prof_data = load_profiles(ppath, prof_data)
 
-    pgrps = list(load_package_groups_data_g(gpaths,
-                                            dict(system_profile=prof_data)))
+    pgrps = list(load_package_groups_data_g(gpaths, {profkey: prof_data}))
 
     excludes = RU.uconcat(g["install_pkgs"] for g in pgrps)
     removes = RU.uconcat(g["remove_pkgs"] for g in pgrps)
@@ -197,9 +199,9 @@ def main():
     host_prof_specs = args[0]
 
     root = os.path.abspath(options.root)
-    (excludes, removes) = make_excl_packages_list(ppaths=[], gpaths=[])
-
     all_rpms = [p["name"] for p in RR.list_installed_rpms(root)]
+
+    (excludes, removes) = make_excl_packages_list(ppaths=[], gpaths=[])
     remove_candidates = RU.select_from_list(removes, all_rpms)
 
     xs = RR.compute_removed(remove_candidates, root, excludes=excludes)
