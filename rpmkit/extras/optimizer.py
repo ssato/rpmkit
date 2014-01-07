@@ -30,10 +30,11 @@ def load_profiles(profilesdir, data=_DATA_0,
     ps = os.path.join(profilesdir, "*.yml")
     diff = anyconfig.load(ps, merge=merge_strategy)
 
-    if diff and not data:
-        data.update(diff)
-    else:
-        data = diff
+    if diff:
+        if data:
+            data.update(diff)
+        else:
+            data = diff
 
     return data
 
