@@ -374,7 +374,7 @@ def find_updates_g(all_packages, packages):
                 yield sorted(updates)
 
 
-def _make_requires_dict(root=None, reversed=False):
+def _make_requires_dict(root=None, reversed=False, use_yum=True):
     """
     Returns RPM dependency relations map.
 
@@ -382,6 +382,7 @@ def _make_requires_dict(root=None, reversed=False):
     :param reversed: Returns a dict such
         {required_RPM: [RPM_requires]} instead of a dict such
         {RPM: [RPM_required]} if True.
+    :param use_yum: Use yum to get the installed RPMs list
 
     :return: Requirements relation map, {p: [required]} or {required: [p]}
 
@@ -403,7 +404,10 @@ def _make_requires_dict(root=None, reversed=False):
         fn = "requiring_packages" if reversed else "required_packages"
         return sorted(x.name for x in getattr(p, fn)())
 
-    return dict((p.name, list_reqs(p)) for p in yum_list_installed(root))
+    assert use_yum, "Not implemented w/o yum yet!"
+
+    list_installed = yum_list_installed if use_yum else list_installed_rpms
+    return dict((p.name, list_reqs(p)) for p in list_installed(root))
 
 
 make_requires_dict = memoize(_make_requires_dict)
