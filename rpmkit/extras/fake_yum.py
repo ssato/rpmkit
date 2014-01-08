@@ -42,15 +42,17 @@ _CMDS = (CMD_REMOVE, CMD_STANDALONES, CMD_LEAVES) = ("remove", "standalones",
 _ARGS_CMD_MAP = dict(rem=CMD_REMOVE, e=CMD_REMOVE, s=CMD_STANDALONES,
                      l=CMD_LEAVES)
 
+_FMT_CHOICES = tuple(anyconfig.list_types())
 
-def option_parser(usage=_USAGE):
+
+def option_parser(usage=_USAGE, ac_fmt_choices=_FMT_CHOICES):
     defaults = dict(verbose=False, root='/', excludes=None, output=None,
                     format="simple", st_rpms=1)
 
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
 
-    fmt_choices = anyconfig.list_types() + ["simple"]
+    fmt_choices = list(ac_fmt_choices) + ["simple"]
     fmt_choices_s = ', '.join(fmt_choices)
 
     p.add_option("-R", "--root",
@@ -63,8 +65,10 @@ def option_parser(usage=_USAGE):
                       "remove (erase) and standalones.")
     p.add_option("-o", "--output", help="Output file path [stdout]")
     p.add_option("-f", "--format", choices=fmt_choices,
-                 help=("Output format selected from %s [%%default]" %
-                       fmt_choices_s))
+                 help="Output format selected from %(type)s. If --option was "
+                      "given and its file extension matches one of %(type)s, "
+                      "the output format will be automatically selected. "
+                      "[%%default]" % {"type": fmt_choices_s})
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     sog = optparse.OptionGroup(p, "Options for standalones command")
@@ -160,9 +164,15 @@ def main(cmd_map=_ARGS_CMD_MAP):
             print(res)
     else:
         if options.output:
-            with open(options.output, 'w') as out:
-                for x in xs:
-                    print(x, file=output)
+            ext = os.path.splitext(options.output)[1][1:]
+
+            if ext in _FMT_CHOICES:
+                anyconfig.dump(dict(data=data, ), options.output,
+                               forced_type=ext)
+            else:
+                with open(options.output, 'w') as out:
+                    for x in xs:
+                        print(x, file=output)
         else:
             for x in xs:
                 print(x)
