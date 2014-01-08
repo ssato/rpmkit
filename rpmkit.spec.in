@@ -1,8 +1,6 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
-# disable debuginfo
 %define debug_package %{nil}
-
 
 Name:           rpmkit
 Version:        @VERSION@
@@ -21,10 +19,8 @@ Requires:       python-BeautifulSoup
 # To support 'list-sec' sub command in yum via yum-surrogate:
 Requires:       yum-plugin-security
 
-
 %description
 RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
-
 
 %package        extras
 Summary:        Extra and experimental modules and tools in %{name}
@@ -41,23 +37,11 @@ Requires:       python-networkx
 %description    extras
 This package provides experimental modules and tools of %{name}.
 
-
-%package        sqldb
-Summary:        Rpms2sqldb and related tools in %{name}
-Requires:       %{name} = %{version}-%{release}
-Requires:       sqlite
-
-%description    sqldb
-This package contains rpms2sqldb and related tools in %{name}.
-
-
 %prep
 %setup -q
 
-
 %build
 %{__python} setup.py build
-
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -70,7 +54,6 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/{default,rhel-6-x86_64
 
 %clean
 rm -rf $RPM_BUILD_ROOT
-
 
 %files
 %defattr(-,root,root,-)
@@ -88,7 +71,6 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
 %{_localstatedir}/cache/swapi
 
-
 %files          extras
 %doc README.rst examples
 %{_bindir}/rk-*
@@ -98,17 +80,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/rpmkit/templates/css/*
 %{_datadir}/rpmkit/templates/js/*
 %{python_sitelib}/rpmkit/extras/*.py*
-%{python_sitelib}/rpmkit/rhncachedb/*.py*
-
-
-%files          sqldb
-%doc README.rst
-%{_bindir}/rpms2sqldb
-%{_bindir}/list-requires-by-package-name.sh
-%{_bindir}/list-srpmnames-by-file.sh
-
 
 %changelog
+* Wed Jan  8 2014 Satoru SATOH <ssato@redhat.com> - 0.2.10.16.99-1
+- Deprecated rpmkit.rpms2sqldb and related tools
+
 * Wed Dec 11 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.16-1
 - Add a virtual API called swapi.bugzilla.getDetails to rpmkit.swapi to get
   Bugzilla information

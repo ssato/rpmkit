@@ -103,7 +103,6 @@ setup(name=PACKAGE,
     packages=[
         "rpmkit",
         "rpmkit.extras",
-        "rpmkit.rhncachedb",
         "rpmkit.tests",
     ],
     scripts=glob("tools/*"),
