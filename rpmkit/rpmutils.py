@@ -562,57 +562,45 @@ def list_required_rpms_not_required_by_others(rpmname, root=None):
     return result
 
 
-def _list_requires_g(remove, rreqs, acc):
-    #logging.debug("Try to resolve RPMs requiring: " + remove)
-    for p in rreqs.get(remove, []):
-        if p in acc or p == remove:
-            #logging.debug("Already resolved one: " + p)
-            continue
-
-        yield p
-
-
-def _compute_removed_1(remove, root=None, rreqs=None, acc=[]):
+def _compute_removed_1(remove, rreqs, acc=[]):
     """
-    Returns a list of RPMs if given RPM ``remove`` was uninstalled such like
-    yum does with 'remove (uninstall)' sub command.
+    Recursively, it will traverse dependency tree and Return a list of RPMs if
+    given ``remove`` RPM was uninstalled such like yum does with 'remove
+    (uninstall)' sub command.
 
     :param remove: The name of RPM to remove (uninstall).
-    :param root: RPM Database root dir or None (use /var/lib/rpm).
     :param rreqs: Reversed RPM Dependency relation map
     :param acc: Accumulator
 
     :return: [pname], a list of RPM names to be uninstalled along with
         ``removes`` RPMs.
     """
-    if not rreqs:
-        rreqs = make_reversed_requires_dict(root)
-
-    acc = acc + [remove] if acc else [remove]
-    removes_next = RU.uniq2(_list_requires_g(remove, rreqs, acc))
-    logging.debug("Resolved (requires) dependency: "
+    removes_next = sorted(p for p in rreqs.get(remove, []) if p not in acc)
+    logging.debug("Resolved requires: "
                   "%s -> %s" % (remove, ' '.join(removes_next) or 'none'))
 
     if removes_next:
-        return ucat(_compute_removed_1(r, root, rreqs, acc) for r
-                    in removes_next)
-    else:
-        return acc
+        for r in removes_next:
+            acc.extend(x for x in _compute_removed_1(r, rreqs, acc + [r])
+                       if x not in acc)
+
+    return acc
 
 
-compute_removed_1 = memoize(_compute_removed_1)
+# :note: This function should not be memoized as argument ``acc`` may be
+# changed everytime it's called.
+compute_removed_1 = _compute_removed_1
 
 
-def compute_removed_g(removes, root, rreqs=None, acc=[], excludes=[]):
+def compute_removed_g(removes, rreqs, acc=[], excludes=[]):
     """
     This is a derived version of :function:``compute_removed_1`` which accepts
-    multiple RPMs as ``removes``.
+    multiple RPMs as ``removes`` parameter.
 
-    Returns a list of RPMs if given list of RPMs ``removes`` was uninstalled
-    such like yum does with 'remove (uninstall)' sub command.
+    It will return a list of RPMs if given list of RPMs ``removes`` was
+    uninstalled such like yum does with 'remove (uninstall)' sub command.
 
     :param removes: The list of name of RPMs to remove (uninstall).
-    :param root: RPM Database root dir or None (use /var/lib/rpm).
     :param rreqs: Reversed RPM Dependency relation map
     :param acc: Accumulator
     :param excludes: RPMs which should not be removed and excluded from the
@@ -623,18 +611,17 @@ def compute_removed_g(removes, root, rreqs=None, acc=[], excludes=[]):
     """
     for r in removes:
         if r in excludes:
-            logging.info("Excluded and not try to resolve requires: " + r)
+            logging.info("Excluded and not resolve requires: " + r)
             continue
 
-        xs = compute_removed_1(r, root, rreqs, acc)
-        ys = [r] + xs
+        xs = compute_removed_1(r, rreqs, acc + [r])
 
         if any(x in excludes for x in xs):
-            logging.info("Excluded as some of requires are excluded: " + r)
+            logging.info("Excluded as some of requires are so: " + r)
             excludes += ys
             continue
 
-        acc += ys  # previous acc is included in it.
+        acc.extend([r] + xs)
         yield acc
 
 
@@ -656,6 +643,6 @@ def compute_removed(removes, root=None, rreqs=None, acc=[], excludes=[]):
     if not rreqs:
         rreqs = make_reversed_requires_dict(root)
 
-    return ucat(compute_removed_g(removes, root, rreqs, acc, excludes))
+    return ucat(compute_removed_g(removes, rreqs, acc, excludes))
 
 # vim:sw=4:ts=4:et:
