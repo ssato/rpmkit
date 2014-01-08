@@ -618,7 +618,7 @@ def compute_removed_g(removes, rreqs, acc=[], excludes=[]):
 
         if any(x in excludes for x in xs):
             logging.info("Excluded as some of requires are so: " + r)
-            excludes += ys
+            excludes.extend([r] + xs)
             continue
 
         acc.extend([r] + xs)
