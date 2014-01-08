@@ -645,4 +645,46 @@ def compute_removed(removes, root=None, rreqs=None, acc=[], excludes=[]):
 
     return ucat(compute_removed_g(removes, rreqs, acc, excludes))
 
+
+def guess_os_version_from_rpmfile(rpmfile):
+    """
+    Guess RHEL major version from rpm file.
+
+    - RHEL 3 => rpm.RPMTAG_RPMVERSION = '4.2.x' where x = 1,2,3
+        or '4.2' or '4.3.3' (comps-*3AS-xxx) or '4.1.1' (comps*-3[aA][Ss])
+    - RHEL 4 => rpm.RPMTAG_RPMVERSION = '4.3.3'
+    - RHEL 5 => rpm.RPMTAG_RPMVERSION = '4.4.2' or '4.4.2.3'
+    - RHEL 6 (beta) => rpm.RPMTAG_RPMVERSION = '4.7.0-rc1'
+
+    :param rpmfile: Path to the RPM file
+    """
+    header = rpm_header_from_rpmfile(rpmfile)
+
+    rpmver = header[rpm.RPMTAG_RPMVERSION]
+    (name, version) = (header[rpm.RPMTAG_NAME], header[rpm.RPMTAG_VERSION])
+
+    irpmver = int(''.join(rpmver.split('.')[:3])[:3])
+
+    # Handle special cases at first:
+    if name in ('comps', 'comps-extras') and version in ('3AS', '3as'):
+        osver = 3
+    elif name in ('comps', 'comps-extras') and version == '4AS':
+        osver = 4
+    elif name == 'rpmdb-redhat' and version == '3':
+        osver = 3
+    elif (irpmver >= 421 and irpmver <= 423) or irpmver == 42:
+        osver = 3
+    elif irpmver == 433 or irpmver == 432 or irpmver == 431:
+        osver = 4
+    elif irpmver == 442:
+        osver = 5
+    elif irpmver == 470:
+        osver = 6
+    elif irpmver >= 411:
+        osver = 7
+    else:
+        osver = 0
+
+    return osver
+
 # vim:sw=4:ts=4:et:
