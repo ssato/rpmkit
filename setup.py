@@ -12,10 +12,12 @@ sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
 VERSION = "0.2.10.16"
+SNAPSHOT_BUILD_MODE = False
 
 # For daily snapshot versioning mode:
 if os.environ.get("_SNAPSHOT_BUILD", None) is not None:
     import datetime
+    SNAPSHOT_BUILD_MODE = True
     VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
 
@@ -55,7 +57,8 @@ class SrpmCommand(Command):
         pass
 
     def run(self):
-        self.update_mo()
+        if not SNAPSHOT_BUILD_MODE:
+            self.update_mo()
         self.run_command('sdist')
         self.build_rpm()
 
