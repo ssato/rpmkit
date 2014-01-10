@@ -25,6 +25,7 @@ from logging import DEBUG, INFO
 from operator import itemgetter
 
 import rpmkit.extras.repodata as RR
+import anyconfig
 import logging
 import optparse
 import os
@@ -177,6 +178,7 @@ def try_special_groups(gps, ps_ref, ps_req, specials=_SPECIAL_GROUPS):
 
     :return: [(group, found_packages_in_group, missing_packages_in_group)]
     """
+    ps_all = ps_ref + ps_req
     gps = [(g,
             [x for x in ps_all if x in ps],     # packages found in ps.
             [y for y in ps if y not in ps_all]  # packages not found in
@@ -265,7 +267,7 @@ def dump(groups, packages, ps_required, output, fmt=KS_FMT):
                            "missing": ps_missing}
                           for g, ps_found, ps_missing in groups]
         data["packages"] = packages
-        json.dump(data, output)
+        anyconfig.dump(data, output, forced_type=fmt)
 
 
 def option_parser():
