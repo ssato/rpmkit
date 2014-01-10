@@ -513,7 +513,7 @@ def list_updates_g(root, logfiles=None, *args):
             if line:
                 yield parse_update_line(line)
     else:
-        failure("check-update", result)
+        failure("check-update", res)
 
 
 def run_yum_cmd(root, yum_args, logfiles, *args):
