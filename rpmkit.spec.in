@@ -99,6 +99,8 @@ rm -rf $RPM_BUILD_ROOT
   if given RPMs was uninstalled such like 'yum remove ...' does
 - Add a tool called rk-fake_yum to simulate 'yum remove ...', etc.
 - Make use of anyconfig to support various output formats in rk-fake_yum
+- Add --use-dnf option to use DNF (hawkey/libsolv) as a RPM dependency resolver
+  backend to fake_yum
 
 * Wed Dec 11 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.16-1
 - Add a virtual API called swapi.bugzilla.getDetails to rpmkit.swapi to get

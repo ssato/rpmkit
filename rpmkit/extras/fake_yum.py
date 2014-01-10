@@ -10,11 +10,44 @@ import rpmkit.rpmutils as RR
 import rpmkit.utils as RU
 
 import anyconfig
+import dnf.cli.cli
+import dnf.transaction
 import logging
 import optparse
 import os.path
 import re
 import sys
+
+
+def get_base(root):
+    """
+    :param root: RPM DB root dir
+    """
+    base = dnf.cli.cli.BaseCli()
+    base.conf.cachedir = root
+    base.conf.installroot = root
+    base.fill_sack(load_available_repos=False)
+    base.goal_parameters.allow_uninstall = True
+
+    return base
+
+
+def list_removed(pkgspecs, root):
+    """
+    :param root: RPM DB root dir (relative or absolute)
+    :param pkgspecs: a list of names or wildcards specifying packages to erase
+
+    :return: A list of name of packages to be removed
+    """
+    root = os.path.abspath(root)
+
+    base = get_base(root)
+    for pspec in pkgspecs:
+        base.remove(pspec)
+    base.resolve()
+
+    return sorted(set(x.erased.name for x in
+                      base.transaction.get_items(dnf.transaction.ERASE)))
 
 
 _USAGE = """\
@@ -47,7 +80,7 @@ _FMT_CHOICES = tuple(anyconfig.list_types())
 
 def option_parser(usage=_USAGE, ac_fmt_choices=_FMT_CHOICES):
     defaults = dict(verbose=False, root='/', excludes=None, output=None,
-                    format="simple", st_rpms=1)
+                    format="simple", st_rpms=1, use_dnf=False)
 
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
@@ -69,6 +102,10 @@ def option_parser(usage=_USAGE, ac_fmt_choices=_FMT_CHOICES):
                       "given and its file extension matches one of %(type)s, "
                       "the output format will be automatically selected. "
                       "[%%default]" % {"type": fmt_choices_s})
+    p.add_option("", "--use-dnf", action="store_true",
+                 help="Use DNF as dependency solving backend. "
+                      "This is very experimental and only work w/ 'remove' "
+                      "sub-command w/o --excludes option")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     sog = optparse.OptionGroup(p, "Options for standalones command")
@@ -142,7 +179,13 @@ def main(cmd_map=_ARGS_CMD_MAP):
 
         rpms = RU.select_from_list(rpms, all_rpms)
 
-        xs = RR.compute_removed(rpms, root, excludes=excludes)
+        if options.use_dnf:
+            logging.warn("--use-dnf option does not support --excludes "
+                         "and exludes are simply ignored.")
+            xs = sorted(list_removed(rpms, root))
+        else:
+            xs = RR.compute_removed(rpms, root, excludes=excludes)
+
         data = dict(removed=xs, )
 
     elif cmd == CMD_STANDALONES:
