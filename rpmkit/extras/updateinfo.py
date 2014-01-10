@@ -456,7 +456,7 @@ def _make_dataset(list_data, headers=None, title=None):
     """
     dataset = tablib.Dataset()
 
-    # TODO: Check title as valid worksheet name, ex. len(title) <= 31. 
+    # TODO: Check title as valid worksheet name, ex. len(title) <= 31.
     # See also xlwt.Utils.valid_sheet_name.
     if title:
         dataset.title = title
@@ -703,8 +703,8 @@ def cve_socre_gt(cve, score=4.0, default=False):
     try:
         return float(cve["score"]) >= score
     except Exception as e:
-        logging.warn("Failed to compare CVE's score: %s, score=%.1f" % \
-            (str(cve), score))
+        logging.warn("Failed to compare CVE's score: %s, score=%.1f" %
+                     (str(cve), score))
 
     return default
 
@@ -779,7 +779,9 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         book = tablib.Databook(datasets)
 
     with open(dataset_file_path(workdir), 'wb') as out:
+        # pylint: disable=E1103
         out.write(book.xls)
+        # pylint: enable=E1103
 
 
 _WARN_DETAILS_NOT_AVAIL = """\
