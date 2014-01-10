@@ -152,7 +152,9 @@ def _list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
         # see also: rpmUtils/transaction.py:initReadOnlyTransaction()
         ts.setVSFlags((rpm._RPMVSF_NOSIGNATURES | rpm._RPMVSF_NODIGESTS))
 
+        # pylint: disable=E1101
         mi = ts.dbMatch()
+        # pylint: enable=E1101
 
         if root:
             rpm.delMacro("_dbpath")
