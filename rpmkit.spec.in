@@ -63,7 +63,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/identrpm
 %{_bindir}/rpm2json
 %{_bindir}/rpmfy
-%{_bindir}/rpms2csv
 %{_bindir}/swapi
 %{_bindir}/yum-surrogate
 %{python_sitelib}/*.egg-info
