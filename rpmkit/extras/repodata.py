@@ -274,7 +274,7 @@ def init_repodata(repodir, packages=[], resolve=False):
     requires = concat(izip(repeat(p), rs) for p, rs
                       in [itemgetter(0, 1)(t) for t
                           in reqs_and_provs if t[0] in packages])
-    provides = concat(izip(repeat(p), prs) for p, pr
+    provides = concat(izip(repeat(p), prs) for p, prs
                       in [itemgetter(0, 2)(t) for t
                           in reqs_and_provs if t[0] in packages])
 
