@@ -25,6 +25,7 @@ RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 %package        extras
 Summary:        Extra and experimental modules and tools in %{name}
 Requires:       %{name} = %{version}-%{release}
+Requires:       dnf
 Requires:       python-anyconfig
 Requires:       python-bunch
 Requires:       graphviz
@@ -84,6 +85,20 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Wed Jan  8 2014 Satoru SATOH <ssato@redhat.com> - 0.2.10.16.99-1
 - Deprecated rpmkit.rpms2sqldb and related tools
+- Removed deprecated Bunch module
+- Implemented downloads function in rpmkit.extras.list_latest_rpms (but very
+  experimental yet)
+- Add an experimental script (rpmkit/extras/make_updateinfo_xml.py) to generate
+  updateinfo.xml
+- I18n-ed and l10n-ed rpmkit.extras.updateinfo as a starting point
+- Add worksheet contains the list of RHSAs of which CVSS score >= 4.0 (this is
+  one of the PCIDSS requirements) in outputs of rk-updateinfo
+- Add an experimental script (rpmkit.extras.compsxml2json) to convert comps.xml
+  to JSON file
+- Add rpmkit.rpmutils.compute_removed() and its friends to compute removed RPMs
+  if given RPMs was uninstalled such like 'yum remove ...' does
+- Add a tool called rk-fake_yum to simulate 'yum remove ...', etc.
+- Make use of anyconfig to support various output formats in rk-fake_yum
 
 * Wed Dec 11 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.16-1
 - Add a virtual API called swapi.bugzilla.getDetails to rpmkit.swapi to get
