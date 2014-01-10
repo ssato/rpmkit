@@ -172,13 +172,22 @@ def compute_removed_w_dnf(remove_candidates, root, excludes=[]):
     excls = excludes
 
     for rem in remove_candidates:
+        if rem in removes:
+            logging.info("Already added in the removes list: " + rem)
+            continue
+
+        if rem in excls:
+            logging.info("Already added in the excludes list: " + rem)
+            continue
+
         try:
             xs = REF.list_removed(rem, root, excls)
-            removes.append(rem)
+            removes.extend(list(set([rem] + xs)))
 
         except dnf.exceptions.DepsolveError:
             logging.warn("Remove '%s' cause depsolv error so that "
                          "'%s' becomes excluded" % (rem, rem))
+            excls.append(rem)
             continue
 
     return (excls, removes)
