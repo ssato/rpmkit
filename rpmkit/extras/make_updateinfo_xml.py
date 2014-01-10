@@ -46,37 +46,45 @@ import xml.sax.saxutils as XSS  # escape, quoteattr
 #   <references>
 #     <reference href="https://rhn.redhat.com/errata/RHBA-2010-0836.html"
 #                type="self" title="RHBA-2010:0836"/>
-#     <reference href="https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=638598"
-#                id="638598" type="bugzilla" title="Enable Networking and ..."/>
+#     <reference
+#       href="https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=638598"
+#       id="638598" type="bugzilla" title="Enable Networking and..."/>
 #   </references>
 #   <pkglist>
 #     <collection short="rhel-x86_64-server-6">
 #       <name>Red Hat Enterprise Linux Server (v. 6 for 64-bit x86_64)</name>
-#       <package name="NetworkManager-glib" version="0.8.1" release="5.el6_0.1" epoch="1" arch="i686" src="NetworkManager-0.8.1-5.el6_0.1.src.rpm">
+#       <package name="NetworkManager-glib" version="0.8.1" release="5.el6_0.1"
+#        epoch="1" arch="i686" src="NetworkManager-0.8.1-5.el6_0.1.src.rpm">
 #         <filename>NetworkManager-glib-0.8.1-5.el6_0.1.i686.rpm</filename>
-#         <sum type="sha256">4f9a37a475a7ef0cdeea963d30c84298a99cb8640a5a7bb9ee22d39c0f870177</sum>
+#         <sum type="sha256">4f9a37a475a7ef0c...ee22d39c0f870177</sum>
 #       </package>
-#       <package name="NetworkManager" version="0.8.1" release="5.el6_0.1" epoch="1" arch="x86_64" src="NetworkManager-0.8.1-5.el6_0.1.src.rpm">
+#       <package name="NetworkManager" version="0.8.1" release="5.el6_0.1"
+#        epoch="1" arch="x86_64" src="NetworkManager-0.8.1-5.el6_0.1.src.rpm">
 #         <filename>NetworkManager-0.8.1-5.el6_0.1.x86_64.rpm</filename>
-#         <sum type="sha256">5cf5374cecd88b4ac3eabc20babfc0e25ee049f21dc8ead5e1aa128112f7c0c3</sum>
+#         <sum type="sha256">5cf5374cecd88b...128112f7c0c3</sum>
 #       </package>
-#       <package name="NetworkManager-glib" version="0.8.1" release="5.el6_0.1" epoch="1" arch="x86_64" src="NetworkManager-0.8.1-5.el6_0.1.src.rpm">
+#       <package name="NetworkManager-glib" version="0.8.1" release="5.el6_0.1"
+#        epoch="1" arch="x86_64" src="NetworkManager-0.8.1-5.el6_0.1.src.rpm">
 #         <filename>NetworkManager-glib-0.8.1-5.el6_0.1.x86_64.rpm</filename>
-#         <sum type="sha256">8a4d9e10521857662926f31bce305e4a3f452cd35f6c7cee2d4f38fe6e55f54b</sum>
+#         <sum type="sha256">8a4d9e10521857...2d4f38fe6e55f54b</sum>
 #       </package>
-#       <package name="NetworkManager-gnome" version="0.8.1" release="5.el6_0.1" epoch="1" arch="x86_64" src="NetworkManager-0.8.1-5.el6_0.1.src.rpm">
+#       <package name="NetworkManager-gnome" version="0.8.1"
+#       release="5.el6_0.1" epoch="1" arch="x86_64"
+#       src="NetworkManager-0.8.1-5.el6_0.1.src.rpm">
 #         <filename>NetworkManager-gnome-0.8.1-5.el6_0.1.x86_64.rpm</filename>
-#         <sum type="sha256">444c6a4078ec0f6ef41f7890e87cdc21b752209738b72698c4a03120e7ad900a</sum>
+#         <sum type="sha256">444c6a4078ec0f6e...8c4a03120e7ad900a</sum>
 #       </package>
 #     </collection>
 #   </pkglist>
 # </update>
 #
-# SEE ALSO: java/code/src/com/redhat/rhn/taskomatic/task/repomd/UpdateInfoWriter.java in spacewalk,
-#   https://git.fedorahosted.org/cgit/spacewalk.git/tree/java/code/src/com/redhat/rhn/taskomatic/task/repomd/UpdateInfoWriter.java
+# SEE ALSO:
+# java/code/src/com/redhat/rhn/taskomatic/task/repomd/UpdateInfoWriter.java in
+# spacewalk, http://bit.ly/19hkzzA
 #
 UPDATEINFO_XML_UPDATE = """\
-<update from="%(from)s" status="%(status)s" type="%(type)s" version="%(version)s">
+<update from="%(from)s" status="%(status)s" type="%(type)s"
+    version="%(version)s">
   <id>%(advisory_name)s</id>
   <title>%(synopsis)s</title>
   <issued date="%(issue_date)s"/>
