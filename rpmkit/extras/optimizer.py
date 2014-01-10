@@ -207,7 +207,8 @@ def main():
     root = os.path.abspath(options.root)
     all_rpms = [p["name"] for p in RR.list_installed_rpms(root)]
 
-    (excludes, removes) = make_excl_packages_list(options.ppaths, options.gpaths)
+    (excludes, removes) = make_excl_packages_list(options.ppaths,
+                                                  options.gpaths)
     remove_candidates = RU.select_from_list(removes, all_rpms)
 
     xs = RR.compute_removed(remove_candidates, root, excludes=excludes)
