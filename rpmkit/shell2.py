@@ -148,7 +148,7 @@ def run(cmd, user=None, host="localhost", workdir=os.curdir, timeout=_RUN_TO,
 
         if stop_on_error:
             gevent.shutdown()
-            raise RuntimeError(m)
+            raise RuntimeError(reason)
 
     # FIXME: This does not work and Timeout exception never be raised for
     # subprocess's process actually.
