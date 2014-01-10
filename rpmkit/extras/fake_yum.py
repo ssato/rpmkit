@@ -24,8 +24,10 @@ def get_base(root):
     :param root: RPM DB root dir
     """
     base = dnf.cli.cli.BaseCli()
-    base.conf.cachedir = root
-    base.conf.installroot = root
+
+    if root != '/':
+        base.conf.installroot = base.conf.cachedir = root
+
     base.fill_sack(load_available_repos=False)
     base.goal_parameters.allow_uninstall = True
 
