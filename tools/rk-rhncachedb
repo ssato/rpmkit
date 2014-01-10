@@ -1,8 +1,0 @@
-#! /usr/bin/python
-#
-import rpmkit.rhncachedb.generator as G
-import sys
-
-G.main(sys.argv)
-
-# vim:sw=4:ts=4:et:
