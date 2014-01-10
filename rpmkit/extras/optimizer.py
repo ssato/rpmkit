@@ -14,6 +14,7 @@ import rpmkit.extras.fake_yum as REF
 import anyconfig
 import anyconfig.utils as AU
 import bunch
+import dnf.exceptions
 import logging
 import optparse
 import os.path
@@ -158,6 +159,31 @@ def make_excl_packages_list(ppaths, gpaths, profkey="system_profile"):
     return (excludes, removes)
 
 
+def compute_removed_w_dnf(remove_candidates, root, excludes=[]):
+    """
+    Repeat trianl-and-error of removing packages and return optimzed
+    (excludes, removes).
+
+    :param remove_candidates: Candidate RPM names to remove
+    :param root: RPM root dir path
+    :param excludes: RPM names must be excluded from removal RPMs
+    """
+    removes = []
+    excls = excludes
+
+    for rem in remove_candidates:
+        try:
+            xs = REF.list_removed(rem, root, excls)
+            removes.append(rem)
+
+        except dnf.exceptions.DepsolveError:
+            logging.warn("Remove '%s' cause depsolv error so that "
+                         "'%s' becomes excluded" % (rem, rem))
+            continue
+
+    return (excls, removes)
+
+
 _USAGE = """\
 %prog [OPTION ...] HOST_PROF_SPEC
 
@@ -218,7 +244,8 @@ def main():
     remove_candidates = RU.select_from_list(removes, all_rpms)
 
     if options.use_dnf:
-        xs = REF.list_removed(remove_candidates, root, excludes)
+        (excludes, xs) = compute_removed_w_dnf(remove_candidates, root,
+                                               excludes)
     else:
         xs = RR.compute_removed(remove_candidates, root, excludes=excludes)
 
