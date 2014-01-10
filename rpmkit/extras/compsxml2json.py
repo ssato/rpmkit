@@ -38,7 +38,8 @@ import yaml
 
 
 def _tree_from_xml(xmlfile):
-    return ET.parse(gzip.open(xmlfile) if xmlfile.endswith(".gz") else open(xmlfile))
+    _open = gzip.open if xmlfile.endswith(".gz") else open
+    return ET.parse(_open(xmlfile))
 
 
 def _find_xml_files_g(topdir="/var/cache/yum", rtype="comps"):
