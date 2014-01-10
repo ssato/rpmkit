@@ -437,8 +437,10 @@ def select_from_list_g(xs, ref_xs=[]):
                     reg = re.compile(r.replace('*', ".*"))
                 else:
                     reg = re.compile(r)
+
             except Exception as e:  # NOTE: There's no special exc.
-                logging.warn("Not look valid regex and skipped: " + r)
+                logging.warn("Not look a valid regex and maybe it's "
+                             "just a string not found. Skipped: " + r)
                 continue
 
             for x in ref_xs:
