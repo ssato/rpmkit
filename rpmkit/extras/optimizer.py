@@ -88,7 +88,7 @@ def load_package_groups_data_g(paths=[], data=_DATA_0,
 
         for grp in pgdata.get("groups", []):
             instif = grp.get("install_if", '')
-            grp["install_if"] = parse_install_pred(instif, sysprof, True)
+            grp["install_if"] = parse_install_pred(instif, sysprof, False)
             logging.debug("install_if: %s -> %s" % (instif, grp["install_if"]))
 
             # TODO: Is 'type' of the packages (mandatory | default | optional)
