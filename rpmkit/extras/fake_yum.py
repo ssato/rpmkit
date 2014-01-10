@@ -33,7 +33,6 @@ def get_base(root):
     base.conf.clean_requirements_on_remove = True
 
     base.fill_sack(load_available_repos=False)
-    base.goal_parameters.allow_uninstall = True
 
     return base
 
@@ -48,6 +47,7 @@ def list_removed(pkgspecs, root, excludes=[]):
     root = os.path.abspath(root)
 
     base = get_base(root)
+    base.goal_parameters.allow_uninstall = True
 
     #if excludes:
     #    matches = dnf.subject.Subject('*').get_best_query(base.sack)
