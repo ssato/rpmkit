@@ -26,6 +26,26 @@ groups:
   - {name: setserial, type: mandatory, original_group: base}
   - {name: tmpwatch, type: mandatory, original_group: base}
   - {name: traceroute, type: mandatory, original_group: base}
+  - name: man-pages
+  - name: man-pages-overrides
+  - name: perl
+  - name: pinfo
+  - name: pkgconfig
+  - name: readahead
+  - name: tcp_wrappers
+  - name: time
+  - name: unzip
+  - name: usbutils
+  - name: vconfig
+  - name: virt-what
+  - name: wget
+  - name: which
+  - name: words
+  - name: xz
+  - name: yum-plugin-security
+  - name: yum-utils
+  - name: zip
+
 
 - group: core-necessary
   install_if: always
@@ -48,6 +68,7 @@ groups:
   - {name: iptables-ipv6, type: mandatory, original_group: core}
   - {name: iputils, type: mandatory, original_group: core}
   - {name: kbd, type: mandatory, original_group: core}
+  - name: lvm2
   - {name: ncurses, type: mandatory, original_group: core}
   - {name: openssh-server, type: mandatory, original_group: core}
   - {name: passwd, type: mandatory, original_group: core}
@@ -81,6 +102,7 @@ groups:
   packages:
   - {name: tcpdump, type: mandatory, original_group: network-tools}
   - {name: nc, type: default, original_group: network-tools}
+  - name: ethtool
 
 - group: performance-necessary
   install_if: always
@@ -107,6 +129,20 @@ groups:
   - {name: pam, type: mandatory, original_group: sever-platform}
   - {name: redhat-lsb, type: mandatory, original_group: sever-platform}
   - {name: zlib, type: mandatory, original_group: sever-platform}
+  - name: ntp
+  - name: openssh-clients
+  - name: openssh-server
+  - name: pam_passwdqc
+
+- group: system-management-necessary
+  install_if: always
+  packages:
+  - name: make
+  - name: rsync
+  - name: screen
+  - name: sos
+  - name: strace
+  - name: vim-enhanced
 
 - group: system-management-snmp-necessary
   install_if: "'snmpd' in services.enabled"
