@@ -72,7 +72,7 @@ def list_removed(pkgspecs, root, excludes=[]):
         try:
             base.remove(pspec)
         except exc:
-            logging.warn("Excluded or no package matched: " + pspec)
+            logging.info("Excluded or no package matched: " + pspec)
             continue
 
     base.resolve()
