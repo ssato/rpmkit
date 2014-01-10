@@ -1218,11 +1218,13 @@ class JSONEncoder(json.JSONEncoder):
     """@see http://goo.gl/vEwdE
     """
 
+    # pylint: disable=E0202
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
             return obj.strftime("%Y-%m-%dT%H:%M:%S")
         else:
             return json.JSONEncoder.default(self, obj)
+    # pylint: enable=E0202
 
 
 def results_to_json_str(results, indent=2):
@@ -1328,7 +1330,7 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
         if profile and cp.has_section(profile):
             try:
                 opts = dict(cp.items(profile))
-            except NoSectionError:
+            except configparser.NoSectionError:
                 continue
         else:
             opts = cp.defaults()
@@ -1341,10 +1343,6 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
 
     return dict(server=server, userid=userid, password=password,
                 timeout=timeout, protocol=protocol)
-
-
-def id_(x):
-    return x
 
 
 def set_options(key, config, opts, ask_fun, param):
@@ -1602,7 +1600,7 @@ def main(argv, tablib_found=TABLIB_FOUND):
         if options.output_format in ofs and options.output == "stdout":
             logging.error(" Output format '%s' requires output but not "
                           "specified w/ --output "
-                          "option" % option.output_format)
+                          "option" % options.output_format)
             return None
 
     if len(args) == 0:
