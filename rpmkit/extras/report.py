@@ -187,7 +187,7 @@ def modmain(ppath, workdir=None, template_paths=_TEMPLATE_PATHS,
               "graphviz-svg.js.j2"):
         renderfile(f, workdir, {}, "js", js_tpaths)
 
-    trees = RD.make_rpm_dependencies_trees(root, True)
+    trees = RD.make_dependencies_trees(root, True)
 
     renderfile("updateinfo.html.j2", workdir,
                dict(d3_charts=[(__name(t), t["name"]) for t in trees], ),
@@ -195,7 +195,6 @@ def modmain(ppath, workdir=None, template_paths=_TEMPLATE_PATHS,
 
     gen_depgraph_gv(root, workdir, template_paths, engine)
     gen_depgraph_d3(trees, workdir, template_paths)
-
 
 
 def mk_template_paths(tpaths_s, default=_TEMPLATE_PATHS, sep=':'):
