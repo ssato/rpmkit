@@ -11,6 +11,8 @@ import rpmkit.utils as RU
 
 import anyconfig
 import dnf.cli.cli
+import dnf.exceptions
+import dnf.subject
 import dnf.transaction
 import logging
 import optparse
@@ -28,13 +30,15 @@ def get_base(root):
     if root != '/':
         base.conf.installroot = base.conf.cachedir = root
 
+    base.conf.clean_requirements_on_remove = True
+
     base.fill_sack(load_available_repos=False)
     base.goal_parameters.allow_uninstall = True
 
     return base
 
 
-def list_removed(pkgspecs, root):
+def list_removed(pkgspecs, root, excludes=[]):
     """
     :param root: RPM DB root dir (relative or absolute)
     :param pkgspecs: a list of names or wildcards specifying packages to erase
@@ -44,8 +48,33 @@ def list_removed(pkgspecs, root):
     root = os.path.abspath(root)
 
     base = get_base(root)
+
+    #if excludes:
+    #    matches = dnf.subject.Subject('*').get_best_query(base.sack)
+    #    installed = matches.installed().run()
+
+    # see :method:`dnf.base.Base._setup_excludes`.
+    for excl in excludes:
+        pkgs = base.sack.query().filter_autoglob(name=excl)
+
+        if not pkgs:
+            logging.debug("Not installed and ignored: " + excl)
+            continue
+
+        # pylint: disable=E1101
+        base.sack.add_excludes(pkgs)
+        # pylint: enable=E1101
+
+        logging.debug("Excluded: " + excl)
+
+    exc = dnf.exceptions.PackagesNotInstalledError
     for pspec in pkgspecs:
-        base.remove(pspec)
+        try:
+            base.remove(pspec)
+        except exc:
+            logging.warn("Excluded or no package matched: " + pspec)
+            continue
+
     base.resolve()
 
     return sorted(set(x.erased.name for x in
@@ -182,9 +211,7 @@ def main(cmd_map=_ARGS_CMD_MAP):
         rpms = RU.select_from_list(rpms, all_rpms)
 
         if options.use_dnf:
-            logging.warn("--use-dnf option does not support --excludes "
-                         "and exludes are simply ignored.")
-            xs = sorted(list_removed(rpms, root))
+            xs = list_removed(rpms, root, excludes)
         else:
             xs = RR.compute_removed(rpms, root, excludes=excludes)
 
