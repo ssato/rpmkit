@@ -6,9 +6,10 @@
 from __future__ import print_function
 from logging import DEBUG, INFO
 
+import rpmkit.globals as G
 import rpmkit.rpmutils as RR
 import rpmkit.utils as RU
-import rpmkit.globals as G
+import rpmkit.extras.fake_yum as REF
 
 import anyconfig
 import anyconfig.utils as AU
@@ -170,7 +171,8 @@ Examples:
 
 
 def option_parser(usage=_USAGE):
-    defaults = dict(verbose=False, root='/', output=None, ppaths=[], gpaths=[])
+    defaults = dict(verbose=False, root='/', output=None, ppaths=[], gpaths=[],
+                    use_dnf=False)
 
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
@@ -187,6 +189,10 @@ def option_parser(usage=_USAGE):
                  help="List of package groups data paths [%default]. "
                       "It is possible to specify this option multiple "
                       "times (data files will be loaded in that order).")
+    p.add_option("", "--use-dnf", action="store_true",
+                 help="Use DNF as dependency solving backend. "
+                      "This is very experimental and only work w/ 'remove' "
+                      "sub-command w/o --excludes option")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -211,7 +217,11 @@ def main():
                                                   options.gpaths)
     remove_candidates = RU.select_from_list(removes, all_rpms)
 
-    xs = RR.compute_removed(remove_candidates, root, excludes=excludes)
+    if options.use_dnf:
+        xs = REF.list_removed(remove_candidates, root, excludes)
+    else:
+        xs = RR.compute_removed(remove_candidates, root, excludes=excludes)
+
     data = dict(removed=xs, excludes=excludes)
 
     output = open(options.output, 'w') if options.output else sys.stdout
