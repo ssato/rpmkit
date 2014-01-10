@@ -181,7 +181,7 @@ def compute_removed_w_dnf(remove_candidates, root, excludes=[]):
             continue
 
         try:
-            xs = REF.list_removed(rem, root, excls)
+            xs = REF.list_removed([rem], root, excls)
             removes.extend(list(set([rem] + xs)))
 
         except dnf.exceptions.DepsolveError:
