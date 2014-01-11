@@ -68,6 +68,7 @@ groups:
   - {name: iptables-ipv6, type: mandatory, original_group: core}
   - {name: iputils, type: mandatory, original_group: core}
   - {name: kbd, type: mandatory, original_group: core}
+  - name: kernel
   - name: lvm2
   - {name: ncurses, type: mandatory, original_group: core}
   - {name: openssh-server, type: mandatory, original_group: core}
