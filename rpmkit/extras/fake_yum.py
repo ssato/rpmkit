@@ -6,79 +6,16 @@
 from __future__ import print_function
 from logging import DEBUG, INFO
 
+import rpmkit.extras.rk_dnf as RED
 import rpmkit.rpmutils as RR
 import rpmkit.utils as RU
 
 import anyconfig
-import dnf.cli.cli
-import dnf.exceptions
-import dnf.subject
-import dnf.transaction
 import logging
 import optparse
 import os.path
 import re
 import sys
-
-
-def get_base(root):
-    """
-    :param root: RPM DB root dir
-    """
-    base = dnf.cli.cli.BaseCli()
-
-    if root != '/':
-        base.conf.installroot = base.conf.cachedir = root
-
-    base.conf.clean_requirements_on_remove = True
-
-    base.fill_sack(load_available_repos=False)
-
-    return base
-
-
-def list_removed(pkgspecs, root, excludes=[]):
-    """
-    :param root: RPM DB root dir (relative or absolute)
-    :param pkgspecs: a list of names or wildcards specifying packages to erase
-
-    :return: A list of name of packages to be removed
-    """
-    root = os.path.abspath(root)
-
-    base = get_base(root)
-    base.goal_parameters.allow_uninstall = True
-
-    #if excludes:
-    #    matches = dnf.subject.Subject('*').get_best_query(base.sack)
-    #    installed = matches.installed().run()
-
-    # see :method:`dnf.base.Base._setup_excludes`.
-    for excl in excludes:
-        pkgs = base.sack.query().filter_autoglob(name=excl)
-
-        if not pkgs:
-            logging.debug("Not installed and ignored: " + excl)
-            continue
-
-        # pylint: disable=E1101
-        base.sack.add_excludes(pkgs)
-        # pylint: enable=E1101
-
-        logging.debug("Excluded: " + excl)
-
-    exc = dnf.exceptions.PackagesNotInstalledError
-    for pspec in pkgspecs:
-        try:
-            base.remove(pspec)
-        except exc:
-            logging.info("Excluded or no package matched: " + pspec)
-            continue
-
-    base.resolve()
-
-    return sorted(set(x.erased.name for x in
-                      base.transaction.get_items(dnf.transaction.ERASE)))
 
 
 _USAGE = """\
@@ -211,7 +148,7 @@ def main(cmd_map=_ARGS_CMD_MAP):
         rpms = RU.select_from_list(rpms, all_rpms)
 
         if options.use_dnf:
-            xs = list_removed(rpms, root, excludes)
+            (excludes, xs) = RED.compute_removed(rpms, root, excludes)
         else:
             xs = RR.compute_removed(rpms, root, excludes=excludes)
 
