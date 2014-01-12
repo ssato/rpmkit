@@ -94,14 +94,15 @@ def get_source0_url_from_rpmspec(rpmspec):
     # 1. Try SOURCE0:
     if re.match(r"^(ftp|http|https)://", src0):
         logging.debug("URL=" + src0)
-        return (src0, os.path.basename(src0))
+        url_src0 = (src0, os.path.basename(src0))
+    else:
+        # 2. Try URL + basename(src0):
+        base_url = spec.sourceHeader["URL"]
+        assert base_url, "URL should not be empty!"
+        url_src0 = (os.path.join(base_url, src0), src0)
 
-    # 2. Try URL + basename(src0):
-    base_url = spec.sourceHeader["URL"]
-    assert base_url, "URL should not be empty!"
-
-    logging.debug("Base URL=" + base_url + ", src0=" + src0)
-    return (os.path.join(base_url, src0), src0)
+    logging.debug("URL=%s, src0=%s" % url_src0)
+    return url_src0
 
 
 def download(url, out, data=None, headers={}):
