@@ -157,7 +157,7 @@ def do_buildsrpm(rpmspec, workdir, timeout=None):
 
 
 def main(argv=sys.argv):
-    defaults = dict(verbose=False, workdir=None, timeout=None, src0=None)
+    defaults = dict(verbose=False, workdir=None, timeout=None)
 
     p = optparse.OptionParser("%prog [Options...] RPM_SPEC")
     p.set_defaults(**defaults)
@@ -167,8 +167,6 @@ def main(argv=sys.argv):
     p.add_option("-T", "--timeout",
                  help="Timeout in seconds or None (wait for the completion "
                       "of build forever")
-    p.add_option("-S", "--src0", help="Explicitly specify source0 filename")
-
     (options, args) = p.parse_args(argv[1:])
 
     if not args:
@@ -189,10 +187,6 @@ def main(argv=sys.argv):
     logging.info("Set workdir to " + options.workdir)
 
     (url, src0) = get_source0_url_from_rpmspec(rpmspec)
-
-    if options.src0:
-        src0 = options.src0
-
     s0 = os.path.join(options.workdir, src0)
 
     if not os.path.exists(options.workdir):
