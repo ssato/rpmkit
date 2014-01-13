@@ -157,16 +157,17 @@ def do_buildsrpm(rpmspec, workdir, timeout=None):
 
 
 def main(argv=sys.argv):
-    defaults = dict(debug=False, workdir=None, timeout=None)
+    defaults = dict(verbose=False, workdir=None, timeout=None, src0=None)
 
     p = optparse.OptionParser("%prog [Options...] RPM_SPEC")
     p.set_defaults(**defaults)
 
-    p.add_option("-D", "--debug", action="store_true", help="Debug mode")
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
     p.add_option("-w", "--workdir", help="Working dir to search source0")
     p.add_option("-T", "--timeout",
                  help="Timeout in seconds or None (wait for the completion "
                       "of build forever")
+    p.add_option("-S", "--src0", help="Explicitly specify source0 filename")
 
     (options, args) = p.parse_args(argv[1:])
 
@@ -174,7 +175,7 @@ def main(argv=sys.argv):
         p.print_usage()
         sys.exit(-1)
 
-    logging.basicConfig(level=(DEBUG if options.debug else INFO), )
+    logging.basicConfig(level=(DEBUG if options.verbose else INFO), )
 
     rpmspec = os.path.abspath(args[0])
     logging.info("rpm spec is " + rpmspec)
@@ -188,6 +189,10 @@ def main(argv=sys.argv):
     logging.info("Set workdir to " + options.workdir)
 
     (url, src0) = get_source0_url_from_rpmspec(rpmspec)
+
+    if options.src0:
+        src0 = options.src0
+
     s0 = os.path.join(options.workdir, src0)
 
     if not os.path.exists(options.workdir):
