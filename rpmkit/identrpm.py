@@ -253,7 +253,7 @@ def complement_rpm_metadata(pkg, options=[]):
     return []
 
 
-def identrpm(label, details=False):
+def identify(label, details=False):
     """
     :param label: Maybe RPM's label, '%{n}-%{v}-%{r}.%{arch} ....' in the RPM
         list gotten by running 'rpm -qa' or the list file found in sosreport
@@ -349,7 +349,7 @@ autoconf: A GNU tool for automatically configuring source code.
             sys.exit(1)
 
     for plabel in packages:
-        ps = identrpm(plabel, options.details)
+        ps = identify(plabel, options.details)
 
         if not ps:
             print "Not found: " + plabel
