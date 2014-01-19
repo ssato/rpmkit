@@ -170,75 +170,87 @@ def parse_rpm_label(label, epoch=0, arch_reg=_ARCH_REG, nvr_reg=_NVR_REG):
     return None
 
 
-def complement_rpm_metadata(pkg):
+def find_rpm_by_nvrea(pkg, options=[]):
+    """
+    :param pkg: A dict contains RPM basic information such as name, version,
+        release, ...
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
+
+    :return: List of another pkg dicts
+
+    see also: http://red.ht/1jgCNCh
+    """
+    epoch = ' ' if pkg['epoch'] == 0 else pkg['epoch']
+    api_args = [pkg['name'], pkg['version'], pkg['release'], epoch,
+                pkg['arch']]
+
+    try:
+        return SW.call('packages.findByNvrea', api_args, options)
+    except RuntimeError, IndexError:
+        return []
+
+
+def find_rpm_by_search(pkg, options=[]):
+    """
+    :param pkg: A dict contains RPM basic information such as name, version,
+        release, ...
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
+
+    :return: List of another pkg dicts
+
+    see also: http://red.ht/1dIs967
+    """
+    epoch = ' ' if pkg['epoch'] == 0 else pkg['epoch']
+    arg_fmt = "name:%(name)s AND version:%(version)s AND release:%(release)s"
+
+    if pkg.get('epoch', 0) != 0:
+        arg_fmt += " AND epoch:%(epoch)d"
+
+    if pkg.get('arch', False):
+        arg_fmt += " AND arch:%(arch)s"
+
+    api_args = [arg_fmt % pkg]
+
+    try:
+        return SW.call('packages.search.advanced', api_args, options)
+    except RuntimeError, IndexError:
+        return []
+
+
+def complement_rpm_metadata(pkg, options=[]):
     """
     Get missing package metadata and return a dict.
 
-    :param pkg:  dict(name, version, release, ...)
+    :param pkg: A dict contains RPM basic information such as name, version,
+        release, ...
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
+
+    :return: Updated dict
     """
-    try:
-        cfmt = "-A \"{name},{version},{release},\'\',{arch}\" " + \
-            "packages.findByNvrea"
-        m = " Try getting w/ packages.findByNvrea, arch="
+    def _normalize(p):
+        if 'arch_label' in p and 'arch' not in p:
+            p['arch'] = p['arch_label']
+        p['epoch'] = RU.normalize_epoch(p['epoch'])
 
-        c = cfmt.format(**pkg)
-        logging.info(m + pkg["arch"])
+        return p
 
-        cs = shlex.split(c)
-        logging.debug(" args passed to swapi.main(): " + str(cs))
+    logging.info("Try fetching w/ the API, packages.findByNvrea: " + str(pkg))
+    if pkg.get('arch', False):
+        ps = find_rpm_by_nvrea(pkg, options)
+        if ps:
+            return [_normalize(p) for p in ps]
 
-        (r, _opts) = SW.main(cs)
+    logging.info("Try fetching w/ the API, packages.search.advanced: "
+                 "%s" % str(pkg))
+    ps = find_rpm_by_search(pkg, options)
 
-        if not r:
-            pkg["arch"] = "noarch"  # override it.
-            logging.info(m + "noarch")
-            c = cfmt.format(**pkg)
+    if ps:
+        return [_normalize(p) for p in ps]
 
-            cs = shlex.split(c)
-            logging.debug(" args passed to swapi.main(): " + str(cs))
-
-            (r, _opts) = SW.main(cs)
-
-        logging.debug("q=" + cmd + ", r=" + str(r))
-
-        r[0]["epoch"] = RU.normalize_epoch(r[0]["epoch"])
-
-        if not r[0].get("arch", False):
-            r[0]["arch"] = r[0]["arch_label"]
-
-        return r[0]
-
-    except Exception, e:
-        try:
-            fmt = "-A \"name:{name} AND version:{version} AND " + \
-                "release:{release}\" packages.search.advanced"
-            cmd = fmt.format(**pkg)
-
-            logging.info(" Try getting w/ packages.search.advanced")
-
-            cs = shlex.split(cmd)
-            logging.debug(" args passed to swapi.main(): " + str(cs))
-
-            (r, _opts) = SW.main(cs)
-            logging.debug("q=" + cmd + ", r=" + str(r))
-
-            r[0]["epoch"] = RU.normalize_epoch(r[0]["epoch"])
-
-            if not r[0].get("arch", False):
-                r[0]["arch"] = r[0]["arch_label"]
-
-            return r[0]
-
-        except Exception, e:
-            print str(e)
-
-            logging.error("Failed to query: "
-                          "nvr=({name}, {version}, {release})".format(**pkg))
-            r = pkg
-            r["epoch"] = 0
-            r["arch"] = "?"
-
-            return r
+    return []
 
 
 def load_packages(pf):
@@ -266,11 +278,7 @@ def init_log(verbose):
 
 def main(argv=sys.argv):
     default_format = "{name},{version},{release},{arch},{epoch}"
-    defaults = {
-        "verbose": 0,
-        "arch": "x86_64",
-        "format": None,
-    }
+    defaults = dict(verbose=0, format=None)
 
     p = optparse.OptionParser("""%prog [Options...] [RPM_0 [RPM_1 ...]]
 
@@ -292,7 +300,6 @@ autoconf: A GNU tool for automatically configuring source code.
                  const=2, help="Debug mode")
     p.add_option("-i", "--input",
                  help="Packages list file (output of 'rpm -qa')")
-    p.add_option("-A", "--arch", help="Architecture of package[s] [%default]")
     p.add_option("-F", "--format",
                  help="Output format, e.g %s" % default_format)
 
@@ -312,19 +319,18 @@ autoconf: A GNU tool for automatically configuring source code.
 
         logging.info(" Guessd p=" + str(p))
 
-        if not p.get("arch"):
-            p["arch"] = options.arch
-
         logging.debug(" p=" + str(p))
-        p = complement_rpm_metadata(p)
+        ps = complement_rpm_metadata(p)
 
-        if p is None:
+        if not ps:
             print "Not found: " + plabel
         else:
             if options.format:
-                print options.format.format(**p)
+                for p in ps:
+                    print options.format.format(**p)
             else:
-                pprint.pprint(p)
+                for p in ps:
+                    pprint.pprint(p)
 
 
 if __name__ == '__main__':
