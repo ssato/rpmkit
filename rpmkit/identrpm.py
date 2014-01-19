@@ -253,21 +253,26 @@ def complement_rpm_metadata(pkg, options=[]):
     return []
 
 
-def identrpm(label):
+def identrpm(label, details=False):
     """
     :param label: Maybe RPM's label, '%{n}-%{v}-%{r}.%{arch} ....' in the RPM
         list gotten by running 'rpm -qa' or the list file found in sosreport
         archives typically.
+    :param details: Try to get extra information other than NVREA if True.
 
     :return: List of pkg dicts. Each dict contains RPM basic info such as name,
         version, release, arch and epoch.
     """
-    p = parse_rpm_label(plabel)
+    p = parse_rpm_label(label)
     logging.info(" Guessd p=" + str(p))
 
     if not p:
         logging.error("Failed to parse given RPM label: " + label)
         return []
+
+    if 'name' in p and 'version' in p and 'release' in p and 'epoch' in p \
+            and 'arch' in p and not details:
+        return [p]  # We've got enough information of this RPM.
 
     return complement_rpm_metadata(p)
 
@@ -305,7 +310,7 @@ def init_log(verbose):
 
 def main(argv=sys.argv):
     default_format = "{name},{version},{release},{arch},{epoch}"
-    defaults = dict(verbose=0, format=None)
+    defaults = dict(verbose=0, format=None, details=False)
 
     p = optparse.OptionParser("""%prog [Options...] [RPM_0 [RPM_1 ...]]
 
@@ -317,18 +322,20 @@ $ identrpm --format "{name},{version},{release},{arch},{epoch}" \
 >   autoconf-2.59-12.noarch
 autoconf,2.59,12,noarch,0
 
-$ identrpm --format "{name}: {summary}" autoconf-2.59-12
+$ identrpm --details --format "{name}: {summary}" autoconf-2.59-12
 autoconf: A GNU tool for automatically configuring source code.
     """)
     p.set_defaults(**defaults)
 
-    p.add_option("-v", "--verbose", action="count", help="Verbose mode")
-    p.add_option("-D", "--debug", action="store_const", dest="verbose",
-                 const=2, help="Debug mode")
     p.add_option("-i", "--input",
                  help="Packages list file (output of 'rpm -qa')")
     p.add_option("-F", "--format",
                  help="Output format, e.g %s" % default_format)
+    p.add_option("", "--details", action="store_true",
+                 help="Get extra information other than RPM's N, V, R, E, A")
+    p.add_option("-v", "--verbose", action="count", help="Verbose mode")
+    p.add_option("-D", "--debug", action="store_const", dest="verbose",
+                 const=2, help="Debug mode")
 
     (options, packages) = p.parse_args(argv[1:])
 
@@ -342,7 +349,7 @@ autoconf: A GNU tool for automatically configuring source code.
             sys.exit(1)
 
     for plabel in packages:
-        ps = identrpm(plabel)
+        ps = identrpm(plabel, options.details)
 
         if not ps:
             print "Not found: " + plabel
