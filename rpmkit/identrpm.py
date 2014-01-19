@@ -5,6 +5,8 @@
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 # License: GPLv3+
 #
+"""Identify given RPMs list.
+"""
 import rpmkit.swapi as SW
 import rpmkit.rpmutils as RU
 
@@ -18,74 +20,159 @@ import shlex
 import sys
 
 
-def parse_package_label(label):
+LOG = logging.getLogger('rpmkit.identrpm')
+
+_ARCHS = ('i[356]86', 'x86_64', 'ppc', 'ia64', 's390', 's390x', 'armv7hl',
+          'noarch')
+_ARCH_REG = re.compile(r"(?:.|-)+(?P<arch>" + '|'.join(_ARCHS) + r")$")
+
+# NOTE: Version string consists of [0-9.]+ as usual, however it seems that
+# there are some special cases of which version strings are consist of
+# [a-zA-Z]+[0-9.]+ such like cdparanoia ('cdparanoia-alpha9.8-27.2'), rarpd and
+# kinput2 in older version of RHEL, RHL or Fedora.
+_NV_REG_BASE = r"^(?P<name>[^.]+)-(?P<version>[^-]+)"
+_NV_REG = re.compile(_NV_REG_BASE + r'$')
+_NVR_REG = re.compile(_NV_REG_BASE + r"-(?P<release>[^-]+)$")
+
+
+def pkg_eq(pkg0, pkg1):
     """
-    Return NVR[A] (name, version, release[, arch]) dict of package constructed
-    from given label (output of 'rpm -qa') containing version and other
-    information.
+    Compare a couple of dict contains RPM basic information (N, V, R, A, E).
 
-    >>> eq = SW.dict_equals
-    >>> d_ref = {
-    ...     'arch': 'noarch', 'label': 'autoconf-2.59-12.noarch',
-    ...     'name': 'autoconf', 'version': '2.59', 'release': '12',
-    ... }
-    >>> d = parse_package_label('autoconf-2.59-12.noarch')
-    >>> assert eq(d, d_ref), "exp. %s vs. %s" % (str(d_ref), str(d))
-    >>> d_ref = {
-    ...     'arch': 'i386', 'label': 'MySQL-python-1.2.1-1.i386',
-    ...     'name': 'MySQL-python', 'version': '1.2.1', 'release': '1',
-    ... }
-    >>> d = parse_package_label('MySQL-python-1.2.1-1.i386')
-    >>> assert eq(d, d_ref), "exp. %s vs. %s" % (str(d_ref), str(d))
-    >>> d_ref = {
-    ...     'label': 'cdparanoia-alpha9.8-27.2', 'name': 'cdparanoia',
-    ...     'version': 'alpha9.8', 'release': '27.2'
-    ... }
-    >>> d = parse_package_label('cdparanoia-alpha9.8-27.2')
-    >>> assert eq(d, d_ref), "exp. %s vs. %s" % (str(d_ref), str(d))
-    >>> d_ref = {
-    ...     'arch': 'i386', 'label': 'ash-0.3.8-20.el4_7.1-i386',
-    ...     'name': 'ash', 'version': '0.3.8', 'release': '20.el4_7.1'
-    ... }
-    >>> d = parse_package_label('ash-0.3.8-20.el4_7.1-i386')
-    >>> assert eq(d, d_ref), "exp. %s vs. %s" % (str(d_ref), str(d))
+    :param pkg0: A dict contains RPM basic information
+    :param pkg1: Another dict contains RPM basic information
 
-    # FIXME: It seems there are some other special cases such $version and
-    # $release cannot be parsed correctly:
-
-        parse_package_label('amanda-2.4.4p1.0.3E')  ==> Fail
+    >>> p0 = dict(name='aaa', version='0.0.1', release='1', arch='i686')
+    >>> p1 = p0.copy()
+    >>> p2 = p1.copy(); p2['epoch'] = 2
+    >>> pkg_eq(p0, p1)
+    True
+    >>> pkg_eq(p0, p2)
+    False
     """
+    return all(pkg0.get(k) == pkg1.get(k) for k in
+               ('name', 'version', 'release', 'arch', 'epoch'))
+
+
+def parse_rpm_label(label, epoch=0, arch_reg=_ARCH_REG, nvr_reg=_NVR_REG):
+    """
+    Parse given maybe-rpm-label string ``label`` and return a dict contains
+    RPM's basic information such as NVR[A] (name, version, release[, arch]) to
+    identify the RPM.
+
+    :param label: Maybe RPM's label, '%{n}-%{v}-%{r}.%{arch} ....' in the RPM
+        list gotten by running 'rpm -qa' or the list file found in sosreport
+        archives typically.
+    :param epoch: Default epoch value
+    :param arch_reg: Regex pattern of possible RPM build target archs
+    :param nvr_reg: Regex pattern of RPM's name, version and release
+    :param nv_reg: Regex pattern of RPM's name and version
+
+    :return: A dict contains RPM's basic information or None (parse error)
+
+    Possible format of RPM labels may be:
+
+    * "%(name)s-%(version)s-%(release)s.%(arch)s": 'rpm -qa', sosreport.
+    * "%(name)s-%(version)s-%(release)s-%(arch)s": 'rpm -qa' ? (old style)
+    * "%(epoch)s:%(name)s-%(version)s-%(release)s.%(arch)s": yum ?
+    * "%(name)s-%(epoch)s:%(version)s-%(release)s.%(arch)s": yum ?
+    * "%(name)s-%(version)s-%(release)s"
+    * "%(name)s-%(version)s": I don't think there is a way to distinguish
+      between this and the above.
+    * "%(name)s.%(arch)s": Likewise.
+
+    See also :method:`yum.rpmsack.RPMDBPackageSack._match_repattern`
+
+    NOTE: It seems there are some other special cases such $version and
+    $release cannot be parsed correctly:
+
+        parse_rpm_label('amanda-2.4.4p1.0.3E') ==> None (Failure)
+
+    >>> refs = [dict(name='autoconf', version='2.59', release='12',
+    ...              arch='noarch', epoch=0, label='autoconf-2.59-12.noarch'),
+    ...         dict(name='MySQL-python', version='1.2.1', release='1',
+    ...              arch='i386', epoch=0, label='MySQL-python-1.2.1-1.i386'),
+    ...         dict(name='ash', version='0.3.8', release='20.el4_7.1',
+    ...              arch='x86_64', epoch=0,
+    ...              label='ash-0.3.8-20.el4_7.1-x86_64'),
+    ...         dict(name='cdparanoia', version='alpha9.8', release='27.2',
+    ...              epoch=0, label='cdparanoia-alpha9.8-27.2'),
+    ...         dict(name='MySQL-python', version='1.2.1', release='1',
+    ...              arch='i386', epoch=3,
+    ...              label='3:MySQL-python-1.2.1-1.i386'),
+    ...         dict(name='MySQL-python', version='1.2.1', release='1',
+    ...              arch='i386', epoch=3,
+    ...              label='MySQL-python-3:1.2.1-1.i386'),
+    ...         dict(name='MySQL-python', version='1.2.1', release='1',
+    ...              epoch=0, label='MySQL-python-1.2.1-1'),
+    ... # This is not supported.
+    ... #       dict(name='MySQL-python', version='1.2.1', epoch=0,
+    ... #            label='MySQL-python-1.2.1'),
+    ... # This is also no supported.
+    ... #       dict(name='MySQL-python', arch='x86_64', epoch=0,
+    ... #            label='MySQL-python.x86_64'),
+    ...        ]
+    >>> for r in refs:
+    ...     x = parse_rpm_label(r['label'])
+    ...     assert x is not None
+    ...     assert pkg_eq(x, r), "%s, label=%s" % (x, r['label'])
+    >>>
+    """
+    # ``label`` must not contain any white space chars.
+    assert re.match(r"^\S+$", label), "Invalid RPM label: " + label
+
     pkg = {'label': label}
 
-    arch_re = re.compile(
-        r"(?:.|-)+(?P<arch>i[356]86|x86_64|ppc|ia64|s390|s390x|noarch)"
-    )
-    m = arch_re.match(label)
+    # 1. Try to find arch and strip it from this label string.
+    m = re.match(arch_reg, label)
     if m:
         arch = m.groupdict().get('arch')
         pkg['arch'] = arch
         label = label[:label.rfind(arch) - 1]
-        #logging.debug("modified label=%s, arch=%s" % (label, arch))
 
-    # Version string is consist of [0-9.]+ as usual, however there are some
-    # special cases of which version strings are consist of [a-zA-Z]+[0-9.]+
-    # such like cdparanoia, rarpd and kinput2.
-    pkg_re = re.compile(r'(?P<name>\S+)-(?P<version>[^-]+)-(?P<release>\S+)')
+    # 2. Try to find epoch.
+    if ':' in label:
+        (maybe_epoch, label) = label.split(':')
 
-    m = pkg_re.match(label)
+        if '-' in maybe_epoch:
+            (name, epoch) = maybe_epoch.rsplit('-', 1)
+            (version, release) = label.rsplit('-', 1)
+
+            try:
+                pkg['epoch'] = int(epoch)
+            except ValueError:
+                LOG.error("Failed to parse epoch '%s'; name=%s, version=%s, "
+                          "release=%s" % (epoch, name, version, release))
+                return None
+
+            pkg['name'] = name
+            pkg['version'] = version
+            pkg['release'] = release
+
+            return pkg
+        else:
+            try:
+                pkg['epoch'] = int(maybe_epoch)
+            except ValueError:
+                LOG.error("Failed to parse epoch '%s'; label=%s" %
+                          (maybe_epoch, label))
+                return None
+    else:
+        pkg['epoch'] = epoch
+
+    m = nvr_reg.match(label)
     if m:
         pkg.update(m.groupdict())
-    else:
-        pkg_re_2 = re.compile(r'(?P<name>\S+)-(?P<version>[0-9]+)')
-        m = pkg_re_2.match(label)
-        if m:
-            pkg.update(m.groupdict())
+        return pkg
 
-    return pkg
+    LOG.error("Failed to parse NVR string: label=%s, epoch=%d" %
+              (label, pkg['epoch']))
+    return None
 
 
-def complement_package_metadata(pkg):
-    """Get missing package metadata and returns a dict.
+def complement_rpm_metadata(pkg):
+    """
+    Get missing package metadata and return a dict.
 
     :param pkg:  dict(name, version, release, ...)
     """
@@ -221,7 +308,7 @@ autoconf: A GNU tool for automatically configuring source code.
             sys.exit(1)
 
     for plabel in packages:
-        p = parse_package_label(plabel)
+        p = parse_rpm_label(plabel)
 
         logging.info(" Guessd p=" + str(p))
 
@@ -229,7 +316,7 @@ autoconf: A GNU tool for automatically configuring source code.
             p["arch"] = options.arch
 
         logging.debug(" p=" + str(p))
-        p = complement_package_metadata(p)
+        p = complement_rpm_metadata(p)
 
         if p is None:
             print "Not found: " + plabel
@@ -242,6 +329,5 @@ autoconf: A GNU tool for automatically configuring source code.
 
 if __name__ == '__main__':
     main(sys.argv)
-
 
 # vim:sw=4:ts=4:et:
