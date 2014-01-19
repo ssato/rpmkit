@@ -253,12 +253,14 @@ def complement_rpm_metadata(pkg, options=[]):
     return []
 
 
-def identify(label, details=False):
+def identify(label, details=False, options=[]):
     """
     :param label: Maybe RPM's label, '%{n}-%{v}-%{r}.%{arch} ....' in the RPM
         list gotten by running 'rpm -qa' or the list file found in sosreport
         archives typically.
     :param details: Try to get extra information other than NVREA if True.
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
 
     :return: List of pkg dicts. Each dict contains RPM basic info such as name,
         version, release, arch and epoch.
@@ -310,7 +312,7 @@ def init_log(verbose):
 
 def main(argv=sys.argv):
     default_format = "{name},{version},{release},{arch},{epoch}"
-    defaults = dict(verbose=0, format=None, details=False)
+    defaults = dict(verbose=0, format=None, details=False, sw_options=[])
 
     p = optparse.OptionParser("""%prog [Options...] [RPM_0 [RPM_1 ...]]
 
@@ -333,6 +335,9 @@ autoconf: A GNU tool for automatically configuring source code.
                  help="Output format, e.g %s" % default_format)
     p.add_option("", "--details", action="store_true",
                  help="Get extra information other than RPM's N, V, R, E, A")
+    p.add_option("", "--sw-options", action="append",
+                 help="Options passed to swapi, can be specified multiple"
+                      "times.")
     p.add_option("-v", "--verbose", action="count", help="Verbose mode")
     p.add_option("-D", "--debug", action="store_const", dest="verbose",
                  const=2, help="Debug mode")
@@ -349,7 +354,7 @@ autoconf: A GNU tool for automatically configuring source code.
             sys.exit(1)
 
     for plabel in packages:
-        ps = identify(plabel, options.details)
+        ps = identify(plabel, options.details, options.sw_options)
 
         if not ps:
             print "Not found: " + plabel
