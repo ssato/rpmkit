@@ -253,13 +253,40 @@ def complement_rpm_metadata(pkg, options=[]):
     return []
 
 
-def load_packages(pf):
+def identrpm(label):
+    """
+    :param label: Maybe RPM's label, '%{n}-%{v}-%{r}.%{arch} ....' in the RPM
+        list gotten by running 'rpm -qa' or the list file found in sosreport
+        archives typically.
+
+    :return: List of pkg dicts. Each dict contains RPM basic info such as name,
+        version, release, arch and epoch.
+    """
+    p = parse_rpm_label(plabel)
+    logging.info(" Guessd p=" + str(p))
+
+    if not p:
+        logging.error("Failed to parse given RPM label: " + label)
+        return []
+
+    return complement_rpm_metadata(p)
+
+
+def load_packages_g(pf):
     """Load package info list from given file.
 
     :param pf: Packages list file.
     """
-    return [l.rstrip() for l in open(pf).readlines()
-            if l and not l.startswith("#")]
+    for l in open(pf).readlines():
+        if l.startswith('#'):
+            continue
+
+        l = l.rstrip()
+
+        if not l:
+            continue
+
+        yield l.split(' ')[0] if ' ' in l else l
 
 
 def init_log(verbose):
@@ -308,19 +335,14 @@ autoconf: A GNU tool for automatically configuring source code.
     init_log(options.verbose)
 
     if options.input:
-        packages = load_packages(options.input)
+        packages = list(load_packages_g(options.input))
     else:
         if not packages:
             p.print_usage()
             sys.exit(1)
 
     for plabel in packages:
-        p = parse_rpm_label(plabel)
-
-        logging.info(" Guessd p=" + str(p))
-
-        logging.debug(" p=" + str(p))
-        ps = complement_rpm_metadata(p)
+        ps = identrpm(plabel)
 
         if not ps:
             print "Not found: " + plabel
