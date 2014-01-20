@@ -7,6 +7,7 @@ import rpmkit.identrpm as RI
 import rpmkit.swapi as RS
 import logging
 import multiprocessing
+import optparse
 import os.path
 import os
 import sys
@@ -61,7 +62,7 @@ def download_rpms(label, outdir, latest=False):
 def option_parser():
     defaults = dict(verbose=False, input=None, sw_options=[])
 
-    p = optparse.OptionParser(usage)
+    p = optparse.OptionParser()
     p.set_defaults(**defaults)
     p.add_option("-i", "--input",
                  help="Packages list file (output of 'rpm -qa')")
@@ -72,7 +73,7 @@ def option_parser():
     return p
 
 
-def main(cmd_map=_ARGS_CMD_MAP):
+def main():
     p = option_parser()
     (options, args) = p.parse_args()
 
