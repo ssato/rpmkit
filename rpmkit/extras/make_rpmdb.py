@@ -5,8 +5,8 @@
 #
 import rpmkit.identrpm as RI
 import rpmkit.swapi as RS
-import itertools
 import logging
+import multiprocessing
 import os.path
 import os
 import sys
@@ -29,7 +29,7 @@ def fetch_rpm_path_g(label):
         yield p
 
 
-def fetch_rpm_paths(label):
+def fetch_rpm_infos(label):
     """
     :param label: RPM package label
     """
@@ -38,22 +38,52 @@ def fetch_rpm_paths(label):
     m0 = "Candidate RPMs: %(name)s-%(version)s.%(release)s.%(arch)s" % ps[0]
     logging.info(m0 + "epochs=%s" % ', '.join(str(p['epoch']) for p in ps))
 
+    return ps
 
-def download_rpm(label, outdir):
+
+def download_rpms(label, outdir, latest=False):
     """
     :param label: RPM package label
+    :param outdir: Where to save RPM[s]
+    :param latest: Download the latest RPM if True else oldest RPM will be
+        downloaded.
     """
-    pkgs = RI.identify(label, True)
-    for p in pkgs:
-        logging.info("Candidate RPM info: n=%(name)s, v=%(version)s, "
-                     "r=%(release)s, " "arch=%(arch)s, epoch=%(epoch)d, "
-                     "id=%(id)d" % p)
+    ps = fetch_rpm_infos(label)
+    pkg = ps[0]  # Select the head of the list
 
-    pkg = pkgs[0]  # Select the head of the list
     urls = RS.call("packages.getPackageUrl", [pkg["id"]], ["--no-cache"])
     logging.info("RPM URLs: " + ', '.join(urls))
 
     url = urls[0]  # Likewise
-    x = urlgrabber.urlgrab(url, os.path.join(outdir, os.path.basename(url)))
+    return urlgrabber.urlgrab(url, os.path.join(outdir, os.path.basename(url)))
+
+
+def option_parser():
+    defaults = dict(verbose=False, input=None, sw_options=[])
+
+    p = optparse.OptionParser(usage)
+    p.set_defaults(**defaults)
+    p.add_option("-i", "--input",
+                 help="Packages list file (output of 'rpm -qa')")
+    p.add_option("", "--sw-options", action="append",
+                 help="Options passed to swapi, can be specified multiple"
+                      "times.")
+    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+    return p
+
+
+def main(cmd_map=_ARGS_CMD_MAP):
+    p = option_parser()
+    (options, args) = p.parse_args()
+
+    RU.init_log(DEBUG if options.verbose else INFO)
+
+    if not args:
+        p.print_usage()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
 
 # vim:sw=4:ts=4:et:
