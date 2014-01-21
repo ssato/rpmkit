@@ -42,13 +42,13 @@ def runCallback(reason, amount, total, key, client_data):
     sargs = [str(a) for a in (reason, amount, total, key, client_data)]
 
     if reason == rpm.RPMCALLBACK_INST_OPEN_FILE:
-        logging.info("Opening file: " + str(sargs))
+        logging.debug("Opening file: " + str(sargs))
         rpmtsCallback_fd = os.open(key, os.O_RDONLY)
 
         return rpmtsCallback_fd
 
     elif reason == rpm.RPMCALLBACK_INST_START:
-        logging.info("Closing file: " + str(sargs))
+        logging.debug("Closing file: " + str(sargs))
 
         if rpmtsCallback_fd:
             os.close(rpmtsCallback_fd)
@@ -79,12 +79,10 @@ def install_rpms(rpms, dbdir):
 
     # Avoid check signature checks:
     ts.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
-    #ts.setVSFlags(rpm._RPMVSF_NODIGESTS | rpm._RPMVSF_NOHEADER |
-    #              rpm._RPMVSF_NOPAYLOAD | rpm._RPMVSF_NOSIGNATURES)
 
     for rpm_path in rpms:
         h = read_rpm_header(ts, rpm_path)
-        logging.info("Add: %s-%s-%s" % (h['name'], h['version'], h['release']))
+        logging.debug("Add: %s-%s-%s" % (h['name'], h['version'], h['release']))
 
         ts.addInstall(h, rpm_path, 'i')
 
