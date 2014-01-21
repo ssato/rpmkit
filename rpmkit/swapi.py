@@ -863,7 +863,7 @@ def get_bugzilla_info(bzid, *keys):
         bzcmd = "bugzilla --bugzilla=" + uri if uri else "bugzilla"
 
         c = bzcmd + " query --bug_id=%s --outputformat='%s'" % (bzid, ofs)
-        logging.info(" bz: " + c[:c.rfind('\n')] + "...")
+        logging.debug(" bz: " + c[:c.rfind('\n')] + "...")
         o = subprocess.check_output(c, shell=True)
 
         if not o:
@@ -963,7 +963,7 @@ class Cache(object):
             return False
 
         if not os.path.exists(self.path(obj)):
-            logging.info(" Cache file not found for " + str(obj))
+            logging.debug(" Cache file not found for " + str(obj))
             return True
 
         try:
@@ -1076,7 +1076,7 @@ class RpcApi(object):
                 ret = cache.load(key)
 
                 if ret is not None:
-                    logging.info("Found cached result for " + str(key))
+                    logging.debug("Found cached result for " + str(key))
                     return ret
 
             logging.debug("No cached results found: " + cache.topdir)
