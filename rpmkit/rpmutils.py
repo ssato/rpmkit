@@ -131,6 +131,29 @@ def _yum_list_installed(root=None, cachedir=None, persistdir=None):
     return sack.returnPackages()  # NOTE: 'gpg-pubkey' is not in this list.
 
 
+def rpm_transactionset(root=None, readonly=True, subdir=RPMDB_SUBDIR):
+    """
+    :param root: RPM DB root dir
+    :param readonly: Return read-only transaction set to pure query purpose
+    :param subdir: RPM DB subdir
+    :return: An instance of rpm.TransactionSet
+    """
+    if root:
+        rpm.addMacro("_dbpath", os.path.join(root, subdir))
+
+    ts = rpm.TransactionSet()
+
+    if readonly:
+        # see also: rpmUtils/transaction.py:initReadOnlyTransaction()
+        ts.setVSFlags((rpm._RPMVSF_NOSIGNATURES | rpm._RPMVSF_NODIGESTS))
+
+    # Not needed ?
+    #if root:
+    #    rpm.delMacro("_dbpath")
+
+    return ts
+
+
 def _list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
                          subdir=RPMDB_SUBDIR):
     """
