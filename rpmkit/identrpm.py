@@ -16,6 +16,7 @@ import rpmkit.utils as RU
 import anyconfig
 import commands
 import datetime
+import itertools
 import logging
 import multiprocessing
 import operator
@@ -320,35 +321,6 @@ def identify_(ldo):
         return identify(ldo[0], ldo[1], ldo[2])
 
 
-_NCPUS = multiprocessing.cpu_count()
-
-
-def identify_rpms(labels, details=False, newer=True, options=[],
-                  nprocs=_NCPUS):
-    """
-    :param labels: List RPM labels
-    :param details: Get extra information other than RPM's N, V, R, E, A if
-        True or get them from RHN / RH Satellite if not available
-    :param newer: Sort by epochs; older is prior to newers
-    :param options: List of option strings passed to
-        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
-    :param nprocs: Number of parallelized processes to identify each lables
-
-    :return: List of list of RPM info dicts :: [[p]]
-    """
-    if nprocs > 1:
-        pool = multiprocessing.Pool(processes=nprocs)
-        pss = pool.map(identify_, ((l, details, options) for l in labels))
-    else:
-        pss = [identify(label, details, options) for label in labels]
-
-    if newer:
-        return [sorted(ps, key=operator.itemgetter("epoch"), reverse=True)
-                for ps in pss]
-    else:
-        return [sorted(ps, key=operator.itemgetter("epoch")) for ps in pss]
-
-
 def load_packages_g(pf):
     """
     Load package info list from given file, generator version.
@@ -368,11 +340,54 @@ def load_packages_g(pf):
 
 
 def load_packages(pf):
-    """Load package info list from given file.
+    """
+    Load package info list from given file.
 
     :param pf: Packages list file.
     """
-    return uniq(load_packages_g(pf))
+    labels = uniq(load_packages_g(pf))
+    logging.info("Loaded %d RPM labels from %s" % (len(labels), pf))
+
+    return labels
+
+
+_NCPUS = multiprocessing.cpu_count()
+
+
+def filter_out_not_resolved_rpms_g(labels, pss, newer):
+    """
+    """
+    for label, ps in itertools.izip(labels, pss):
+        if ps:
+            yield sorted(ps, key=operator.itemgetter("epoch"), reverse=newer)
+        else:
+            logging.warn("Failed to parse: " + label)
+
+
+def identify_rpms(labels, details=False, newer=True, options=[],
+                  nprocs=_NCPUS):
+    """
+    :param labels: A list of RPM labels
+    :param details: Get extra information other than RPM's N, V, R, E, A if
+        True or get them from RHN / RH Satellite if not available
+    :param newer: Sort by epochs; older is prior to newers
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
+    :param nprocs: Number of parallelized processes to identify each lables
+
+    :return: List of list of RPM info dicts :: [[p]]
+    """
+    if nprocs > 1:
+        pool = multiprocessing.Pool(processes=nprocs)
+        pss = pool.map(identify_, ((l, details, options) for l in labels))
+    else:
+        pss = [identify(label, details, options) for label in labels]
+
+    for label, ps in itertools.izip(labels, pss):
+        if not ps:
+            logging.warn("Failed to parse: " + label)
+
+    return list(filter_out_not_resolved_rpms_g(labels, pss, newer))
 
 
 def init_log(verbose):
