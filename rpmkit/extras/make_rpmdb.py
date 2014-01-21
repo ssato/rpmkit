@@ -82,7 +82,8 @@ def install_rpms(rpms, dbdir):
 
     for rpm_path in rpms:
         h = read_rpm_header(ts, rpm_path)
-        logging.debug("Add: %s-%s-%s" % (h['name'], h['version'], h['release']))
+        logging.debug("Add: %s-%s-%s" % (h['name'], h['version'],
+                                         h['release']))
 
         ts.addInstall(h, rpm_path, 'i')
 
