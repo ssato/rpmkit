@@ -7,11 +7,18 @@
 #
 """Identify given RPMs list.
 """
-import rpmkit.swapi as SW
-import rpmkit.rpmutils as RU
+from __future__ import print_function
 
+import rpmkit.rpmutils as RR
+import rpmkit.swapi as SW
+import rpmkit.utils as RU
+
+import anyconfig
 import commands
+import datetime
 import logging
+import multiprocessing
+import operator
 import optparse
 import os
 import pprint
@@ -33,6 +40,19 @@ _ARCH_REG = re.compile(r"(?:.|-)+(?P<arch>" + '|'.join(_ARCHS) + r")$")
 _NV_REG_BASE = r"^(?P<name>[^.]+)-(?P<version>[^-]+)"
 _NV_REG = re.compile(_NV_REG_BASE + r'$')
 _NVR_REG = re.compile(_NV_REG_BASE + r"-(?P<release>[^-]+)$")
+
+
+def uniq(xs, sort=False):
+    """
+    :param xs: Iterable object :: list, tuple, generator, etc.
+    :param sort: Result will be sorted if True
+
+    >>> uniq((1, 3, 0, 5, -1))
+    [0, 1, 3, 5, -1]
+    >>> uniq((1, 3, 0, 5, -1), True)
+    [-1, 0, 1, 3, 5]
+    """
+    return (sorted if sort else list)(set(xs))
 
 
 def pkg_eq(pkg0, pkg1):
@@ -163,6 +183,8 @@ def parse_rpm_label(label, epoch=0, arch_reg=_ARCH_REG, nvr_reg=_NVR_REG):
     m = nvr_reg.match(label)
     if m:
         pkg.update(m.groupdict())
+        logging.info("Succeed to parse %(label)s: n=%(name)s, v=%(version)s, "
+                     "r=%(release)s" % pkg)
         return pkg
 
     LOG.error("Failed to parse NVR string: label=%s, epoch=%d" %
@@ -184,7 +206,6 @@ def find_rpm_by_nvrea(pkg, options=[]):
     epoch = ' ' if pkg['epoch'] == 0 else pkg['epoch']
     api_args = [pkg['name'], pkg['version'], pkg['release'], epoch,
                 pkg['arch']]
-
     try:
         return SW.call('packages.findByNvrea', api_args, options)
     except RuntimeError, IndexError:
@@ -211,10 +232,8 @@ def find_rpm_by_search(pkg, options=[]):
     if pkg.get('arch', False):
         arg_fmt += " AND arch:%(arch)s"
 
-    api_args = [arg_fmt % pkg]
-
     try:
-        return SW.call('packages.search.advanced', api_args, options)
+        return SW.call('packages.search.advanced', [arg_fmt % pkg], options)
     except RuntimeError, IndexError:
         return []
 
@@ -233,7 +252,7 @@ def complement_rpm_metadata(pkg, options=[]):
     def _normalize(p):
         if 'arch_label' in p and 'arch' not in p:
             p['arch'] = p['arch_label']
-        p['epoch'] = RU.normalize_epoch(p['epoch'])
+        p['epoch'] = RR.normalize_epoch(p['epoch'])
 
         return p
 
@@ -272,15 +291,67 @@ def identify(label, details=False, options=[]):
         logging.error("Failed to parse given RPM label: " + label)
         return []
 
-    if 'name' in p and 'version' in p and 'release' in p and 'epoch' in p \
-            and 'arch' in p and not details:
+    keys = ('name', 'version', 'release', 'epoch', 'arch')
+    if not details and all(k in p for k in keys):
         return [p]  # We've got enough information of this RPM.
 
     return complement_rpm_metadata(p)
 
 
+def identify_(ldo):
+    """
+    :param ldo: A tuple of (label, details, options) or
+        (label, kwargs) (kwargs = dict(details=, options=, ) passed to
+        :function:`identify`.
+    :return: List of pkg dicts. Each dict contains RPM basic info such as name,
+        version, release, arch and epoch.
+    """
+    lldo = len(ldo)
+    assert lldo > 0, "Null tuple passed: ldo=" + str(ldo)
+
+    if lldo < 2:
+        return identify(ldo[0])
+    elif lldo < 3:
+        if isinstance(lldo[1], dict):
+            return identify(ldo[0], **ldo[1])
+        else:
+            return identify(ldo[0], ldo[1])
+    else:
+        return identify(ldo[0], ldo[1], ldo[2])
+
+
+_NCPUS = multiprocessing.cpu_count()
+
+
+def identify_rpms(labels, details=False, newer=True, options=[],
+                  nprocs=_NCPUS):
+    """
+    :param labels: List RPM labels
+    :param details: Get extra information other than RPM's N, V, R, E, A if
+        True or get them from RHN / RH Satellite if not available
+    :param newer: Sort by epochs; older is prior to newers
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
+    :param nprocs: Number of parallelized processes to identify each lables
+
+    :return: List of list of RPM info dicts :: [[p]]
+    """
+    if nprocs > 1:
+        pool = multiprocessing.Pool(processes=nprocs)
+        pss = pool.map(identify_, ((l, details, options) for l in labels))
+    else:
+        pss = [identify(label, details, options) for label in labels]
+
+    if newer:
+        return [sorted(ps, key=operator.itemgetter("epoch"), reverse=True)
+                for ps in pss]
+    else:
+        return [sorted(ps, key=operator.itemgetter("epoch")) for ps in pss]
+
+
 def load_packages_g(pf):
-    """Load package info list from given file.
+    """
+    Load package info list from given file, generator version.
 
     :param pf: Packages list file.
     """
@@ -294,6 +365,14 @@ def load_packages_g(pf):
             continue
 
         yield l.split(' ')[0] if ' ' in l else l
+
+
+def load_packages(pf):
+    """Load package info list from given file.
+
+    :param pf: Packages list file.
+    """
+    return uniq(load_packages_g(pf))
 
 
 def init_log(verbose):
@@ -310,9 +389,39 @@ def init_log(verbose):
     logging.basicConfig(level=level)
 
 
+def process_datetime_g(ps):
+    """
+    Returned results w/ swapi.call may contain datetime.datetime object but
+    datetime.datetime objects cannot be serialized in JSON format and need to
+    be converted into other object such as str instance.
+    """
+    for p in ps:
+        for k in p.keys():
+            if isinstance(p[k], datetime.datetime):
+                p[k] = p[k].strftime("%Y-%m-%dT%H:%M:%S")
+
+        yield p
+
+
+def print_outputs(ps, format=None, output=None):
+    if format:
+        out = open(output, 'w') if output else sys.stdout
+        for p in ps:
+            print(format.format(**p), file=out)
+    else:
+        if output:
+            anyconfig.dump(sorted(process_datetime_g(ps),
+                                  key=operator.itemgetter("name")),
+                           output)
+        else:
+            for p in ps:
+                print(pprint.pformat(p), sys.stdout)
+
+
 def main(argv=sys.argv):
     default_format = "{name},{version},{release},{arch},{epoch}"
-    defaults = dict(verbose=0, format=None, details=False, sw_options=[])
+    defaults = dict(verbose=0, format=None, details=False, sw_options=[],
+                    input=None, output=None, latest=False, all=False)
 
     p = optparse.OptionParser("""%prog [Options...] [RPM_0 [RPM_1 ...]]
 
@@ -330,11 +439,17 @@ autoconf: A GNU tool for automatically configuring source code.
     p.set_defaults(**defaults)
 
     p.add_option("-i", "--input",
-                 help="Packages list file (output of 'rpm -qa')")
+                 help="Packages list file path (output of 'rpm -qa')")
+    p.add_option("-o", "--output",
+                 help="Output file path [stdout]. It must be ends w/ .json, "
+                      "yaml, etc.")
     p.add_option("-F", "--format",
                  help="Output format, e.g %s" % default_format)
     p.add_option("", "--details", action="store_true",
                  help="Get extra information other than RPM's N, V, R, E, A")
+    p.add_option("", "--latest", action="store_true",
+                 help="Output only the latest RPMs instead of oldest RPMs")
+    p.add_option("", "--all", action="store_true", help="Output all RPMs")
     p.add_option("", "--sw-options", action="append",
                  help="Options passed to swapi, can be specified multiple"
                       "times.")
@@ -347,25 +462,19 @@ autoconf: A GNU tool for automatically configuring source code.
     init_log(options.verbose)
 
     if options.input:
-        packages = list(load_packages_g(options.input))
+        packages = load_packages(options.input)
     else:
         if not packages:
             p.print_usage()
             sys.exit(1)
 
-    for plabel in packages:
-        ps = identify(plabel, options.details, options.sw_options)
-
-        if not ps:
-            print "Not found: " + plabel
-        else:
-            if options.format:
-                for p in ps:
-                    print options.format.format(**p)
-            else:
-                for p in ps:
-                    pprint.pprint(p)
-
+    pss = identify_rpms(packages, options.details, options.latest,
+                        options.sw_options)
+    if options.all:
+        print_outputs(RU.concat(pss), options.format, options.output)
+    else:
+        print_outputs([ps[0] for ps in pss if ps], options.format,
+                      options.output)
 
 if __name__ == '__main__':
     main(sys.argv)
