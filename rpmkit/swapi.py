@@ -1534,6 +1534,7 @@ def init_log(verbose):
 
 def init_rpcapi(options):
     params = configure(options)
+    init_log(options.verbose)
     rapi = RpcApi(
         params, not options.no_cache, options.cachedir, options.rpcdebug,
         options.readonly, options.cacheonly, options.force,
