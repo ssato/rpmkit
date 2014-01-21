@@ -1441,7 +1441,15 @@ def option_parser(prog="swapi", tablib_found=TABLIB_FOUND):
     p.add_option('-C', '--config', help=config_help)
     p.add_option('-P', '--profile',
                  help='Select profile (section) in config file')
-    p.add_option('-v', '--verbose', help='verbose mode', action="count")
+    p.add_option('-v', '--verbose', action="count",
+                 help="Verbose mode. It can be specified multiple times "
+                      "such as -vv.")
+    p.add_option('-D', '--debug', action="store_const", const=2,
+                 dest="verbose", help='Debug mode. Same as -vv')
+    p.add_option('', '--silent', action="store_const", const=0,
+                 dest="verbose", help='Silent mode')
+    p.add_option('-q', '--quiet', action="store_const", const=0,
+                 dest="verbose", help='Same as --silent')
 
     cog = optparse.OptionGroup(p, "Connect options")
     cog.add_option('-s', '--server', help='Spacewalk/RHN server hostname.')
