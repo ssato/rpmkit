@@ -8,12 +8,14 @@ from logging import DEBUG, INFO
 import rpmkit.identrpm as RI
 import rpmkit.swapi as RS
 import rpmkit.utils as RU
+import rpmkit.rpmutils as RR
 import logging
 import multiprocessing
 import operator
 import optparse
 import os.path
 import os
+import rpm
 import sys
 import urlgrabber
 
@@ -21,56 +23,121 @@ import urlgrabber
 RPMDB_SUBDIR = "var/lib/rpm"
 
 
-def fetch_rpm_path_g(label):
+def read_rpm_header(ts, rpm_path):
     """
-    :param label: RPM package label
+    :param ts: An initialized instance of rpm.TransactionSet
+    :param rpm_path: RPM's file path
     """
-    pkgs = RI.identify(label, True)
-    for p in pkgs:
-        if 'path' not in p:
-            pd = RS.call("packages.getDetails", [p['id']])
-            p.update(pd)
-
-        yield p
+    with open(rpm_path, 'rb') as f:
+        return ts.hdrFromFdno(f)
 
 
-def fetch_rpm_infos(label):
+rpmtsCallback_fd = None
+
+
+# @see http://bit.ly/1jkc2iW
+def runCallback(reason, amount, total, key, client_data):
+    global rpmtsCallback_fd
+
+    sargs = [str(a) for a in (reason, amount, total, key, client_data)]
+
+    if reason == rpm.RPMCALLBACK_INST_OPEN_FILE:
+        logging.info("Opening file: " + str(sargs))
+        rpmtsCallback_fd = os.open(key, os.O_RDONLY)
+
+        return rpmtsCallback_fd
+
+    elif reason == rpm.RPMCALLBACK_INST_START:
+        logging.info("Closing file: " + str(sargs))
+
+        if rpmtsCallback_fd:
+            os.close(rpmtsCallback_fd)
+
+
+def install_rpms(rpms, dbdir):
     """
-    :param label: RPM package label
+    :param rpms: A list of RPM info dicts contain 'path' info
+    :param dbdir: RPM DB topdir; RPM DB files will be created in
+        ``dbdir``/var/lib/rpm.
     """
-    ps = sorted(fetch_rpm_path_g(label), key=operator.itemgetter('epoch'),
-                reverse=True)
+    if not dbdir.startswith(os.path.sep):  # Relative path.
+        dbdir = os.path.abspath(dbdir)
 
-    m0 = "Candidate RPMs: %(name)s-%(version)s.%(release)s.%(arch)s" % ps[0]
-    logging.info(m0 + "epochs=%s" % ', '.join(str(p['epoch']) for p in ps))
+    ts = RR.rpm_transactionset(dbdir, readonly=False)
 
-    return ps
+    # Corresponding to combination of rpm options:
+    #   --noscripts --justdb --notriggers
+    ts.setFlags(rpm.RPMTRANS_FLAG_NOSCRIPTS | rpm.RPMTRANS_FLAG_JUSTDB |
+                rpm.RPMTRANS_FLAG_NOTRIGGERS)
+
+    # Corresponding to combination of rpm options: --force
+    ts.setProbFilter(rpm.RPMPROB_FILTER_REPLACEPKG |
+                     rpm.RPMPROB_FILTER_REPLACENEWFILES |
+                     rpm.RPMPROB_FILTER_REPLACEOLDFILES |
+                     rpm.RPMPROB_FILTER_OLDPACKAGE |
+                     rpm.RPMPROB_FILTER_FORCERELOCATE)
+
+    # Avoid check signature checks:
+    ts.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
+    #ts.setVSFlags(rpm._RPMVSF_NODIGESTS | rpm._RPMVSF_NOHEADER |
+    #              rpm._RPMVSF_NOPAYLOAD | rpm._RPMVSF_NOSIGNATURES)
+
+    for rpm_path in rpms:
+        h = read_rpm_header(ts, rpm_path)
+        logging.info("Add: %s-%s-%s" % (h['name'], h['version'], h['release']))
+
+        ts.addInstall(h, rpm_path, 'i')
+
+    unresolved_deps = ts.check()
+    if unresolved_deps:
+        logging.error("Unresolved deps: " + str(unresolved_deps))
+        return
+
+    # pylint: disable=E1101
+    ts.order()
+    # pylint: enable=E1101
+
+    ts.run(runCallback, 1)
 
 
-def download_rpms(label, outdir, latest=False):
+def download_rpms(pkg, outdir):
     """
-    :param label: RPM package label
+    TBD.
+
+    :param pkg: A dict contains RPM basic information other than url
     :param outdir: Where to save RPM[s]
-    :param latest: Download the latest RPM if True else oldest RPM will be
-        downloaded.
     """
-    ps = fetch_rpm_infos(label)
-    pkg = ps[0]  # Select the head of the list
+    url = RS.call("packages.getPackageUrl", [pkg["id"]], ["--no-cache"])[0]
+    logging.info("RPM URL: " + ', '.join(url))
 
-    urls = RS.call("packages.getPackageUrl", [pkg["id"]], ["--no-cache"])
-    logging.info("RPM URLs: " + ', '.join(urls))
-
-    url = urls[0]  # Likewise
     return urlgrabber.urlgrab(url, os.path.join(outdir, os.path.basename(url)))
 
 
-def option_parser():
-    defaults = dict(verbose=False, input=None, sw_options=[])
+def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[]):
+    """
+    """
+    if not rpmsdir.startswith(os.path.sep):  # relative path.
+        rpmsdir = os.path.abspath(rpmsdir)
 
-    p = optparse.OptionParser()
+    labels = RI.load_packages(rpmlist_path)
+    pss = RI.identify_rpms(labels, details=True, newer=False, options=options)
+
+    # Pick up oldest from each ps if len(ps) > 1.
+    rpm_paths = [os.path.join(rpmsdir, ps[0]['path']) for ps in pss if ps]
+
+    install_rpms(rpm_paths, root)
+
+
+def option_parser():
+    defaults = dict(verbose=False, sw_options=[], rpmsdir=os.curdir,
+                    root=os.curdir)
+
+    p = optparse.OptionParser("Usage: %prog [Options] RPMS_LIST")
     p.set_defaults(**defaults)
-    p.add_option("-i", "--input",
-                 help="Packages list file (output of 'rpm -qa')")
+
+    p.add_option("", "--rpmsdir", help="Top dir RPMs are [%default]")
+    p.add_option("", "--root",
+                 help="Root dir of RPM DBs will be created [%default]")
     p.add_option("", "--sw-options", action="append",
                  help="Options passed to swapi, can be specified multiple"
                       "times.")
@@ -87,6 +154,14 @@ def main():
     if not args:
         p.print_usage()
         sys.exit(1)
+
+    rpmlist_path = args[0]
+
+    if not os.path.exists(os.path.join(options.rpmsdir, 'redhat')):
+        print("RPMs dir does not look exist under: " + options.rpmsdir)
+        sys.exit(1)
+
+    make_rpmdb(rpmlist_path, options.rpmsdir, options.root, options.sw_options)
 
 
 if __name__ == "__main__":
