@@ -3,10 +3,14 @@
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 # License: GPLv3+
 #
+from logging import DEBUG, INFO
+
 import rpmkit.identrpm as RI
 import rpmkit.swapi as RS
+import rpmkit.utils as RU
 import logging
 import multiprocessing
+import operator
 import optparse
 import os.path
 import os
@@ -24,7 +28,7 @@ def fetch_rpm_path_g(label):
     pkgs = RI.identify(label, True)
     for p in pkgs:
         if 'path' not in p:
-            pd = RS.call("packages.getDetails", [pkg['id']])
+            pd = RS.call("packages.getDetails", [p['id']])
             p.update(pd)
 
         yield p
@@ -34,7 +38,8 @@ def fetch_rpm_infos(label):
     """
     :param label: RPM package label
     """
-    ps = sorted(fetch_rpm_path_g(label), key=itemgetter('epoch'), reverse=True)
+    ps = sorted(fetch_rpm_path_g(label), key=operator.itemgetter('epoch'),
+                reverse=True)
 
     m0 = "Candidate RPMs: %(name)s-%(version)s.%(release)s.%(arch)s" % ps[0]
     logging.info(m0 + "epochs=%s" % ', '.join(str(p['epoch']) for p in ps))
