@@ -3,6 +3,10 @@
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 # License: GPLv3+
 #
+"""
+Make up RPM database files from a RPMs list such like `rpm -qa` outputs,
+installed-rpms file in sosreport outputs, etc.
+"""
 from logging import DEBUG, INFO
 
 import rpmkit.identrpm as RI
