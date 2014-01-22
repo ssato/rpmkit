@@ -286,11 +286,12 @@ def identify(label, details=False, options=[]):
         version, release, arch and epoch.
     """
     p = parse_rpm_label(label)
-    logging.info(" Guessd p=" + str(p))
+    logging.info("Guessd p=" + str(p))
 
     if not p:
         logging.error("Failed to parse given RPM label: " + label)
-        return []
+        return [dict(label=label, name=None, version=None, release=None,
+                     epoch=None, arch=None)]
 
     keys = ('name', 'version', 'release', 'epoch', 'arch')
     if not details and all(k in p for k in keys):
@@ -354,14 +355,25 @@ def load_packages(pf):
 _NCPUS = multiprocessing.cpu_count()
 
 
-def filter_out_not_resolved_rpms_g(labels, pss, newer):
+def filter_out_not_resolved_rpms_g(labels, pss, newer, return_failed=False):
     """
+    :param labels: A list of RPM labels
+    :param pss: A list of list of dicts of RPM basic information
+    :param newer: Sort by epochs; older is prior to newers
+    :param return_failed: Yield label of RPMs failed to resolve instead of
+        suceed ones if True
+
+    see also :function:`identify`
     """
     for label, ps in itertools.izip(labels, pss):
-        if ps:
-            yield sorted(ps, key=operator.itemgetter("epoch"), reverse=newer)
+        if not ps or (len(ps) == 1 and ps[0].get('name') is None):
+            if return_failed:
+                logging.warn("Failed to parse or fetch info: " + label)
+                yield label
         else:
-            logging.warn("Failed to parse: " + label)
+            if not return_failed:
+                yield sorted(ps, key=operator.itemgetter("epoch"),
+                             reverse=newer)
 
 
 def identify_rpms(labels, details=False, newer=True, options=[],
@@ -383,8 +395,12 @@ def identify_rpms(labels, details=False, newer=True, options=[],
     else:
         pss = [identify(label, details, options) for label in labels]
 
-    logging.info("%d RPMs sets found in the list" % len(pss))
-    return list(filter_out_not_resolved_rpms_g(labels, pss, newer))
+    resolved = list(filter_out_not_resolved_rpms_g(labels, pss, newer))
+    failed = list(filter_out_not_resolved_rpms_g(labels, pss, newer, True))
+    logging.info("%d RPMs sets found in the list: resolved=%d, "
+                 "failed=%d" % (len(pss), len(resolved), len(failed)))
+
+    return (resolved, failed)
 
 
 def init_log(verbose):
@@ -480,8 +496,8 @@ autoconf: A GNU tool for automatically configuring source code.
             p.print_usage()
             sys.exit(1)
 
-    pss = identify_rpms(packages, options.details, options.latest,
-                        options.sw_options)
+    (pss, failed) = identify_rpms(packages, options.details, options.latest,
+                                  options.sw_options)
     if options.all:
         print_outputs(RU.concat(pss), options.format, options.output)
     else:
