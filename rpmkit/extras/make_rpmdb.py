@@ -169,9 +169,9 @@ def main():
 
     rpmlist_path = args[0]
 
-    if not os.path.exists(os.path.join(options.rpmsdir, 'redhat')):
-        print("RPMs dir does not look exist under: " + options.rpmsdir)
-        sys.exit(1)
+    #if not os.path.exists(os.path.join(options.rpmsdir, 'redhat')):
+    #   print("RPMs dir does not look exist under: " + options.rpmsdir)
+    #   sys.exit(1)
 
     make_rpmdb(rpmlist_path, options.rpmsdir, options.root, options.sw_options,
                options.dryrun)
