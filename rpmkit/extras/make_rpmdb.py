@@ -10,9 +10,9 @@ installed-rpms file in sosreport outputs, etc.
 from logging import DEBUG, INFO
 
 import rpmkit.identrpm as RI
+import rpmkit.rpmutils as RR
 import rpmkit.swapi as RS
 import rpmkit.utils as RU
-import rpmkit.rpmutils as RR
 import logging
 import multiprocessing
 import operator
