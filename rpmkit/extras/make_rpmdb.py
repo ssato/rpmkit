@@ -124,13 +124,17 @@ def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[],
         rpmsdir = os.path.abspath(rpmsdir)
 
     labels = RI.load_packages(rpmlist_path)
-    pss = RI.identify_rpms(labels, details=True, newer=False, options=options)
+    (pss, failed) = RI.identify_rpms(labels, details=True, newer=False,
+                                     options=options)
 
     # Pick up oldest from each ps if len(ps) > 1.
     rpm_paths = [os.path.join(rpmsdir, ps[0]['path']) for ps in pss if ps]
 
+    logging.warn("%d RPMs not resolved: %s" % (len(failed), ', '.join(failed)))
+
     if dryrun:
         logging.info("Just print out commands may do same things: ")
+
         for p in rpm_paths:
             print("rpm --force --nodeps --justdb --root %s %s" % (root, p))
     else:
