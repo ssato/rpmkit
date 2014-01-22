@@ -112,7 +112,8 @@ def download_rpms(pkg, outdir):
     return urlgrabber.urlgrab(url, os.path.join(outdir, os.path.basename(url)))
 
 
-def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[]):
+def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[],
+               dryrun=False):
     """
     """
     if not rpmsdir.startswith(os.path.sep):  # relative path.
@@ -124,16 +125,24 @@ def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[]):
     # Pick up oldest from each ps if len(ps) > 1.
     rpm_paths = [os.path.join(rpmsdir, ps[0]['path']) for ps in pss if ps]
 
-    install_rpms(rpm_paths, root)
+    if dryrun:
+        logging.info("Just print out commands may do same things: ")
+        for p in rpm_paths:
+            print("rpm --force --nodeps --justdb --root %s %s" % (root, p))
+    else:
+        install_rpms(rpm_paths, root)
 
 
 def option_parser():
     defaults = dict(verbose=False, sw_options=[], rpmsdir=os.curdir,
-                    root=os.curdir)
+                    root=os.curdir, dryrun=False)
 
     p = optparse.OptionParser("Usage: %prog [Options] RPMS_LIST")
     p.set_defaults(**defaults)
 
+    p.add_option("", "--dryrun", action="store_true",
+                 help="Do not install RPMs and make RPM database files "
+                      "actually and print out commands have same effects")
     p.add_option("", "--rpmsdir", help="Top dir RPMs are [%default]")
     p.add_option("", "--root",
                  help="Root dir of RPM DBs will be created [%default]")
@@ -160,7 +169,8 @@ def main():
         print("RPMs dir does not look exist under: " + options.rpmsdir)
         sys.exit(1)
 
-    make_rpmdb(rpmlist_path, options.rpmsdir, options.root, options.sw_options)
+    make_rpmdb(rpmlist_path, options.rpmsdir, options.root, options.sw_options,
+               options.dryrun)
 
 
 if __name__ == "__main__":
