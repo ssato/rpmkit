@@ -383,10 +383,7 @@ def identify_rpms(labels, details=False, newer=True, options=[],
     else:
         pss = [identify(label, details, options) for label in labels]
 
-    for label, ps in itertools.izip(labels, pss):
-        if not ps:
-            logging.warn("Failed to parse: " + label)
-
+    logging.info("%d RPMs sets found in the list" % len(pss))
     return list(filter_out_not_resolved_rpms_g(labels, pss, newer))
 
 
