@@ -24,9 +24,6 @@ import sys
 import urlgrabber
 
 
-RPMDB_SUBDIR = "var/lib/rpm"
-
-
 def read_rpm_header(ts, rpm_path):
     """
     :param ts: An initialized instance of rpm.TransactionSet
