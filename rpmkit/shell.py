@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011, 2012 Red Hat, Inc.
+# Copyright (C) 2011 - 2014 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -66,7 +66,7 @@ def _cleanup_process(pid):
         pass
 
 
-def _terminate(proc):
+def _terminate(proc, wait=1):
     """
     Force terminating the given proc :: subprocess.Popen
 
@@ -79,9 +79,9 @@ def _terminate(proc):
         return rc
 
     proc.terminate()
-    time.sleep(1)
-    rc = proc.poll()
+    time.sleep(wait)
 
+    rc = proc.poll()
     if rc is not None:
         return rc
 
