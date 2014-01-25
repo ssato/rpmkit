@@ -94,10 +94,10 @@ def load_package_groups_data_g(paths=[], data=_DATA_0,
 
             # TODO: Is 'type' of the packages (mandatory | default | optional)
             # to be checked?
-            inst_pkgs = RU.uniq2(p["name"] for p in grp.get("packages", [])
-                                 if grp["install_if"])
-            uninst_pkgs = RU.uniq2(p["name"] for p in grp.get("packages", [])
-                                   if not grp["install_if"])
+            inst_pkgs = RU.uniq((p["name"] for p in grp.get("packages", [])
+                                 if grp["install_if"]), use_set=True)
+            uninst_pkgs = RU.uniq((p["name"] for p in grp.get("packages", [])
+                                   if not grp["install_if"]), use_set=True)
             grp["install_pkgs"] = inst_pkgs
             grp["remove_pkgs"] = uninst_pkgs
 
