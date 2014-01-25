@@ -141,51 +141,40 @@ def _flatten(xss):
         return [xss]
 
 
-def _unique(xs, cmp=cmp, key=None):
-    """Returns new sorted list of no duplicated items.
-
-    >>> _unique([])
-    []
-    >>> _unique([0, 3, 1, 2, 1, 0, 4, 5])
-    [0, 1, 2, 3, 4, 5]
+def unique_(xs, sort=True, key=None, reverse=False, use_set=False):
     """
-    if xs == []:
-        return xs
+    Returns new list of no duplicated items.
+    If ``sort`` is True, result list will be sorted.
 
-    ys = sorted(xs, cmp=cmp, key=key)
+    :param xs: Any iterables such as a list, tuple and generator.
+    :param key: Key to compare items passed to :function:`sorted`
+        if ``sort`` is True.
+    :param reverse: Sorted result list reversed if ``sort`` is True.
+    :param use_set: Use :function:`set` to make unique items set if True.
+        It's much faster than naive implementation but items must be hash-able
+        objects as :function:`set` requires this as its inputs. Also, result
+        list will be sorted even if ``sort`` is not True in this case.
 
-    if ys == []:
-        return ys
-
-    ret = [ys[0]]
-
-    for y in ys[1:]:
-        if y == ret[-1]:
-            continue
-        ret.append(y)
-
-    return ret
-
-
-def uniq2(iterable, cmp=cmp, key=None, reverse=False, sort=True):
-    """
-    Safer version of the above.
-
-    >>> uniq2([])
+    >>> unique_([])
     []
-    >>> uniq2([0, 3, 1, 2, 1, 0, 4, 5])
+    >>> unique_([0, 3, 1, 2, 1, 0, 4, 5])
     [0, 1, 2, 3, 4, 5]
-    >>> uniq2([0, 3, 1, 2, 1, 0, 4, 5], reverse=True)
+    >>> unique_([0, 3, 1, 2, 1, 0, 4, 5], reverse=True)
     [5, 4, 3, 2, 1, 0]
-    >>> uniq2([0, 3, 1, 2, 1, 0, 4, 5], sort=False)
+    >>> unique_([0, 3, 1, 2, 1, 0, 4, 5], sort=False)
+    [0, 3, 1, 2, 4, 5]
+    >>> unique_((0, 3, 1, 2, 1, 0, 4, 5), sort=False)
     [0, 3, 1, 2, 4, 5]
     """
+    if use_set:
+        return sorted(set(xs), key=key, reverse=reverse)
+
     acc = []
-    for x in iterable:
+    for x in xs:
         if x not in acc:
             acc.append(x)
 
-    return sorted(acc, cmp, key, reverse) if sort else acc
+    return sorted(acc, key=key, reverse=reverse) if sort else acc
 
 
 def groupby_key(xs, keyfunc):
@@ -196,8 +185,9 @@ def groupby_key(xs, keyfunc):
 # FIXME: Looks like bad effects if memoized. Not memoized for a while
 concat = _concat
 flatten = _flatten
-unique = _unique
-uniq = _unique
+unique = unique_
+uniq = unique_
+uniq2 = unique_
 
 
 def uconcat(xss):
