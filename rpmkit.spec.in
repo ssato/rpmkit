@@ -82,7 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
-* Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.10.17-1
+* Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11-1
 - Deprecated rpmkit.rpms2sqldb and related tools
 - Removed deprecated Bunch module
 - Implemented downloads function in rpmkit.extras.list_latest_rpms (but very
