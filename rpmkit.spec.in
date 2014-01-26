@@ -82,7 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
-* Wed Jan  8 2014 Satoru SATOH <ssato@redhat.com> - 0.2.10.16.99-1
+* Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.10.17-1
 - Deprecated rpmkit.rpms2sqldb and related tools
 - Removed deprecated Bunch module
 - Implemented downloads function in rpmkit.extras.list_latest_rpms (but very
@@ -100,6 +100,7 @@ rm -rf $RPM_BUILD_ROOT
 - Make use of anyconfig to support various output formats in rk-fake_yum
 - Add --use-dnf option to use DNF (hawkey/libsolv) as a RPM dependency resolver
   backend to fake_yum
+- Deprecated rpmkit.utils.uniq*
 - Add pylint checks in tests driver script
 - Fixed many PEP8 and pylint errors and warnings
 
