@@ -1,7 +1,7 @@
 #
 # minifyrpms.py - Minify given rpm list
 #
-# Copyright (C) 2012, 2013 Red Hat, Inc.
+# Copyright (C) 2012 - 2014 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from rpmkit.identrpm import load_packages, parse_package_label
 from rpmkit.utils import concat, uniq, uconcat
 
 from itertools import izip, repeat
 from logging import DEBUG, INFO
 from operator import itemgetter
 
+import rpmkit.identrpm as RI
 import rpmkit.extras.repodata as RR
 import anyconfig
 import logging
@@ -94,10 +94,10 @@ def get_packages_from_file(rpmlist, parse=True):
     :param rpmlist: Rpm list file, maybe output of `rpm -qa`
     :param parse: The list is package labels and must be parsed if True
     """
-    l2n = lambda l: parse_package_label(l).get("name")
+    l2n = lambda l: RI.parse_rpm_label(l).get("name")
     f = l2n if parse else _id
 
-    return [f(x) for x in load_packages(rpmlist)]
+    return [f(x) for x in RI.load_packages(rpmlist)]
 
 
 def minify_packages(requires, packages):
