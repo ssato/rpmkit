@@ -55,8 +55,10 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/{default,rhel-6-x86_64}
 (cd $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/default && ln -s ../rhel-6-x86_64/00_server.yml ./)
 
+%if 0%{?rhel} && 0%{?rhel} <= 5
 %clean
 rm -rf $RPM_BUILD_ROOT
+%endif
 
 %files
 %defattr(-,root,root,-)
