@@ -76,7 +76,9 @@ def parse_rpm_label(label, epoch=0, arch_reg=_ARCH_REG, nvr_reg=_NVR_REG):
     :param nvr_reg: Regex pattern of RPM's name, version and release
     :param nv_reg: Regex pattern of RPM's name and version
 
-    :return: A dict contains RPM's basic information or None (parse error)
+    :return: A dict contains RPM's basic information or None (parse error). If
+        it's a dict, the dict must have keys (name, version, release) and may
+        have keys (arch and epoch).
 
     Possible format of RPM labels may be:
 
@@ -180,18 +182,42 @@ def parse_rpm_label(label, epoch=0, arch_reg=_ARCH_REG, nvr_reg=_NVR_REG):
     return None
 
 
+def __validate_pkg(pkg, keys=[]):
+    """
+    Check if given pkg object is expected type (dict or dict-like) and has
+    necessary keys.
+
+    NOTE: This function is effectful, that is, it will raise AssertionError if
+    any of checks failed to pass.
+
+    :param pkg: A dict contains RPM basic information:
+        * Must: name, version and release
+        * May: arch and epoch
+    :param keys: Extra dict keys to check
+    """
+    assert isinstance(pkg, dict), \
+        "Passed pkg object is not dict[-like] object: " + str(pkg)
+
+    mfmt = "Passed pkg object is missing '%s': "  + str(pkg)
+    for key in ['name', 'version', 'release'] + keys:
+        assert key in pkg, mfmt % key
+
+
 def find_rpm_by_nvrea(pkg, options=[]):
     """
-    :param pkg: A dict contains RPM basic information such as name, version,
-        release, ...
+    :param pkg: A dict contains RPM basic information:
+        * Must: name, version and release
+        * Should/May: arch and epoch
     :param options: List of option strings passed to
         :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
 
-    :return: List of another pkg dicts
+    :return: List of resolved pkg dicts
 
     see also: http://red.ht/1jgCNCh
     """
-    epoch = ' ' if pkg['epoch'] == 0 else pkg['epoch']
+    __validate_pkg(pkg, ['arch'])
+
+    epoch = ' ' if pkg.get('epoch', 0) == 0 else pkg['epoch']
     api_args = [pkg['name'], pkg['version'], pkg['release'], epoch,
                 pkg['arch']]
     try:
@@ -202,8 +228,9 @@ def find_rpm_by_nvrea(pkg, options=[]):
 
 def find_rpm_by_search(pkg, options=[]):
     """
-    :param pkg: A dict contains RPM basic information such as name, version,
-        release, ...
+    :param pkg: A dict contains RPM basic information:
+        * Must: name, version and release
+        * Should/May: arch and epoch
     :param options: List of option strings passed to
         :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
 
@@ -211,7 +238,8 @@ def find_rpm_by_search(pkg, options=[]):
 
     see also: http://red.ht/1dIs967
     """
-    epoch = ' ' if pkg['epoch'] == 0 else pkg['epoch']
+    __validate_pkg(pkg)
+
     arg_fmt = "name:%(name)s AND version:%(version)s AND release:%(release)s"
 
     if pkg.get('epoch', 0) != 0:
@@ -237,6 +265,8 @@ def complement_rpm_metadata(pkg, options=[]):
 
     :return: Updated dict
     """
+    __validate_pkg(pkg)
+
     def _normalize(p):
         if 'arch_label' in p and 'arch' not in p:
             p['arch'] = p['arch_label']
