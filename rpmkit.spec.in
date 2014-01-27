@@ -10,7 +10,6 @@ Group:          Development/Tools
 License:        GPLv3+
 URL:            https://github.com/ssato/rpmkit
 Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version}.tar.gz
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  python
 BuildRequires:  /usr/bin/pygettext.py
@@ -53,8 +52,10 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/{default,rhel-6-x86_64}
 (cd $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/default && ln -s ../rhel-6-x86_64/00_server.yml ./)
 
+%if 0%{?rhel} && 0%{?rhel} <= 5
 %clean
 rm -rf $RPM_BUILD_ROOT
+%endif
 
 %files
 %defattr(-,root,root,-)
