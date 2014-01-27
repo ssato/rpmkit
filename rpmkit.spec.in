@@ -10,7 +10,9 @@ Group:          Development/Tools
 License:        GPLv3+
 URL:            https://github.com/ssato/rpmkit
 Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version}.tar.gz
+%if 0%{?rhel} && 0%{?rhel} <= 5
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+%endif
 BuildArch:      noarch
 BuildRequires:  python
 BuildRequires:  /usr/bin/pygettext.py
