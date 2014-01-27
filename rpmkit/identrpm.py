@@ -43,19 +43,6 @@ _NV_REG = re.compile(_NV_REG_BASE + r'$')
 _NVR_REG = re.compile(_NV_REG_BASE + r"-(?P<release>[^-]+)$")
 
 
-def uniq(xs, sort=False):
-    """
-    :param xs: Iterable object :: list, tuple, generator, etc.
-    :param sort: Result will be sorted if True
-
-    >>> uniq((1, 3, 0, 5, -1))
-    [0, 1, 3, 5, -1]
-    >>> uniq((1, 3, 0, 5, -1), True)
-    [-1, 0, 1, 3, 5]
-    """
-    return (sorted if sort else list)(set(xs))
-
-
 def pkg_eq(pkg0, pkg1):
     """
     Compare a couple of dict contains RPM basic information (N, V, R, A, E).
@@ -346,7 +333,7 @@ def load_packages(pf):
 
     :param pf: Packages list file.
     """
-    labels = uniq(load_packages_g(pf))
+    labels = RU.uniq(load_packages_g(pf))
     logging.info("Loaded %d RPM labels from %s" % (len(labels), pf))
 
     return labels
