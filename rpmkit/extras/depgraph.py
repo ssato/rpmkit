@@ -22,7 +22,7 @@ from jinja2_cli.render import render
 import rpmkit.memoize as RM
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
-import rpmkit.shell2 as SH
+import rpmkit.shell as SH
 
 import datetime
 import logging
