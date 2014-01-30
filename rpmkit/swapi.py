@@ -11,7 +11,6 @@
 # along with this software; if not, see
 # http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt.
 #
-#
 # [Features]
 #
 # * Can call every Spacewalk/RHN RPC APIs with or without arguments from
@@ -105,7 +104,6 @@ except ImportError:
             return cache[key]
 
         return wrapped
-
 
 """
 Examples:
@@ -213,7 +211,6 @@ $
 
 """
 
-
 PROTO = 'https'
 TIMEOUT = 900
 
@@ -224,7 +221,6 @@ CONFIG_FILES = glob.glob("/etc/swapi.d/*.conf") + [CONFIG]
 SYSTEM_CACHE_DIR = "/var/cache/swapi"
 CACHE_DIR = os.path.join(CONFIG_DIR, 'cache')
 CACHE_EXPIRING_DATES = 1  # [days]
-
 
 ## Cache expiration dates for each APIs:
 API_CACHE_EXPIRATIONS = {
