@@ -676,9 +676,8 @@ def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
         val = metric["metrics"].get(m, False)
 
         if not val:
-            logging.error(
-                "Uknown value for CVSS metric '%s': %s" % (metric, m)
-            )
+            logging.error("Uknown value for CVSS metric '%s': %s" %
+                          (metric, m))
             return metrics
 
         metrics.append((label, val))
@@ -721,7 +720,7 @@ def get_cvss_for_cve(cve):
                     url=url_fmt % (cve, cvss_base_metrics))
 
     except Exception, e:
-        logging.warn(" Could not get CVSS data: err=" + str(e))
+        logging.warn("Could not get CVSS data: err=" + str(e))
 
     return None
 
@@ -778,7 +777,7 @@ def get_all_cve_g(raw=False):
                 yield d
 
     except Exception, e:
-        logging.warn(" Could not get CVE and CVSS data: err=" + str(e))
+        logging.warn("Could not get CVE and CVSS data: err=" + str(e))
         yield  # None
 
 
@@ -820,14 +819,14 @@ def get_all_errata_g(raw=False):
                     (adv, cves, cpe) = line.split()
                     assert cves.startswith(cve_prefix)
 
-                    yield {"advisory": adv, "cves": cves.split(","), }
+                    yield dict(advisory=adv, cves=cves.split(','))
 
                 except (IndexError, AssertionError):
                     logging.warn("Invalid line: " + line)
                     continue
 
     except Exception, e:
-        logging.warn(" Could not get Errata vs. CVEs data: err=" + str(e))
+        logging.warn("Could not get Errata vs. CVEs data: err=" + str(e))
 
 
 def get_all_errata(raw=False):
@@ -849,7 +848,7 @@ def get_bugzilla_info(bzid, *keys):
         keys = _BZ_KEYS
 
     try:
-        ofs = "\n".join('%s %%{%s}' % (k, k) for k in keys)
+        ofs = '\n'.join('%s %%{%s}' % (k, k) for k in keys)
 
         # wait a little to avoid DoS attack to the server if called
         # multiple times.
@@ -915,11 +914,11 @@ class Cache(object):
     def path(self, obj):
         """Resolve path to cache file of the object.
         """
-        return os.path.join(self.dir(obj), "cache.pkl")
+        return os.path.join(self.dir(obj), 'cache.pkl')
 
     def load(self, obj):
         try:
-            return pickle.load(open(self.path(obj), "rb"))
+            return pickle.load(open(self.path(obj), 'rb'))
         except:
             return None
 
@@ -938,7 +937,7 @@ class Cache(object):
         try:
             # TODO: How to detect errors during/after pickle.dump.
             pickle.dump(data, open(cache_path, "wb"), protocol)
-            logging.debug(" Saved in " + cache_path)
+            logging.debug("Saved in " + cache_path)
             return True
         except:
             return False
@@ -950,7 +949,7 @@ class Cache(object):
         """
         key = obj2key(obj)
         expires = self.expirations.get(key, 0)  # Default: no cache
-        logging.debug(" Expiration dates for %s: %d" % (key, expires))
+        logging.debug("Expiration dates for %s: %d" % (key, expires))
 
         if expires == 0:  # it means never cache.
             return True
@@ -959,7 +958,7 @@ class Cache(object):
             return False
 
         if not os.path.exists(self.path(obj)):
-            logging.debug(" Cache file not found for " + str(obj))
+            logging.debug("Cache file not found for " + str(obj))
             return True
 
         try:
@@ -980,11 +979,11 @@ class Cache(object):
 class ReadOnlyCache(Cache):
 
     def save(self, *args, **kwargs):
-        logging.debug(" Not save as read-only cache: " + self.topdir)
+        logging.debug("Not save as read-only cache: " + self.topdir)
         return True
 
     def needs_update(self, *args, **kwargs):
-        logging.debug(" No updates needed as read-only cache: " + self.topdir)
+        logging.debug("No updates needed as read-only cache: " + self.topdir)
         return False
 
 
@@ -1023,10 +1022,8 @@ class RpcApi(object):
             cachecls = ReadOnlyCache if self.readonly else Cache
             cdomain = str_to_id("%s:%s" % (self.url, self.userid))
 
-            self.caches = [
-                ReadOnlyCache(cdomain, SYSTEM_CACHE_DIR),
-                cachecls(cdomain, cachedir),
-            ]
+            self.caches = [ReadOnlyCache(cdomain, SYSTEM_CACHE_DIR),
+                           cachecls(cdomain, cachedir)]
         else:
             self.caches = []
 
@@ -1063,7 +1060,7 @@ class RpcApi(object):
             return None
 
         for cache in self.caches:
-            logging.debug(" Try the cache: " + cache.topdir)
+            logging.debug("Try the cache: " + cache.topdir)
             if not self.cacheonly and cache.needs_update(key, obj2key):
                 logging.debug("Cached result is old and not "
                               "used: " + str(key))
@@ -1092,7 +1089,7 @@ class RpcApi(object):
         return ret
 
     def call(self, method_name, *args):
-        logging.debug(" Call: api=%s, args=%s" % (method_name, str(args)))
+        logging.debug("Call: api=%s, args=%s" % (method_name, str(args)))
         key = self.ma_to_key(method_name, args)
 
         if self.caches:
@@ -1100,7 +1097,7 @@ class RpcApi(object):
 
             if ret is None:
                 if self.cacheonly:
-                    logging.warn(" Cache-only mode but got no results!")
+                    logging.warn("Cache-only mode but got no results!")
                     return None
             else:
                 return ret
@@ -1113,7 +1110,7 @@ class RpcApi(object):
             return self.call_virtual_api(method_name, *args)
 
         try:
-            logging.debug(" Try accessing the server to get results")
+            logging.debug("Try accessing the server to get results")
             if self.sid is None:
                 self.login()
 
@@ -1233,9 +1230,8 @@ def results_to_json_str(results, indent=2):
     >>> results_to_json_str([123, "abc", {'x': "yz"}])
     '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
     """
-    return json.dumps(
-        results, ensure_ascii=False, indent=indent, cls=JSONEncoder
-    )
+    return json.dumps(results, ensure_ascii=False, indent=indent,
+                      cls=JSONEncoder)
 
 
 def parse_list_str(list_s, sep=","):
@@ -1312,10 +1308,10 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
         config_files = CONFIG_FILES
 
     cp = configparser.SafeConfigParser()
-    logging.debug(" Loading config files: %s" % ",".join(config_files))
+    logging.debug("Loading config files: %s" % ",".join(config_files))
 
     if profile:
-        logging.debug(" Config profile: " + profile)
+        logging.debug("Config profile: " + profile)
 
     for cfg in config_files:
         if not os.path.exists(cfg):
@@ -1531,10 +1527,9 @@ def init_log(verbose):
 def init_rpcapi(options):
     params = configure(options)
     init_log(options.verbose)
-    rapi = RpcApi(
-        params, not options.no_cache, options.cachedir, options.rpcdebug,
-        options.readonly, options.cacheonly, options.force,
-    )
+    rapi = RpcApi(params, not options.no_cache, options.cachedir,
+                  options.rpcdebug, options.readonly, options.cacheonly,
+                  options.force)
     return rapi
 
 
@@ -1594,16 +1589,15 @@ def main(argv, tablib_found=TABLIB_FOUND):
         return (sorted(API_CACHE_EXPIRATIONS.keys()), options)
 
     if options.no_cache and options.cacheonly:
-        logging.error(
-            " Conflicted options were given: --no-cache and --cacheonly"
-        )
+        logging.error("Conflicted options were given: --no-cache and "
+                      "--cacheonly")
         return None
 
     # FIXME: Breaks DRY principle:
     if tablib_found:
         ofs = ("xls", "xlsx", "ods")
         if options.output_format in ofs and options.output == "stdout":
-            logging.error(" Output format '%s' requires output but not "
+            logging.error("Output format '%s' requires output but not "
                           "specified w/ --output "
                           "option" % options.output_format)
             return None
@@ -1616,9 +1610,8 @@ def main(argv, tablib_found=TABLIB_FOUND):
     rapi = init_rpcapi(options)
 
     if options.force:
-        logging.info(
-            "Caches will be updated regardless of its expiration dates"
-        )
+        logging.info("Caches will be updated regardless of its "
+                     "expiration dates")
 
     if options.list_args:
         list_args = parse_api_args(options.list_args)
@@ -1646,9 +1639,8 @@ def main(argv, tablib_found=TABLIB_FOUND):
         kvs = parse_list_str(options.select, ":")
 
         if len(kvs) < 2:
-            sys.stderr.write(
-                "Invalid value given for --select: %s\n" % options.select
-            )
+            sys.stderr.write("Invalid value given for --select: "
+                             "%s\n" % options.select)
             sys.exit(1)
 
         (key, values) = kvs
@@ -1659,9 +1651,8 @@ def main(argv, tablib_found=TABLIB_FOUND):
         kvs = parse_list_str(options.deselect, ":")
 
         if len(kvs) < 2:
-            sys.stderr.write(
-                "Invalid value given for --deselect: %s\n" % options.deselect
-            )
+            sys.stderr.write("Invalid value given for --deselect: "
+                             "%s\n" % options.deselect)
             sys.exit(1)
 
         (key, values) = kvs
@@ -1701,7 +1692,7 @@ def realmain(argv, tablib_found=TABLIB_FOUND):
                     data.append(r.values())
 
             ofs = ("xls", "xlsx", "ods")
-            flg = "wb" if options.output_format in ofs else "w"
+            flg = 'wb' if options.output_format in ofs else 'w'
 
             with open(options.output, flg) as f:
                 content = getattr(data, options.output_format)
