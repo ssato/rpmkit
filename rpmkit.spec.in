@@ -86,6 +86,11 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
+* Thu Jan 30 2014 Satoru SATOH <ssato@redhat.com> - 0.2.12-1
+- Remove runtime dependency to gevent and implement some alternative routines
+  with using multiprocessing module
+- Fixed some more PEP8 and pylint errors and warnings
+
 * Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11-1
 - Deprecated rpmkit.rpms2sqldb and related tools
 - Removed deprecated Bunch module
