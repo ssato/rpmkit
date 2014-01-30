@@ -18,24 +18,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 import rpmkit.swapi as RS
-
+import rpmkit.utils as RU
 import base64
 import datetime
-import gevent
 import logging
 import optparse
 import os
 import os.path
 import sys
-
-
-def swapicall(cmd):
-    """
-    swapi (SpaceWalk API library) main() wrapper.
-
-    :param cmd: command args :: [str]
-    """
-    return RS.main(cmd)[0]
 
 
 def list_latest_packages_in_the_channel_g(channel, details=True):
@@ -45,12 +35,10 @@ def list_latest_packages_in_the_channel_g(channel, details=True):
         "packages.getDetails".
     :yield: A dict of RPM information
     """
-    for r in swapicall(["-A", channel, "channel.software.listLatestPackages"]):
+    for r in RS.call("channel.software.listLatestPackages", (channel, )):
         if details:
             logging.info("Try to get more detailed info: pid=" + str(r["id"]))
-            args = ["-A", str(r["id"]), "packages.getDetails"]
-            logging.debug("swapi::args: " + str(args))
-            yield swapicall(args)[0]
+            yield RS.call("packages.getDetails", (r['id'], ))[0]
         else:
             yield r
 
@@ -64,17 +52,18 @@ def get_filepath_of_rpm_on_satellite(rpminfo, topdir="/var/satellite"):
     return os.path.join(topdir, rpminfo["path"])
 
 
-def download_rpm(rpminfo, outdir):
+def download_rpm(args):
     """
     NOTE: Requires the info gotten by the RHN API "packages.getDetails".
     """
+    (rpminfo, outdir) = args
     assert "id" in rpminfo, \
         "'id' info is necessary to download RPM: " + str(rpminfo)
     assert "file" in rpminfo, \
         "'file' info is necessary to download RPM: " + str(rpminfo)
 
     logging.info("Try to download the RPM: " + rpminfo["file"])
-    b64s = swapicall(["-A", str(rpminfo["id"]), "packages.getPackage"])
+    b64s = RS.call("packages.getPackage", (rpminfo['id'], ))[0]
 
     with open(os.path.join(outdir, rpminfo["file"]), 'wb') as o:
         o.write(base64.decodestring(b64s))
@@ -121,15 +110,13 @@ def main(argv=sys.argv):
         os.makedirs(options.outdir)
 
     if options.download:
-        def _downloads(channel=channel, outdir=options.outdir):
-            for rpm in list_latest_packages_in_the_channel_g(channel):
-                yield gevent.spawn(download_rpm, rpm, outdir)
-
-        gevent.joinall(_downloads())
+        _res = RU.pcall(download_rpm,
+                        [(rpm, options.outdir) for rpm in
+                         list_latest_packages_in_the_channel_g(channel, True)])
     else:
         fn = "latest_rpm_paths_on_satellite.txt"
         with open(os.path.join(options.outdir, fn), 'w') as out:
-            for rpm in list_latest_packages_in_the_channel_g(channel):
+            for rpm in list_latest_packages_in_the_channel_g(channel, True):
                 out.write(get_filepath_of_rpm_on_satellite(rpm) + '\n')
 
 
