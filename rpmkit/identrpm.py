@@ -198,7 +198,7 @@ def __validate_pkg(pkg, keys=[]):
     assert isinstance(pkg, dict), \
         "Passed pkg object is not dict[-like] object: " + str(pkg)
 
-    mfmt = "Passed pkg object is missing '%s': "  + str(pkg)
+    mfmt = "Passed pkg object is missing '%s': " + str(pkg)
     for key in ['name', 'version', 'release'] + keys:
         assert key in pkg, mfmt % key
 
