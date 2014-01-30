@@ -24,6 +24,7 @@ import codecs
 import datetime
 import itertools
 import logging
+import multiprocessing
 import operator
 import os.path
 import re
@@ -466,5 +467,31 @@ def init_log(level):
     #anyconfig.set_loglevel(level)
     logging.basicConfig(format="%(asctime)s %(name)s: [%(levelname)s] "
                         "%(message)s")
+
+
+NPROCS = multiprocessing.cpu_count() * 2
+
+
+def pcall(func, datasets, n=NPROCS):
+    """
+    Run specified function in parallel.
+
+    :param func: Any callable object
+    :param datasets: [data_passed_to_func]
+    :param n: Number of process run in parallel :: int
+    """
+    assert callable(func)
+
+    if n == 1:
+        return [func(ds) for ds in datasets]
+
+    pool = multiprocessing.Pool(processes=n)
+    results = pool.map(func, datasets)
+
+    # Are these needed ?
+    pool.close()
+    pool.join()
+
+    return results
 
 # vim:sw=4:ts=4:et:

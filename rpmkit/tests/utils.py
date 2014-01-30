@@ -15,31 +15,43 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.utils as U
+import rpmkit.utils as TT
+import functools
+import operator
 import unittest
+
+
+def plus(xs):
+    for x in xs:
+        assert isinstance(x, (int, float)), "not add-able object: " + str(x)
+
+    return functools.reduce(operator.add, xs)
 
 
 class Test_00(unittest.TestCase):
 
     def test_00_typecheck(self):
-        U.typecheck("aaa", str)
-        U.typecheck(1, int)
-        U.typecheck({}, dict)
+        TT.typecheck("aaa", str)
+        TT.typecheck(1, int)
+        TT.typecheck({}, dict)
 
         class A(object):
             pass
 
-        U.typecheck(A(), A)
+        TT.typecheck(A(), A)
 
         with self.assertRaises(TypeError) as cm:
-            U.typecheck(A(), str)
+            TT.typecheck(A(), str)
 
     def test_20_is_local(self):
-        self.assertTrue(U.is_local("localhost"))
-        self.assertTrue(U.is_local("localhost.localdomain"))
+        self.assertTrue(TT.is_local("localhost"))
+        self.assertTrue(TT.is_local("localhost.localdomain"))
 
-        self.assertFalse(U.is_local("repo-server.example.com"))
-        self.assertFalse(U.is_local("127.0.0.1"))  # special case
+        self.assertFalse(TT.is_local("repo-server.example.com"))
+        self.assertFalse(TT.is_local("127.0.0.1"))  # special case
 
+    def test_90_pcall(self):
+        res = TT.pcall(plus, [(1, 2), (2, 3, 4)], 2)
+        self.assertEquals(res, [3, 9])
 
 # vim:sw=4 ts=4 et:
