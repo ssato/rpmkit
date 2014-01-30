@@ -28,6 +28,7 @@ import multiprocessing
 import operator
 import os.path
 import re
+import subprocess
 
 try:
     from functools import reduce as foldl
@@ -467,6 +468,44 @@ def init_log(level):
     #anyconfig.set_loglevel(level)
     logging.basicConfig(format="%(asctime)s %(name)s: [%(levelname)s] "
                         "%(message)s")
+
+
+def call_async(func, args):
+    """
+    :param func: Any callable object
+    :param args: Arguments will be passed to the callable ``func``
+
+    :return: A multiprocessing.Process instance
+    """
+    proc = multiprocessing.Process(target=func, args=args)
+    proc.start()
+
+    return proc
+
+
+def run_cmd(cmd, workdir):
+    """
+    Run given command ``cmd`` in the dir, ``workdir``.
+
+    :param cmd: Command string to run
+    :param workdir: Working dir in which command run
+
+    :return: Result code by running the command
+    """
+    return subprocess.check_call(cmd, cwd=workdir, shell=True)
+
+
+def run_cmd_async(cmd, workdir=os.curdir):
+    """
+    Asynchronous version of :function:`run_cmd`.
+
+    :param cmd: Command string to run
+    :param workdir: Working dir in which command run
+
+    :return: A multiprocessing.Process instance
+    """
+    logging.debug("Run command in background: %s [%s]" % (cmd, workdir))
+    return call_async(run_cmd, args=(cmd, workdir))
 
 
 NPROCS = multiprocessing.cpu_count() * 2
