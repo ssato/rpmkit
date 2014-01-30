@@ -273,7 +273,7 @@ def setup_root(ppath, root=None, force=False, copy=False,
     if find and not ppath.endswith("Packages"):
         m = "Adjust ppath from " + ppath
         ppath = find_Packages_rpmdb(ppath)
-        logging.info(m + " to " + ppath)
+        logging.debug(m + " to " + ppath)
 
     ppath = os.path.normpath(ppath)
     prelpath = os.path.join(subdir, "Packages")
