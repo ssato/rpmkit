@@ -8,66 +8,11 @@
 #
 from logging import DEBUG, INFO
 
-import os
-import subprocess
-
-try:
-    import gevent
-
-    from gevent import monkey
-    monkey.patch_socket()
-
-    def run(cmd_s, workdir=os, timeout=None, stop_on_error=True):
-        """
-        :param cmd_s: Command string to execute.
-        :param workdir: Working dir to run command.
-        :param timeout: Time out to wait for the completion of running command,
-            or None
-        :param stop_on_error: Raise subprocess.CalledProcessError exception if
-            command execution was failed.
-
-        :return: True if succeeded to run command or if ``stop_on_error`` is
-            False.
-        """
-        job = gevent.spawn(subprocess.Popen, cmd_s, cwd=workdir, shell=True,
-                           stdout=subprocess.PIPE)
-        job.join(timeout)
-
-        if job.successful():
-            return True
-        else:
-            if stop_on_error:
-                raise subprocess.CalledProcessError("Failed to run: " + cmd_s)
-
-            return False
-
-except ImportError:
-    def run(cmd_s, workdir=os, timeout=None, stop_on_error=True):
-        """
-        :param cmd_s: Command string to execute.
-        :param workdir: Working dir to run command.
-        :param timeout: Time out to wait for the completion of running command,
-            or None
-        :param stop_on_error: Raise subprocess.CalledProcessError exception if
-            command execution was failed.
-
-        :return: True if succeeded to run command.
-        """
-        try:
-            subprocess.check_call(cmd_s, cwd=workdir, shell=True,
-                                  stdout=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            if stop_on_error:
-                #raise subprocess.CalledProcessError("Failed to run: " + cmd_s)
-                raise
-
-            return False
-
-        return True
-
+import rpmkit.utils as RU
 import logging
 import optparse
 import os.path
+import os
 import re
 import rpm
 import sys
@@ -153,7 +98,8 @@ def do_buildsrpm(rpmspec, workdir, timeout=None):
     cmd = ' '.join(cs) % dict(workdir=workdir, spec=rpmspec)
 
     logging.info("Creating src.rpm from %s in %s" % (rpmspec, workdir))
-    run(cmd, workdir=workdir, timeout=timeout, stop_on_error=True)
+    proc = RU.run_cmd_async(cmd, workdir)
+    proc.join(timeout)
 
 
 def main(argv=sys.argv):
