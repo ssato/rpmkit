@@ -61,9 +61,6 @@ def install_rpms(rpms, dbdir):
     :param dbdir: RPM DB topdir; RPM DB files will be created in
         ``dbdir``/var/lib/rpm.
     """
-    if not dbdir.startswith(os.path.sep):  # Relative path.
-        dbdir = os.path.abspath(dbdir)
-
     ts = RR.rpm_transactionset(dbdir, readonly=False)
 
     # Corresponding to combination of rpm options:
