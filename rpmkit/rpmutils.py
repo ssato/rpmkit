@@ -15,17 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from rpmkit.memoize import memoize
-from operator import itemgetter, attrgetter
+from operator import itemgetter
 
 import rpmkit.utils as RU
-import itertools as IT
+import rpmkit.memoize as RM
+import itertools
 import logging
+import operator
 import os
 import random
 import re
-import sys
 import rpm
+import sys
 import yum
 import yum.rpmsack
 
@@ -52,7 +53,7 @@ def _is_noarch(srpm):
     return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
 
 
-is_noarch = memoize(_is_noarch)
+is_noarch = RM.memoize(_is_noarch)
 
 
 def normalize_arch(arch):
@@ -131,56 +132,48 @@ def _yum_list_installed(root=None, cachedir=None, persistdir=None):
     return sack.returnPackages()  # NOTE: 'gpg-pubkey' is not in this list.
 
 
-def rpm_transactionset(root=None, readonly=True, subdir=RPMDB_SUBDIR):
+def rpm_transactionset(root='/', readonly=True):
     """
+    Return rpm.TransactionSet object.
+
     :param root: RPM DB root dir
     :param readonly: Return read-only transaction set to pure query purpose
-    :param subdir: RPM DB subdir
+
     :return: An instance of rpm.TransactionSet
     """
-    if root:
-        rpm.addMacro("_dbpath", os.path.join(root, subdir))
+    if root.startswith('/'):
+        root = os.path.abspath(root)
 
-    ts = rpm.TransactionSet()
+    ts = rpm.TransactionSet(root)
 
     if readonly:
         # see also: rpmUtils/transaction.py:initReadOnlyTransaction()
         ts.setVSFlags((rpm._RPMVSF_NOSIGNATURES | rpm._RPMVSF_NODIGESTS))
 
-    # Not needed ?
-    #if root:
-    #    rpm.delMacro("_dbpath")
-
     return ts
 
 
-def _list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
-                         subdir=RPMDB_SUBDIR):
+def _list_installed_rpms(root='/', keys=RPM_BASIC_KEYS, yum=False):
     """
+    Return a list of installed RPMs.
+
     :param root: RPM DB root dir
     :param keys: RPM Package dict keys
     :param yum: Use yum instead of querying rpm db directly
+
     :return: List of RPM dict of given keys
     """
     if yum:
-        p2d = lambda p: dict(zip(keys, attrgetter(*keys)(p)))
+        p2d = lambda p: dict(zip(keys, operator.attrgetter(*keys)(p)))
 
         return sorted((p2d(p) for p in yum_list_installed(root)),
                       key=itemgetter(*keys))
     else:
-        if root:
-            rpm.addMacro("_dbpath", os.path.join(root, subdir))
-
-        ts = rpm.TransactionSet()
-        # see also: rpmUtils/transaction.py:initReadOnlyTransaction()
-        ts.setVSFlags((rpm._RPMVSF_NOSIGNATURES | rpm._RPMVSF_NODIGESTS))
+        ts = rpm_transactionset(root)
 
         # pylint: disable=E1101
         mi = ts.dbMatch()
         # pylint: enable=E1101
-
-        if root:
-            rpm.delMacro("_dbpath")
 
         ps = [h2nvrea(h, keys) for h in mi]
         del mi, ts
@@ -188,8 +181,8 @@ def _list_installed_rpms(root=None, keys=RPM_BASIC_KEYS, yum=False,
         return sorted(ps, key=itemgetter(*keys))
 
 
-yum_list_installed = memoize(_yum_list_installed)
-list_installed_rpms = memoize(_list_installed_rpms)
+yum_list_installed = RM.memoize(_yum_list_installed)
+list_installed_rpms = RM.memoize(_list_installed_rpms)
 
 
 def guess_rhel_version(root, maybe_rhel_4=False):
@@ -311,7 +304,7 @@ def group_by_names_g(xs):
     >>> [(n, ys) for n, ys in group_by_names_g(xs)] == zs
     True
     """
-    for name, g in IT.groupby(sort_by_names(xs), itemgetter("name")):
+    for name, g in itertools.groupby(sort_by_names(xs), itemgetter("name")):
         yield (name, list(g))
 
 
@@ -435,7 +428,7 @@ def _make_requires_dict(root=None, reversed=False, use_yum=True):
     return dict((p.name, list_reqs(p)) for p in list_installed(root))
 
 
-make_requires_dict = memoize(_make_requires_dict)
+make_requires_dict = RM.memoize(_make_requires_dict)
 
 
 def make_reversed_requires_dict(root):
@@ -473,7 +466,7 @@ def _get_leaves(root=None):
     return [r for r, ps in rreqs.iteritems() if not ps]
 
 
-get_leaves = memoize(_get_leaves)
+get_leaves = RM.memoize(_get_leaves)
 
 
 def _list_standalones_1_g(name, reqs, rreqs, nrpms=1, excludes=[]):
