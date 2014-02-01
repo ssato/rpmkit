@@ -26,7 +26,6 @@ def base_create(root):
         base.conf.installroot = base.conf.cachedir = os.path.abspath(root)
 
     base.conf.clean_requirements_on_remove = True
-    base.fill_sack(load_available_repos=False)
 
     return base
 
@@ -61,21 +60,24 @@ def list_installed(root):
     :param root: RPM DB root dir (relative or absolute)
     """
     base = base_create(root)
+    base.fill_sack(load_available_repos=False)
+
     return base.sack.query().installed().run()
 
 
 def compute_removed(pkgspecs, root, excludes=[]):
     """
-    :param root: RPM DB root dir (relative or absolute)
     :param pkgspecs: A list of names or wildcards specifying packages to erase
+    :param root: RPM DB root dir (relative or absolute)
     :param excludes: A list of names or wildcards specifying packages must be
         excluded from the erasure list
 
     :return: A pair of a list of name of packages to be excluded and removed
     """
     base = base_create(root)
-    base.goal_parameters.allow_uninstall = True
 
+    base.fill_sack(load_available_repos=False)
+    base.goal_parameters.allow_uninstall = True
     base_setup_excludes(base, excludes)
 
     removes = []
