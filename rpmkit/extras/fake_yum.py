@@ -28,6 +28,7 @@ Commands:
   s[tandalones]  List the standalone RPMs which required by not any other
                  RPMs nor requires any other RPMs
   l[eaves]       List the leaf RPMs which is required by no any other RPMs
+  u[pdates]      List update RPMs (DNF will be used as a backend)
 
 Examples:
   %prog -R ./rhel-6-client-1 rem libreport abrt
@@ -35,20 +36,22 @@ Examples:
   %prog -R ./rhel-6-client-1 -x ./rpm_list_to_keep.txt e NetworkManager'*'
   %prog -R ./rhel-6-client-1 e 'NetworkManager.*'  # In regexp.
   %prog -R ./rhel-6-client-1 s
-  %prog -R ./rhel-6-client-1 leaves"""
+  %prog -R ./rhel-6-client-1 leaves
+  %prog -R ./rhel-6-client-1 u --latest"""
 
 
-_CMDS = (CMD_REMOVE, CMD_STANDALONES, CMD_LEAVES) = ("remove", "standalones",
-                                                     "leaves")
+_CMDS = (CMD_REMOVE, CMD_STANDALONES, CMD_LEAVES, CMD_UPDATES) = \
+    ("remove", "standalones", "leaves", "updates")
 _ARGS_CMD_MAP = dict(rem=CMD_REMOVE, e=CMD_REMOVE, s=CMD_STANDALONES,
-                     l=CMD_LEAVES)
+                     l=CMD_LEAVES, u=CMD_UPDATES)
 
 _FMT_CHOICES = tuple(anyconfig.list_types())
 
 
 def option_parser(usage=_USAGE, ac_fmt_choices=_FMT_CHOICES):
     defaults = dict(verbose=False, root='/', excludes=None, output=None,
-                    format="simple", st_rpms=1, use_dnf=False)
+                    format="simple", st_rpms=1, use_dnf=False,
+                    latest=False, repos=[])
 
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
@@ -83,6 +86,16 @@ def option_parser(usage=_USAGE, ac_fmt_choices=_FMT_CHOICES):
                         "selected if it's 1 (default) and RPMs has N "
                         "requires and/or required RPMs at a maximum.")
     p.add_option_group(sog)
+
+    uog = optparse.OptionGroup(p, "Options for updates command")
+    uog.add_option('', "--latest", action="store_true",
+                   help="List the latest RPMs only")
+    uog.add_option('', "--repos", action="append",
+                   help="Specify the yum repo IDs to enable. Other all "
+                        "available repos will be disabled if this option was "
+                        "given. Ex. --repos rhel-x86_64-server-6 --repos "
+                        "rhel-x86_64-server-optional-6 [%default]")
+    p.add_option_group(uog)
 
     return p
 
@@ -157,6 +170,20 @@ def main(cmd_map=_ARGS_CMD_MAP):
     elif cmd == CMD_STANDALONES:
         xs = sorted(RR.list_standalones(root, options.st_nrpms, excludes))
         data = dict(standalones=xs, )
+
+    elif cmd == CMD_UPDATES:
+        xs = [dict(name=x.name, version=x.version, release=x.release,
+                   arch=x.arch, epoch=int(x.epoch)) for x
+              in RED.compute_updates(root, options.repos, True)]
+
+        if options.latest:
+            xs = RR.find_latests(xs)
+
+        if options.format == 'simple':
+            xfmt = "%(name)s-%(epoch)s:%(version)s-%(release)s.%(arch)s"
+            xs = sorted(xfmt % x for x in xs)
+
+        data = dict(updates=xs, )
     else:
         xs = sorted(RR.get_leaves(root))
         data = dict(leaves=xs, )
