@@ -76,6 +76,7 @@ def compute_removed(pkgspecs, root, excludes=[]):
     """
     base = base_create(root)
 
+    # Load RPM DB (system repo) only.
     base.fill_sack(load_available_repos=False)
     base.goal_parameters.allow_uninstall = True
     base_setup_excludes(base, excludes)
@@ -100,5 +101,43 @@ def compute_removed(pkgspecs, root, excludes=[]):
     del base.ts  # Needed to release RPM DB session ?
 
     return (sorted(set(excludes)), sorted(set(removes)))
+
+
+def compute_updates(root, repos=[]):
+    """
+    :param root: RPM DB root dir (relative or absolute)
+    :param repos: A list of repos to enable or []. [] means that all available
+        system repos to be enabled.
+
+    :return: A pair of a list of packages
+    """
+    base = base_create(root)
+
+    base.read_all_repos()
+
+    # Only enable repos if ``repos`` is not empty. see
+    # :method:`_configure_repos` in :class:`dnf.cli.cli.Cli`.
+    if repos:
+        for rid, repo in base.repos.iteritems():
+            if rid in repos:
+                repo.enable()
+                repo.gpgcheck = repo.repo_gpgcheck = False
+            else:
+                repo.disable()
+
+    # see :method:`configure` in :class:`dnf.cli.cli.Cli`.
+    base.activate_persistor()
+
+    # It will take some time to get metadata from remote repos.
+    # see :method:`run` in :class:`dnf.cli.cli.Cli`.
+    base.fill_sack(load_system_repo='auto',
+                   load_available_repos=base.repos.enabled())
+
+    # see :method:`run` in :class:`dnf.cli.commands.CheckUpdateCommand`.
+    ypl = base.returnPkgLists(["updates"])
+
+    del base.ts  # Needed to release RPM DB session ?
+
+    return ypl.updates
 
 # vim:sw=4:ts=4:et:
