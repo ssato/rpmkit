@@ -103,11 +103,12 @@ def compute_removed(pkgspecs, root, excludes=[]):
     return (sorted(set(excludes)), sorted(set(removes)))
 
 
-def compute_updates(root, repos=[]):
+def compute_updates(root, repos=[], setup_callbacks=False):
     """
     :param root: RPM DB root dir (relative or absolute)
     :param repos: A list of repos to enable or []. [] means that all available
         system repos to be enabled.
+    :param setup_callbacks: Setup callbacks and progress bar displayed if True
 
     :return: A pair of a list of packages
     """
@@ -127,6 +128,12 @@ def compute_updates(root, repos=[]):
 
     # see :method:`configure` in :class:`dnf.cli.cli.Cli`.
     base.activate_persistor()
+
+    # see :method:`_configure_repos` in :class:`dnf.cli.cli.Cli`.
+    if setup_callbacks:
+        (bar, base.ds_callback) = base.output.setup_progress_callbacks()
+        base.repos.all.set_progress_bar(bar)
+        base.repos.all.confirm_func = base.output._cli_confirm_gpg_key_import
 
     # It will take some time to get metadata from remote repos.
     # see :method:`run` in :class:`dnf.cli.cli.Cli`.
