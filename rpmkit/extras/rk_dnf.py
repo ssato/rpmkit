@@ -89,6 +89,7 @@ def download_updateinfo_xml(repo):
 
     tmpdir = tempfile.mkdtemp(dir=repo.cachedir, prefix="tmp-updateinfo-")
     h.setopt(librepo.LRO_DESTDIR, tmpdir)
+    h.setopt(librepo.LRO_PROGRESSCB, lambda *args, **kwargs: None)
 
     h.perform()  # FIXME: Handle exceptions.
 
