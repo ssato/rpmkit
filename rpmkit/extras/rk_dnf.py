@@ -5,12 +5,19 @@
 #
 """Some utility routines utilize DNF/Hawkey.
 """
+from __future__ import print_function
+
 import dnf.cli.cli
 import dnf.exceptions
 import dnf.subject
 import dnf.transaction
+import glob
+import librepo
 import logging
 import os.path
+import shutil
+import sys
+import tempfile
 
 
 def base_create(root):
@@ -65,6 +72,32 @@ def list_installed(root):
     return base.sack.query().installed().run()
 
 
+PROGRESSBAR_LEN = 50
+
+
+def download_updateinfo_xml(repo):
+    """
+    TODO: This code is too much low level and I guess there is a
+    way to do same things in DNF/Hawkey level.
+
+    see also: http://tojaj.github.io/librepo/examples.html
+
+    :param repo: An initialized :class:`dnf.repo.Repo` instance
+    """
+    h = repo.get_handle()
+    h.setopt(librepo.LRO_YUMDLIST, ["updateinfo"])
+
+    tmpdir = tempfile.mkdtemp(dir=repo.cachedir, prefix="tmp-updateinfo-")
+    h.setopt(librepo.LRO_DESTDIR, tmpdir)
+
+    h.perform()  # FIXME: Handle exceptions.
+
+    updixml = glob.glob(os.path.join(tmpdir, 'repodata', '*updateinfo*'))[0]
+    shutil.move(updixml, os.path.join(repo.cachedir, "repodata",
+                                      os.path.basename(updixml)))
+    shutil.rmtree(tmpdir)
+
+
 def compute_removed(pkgspecs, root, excludes=[]):
     """
     :param pkgspecs: A list of names or wildcards specifying packages to erase
@@ -103,17 +136,17 @@ def compute_removed(pkgspecs, root, excludes=[]):
     return (sorted(set(excludes)), sorted(set(removes)))
 
 
-def compute_updates(root, repos=[], setup_callbacks=False):
+def compute_updates(root, repos=[], updateinfo=False, setup_callbacks=False):
     """
     :param root: RPM DB root dir (relative or absolute)
     :param repos: A list of repos to enable or []. [] means that all available
         system repos to be enabled.
+    :param updateinfo: Retrieve updateinfo.xml if True
     :param setup_callbacks: Setup callbacks and progress bar displayed if True
 
     :return: A pair of a list of packages
     """
     base = base_create(root)
-
     base.read_all_repos()
 
     # Only enable repos if ``repos`` is not empty. see
@@ -139,6 +172,11 @@ def compute_updates(root, repos=[], setup_callbacks=False):
     # see :method:`run` in :class:`dnf.cli.cli.Cli`.
     base.fill_sack(load_system_repo='auto',
                    load_available_repos=base.repos.enabled())
+
+    if updateinfo:
+        for rid, repo in base.repos.iteritems():
+            if repo.enabled:
+                download_updateinfo_xml(repo)
 
     # see :method:`run` in :class:`dnf.cli.commands.CheckUpdateCommand`.
     ypl = base.returnPkgLists(["updates"])
