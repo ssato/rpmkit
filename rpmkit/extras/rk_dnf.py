@@ -77,8 +77,8 @@ PROGRESSBAR_LEN = 50
 
 def download_updateinfo_xml(repo):
     """
-    TODO: This code is too much low level and I guess there is a
-    way to do same things in DNF/Hawkey level.
+    TODO: This code is a quick and dirty hack; too much low level and I guess
+    there is a way to do same things in DNF/Hawkey level.
 
     see also: http://tojaj.github.io/librepo/examples.html
 
