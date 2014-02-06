@@ -80,7 +80,11 @@ def download_updateinfo_xml(repo):
     TODO: This code is a quick and dirty hack; too much low level and I guess
     there is a way to do same things in DNF/Hawkey level.
 
-    see also: http://tojaj.github.io/librepo/examples.html
+    see also:
+        * rhbz#850912 RFE: support updateinfo:
+          https://bugzilla.redhat.com/show_bug.cgi?id=850912
+
+        * http://tojaj.github.io/librepo/examples.html
 
     :param repo: An initialized :class:`dnf.repo.Repo` instance
     """
