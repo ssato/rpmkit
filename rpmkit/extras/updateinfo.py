@@ -355,8 +355,10 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
                 dcves = []
                 if cves:
                     for cve in cves:
-                        dcve = swapicall("swapi.cve.getCvss", offline, cve)[0]
+                        dcve = swapicall("swapi.cve.getCvss", offline, cve)
+
                         if dcve:
+                            dcve = dcve[0]
                             dcves.append(dcve)
                         else:
                             logging.warn("Couldn't get details of " + cve)
