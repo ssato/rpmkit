@@ -203,6 +203,25 @@ def __validate_pkg(pkg, keys=[]):
         assert key in pkg, mfmt % key
 
 
+def get_rpm_details(pkg, options=[]):
+    """
+    :param pkg: A dict contains RPM basic information:
+        * Must: id
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
+
+    :return: List of resolved pkg dict
+
+    see also: http://red.ht/NWByOa
+    """
+    __validate_pkg(pkg, ['id'])
+    try:
+        return SW.call('packages.getDetails', [pkg['id']], options)[0]
+    except RuntimeError, IndexError:
+        logging.warn("Failed to get details of the pkg#%(id)d" % pkg)
+        return pkg
+
+
 def find_rpm_by_nvrea(pkg, options=[]):
     """
     :param pkg: A dict contains RPM basic information:
@@ -221,7 +240,8 @@ def find_rpm_by_nvrea(pkg, options=[]):
     api_args = [pkg['name'], pkg['version'], pkg['release'], epoch,
                 pkg['arch']]
     try:
-        return SW.call('packages.findByNvrea', api_args, options)
+        return [get_rpm_details(p) for p in
+                SW.call('packages.findByNvrea', api_args, options)]
     except RuntimeError, IndexError:
         return []
 
@@ -249,7 +269,8 @@ def find_rpm_by_search(pkg, options=[]):
         arg_fmt += " AND arch:%(arch)s"
 
     try:
-        return SW.call('packages.search.advanced', [arg_fmt % pkg], options)
+        return [get_rpm_details(p) for p in
+                SW.call('packages.search.advanced', [arg_fmt % pkg], options)]
     except RuntimeError, IndexError:
         return []
 
@@ -287,7 +308,8 @@ def complement_rpm_metadata(pkg, options=[]):
     if ps:
         return [_normalize(p) for p in ps]
 
-    return []
+    logging.warn("Failed to complement RPM metadata: " + pkg["label"])
+    return [pkg]
 
 
 def identify(label, details=False, options=[]):
@@ -302,6 +324,9 @@ def identify(label, details=False, options=[]):
     :return: List of pkg dicts. Each dict contains RPM basic info such as name,
         version, release, arch and epoch.
     """
+    logging.debug("args: label=%s, details=%s, options=%s" %
+                  (label, str(details), str(options)))
+
     p = parse_rpm_label(label)
     logging.info("Guessd p=" + str(p))
 
@@ -314,7 +339,7 @@ def identify(label, details=False, options=[]):
     if not details and all(k in p for k in keys):
         return [p]  # We've got enough information of this RPM.
 
-    return complement_rpm_metadata(p)
+    return complement_rpm_metadata(p, options)
 
 
 def identify_(ldo):
@@ -412,7 +437,7 @@ def identify_rpms(labels, details=False, newer=True, options=[],
     else:
         pss = [identify(label, details, options) for label in labels]
 
-    resolved = list(filter_out_not_resolved_rpms_g(labels, pss, newer))
+    resolved = list(filter_out_not_resolved_rpms_g(labels, pss, newer, False))
     failed = list(filter_out_not_resolved_rpms_g(labels, pss, newer, True))
     logging.info("%d RPMs sets found in the list: resolved=%d, "
                  "failed=%d" % (len(pss), len(resolved), len(failed)))
