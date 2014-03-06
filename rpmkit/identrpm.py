@@ -324,9 +324,6 @@ def identify(label, details=False, options=[]):
     :return: List of pkg dicts. Each dict contains RPM basic info such as name,
         version, release, arch and epoch.
     """
-    logging.debug("args: label=%s, details=%s, options=%s" %
-                  (label, str(details), str(options)))
-
     p = parse_rpm_label(label)
     logging.info("Guessd p=" + str(p))
 
