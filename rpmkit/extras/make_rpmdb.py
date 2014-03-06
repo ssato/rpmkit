@@ -125,7 +125,8 @@ def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[],
                                      options=options, nprocs=nprocs)
 
     # Pick up oldest from each ps if len(ps) > 1.
-    rpm_paths = [os.path.join(rpmsdir, ps[0]['path']) for ps in pss if ps]
+    rpm_paths = [os.path.join(rpmsdir, ps[0]['path']) for ps in pss
+                 if ps and 'path' in ps[0]]
 
     logging.warn("%d RPMs not resolved: %s" % (len(failed), ', '.join(failed)))
 
