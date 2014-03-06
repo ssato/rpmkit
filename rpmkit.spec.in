@@ -86,7 +86,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
-* Sun Feb  9 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
+* Thu Mar  6 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
 - Remove runtime dependency to gevent and implement some alternative routines
   with using multiprocessing module
 - Fixed some more PEP8 and pylint errors and warnings
@@ -98,6 +98,8 @@ rm -rf $RPM_BUILD_ROOT
 - Remove runtime dependency to gevent and make use of mulitprocessing based
   functions such like multiprocessing.Pool.map
 - Add 'updates' sub command to list update RPMs in rk-fake_yum
+- Fix some bugs in the code processing CVEs w/o CVSS metrics in
+  rpmkit.extras.updateinfo
 
 * Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11-1
 - Deprecated rpmkit.rpms2sqldb and related tools
