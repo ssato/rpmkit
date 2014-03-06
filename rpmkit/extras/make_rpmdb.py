@@ -110,8 +110,11 @@ def download_rpms(pkg, outdir):
     return urlgrabber.urlgrab(url, os.path.join(outdir, os.path.basename(url)))
 
 
+_NCPUS = multiprocessing.cpu_count()
+
+
 def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[],
-               dryrun=False):
+               nprocs=_NCPUS, dryrun=False):
     """
     """
     if not rpmsdir.startswith(os.path.sep):  # relative path.
@@ -119,7 +122,7 @@ def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[],
 
     labels = RI.load_packages(rpmlist_path)
     (pss, failed) = RI.identify_rpms(labels, details=True, newer=False,
-                                     options=options)
+                                     options=options, nprocs=nprocs)
 
     # Pick up oldest from each ps if len(ps) > 1.
     rpm_paths = [os.path.join(rpmsdir, ps[0]['path']) for ps in pss if ps]
@@ -137,7 +140,7 @@ def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[],
 
 def option_parser():
     defaults = dict(verbose=False, sw_options=[], rpmsdir=os.curdir,
-                    root=os.curdir, dryrun=False)
+                    root=os.curdir, nprocs=_NCPUS, dryrun=False)
 
     p = optparse.OptionParser("Usage: %prog [Options] RPMS_LIST")
     p.set_defaults(**defaults)
@@ -151,6 +154,8 @@ def option_parser():
     p.add_option("", "--sw-options", action="append",
                  help="Options passed to swapi, can be specified multiple"
                       "times.")
+    p.add_option("-N", "--nprocs", type="int",
+                 help="Number of processes [%default]")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
     return p
 
@@ -173,7 +178,7 @@ def main():
         sys.exit(1)
 
     make_rpmdb(rpmlist_path, options.rpmsdir, options.root, options.sw_options,
-               options.dryrun)
+               options.nprocs, options.dryrun)
 
 
 if __name__ == "__main__":
