@@ -350,22 +350,22 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
         if use_map:
             errata["cves"] = errata_cves_map.get(adv, [])
         else:
-            try:
-                cves = swapicall("errata.listCves", offline, adv)
-                dcves = []
-                if cves:
-                    for cve in cves:
-                        dcve = swapicall("swapi.cve.getCvss", offline, cve)
+            cves = swapicall("errata.listCves", offline, adv)
+            dcves = []
+            if cves:
+                for cve in cves:
+                    dcve = swapicall("swapi.cve.getCvss", offline, cve)
 
-                        if dcve:
-                            dcve = dcve[0]
-                            dcves.append(dcve)
-                        else:
-                            logging.warn("Couldn't get details of " + cve)
+                    if dcve:
+                        dcve = dcve[0]
+                    else:
+                        logging.warn("Couldn't get CVSS metrics of " + cve)
+                        dcve = dict(cve=cve, )
 
-                errata["cves"] = dcves if dcves else cves
+                    dcves.append(dcve)
 
-            except IndexError:
+                errata["cves"] = dcves
+            else:
                 logging.warn("Could not get relevant CVEs: " + adv)
                 errata["cves"] = []
 
@@ -523,14 +523,20 @@ _DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
                          "update_date", "url", "cves", "bzs"]
 
 
+def _fmt_cve(cve):
+    if 'score' in cve:
+        return '%(cve)s (score=%(score)s, metrics=%(metrics)s, url=%(url)s)'
+    else:
+        return '%(cve)s (CVSS=N/A)'
+
+
 def _fmt_cvess(cves):
     """
     :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
     :return: List of CVE strings
     """
     try:
-        fmt = '%(cve)s (score=%(score)s, metrics=%(metrics)s, url=%(url)s)'
-        cves = [fmt % c for c in cves]
+        cves = [_fmt_cve(c) % c for c in cves]
     except KeyError:
         pass
 
