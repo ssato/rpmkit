@@ -173,7 +173,7 @@ def parse_rpm_label(label, epoch=0, arch_reg=_ARCH_REG, nvr_reg=_NVR_REG):
     m = nvr_reg.match(label)
     if m:
         pkg.update(m.groupdict())
-        logging.info("Succeed to parse %(label)s: n=%(name)s, v=%(version)s, "
+        LOG.info("Succeed to parse %(label)s: n=%(name)s, v=%(version)s, "
                      "r=%(release)s" % pkg)
         return pkg
 
@@ -218,7 +218,7 @@ def get_rpm_details(pkg, options=[]):
     try:
         return SW.call('packages.getDetails', [pkg['id']], options)[0]
     except RuntimeError, IndexError:
-        logging.warn("Failed to get details of the pkg#%(id)d" % pkg)
+        LOG.warn("Failed to get details of the pkg#%(id)d" % pkg)
         return pkg
 
 
@@ -295,20 +295,20 @@ def complement_rpm_metadata(pkg, options=[]):
 
         return p
 
-    logging.info("Try fetching w/ the API, packages.findByNvrea: " + str(pkg))
+    LOG.info("Try fetching w/ the API, packages.findByNvrea: " + str(pkg))
     if pkg.get('arch', False):
         ps = find_rpm_by_nvrea(pkg, options)
         if ps:
             return [_normalize(p) for p in ps]
 
-    logging.info("Try fetching w/ the API, packages.search.advanced: "
+    LOG.info("Try fetching w/ the API, packages.search.advanced: "
                  "%s" % str(pkg))
     ps = find_rpm_by_search(pkg, options)
 
     if ps:
         return [_normalize(p) for p in ps]
 
-    logging.warn("Failed to complement RPM metadata: " + pkg["label"])
+    LOG.warn("Failed to complement RPM metadata: " + pkg["label"])
     return [pkg]
 
 
@@ -325,10 +325,10 @@ def identify(label, details=False, options=[]):
         version, release, arch and epoch.
     """
     p = parse_rpm_label(label)
-    logging.info("Guessd p=" + str(p))
+    LOG.info("Guessd p=" + str(p))
 
     if not p:
-        logging.error("Failed to parse given RPM label: " + label)
+        LOG.error("Failed to parse given RPM label: " + label)
         return [dict(label=label, name=None, version=None, release=None,
                      epoch=None, arch=None)]
 
@@ -386,7 +386,7 @@ def load_packages(pf):
     :param pf: Packages list file.
     """
     labels = RU.uniq(load_packages_g(pf))
-    logging.info("Loaded %d RPM labels from %s" % (len(labels), pf))
+    LOG.info("Loaded %d RPM labels from %s" % (len(labels), pf))
 
     return labels
 
@@ -407,7 +407,7 @@ def filter_out_not_resolved_rpms_g(labels, pss, newer, return_failed=False):
     for label, ps in itertools.izip(labels, pss):
         if not ps or (len(ps) == 1 and ps[0].get('name') is None):
             if return_failed:
-                logging.warn("Failed to parse or fetch info: " + label)
+                LOG.warn("Failed to parse or fetch info: " + label)
                 yield label
         else:
             if not return_failed:
@@ -436,8 +436,8 @@ def identify_rpms(labels, details=False, newer=True, options=[],
 
     resolved = list(filter_out_not_resolved_rpms_g(labels, pss, newer, False))
     failed = list(filter_out_not_resolved_rpms_g(labels, pss, newer, True))
-    logging.info("%d RPMs sets found in the list: resolved=%d, "
-                 "failed=%d" % (len(pss), len(resolved), len(failed)))
+    LOG.info("%d RPMs sets found in the list: resolved=%d, "
+             "failed=%d" % (len(pss), len(resolved), len(failed)))
 
     return (resolved, failed)
 
@@ -453,7 +453,7 @@ def init_log(verbose):
         if verbose > 1:
             level = logging.DEBUG
 
-    logging.basicConfig(level=level)
+    LOG.setLevel(level)
 
 
 def process_datetime_g(ps):
