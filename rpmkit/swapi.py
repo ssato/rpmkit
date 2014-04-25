@@ -1673,15 +1673,15 @@ def _call(api, args=[], options=[]):
     """
     :param api: String represents RHN or swapi's virtual API,
         e.g. "packages.listProvidingErrata", "swapi.errata.getAll"
-    :param options: List of options options for swapi
     :param args: An argument or list of arguments passed to API call.
         (NOTE: rpmkit.swapi.parse_api_args can be used to parse
         string contains these arguments.)
+    :param options: List of options options for swapi
 
     :return: [Reult]
     """
     args = list(args) if is_iterable(args) else [args]
-    (res, _opts) = main(options + args + [api])
+    (res, _opts) = main(options + ["-A", ",".join(args)] + [api])
 
     return res
 
