@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-01-26 10:16+JST\n"
+"POT-Creation-Date: 2014-04-25 14:37+JST\n"
 "PO-Revision-Date: 2013-12-17 01:00+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
@@ -15,87 +15,87 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
-#: aux/..//rpmkit/extras/updateinfo.py:612
+#: aux/..//rpmkit/extras/updateinfo.py:620
 msgid "# of Security Errata (critical)"
 msgstr "影響度 Critical のセキュリティエラータの数"
 
-#: aux/..//rpmkit/extras/updateinfo.py:613
+#: aux/..//rpmkit/extras/updateinfo.py:621
 msgid "# of Security Errata (important)"
 msgstr "影響度 Important のセキュリティエラータの数"
 
-#: aux/..//rpmkit/extras/updateinfo.py:614
+#: aux/..//rpmkit/extras/updateinfo.py:622
 msgid "# of Security Errata (all)"
 msgstr "すべてのセキュリティエラータの数"
 
-#: aux/..//rpmkit/extras/updateinfo.py:615
+#: aux/..//rpmkit/extras/updateinfo.py:623
 msgid "# of Bug Errata"
 msgstr "バグ修正エラータの数"
 
-#: aux/..//rpmkit/extras/updateinfo.py:616
+#: aux/..//rpmkit/extras/updateinfo.py:624
 msgid "# of Enhancement Errata"
 msgstr "機能拡張エラータの数"
 
-#: aux/..//rpmkit/extras/updateinfo.py:617
+#: aux/..//rpmkit/extras/updateinfo.py:625
 msgid "# of Installed RPMs"
 msgstr "インストールされている RPM パッケージの数"
 
-#: aux/..//rpmkit/extras/updateinfo.py:618
+#: aux/..//rpmkit/extras/updateinfo.py:626
 msgid "# of RPMs (names) need to be updated"
 msgstr "更新が必要な RPM パッケージ (名) の数"
 
-#: aux/..//rpmkit/extras/updateinfo.py:620
+#: aux/..//rpmkit/extras/updateinfo.py:628
 msgid "The rate of RPMs (names) need any updates / RPMs (names) [%]"
 msgstr "更新が必要な RPM パッケージ (名) の割合 [%]"
 
-#: aux/..//rpmkit/extras/updateinfo.py:624
+#: aux/..//rpmkit/extras/updateinfo.py:632
 msgid "Summary"
 msgstr "概要"
 
-#: aux/..//rpmkit/extras/updateinfo.py:625
+#: aux/..//rpmkit/extras/updateinfo.py:633
 msgid "comments"
 msgstr "コメント"
 
-#: aux/..//rpmkit/extras/updateinfo.py:625
+#: aux/..//rpmkit/extras/updateinfo.py:633
 msgid "item"
 msgstr "項目"
 
-#: aux/..//rpmkit/extras/updateinfo.py:625
+#: aux/..//rpmkit/extras/updateinfo.py:633
 msgid "rating"
 msgstr "評価"
 
-#: aux/..//rpmkit/extras/updateinfo.py:625
+#: aux/..//rpmkit/extras/updateinfo.py:633
 msgid "value"
 msgstr "値"
 
-#: aux/..//rpmkit/extras/updateinfo.py:723
-#: aux/..//rpmkit/extras/updateinfo.py:755
+#: aux/..//rpmkit/extras/updateinfo.py:731
+#: aux/..//rpmkit/extras/updateinfo.py:763
 msgid "Sec. Errata CVSS >= %.1f"
 msgstr "Sec. Errata CVSS >= %.1f"
 
-#: aux/..//rpmkit/extras/updateinfo.py:742
+#: aux/..//rpmkit/extras/updateinfo.py:750
 msgid "Installed RPMs"
 msgstr "インストール RPM"
 
-#: aux/..//rpmkit/extras/updateinfo.py:744
+#: aux/..//rpmkit/extras/updateinfo.py:752
 msgid "Errata"
 msgstr "エラータ"
 
-#: aux/..//rpmkit/extras/updateinfo.py:745
+#: aux/..//rpmkit/extras/updateinfo.py:753
 msgid "Update RPMs"
 msgstr "更新 RPM"
 
-#: aux/..//rpmkit/extras/updateinfo.py:751
+#: aux/..//rpmkit/extras/updateinfo.py:759
 msgid "Errata Details"
 msgstr "エラータ詳細"
 
-#: aux/..//rpmkit/extras/updateinfo.py:765
+#: aux/..//rpmkit/extras/updateinfo.py:773
 msgid "Errata Details (%s ~)"
 msgstr "エラータ詳細 (%s ~)"
 
-#: aux/..//rpmkit/extras/updateinfo.py:774
+#: aux/..//rpmkit/extras/updateinfo.py:782
 msgid "Errata (%s ~)"
 msgstr "エラータ (%s ~)"
 
-#: aux/..//rpmkit/extras/updateinfo.py:814
+#: aux/..//rpmkit/extras/updateinfo.py:822
 msgid "Path to the RPM DB 'Packages' > "
 msgstr "RPM データベース 'Packages' ファイルのパス > "
