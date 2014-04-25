@@ -1427,9 +1427,6 @@ def get_option_value(key, config, opts, prompt="Enter value",
     >>> 0 == get_option_value(key, dict(), opts, "", lambda _: 0)
     True
     """
-    _typecheck(config, dict)
-    _typecheck(opts, optparse.Values)
-
     cv = config.get(key, False)
     if cv:
         v = getattr(opts, key, False)
@@ -1446,6 +1443,9 @@ def configure_with_options(config, options):
 
     :return: A dict contains connection parameters :: dict
     """
+    _typecheck(config, dict)
+    _typecheck(opts, optparse.Values)
+
     server = get_option_value("server", config, options, "Server name")
     userid = get_option_value("userid", config, options, "User ID")
     password = get_option_value("password", config, options, "Password",
