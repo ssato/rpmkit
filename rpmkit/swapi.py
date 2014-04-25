@@ -1353,7 +1353,8 @@ def set_options(key, config, opts, prompt="Enter value", ask_fun=raw_input):
 
 def configure_with_options(config, options):
     """
-    :param config: A dict contains config parameters, {'server':, 'userid':, ...}
+    :param config: A dict contains config parameters,
+        {'server':, 'userid':, ...}
     :param options: An instance of optparse.Options
 
     :return: A dict contains connection parameters :: dict
