@@ -1437,11 +1437,11 @@ def get_option_value(key, config, opts, prompt="Enter value",
 
 def configure_with_options(config, options):
     """
-    :param config: A dict contains config parameters,
+    :param config: A dict contains configuration parameters and these value,
         {'server':, 'userid':, ...}
     :param options: An instance of optparse.Options
 
-    :return: A dict contains connection parameters :: dict
+    :return: A dict contains configuration parameters :: dict
     """
     _typecheck(config, dict)
     _typecheck(opts, optparse.Values)
