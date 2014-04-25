@@ -1680,7 +1680,7 @@ def _call(api, args=[], options=[]):
 
     :return: [Reult]
     """
-    args = list(args) if is_iterable(args) else [args]
+    args = list(str(a) for a in args) if is_iterable(args) else [args]
     (res, _opts) = main(options + ["-A", ",".join(args)] + [api])
 
     return res
