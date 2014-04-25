@@ -1545,9 +1545,8 @@ _DEFAULTS = dict(config=None, verbose=0, timeout=TIMEOUT, protocol=PROTO,
                  list=False, output="stdout")
 
 
-def option_parser(prog="swapi", tablib_found=TABLIB_FOUND,
-                  defaults=_DEFAULTS):
-    if tablib_found:
+def option_parser(prog="swapi", defaults=_DEFAULTS):
+    if TABLIB_FOUND:
         defaults["output_format"] = None
         defaults["headers"] = None
 
@@ -1603,7 +1602,7 @@ def option_parser(prog="swapi", tablib_found=TABLIB_FOUND,
     oog.add_option('-F', '--format', help="Output format (non-json)")
     oog.add_option('-o', '--output', help="Output [stdout]")
 
-    if tablib_found:
+    if TABLIB_FOUND:
         formats = ("json", "xls", "yaml", "csv", "tsv", "xlsx", "ods")
         oog.add_option('-O', '--output-format', choices=formats,
                        help="Select output format from: " + ", ".join(formats))
@@ -1690,7 +1689,7 @@ def _call(api, args=[], options=[]):
 call = memoize(_call)
 
 
-def main(argv, tablib_found=TABLIB_FOUND):
+def main(argv):
     """
     :param argv: A list of argument strings including options and API args.
     """
@@ -1708,7 +1707,7 @@ def main(argv, tablib_found=TABLIB_FOUND):
         return None
 
     # FIXME: Breaks DRY principle:
-    if tablib_found:
+    if TABLIB_FOUND:
         ofs = ("xls", "xlsx", "ods")
         if options.output_format in ofs and options.output == "stdout":
             LOG.error("Output format '%s' requires output but not specified "
@@ -1774,7 +1773,7 @@ def main(argv, tablib_found=TABLIB_FOUND):
     return (res, options)
 
 
-def realmain(argv, tablib_found=TABLIB_FOUND):
+def realmain(argv):
     result = main(argv[1:])
 
     if not result:
@@ -1792,7 +1791,7 @@ def realmain(argv, tablib_found=TABLIB_FOUND):
                 for r in res:
                     print >> f, options.format % r
     else:
-        if tablib_found and options.output_format:
+        if TABLIB_FOUND and options.output_format:
             data = tablib.Dataset()
 
             if options.headers:
