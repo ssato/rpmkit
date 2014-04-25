@@ -284,9 +284,10 @@ def list_rpms_in_channel(pkg, channel, options=[]):
                             options)]
         assert all_rpms
 
-        def f(pkg, all_rpms=[]):
+        def f(pkg, all_rpms):
             for ref in all_rpms:
                 if maybe_same_rpm(pkg, ref):
+                    LOG.debug("matched: " + str(ref))
                     yield get_rpm_details(ref, options)
                 else:
                     if all(ref[k] == pkg[k] for k in ("name", "version")):
