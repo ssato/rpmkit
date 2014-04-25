@@ -1337,13 +1337,13 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
                 timeout=timeout, protocol=protocol)
 
 
-def set_options(key, config, opts, ask_fun, param):
+def set_options(key, config, opts, prompt="Enter value", ask_fun=raw_input):
     cv = config.get(key, False)
     if cv:
         v = getattr(opts, key, False)
         return v if v else cv  # Prefer value from options.
     else:
-        return ask_fun(param)
+        return ask_fun(prompt + ": ")
 
 
 def configure_with_options(config, options):
@@ -1351,14 +1351,12 @@ def configure_with_options(config, options):
     @config   config parameters dict: {'server':, 'userid':, ...}
     @options  optparse.Options
     """
-    server = set_options("server", config, options,
-                         raw_input, "Enter server name > ")
-    userid = set_options("userid", config, options,
-                         raw_input, "Enter user ID > ")
-    password = set_options("password", config, options,
-                           getpass.getpass, "Enter your password > ")
-    timeout = set_options("timeout", config, options, id_, TIMEOUT)
-    protocol = set_options("protocol", config, options, id_, PROTO)
+    server = set_options("server", config, options, "Server name")
+    userid = set_options("userid", config, options, "User ID")
+    password = set_options("password", config, options, "Password",
+                           getpass.getpass)
+    timeout = set_options("timeout", config, options, TIMEOUT, id_)
+    protocol = set_options("protocol", config, options, PROTO, id_)
 
     return dict(server=server, userid=userid, password=password,
                 timeout=timeout, protocol=protocol)
