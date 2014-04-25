@@ -497,6 +497,8 @@ CVSSS_METRICS_MAP = dict(
 
 def str_to_id(s):
     """
+    :param s: a string to get its ID value
+
     >>> str_to_id("aaa")
     '47bce5c74f589f4867dbd57e9ca9f808'
     """
@@ -505,6 +507,8 @@ def str_to_id(s):
 
 def object_to_id(obj):
     """Object -> id.
+
+    :param obj: Any object to get its ID value
 
     NOTE: Object must be able to convert to str (i.e. implements __str__).
 
@@ -543,6 +547,8 @@ def dict_equals(d0, d1, allow_more=False):
 
 def all_eq(xs):
     """Whether all items in xs (list or generator) equals each other.
+
+    :param xs: An iterable object such as a list, a tuple, etc.
 
     >>> all_eq([])
     False
@@ -617,6 +623,12 @@ def shorten_dict_keynames(d, prefix=None):
 def urlread(url, data=None, headers={}):
     """
     Open given url and returns its contents or None.
+
+    :param url: URL string to read
+    :param data: Data to send
+    :param headers: Optional http headers to be passed
+
+    :return: Content (:: str) or None
     """
     req = urllib2.Request(url=url, data=data, headers=headers)
 
@@ -628,6 +640,9 @@ def urlread(url, data=None, headers={}):
 
 def cve2url(cve):
     """
+    :param cve: A CVE ID string
+    :return: URL of CVE in Red Hat CVE database on the web
+
     >>> url = "https://access.redhat.com/security/cve/CVE-2010-1585?lang=en"
     >>> assert url == cve2url("CVE-2010-1585")
     """
@@ -638,6 +653,10 @@ def cvss_metrics(cvss, metrics_map=CVSSS_METRICS_MAP):
     """
     TODO: Some of CVEs in Red Hat CVE database look having wrong CVSS
     metrics data.
+
+    :param cvss: A string represents CVSS metrics,
+        ex. "AV:N/AC:H/Au:N/C:N/I:P/A:N"
+    :param metrics_map: CVSS metrics mappings :: dict
 
     >>> ms0 = cvss_metrics("AV:N/AC:H/Au:N/C:N/I:P/A:N")
     >>> ms_ref = [
@@ -782,6 +801,9 @@ def get_all_cve_g(raw=False):
 
 
 def get_all_cve(raw=False):
+    """
+    :param raw: Get raw txt data if True [False]
+    """
     return [r for r in get_all_cve_g(raw) if r is not None]
 
 
@@ -881,6 +903,9 @@ def run(cmd_str):
 
 
 def id_(x):
+    """
+    Identical transformation.
+    """
     return x
 
 
@@ -1145,6 +1170,8 @@ class RpcApi(object):
 
 def __parse(arg):
     """
+    :param arg: An argument string to parse
+
     >>> __parse("1234567")
     1234567
     >>> __parse("abcXYZ012")
@@ -1224,6 +1251,8 @@ class JSONEncoder(json.JSONEncoder):
 
 def results_to_json_str(results, indent=2):
     """
+    Serialize any given object ``results`` to JSON string.
+
     >>> assert results_to_json_str("abc") == '"abc"'
 
     #>>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
@@ -1236,9 +1265,12 @@ def results_to_json_str(results, indent=2):
                       cls=JSONEncoder)
 
 
-def parse_list_str(list_s, sep=","):
+def parse_list_str(list_s, sep=','):
     """
-    simple parser for a list of items separated with "," (comma) and so on.
+    simple parser for a list of items separated with ',' (comma) and so on.
+
+    :param list_s: A string represents a list
+    :param sep: List item separator string
 
     >>> assert parse_list_str("") == []
     >>> assert parse_list_str("a,b") == ["a", "b"]
@@ -1249,6 +1281,10 @@ def parse_list_str(list_s, sep=","):
 
 def sorted_by(ds, key):
     """
+    :param ds: A list of dicts
+    :param key: Key to sort the above list
+    :return: A list of dicts sorted by key :: [dict]
+
     >>> (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=3, b=0))
     >>> ds = [a, b, c]
     >>> assert sorted_by(ds, "a") == [b, a, c]
@@ -1258,6 +1294,10 @@ def sorted_by(ds, key):
 
 def group_by(ds, key):
     """
+    :param ds: A list of dicts
+    :param key: Key to group items in dicts in the above list
+    :return: A dict that list of dicts are merged by grouping items by key
+
     >>> (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=1, b=0))
     >>> ds = [a, b, c]
     >>> ref = dict([(1, [a, c]), (0, [b])])
@@ -1269,6 +1309,9 @@ def group_by(ds, key):
 
 def select_by(ds, key, values):
     """
+    :param ds: A list of dicts
+    :param key: Key to select (filter) dicts in the above list
+
     >>> (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=3, b=0))
     >>> ds = [a, b, c]
     >>> assert select_by(ds, "a", (0, 1)) == [a, b]
@@ -1278,6 +1321,9 @@ def select_by(ds, key, values):
 
 def deselect_by(ds, key, values):
     """
+    :param ds: A list of dicts
+    :param key: Key to deselect (filter out) dicts in the above list
+
     >>> (a, b, c) = (dict(a=1, b=2), dict(a=0, b=3), dict(a=3, b=0))
     >>> ds = [a, b, c]
     >>> assert deselect_by(ds, "a", (0, 1)) == [c]
@@ -1343,6 +1389,15 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
 
 
 def set_options(key, config, opts, prompt="Enter value", ask_fun=raw_input):
+    """
+    :param key: parameter name to set the option value
+    :param config: A dict contains config parameters
+    :param options: An instance of optparse.Options
+    :param prompt: Prompt to ask parameter value to users
+    :param ask_fun: callable to ask users
+
+    :return: parameter value
+    """
     cv = config.get(key, False)
     if cv:
         v = getattr(opts, key, False)
@@ -1371,6 +1426,11 @@ def configure_with_options(config, options):
 
 
 def configure(options):
+    """
+    :param options: An instance of optparse.Options
+
+    :return: A dict contains connection parameters :: dict
+    """
     conf = configure_with_configfile(options.config, options.profile)
     conf = configure_with_options(conf, options)
 
@@ -1518,6 +1578,8 @@ def option_parser(prog="swapi", tablib_found=TABLIB_FOUND):
 
 def init_log(verbose):
     """Initialize logging module
+
+    :param verbose: Unsigned int value represents verbosity level :: int
     """
     level = logging.WARN  # default
 
@@ -1531,6 +1593,11 @@ def init_log(verbose):
 
 
 def init_rpcapi(options):
+    """
+    :param options: An instance of optparse.Options
+
+    :return: An instance of RpcApi class
+    """
     params = configure(options)
     init_log(options.verbose)
     rapi = RpcApi(params, not options.no_cache, options.cachedir,
