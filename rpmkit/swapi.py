@@ -1388,16 +1388,48 @@ def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
                 timeout=timeout, protocol=protocol)
 
 
-def set_options(key, config, opts, prompt="Enter value", ask_fun=raw_input):
+def _typecheck(obj, _type):
     """
+    TODO: Find 'typeof' in python.
+    """
+    assert isinstance(obj, _type), ("Type mismatch: expect %s but got %s" %
+                                    (str(_type), str(type(obj))))
+
+
+def get_option_value(key, config, opts, prompt="Enter value",
+                     ask_fun=raw_input):
+    """
+    Return default or specified option value if set or value in config.
+
     :param key: parameter name to set the option value
     :param config: A dict contains config parameters
-    :param options: An instance of optparse.Options
+    :param options: An instance of optparse.Values
     :param prompt: Prompt to ask parameter value to users
     :param ask_fun: callable to ask users
 
     :return: parameter value
+
+    >>> key = "aaa"
+    >>> config = dict(aaa=1)
+
+    >>> p = optparse.OptionParser()
+    >>> _ = p.add_option("-a", "--aaa", default=2, type="int")
+    >>> (opts, _a) = p.parse_args(["a0"])
+    >>> 2 == get_option_value(key, config, opts)
+    True
+
+    >>> p = optparse.OptionParser()
+    >>> _ = p.add_option("-a", "--aaa", default=2, type="int")
+    >>> (opts, _a) = p.parse_args("a0 --aaa 3".split())
+    >>> 3 == get_option_value(key, config, opts)
+    True
+
+    >>> 0 == get_option_value(key, dict(), opts, "", lambda _: 0)
+    True
     """
+    _typecheck(config, dict)
+    _typecheck(opts, optparse.Values)
+
     cv = config.get(key, False)
     if cv:
         v = getattr(opts, key, False)
@@ -1414,12 +1446,12 @@ def configure_with_options(config, options):
 
     :return: A dict contains connection parameters :: dict
     """
-    server = set_options("server", config, options, "Server name")
-    userid = set_options("userid", config, options, "User ID")
-    password = set_options("password", config, options, "Password",
-                           getpass.getpass)
-    timeout = set_options("timeout", config, options, TIMEOUT, id_)
-    protocol = set_options("protocol", config, options, PROTO, id_)
+    server = get_option_value("server", config, options, "Server name")
+    userid = get_option_value("userid", config, options, "User ID")
+    password = get_option_value("password", config, options, "Password",
+                                getpass.getpass)
+    timeout = get_option_value("timeout", config, options, TIMEOUT, id_)
+    protocol = get_option_value("protocol", config, options, PROTO, id_)
 
     return dict(server=server, userid=userid, password=password,
                 timeout=timeout, protocol=protocol)
