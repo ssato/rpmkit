@@ -100,6 +100,15 @@ rm -rf $RPM_BUILD_ROOT
 - Add 'updates' sub command to list update RPMs in rk-fake_yum
 - Fix some bugs in the code processing CVEs w/o CVSS metrics in
   rpmkit.extras.updateinfo
+- add --nprocs option to control the number of task processes in
+  rpmkit.extras.make_rpmdb
+- remove the try-except block which catches all errors and hides type mismatch
+  error, and process CVEs w/o CVSS metrics correctly in
+  rpmkit.extras.updateinfo.get_errata_details()
+- Fix a long standing bug in rpmkit.swapi.call() does not process options and
+  arguments correctly
+- Make use of module specific logger in rpmkit.swapi and rpmkit.identrpm
+- Fix some PEP8 errors in rpmkit.swapi
 
 * Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11-1
 - Deprecated rpmkit.rpms2sqldb and related tools
