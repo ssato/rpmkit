@@ -246,6 +246,48 @@ def find_rpm_by_nvrea(pkg, options=[]):
         return []
 
 
+def maybe_same_rpm(p1, p2, keys=["name", "version", "release", "arch"]):
+    """
+    :param p1: A dict contains RPM basic information:
+        * Must: name, version, release and arch
+        * Should/May: epoch
+    :param p2: Likewise
+    """
+    # These should be validated already.
+    # __validate_pkg(p1, ['arch'])
+    # __validate_pkg(p2, ['arch'])
+
+    if 'epoch' in p1:
+        keys.append('epoch')
+
+    return all(p1[k] == p2.get(k, None) for k in keys)
+
+
+def list_rpms_in_channel(pkg, channel, options=[]):
+    """
+    :param pkg: A dict contains RPM basic information:
+        * Must: name, version and release
+        * Should/May: arch and epoch
+    :param channel: Software channel label to list RPMs.
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
+
+    :return: List of pkg dicts in the software channel
+
+    see also: http://red.ht/1laSAVn
+    """
+    __validate_pkg(pkg, ['arch'])
+
+    try:
+        return [get_rpm_details(p) for p in
+                SW.call('channel.software.listAllPackages', [channel],
+                        options)
+                if maybe_same_rpm(pkg, _normalize(p))]
+
+    except RuntimeError, IndexError:
+        return []
+
+
 def find_rpm_by_search(pkg, options=[]):
     """
     :param pkg: A dict contains RPM basic information:
@@ -275,6 +317,14 @@ def find_rpm_by_search(pkg, options=[]):
         return []
 
 
+def _normalize(p):
+    if 'arch_label' in p and 'arch' not in p:
+        p['arch'] = p['arch_label']
+    p['epoch'] = RR.normalize_epoch(p['epoch'])
+
+    return p
+
+
 def complement_rpm_metadata(pkg, options=[]):
     """
     Get missing package metadata and return a dict.
@@ -287,13 +337,6 @@ def complement_rpm_metadata(pkg, options=[]):
     :return: Updated dict
     """
     __validate_pkg(pkg)
-
-    def _normalize(p):
-        if 'arch_label' in p and 'arch' not in p:
-            p['arch'] = p['arch_label']
-        p['epoch'] = RR.normalize_epoch(p['epoch'])
-
-        return p
 
     LOG.info("Try fetching w/ the API, packages.findByNvrea: " + str(pkg))
     if pkg.get('arch', False):
@@ -312,12 +355,39 @@ def complement_rpm_metadata(pkg, options=[]):
     return [pkg]
 
 
-def identify(label, details=False, options=[]):
+def complement_rpm_metadata_in_channels(pkg, channels=[], options=[]):
+    """
+    Get missing package metadata and return a dict by searching RPMs in given
+    software channels.
+
+    :param pkg: A dict contains RPM basic information such as name, version,
+        release, ...
+    :param channels: List of software channels to search RPMs
+    :param options: List of option strings passed to
+        :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
+
+    :return: Updated dict
+    """
+    __validate_pkg(pkg)
+
+    LOG.info("Try searching possible RPMs in channels w/ the API,
+             "channel.software.listAllPackages in: " + ", ".join(channels))
+    ps = RU.concat(list_rpms_in_channel(pkg, c, options) for c in channels)
+
+    if ps:
+        return [_normalize(p) for p in ps]
+
+    LOG.warn("Failed to complement RPM metadata: " + pkg["label"])
+    return [pkg]
+
+
+def identify(label, details=False, channels=[], options=[]):
     """
     :param label: Maybe RPM's label, '%{n}-%{v}-%{r}.%{arch} ....' in the RPM
         list gotten by running 'rpm -qa' or the list file found in sosreport
         archives typically.
     :param details: Try to get extra information other than NVREA if True.
+    :param channels: List of software channels to search RPMs
     :param options: List of option strings passed to
         :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
 
@@ -336,14 +406,17 @@ def identify(label, details=False, options=[]):
     if not details and all(k in p for k in keys):
         return [p]  # We've got enough information of this RPM.
 
-    return complement_rpm_metadata(p, options)
+    if channels:
+        return complement_rpm_metadata_in_channels(pkg, channels, options)
+    else:
+        return complement_rpm_metadata(p, channels, options)
 
 
 def identify_(ldo):
     """
-    :param ldo: A tuple of (label, details, options) or
-        (label, kwargs) (kwargs = dict(details=, options=, ) passed to
-        :function:`identify`.
+    :param ldo: A tuple of (label, details, channels, options) or
+        (label, kwargs) (kwargs = dict(details=, channels=, options=, )
+        passed to :function:`identify`.
     :return: List of pkg dicts. Each dict contains RPM basic info such as name,
         version, release, arch and epoch.
     """
@@ -352,13 +425,13 @@ def identify_(ldo):
 
     if lldo < 2:
         return identify(ldo[0])
-    elif lldo < 3:
+    elif lldo < 4:
         if isinstance(lldo[1], dict):
             return identify(ldo[0], **ldo[1])
         else:
-            return identify(ldo[0], ldo[1])
+            return identify(ldo[0], ldo[1], ldo[2])
     else:
-        return identify(ldo[0], ldo[1], ldo[2])
+        return identify(ldo[0], ldo[1], ldo[2], ldo[3])
 
 
 def load_packages_g(pf):
@@ -415,13 +488,14 @@ def filter_out_not_resolved_rpms_g(labels, pss, newer, return_failed=False):
                              reverse=newer)
 
 
-def identify_rpms(labels, details=False, newer=True, options=[],
-                  nprocs=_NCPUS):
+def identify_rpms(labels, details=False, newer=True, channels=[],
+                  options=[], nprocs=_NCPUS):
     """
     :param labels: A list of RPM labels
     :param details: Get extra information other than RPM's N, V, R, E, A if
         True or get them from RHN / RH Satellite if not available
     :param newer: Sort by epochs; older is prior to newers
+    :param channels: List of software channels to search RPMs
     :param options: List of option strings passed to
         :function:`rpmkti.swapi.call`, e.g. ['--verbose', '--server ...']
     :param nprocs: Number of parallelized processes to identify each lables
@@ -430,9 +504,9 @@ def identify_rpms(labels, details=False, newer=True, options=[],
     """
     if nprocs > 1:
         pool = multiprocessing.Pool(processes=nprocs)
-        pss = pool.map(identify_, ((l, details, options) for l in labels))
+        pss = pool.map(identify_, ((l, details, channels, options) for l in labels))
     else:
-        pss = [identify(label, details, options) for label in labels]
+        pss = [identify(label, details, channels, options) for label in labels]
 
     resolved = list(filter_out_not_resolved_rpms_g(labels, pss, newer, False))
     failed = list(filter_out_not_resolved_rpms_g(labels, pss, newer, True))
@@ -488,7 +562,8 @@ def print_outputs(ps, format=None, output=None):
 def main(argv=sys.argv):
     default_format = "{name},{version},{release},{arch},{epoch}"
     defaults = dict(verbose=0, format=None, details=False, sw_options=[],
-                    input=None, output=None, latest=False, all=False)
+                    input=None, output=None, latest=False, all=False,
+                    channels=[])
 
     p = optparse.OptionParser("""%prog [Options...] [RPM_0 [RPM_1 ...]]
 
@@ -517,6 +592,10 @@ autoconf: A GNU tool for automatically configuring source code.
     p.add_option("", "--latest", action="store_true",
                  help="Output only the latest RPMs instead of oldest RPMs")
     p.add_option("", "--all", action="store_true", help="Output all RPMs")
+    p.add_option("", "--channel", action="append", dest="channels",
+                 help="Specify software channels to search RPMs, "
+                      "ex. --channel='rhel-x86_64-server-6' "
+                      "--channel='rhel-x86_64-server-optional-6'")
     p.add_option("", "--sw-options", action="append",
                  help="Options passed to swapi, can be specified multiple"
                       "times.")
@@ -536,7 +615,7 @@ autoconf: A GNU tool for automatically configuring source code.
             sys.exit(1)
 
     (pss, failed) = identify_rpms(packages, options.details, options.latest,
-                                  options.sw_options)
+                                  options.channels, options.sw_options)
     if options.all:
         print_outputs(RU.concat(pss), options.format, options.output)
     else:
