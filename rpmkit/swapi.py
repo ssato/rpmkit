@@ -222,7 +222,7 @@ SYSTEM_CACHE_DIR = "/var/cache/swapi"
 CACHE_DIR = os.path.join(CONFIG_DIR, 'cache')
 CACHE_EXPIRING_DATES = 1  # [days]
 
-## Cache expiration dates for each APIs:
+# Cache expiration dates for each APIs:
 API_CACHE_EXPIRATIONS = {
     # api method: expiration dates (0: no cache [default], 1.. days
     # or -1: permanent)
@@ -431,7 +431,7 @@ API_CACHE_EXPIRATIONS = {
     "user.listRoles": 100,
     "user.listUsers": 100,
     # Virtual (extended) RPC APIs:
-    #"swapi.errata.getCvss": 100,  # TODO: Implement this.
+    # "swapi.errata.getCvss": 100,  # TODO: Implement this.
     "swapi.cve.getCvss": 100,
     "swapi.cve.getAll": 1,
     "swapi.errata.getAll": 1,
