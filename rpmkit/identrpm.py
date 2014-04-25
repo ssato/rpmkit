@@ -174,7 +174,7 @@ def parse_rpm_label(label, epoch=0, arch_reg=_ARCH_REG, nvr_reg=_NVR_REG):
     if m:
         pkg.update(m.groupdict())
         LOG.info("Succeed to parse %(label)s: n=%(name)s, v=%(version)s, "
-                     "r=%(release)s" % pkg)
+                 "r=%(release)s" % pkg)
         return pkg
 
     LOG.error("Failed to parse NVR string: label=%s, epoch=%d" %
@@ -240,13 +240,13 @@ def find_rpm_by_nvrea(pkg, options=[]):
     api_args = [pkg['name'], pkg['version'], pkg['release'], epoch,
                 pkg['arch']]
     try:
-        return [get_rpm_details(p) for p in
+        return [get_rpm_details(p, options) for p in
                 SW.call('packages.findByNvrea', api_args, options)]
     except RuntimeError, IndexError:
         return []
 
 
-def maybe_same_rpm(p1, p2, keys=["name", "version", "release", "arch"]):
+def maybe_same_rpm(p1, p2, keys=["name", "version", "release"]):
     """
     :param p1: A dict contains RPM basic information:
         * Must: name, version, release and arch
@@ -279,10 +279,20 @@ def list_rpms_in_channel(pkg, channel, options=[]):
     __validate_pkg(pkg, ['arch'])
 
     try:
-        return [get_rpm_details(p) for p in
-                SW.call('channel.software.listAllPackages', [channel],
-                        options)
-                if maybe_same_rpm(pkg, _normalize(p))]
+        all_rpms = [_normalize(p) for p in
+                    SW.call('channel.software.listAllPackages', [channel],
+                            options)]
+        assert all_rpms
+
+        def f(pkg, all_rpms=[]):
+            for ref in all_rpms:
+                if maybe_same_rpm(pkg, ref):
+                    yield get_rpm_details(ref, options)
+                else:
+                    if all(ref[k] == pkg[k] for k in ("name", "version")):
+                        LOG.debug("mismatch: ref=" + str(ref))
+
+        return list(f(pkg, all_rpms))
 
     except RuntimeError, IndexError:
         return []
@@ -311,7 +321,7 @@ def find_rpm_by_search(pkg, options=[]):
         arg_fmt += " AND arch:%(arch)s"
 
     try:
-        return [get_rpm_details(p) for p in
+        return [get_rpm_details(p, options) for p in
                 SW.call('packages.search.advanced', [arg_fmt % pkg], options)]
     except RuntimeError, IndexError:
         return []
@@ -344,8 +354,7 @@ def complement_rpm_metadata(pkg, options=[]):
         if ps:
             return [_normalize(p) for p in ps]
 
-    LOG.info("Try fetching w/ the API, packages.search.advanced: "
-                 "%s" % str(pkg))
+    LOG.info("Try fetching w/ the API, packages.search.advanced: " + str(pkg))
     ps = find_rpm_by_search(pkg, options)
 
     if ps:
@@ -370,7 +379,7 @@ def complement_rpm_metadata_in_channels(pkg, channels=[], options=[]):
     """
     __validate_pkg(pkg)
 
-    LOG.info("Try searching possible RPMs in channels w/ the API,
+    LOG.info("Try searching possible RPMs in channels w/ the API, "
              "channel.software.listAllPackages in: " + ", ".join(channels))
     ps = RU.concat(list_rpms_in_channel(pkg, c, options) for c in channels)
 
@@ -407,9 +416,9 @@ def identify(label, details=False, channels=[], options=[]):
         return [p]  # We've got enough information of this RPM.
 
     if channels:
-        return complement_rpm_metadata_in_channels(pkg, channels, options)
+        return complement_rpm_metadata_in_channels(p, channels, options)
     else:
-        return complement_rpm_metadata(p, channels, options)
+        return complement_rpm_metadata(p, options)
 
 
 def identify_(ldo):
@@ -504,7 +513,8 @@ def identify_rpms(labels, details=False, newer=True, channels=[],
     """
     if nprocs > 1:
         pool = multiprocessing.Pool(processes=nprocs)
-        pss = pool.map(identify_, ((l, details, channels, options) for l in labels))
+        pss = pool.map(identify_, ((l, details, channels, options) for l
+                                   in labels))
     else:
         pss = [identify(label, details, channels, options) for label in labels]
 
@@ -563,7 +573,7 @@ def main(argv=sys.argv):
     default_format = "{name},{version},{release},{arch},{epoch}"
     defaults = dict(verbose=0, format=None, details=False, sw_options=[],
                     input=None, output=None, latest=False, all=False,
-                    channels=[])
+                    channels=[], nprocs=_NCPUS)
 
     p = optparse.OptionParser("""%prog [Options...] [RPM_0 [RPM_1 ...]]
 
@@ -599,6 +609,8 @@ autoconf: A GNU tool for automatically configuring source code.
     p.add_option("", "--sw-options", action="append",
                  help="Options passed to swapi, can be specified multiple"
                       "times.")
+    p.add_option("", "--nprocs", type="int",
+                 help="Number of parallel processes to find RPMs [%default]")
     p.add_option("-v", "--verbose", action="count", help="Verbose mode")
     p.add_option("-D", "--debug", action="store_const", dest="verbose",
                  const=2, help="Debug mode")
@@ -615,7 +627,8 @@ autoconf: A GNU tool for automatically configuring source code.
             sys.exit(1)
 
     (pss, failed) = identify_rpms(packages, options.details, options.latest,
-                                  options.channels, options.sw_options)
+                                  options.channels, options.sw_options,
+                                  options.nprocs)
     if options.all:
         print_outputs(RU.concat(pss), options.format, options.output)
     else:
