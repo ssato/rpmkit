@@ -1169,8 +1169,10 @@ def parse_api_args(args, arg_sep=','):
     """
     Simple JSON-like expression parser.
 
-    @args     options.args :: string
-    @return   rpc arg objects, [arg] :: [string]
+    :param args: arguments string to parse :: string
+    :param arg_sep: Separator char in the above string
+
+    :return: parsed RPC API arguments rpc arg :: [string]
 
     >>> parse_api_args('')
     []
@@ -1290,7 +1292,10 @@ CONN_DEFAULTS = dict(
 
 def configure_with_configfile(config_file, profile="", defaults=CONN_DEFAULTS):
     """
-    @config_file  Configuration file path, ex. "~/.swapi/config".
+    :param config_file: Configuration file path. "~/.swapi/config" by default.
+    :param profile: Profile of connection to use
+
+    :return: A dict contains connection parameters :: dict
     """
     server = defaults["server"]
     userid = defaults["userid"]
@@ -1348,8 +1353,10 @@ def set_options(key, config, opts, prompt="Enter value", ask_fun=raw_input):
 
 def configure_with_options(config, options):
     """
-    @config   config parameters dict: {'server':, 'userid':, ...}
-    @options  optparse.Options
+    :param config: A dict contains config parameters, {'server':, 'userid':, ...}
+    :param options: An instance of optparse.Options
+
+    :return: A dict contains connection parameters :: dict
     """
     server = set_options("server", config, options, "Server name")
     userid = set_options("userid", config, options, "User ID")
