@@ -1442,16 +1442,34 @@ def configure_with_options(config, options):
     :param options: An instance of optparse.Options
 
     :return: A dict contains configuration parameters :: dict
+
+    >>> config = dict(server="a-server",  # doctest: +NORMALIZE_WHITESPACE
+    ...               userid="jdoe", password="*******", timeout=TIMEOUT,
+    ...               protocol=PROTO)
+    >>> (opts, _a) = option_parser().parse_args(["a0"])
+    >>> c = configure_with_options(config, opts)
+    >>> all(config[k] == v for k, v in c.iteritems())
+    True
+
+    >>> args = "a0 --password xxxx".split()
+    >>> (opts, _a) = option_parser().parse_args(args)
+    >>> config["password"] = "xxxx"
+    >>> c = configure_with_options(config, opts)
+    >>> all(config[k] == v for k, v in c.iteritems())
+    True
     """
     _typecheck(config, dict)
-    _typecheck(opts, optparse.Values)
+    _typecheck(options, optparse.Values)
 
     server = get_option_value("server", config, options, "Server name")
     userid = get_option_value("userid", config, options, "User ID")
     password = get_option_value("password", config, options, "Password",
                                 getpass.getpass)
-    timeout = get_option_value("timeout", config, options, TIMEOUT, id_)
-    protocol = get_option_value("protocol", config, options, PROTO, id_)
+
+    timeout = get_option_value("timeout", config, options,
+                               ask_fun=lambda *args: TIMEOUT)
+    protocol = get_option_value("protocol", config, options,
+                                ask_fun=lambda *args: PROTO)
 
     return dict(server=server, userid=userid, password=password,
                 timeout=timeout, protocol=protocol)
@@ -1463,6 +1481,8 @@ def configure(options):
 
     :return: A dict contains connection parameters :: dict
     """
+    _typecheck(options, optparse.Values)
+
     conf = configure_with_configfile(options.config, options.profile)
     conf = configure_with_options(conf, options)
 
@@ -1509,15 +1529,17 @@ password = secretpasswd
 """ % CONFIG
 
 
-def option_parser(prog="swapi", tablib_found=TABLIB_FOUND):
-    defaults = dict(config=None, verbose=0, timeout=TIMEOUT, protocol=PROTO,
-                    rpcdebug=False, no_cache=False, cachedir=CACHE_DIR,
-                    readonly=False, cacheonly=False, force=False,
-                    format=False, indent=2, sort="", group="", select="",
-                    deselect="", short_keys=True,
-                    profile=os.environ.get("SWAPI_PROFILE", ""),
-                    list=False, output="stdout")
+_DEFAULTS = dict(config=None, verbose=0, timeout=TIMEOUT, protocol=PROTO,
+                 rpcdebug=False, no_cache=False, cachedir=CACHE_DIR,
+                 readonly=False, cacheonly=False, force=False,
+                 format=False, indent=2, sort="", group="", select="",
+                 deselect="", short_keys=True,
+                 profile=os.environ.get("SWAPI_PROFILE", ""),
+                 list=False, output="stdout")
 
+
+def option_parser(prog="swapi", tablib_found=TABLIB_FOUND,
+                  defaults=_DEFAULTS):
     if tablib_found:
         defaults["output_format"] = None
         defaults["headers"] = None
@@ -1630,20 +1652,22 @@ def init_rpcapi(options):
 
     :return: An instance of RpcApi class
     """
+    _typecheck(options, optparse.Values)
+
     params = configure(options)
     init_log(options.verbose)
-    rapi = RpcApi(params, not options.no_cache, options.cachedir,
+
+    return RpcApi(params, not options.no_cache, options.cachedir,
                   options.rpcdebug, options.readonly, options.cacheonly,
                   options.force)
-    return rapi
 
 
 # wrapper functions to utilize this from other programs:
-def _connect(*options):
+def _connect(options):
     """
-    :param options: List of option strings for swapi.main,
-        e.g. ["--verbose", "--cacheonly"].
-
+    :param options: Iterable (a list in typical) of option strings
+        for swapi.main, e.g. ["--verbose", "--cacheonly"].
+    :return: An instance of RpcApi
     """
     argv = ["dummy_av0"] + list(options) + ["dummy_args0"]
     (opts, _) = option_parser().parse_args(argv)
@@ -1664,7 +1688,7 @@ def _call(api, args=[], options=[]):
     """
     args = args if isinstance(args, (list, tuple)) else [args]
 
-    rapi = connect(*options)
+    rapi = connect(options)
     res = rapi.call(api, *args)
 
     if res is None:
