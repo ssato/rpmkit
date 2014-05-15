@@ -614,11 +614,14 @@ def shorten_dict_keynames(d, prefix=None):
     >>> assert dict_equals(d_ref, d5)
     >>> assert dict_equals(d_ref, d6)
     """
-    if not isinstance(d, dict):  # `dic` may be a str.
+    # NOTE: This does not work well and I don't know why...
+    # if not isinstance(d, dict):  # `dic` may be a str.
+    if isinstance(d, str):  # FIXME: Dirty hack!
         return d
 
     if prefix is None:
         prefix = longest_common_prefix(*(k.lower() for k in d.keys()))
+        LOG.debug("computed prefix='%s'" % prefix)
 
     return dict((k.lower().replace(prefix, ''), v) for k, v in d.iteritems())
 
