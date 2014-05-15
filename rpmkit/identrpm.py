@@ -29,6 +29,7 @@ import sys
 
 
 LOG = logging.getLogger('rpmkit.identrpm')
+LOG.addHandler(logging.StreamHandler())
 
 _ARCHS = ('i[356]86', 'x86_64', 'ppc', 'ia64', 's390', 's390x', 'armv7hl',
           'noarch')
