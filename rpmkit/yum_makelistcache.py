@@ -13,10 +13,11 @@
 """Make caches of various yum 'list' command execution results.
 
 Usage:
-    su - apache -c 'yum_makelistcache [Options ...]'
+    su - apache -c 'yum_makelistcache [Options ...] ...'
 """
 from __future__ import print_function
 
+import ConfigParser as configparser
 import datetime
 import glob
 import itertools
@@ -318,14 +319,15 @@ def list_errata_g(root, opts=[], dist=None):
     (rc, err) = _run(cs, output)
 
     if rc == 0:
-        with open(output) as f:
-            reg = _reg_by_dist()
-            for line in f.readlines():
-                if _is_errata_line(line, reg):
-                    LOG.debug("Errata line: " + line)
-                    yield parse_errata_line(line)
-                else:
-                    LOG.debug("Not errata line: " + line)
+        lines = open(output).readlines()
+        reg = _reg_by_dist()
+
+        for line in lines:
+            if _is_errata_line(line, reg):
+                LOG.debug("Errata line: " + line)
+                yield parse_errata_line(line)
+            else:
+                LOG.debug("Not errata line: " + line)
     else:
         LOG.error("Failed to fetch the errata list: " + err)
 
@@ -352,6 +354,10 @@ def yum_list_errata(root, enablerepos=[], disablerepos=['*']):
     return list(list_errata_g(root, opts))
 
 
+def _is_root():
+    return os.getuid() == 0
+
+
 def yum_download(root, enablerepos=[], disablerepos=['*']):
     """
     List errata similar to "yum list-sec".
@@ -364,8 +370,11 @@ def yum_download(root, enablerepos=[], disablerepos=['*']):
     yum update -y --downloadonly
     """
     opts = _mk_repo_opts(enablerepos, disablerepos)
-    cs = ["yum", "--installroot=" + root] + opts + ["--downloadonly",
-                                                    "update", "-y"]
+
+    cs = [] if _is_root() else ["fakeroot"]  # avoid unneeded check.
+    cs += ["yum", "--installroot=" + root] + opts + ["--downloadonly",
+                                                     "update", "-y"]
+
     output = logpath(root, "yum_download.log")
 
     (rc, err) = _run(cs, output)
@@ -401,7 +410,7 @@ _COMMANDS = dict(l="list", d="download")
 _LIST_TYPES = (LIST_INSTALLED, LIST_UPDATES, LIST_ERRATA) \
             = ("installed", "updates", "errata")
 _DEFAULTS = dict(root=os.curdir, dist="rhel", list_type=LIST_INSTALLED,
-                 enablerepo=[], disablerepo=[], verbose=False)
+                 enablerepo=[], disablerepo=[], conf=None, verbose=False)
 
 
 def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
@@ -431,9 +440,21 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
                     help="List type [%default]")
     p.add_option_group(liog)
 
+    p.add_option("-C", "--conf", help="Specify .ini style config file path")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
+
+
+def load_conf(conf_path, sect="main"):
+    cp = configparser.SafeConfigParser()
+    try:
+        cp.read(conf_path)
+        return dict(cp.items(sect))
+    except Exception as e:
+        LOG.warn("Failed to load '%s': %s" % (conf_path, str(e)))
+
+    return dict()
 
 
 def outputs_result(result, root, restype="updates"):
@@ -457,6 +478,12 @@ def main(argv=sys.argv, cmds=_COMMANDS):
         LOG.error("You must specify command")
         p.print_help()
         sys.exit(3)
+
+    if options.conf:
+        diff = options.load_conf(options.conf)
+        for k, v in diff.iteritems():
+            if getattr(options, k, False):
+                setattr(options, k, v)
 
     LOG.setLevel(logging.DEBUG if options.verbose else logging.INFO)
 
