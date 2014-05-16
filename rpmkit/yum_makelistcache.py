@@ -26,7 +26,6 @@ import optparse
 import os
 import pprint
 import re
-import shlex
 import subprocess
 import sys
 import yum
@@ -282,11 +281,11 @@ def _run(cmd, output=None, curdir=os.curdir):
 
     :return: (returncode :: int, error_message :: str)
 
-    >>> (rc, err) = _run(shlex.split("timeout 10 ls /"))
+    >>> (rc, err) = _run("timeout 10 ls /".split())
     >>> rc == 0, err
     (True, '')
 
-    >>> (rc, err) = _run(shlex.split("timeout 1 sleep 10"))
+    >>> (rc, err) = _run("timeout 1 sleep 10".split())
     >>> rc == 0, bool(err)
     (False, True)
     """
