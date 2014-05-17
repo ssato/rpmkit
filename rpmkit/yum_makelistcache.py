@@ -18,12 +18,11 @@ Usage:
 from __future__ import print_function
 
 import ConfigParser as configparser
-import datetime
+import bsddb
 import glob
-import itertools
 import logging
-import operator
 import optparse
+import os.path
 import os
 import pprint
 import re
@@ -31,28 +30,14 @@ import subprocess
 import sys
 import yum
 
-
-LOG = logging.getLogger('yum_makelistcache')
-LOG.addHandler(logging.StreamHandler())
-
-
-import bsddb
-import logging
-import optparse
-import os.path
-import os
-import re
-import shutil
-import subprocess
-import sys
-import threading
-import time
-
 try:
     import json
 except ImportError:
     import simplejson as json
 
+
+LOG = logging.getLogger('yum_makelistcache')
+LOG.addHandler(logging.StreamHandler())
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
 # _RPM_KEYS = ("nevra", "name", "version", "release", "epoch", "arch")
