@@ -437,7 +437,8 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
 
     liog = optparse.OptionGroup(p, "'list' command options")
     liog.add_option("-L", "--list-type", choices=_LIST_TYPES,
-                    help="List type [%default]")
+                    help=("Select list type from %s [%%default]" %
+                          (", ".join(_LIST_TYPES), )))
     p.add_option_group(liog)
 
     p.add_option("-C", "--conf", help="Specify .ini style config file path")
