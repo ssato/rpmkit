@@ -479,13 +479,17 @@ def main(argv=sys.argv, cmds=_COMMANDS):
         p.print_help()
         sys.exit(3)
 
-    if options.conf:
-        diff = options.load_conf(options.conf)
-        for k, v in diff.iteritems():
-            if getattr(options, k, False):
-                setattr(options, k, v)
-
     LOG.setLevel(logging.DEBUG if options.verbose else logging.INFO)
+
+    if options.conf:
+        diff = load_conf(options.conf)
+        LOG.debug("diff=" + pprint.pformat(diff))
+        for k, v in diff.iteritems():
+            if k in ('enablerepos', 'disablerepos'):
+                setattr(options, k, eval(v))
+
+            elif getattr(options, k, False):
+                setattr(options, k, v)
 
     options.root = os.path.abspath(options.root)  # Ensure abspath.
 
