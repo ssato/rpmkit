@@ -74,6 +74,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
 %{_localstatedir}/cache/swapi
+%{_sysconfdir}/rpmkit/yum_makelistcache.d/*.ini
 
 %files          extras
 %doc README.rst examples
@@ -86,7 +87,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
-* Thu May 15 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
+* Sat May 17 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
 - Remove runtime dependency to gevent and implement some alternative routines
   with using multiprocessing module
 - Fixed some more PEP8 and pylint errors and warnings
@@ -110,6 +111,7 @@ rm -rf $RPM_BUILD_ROOT
 - Make use of module specific logger in rpmkit.swapi and rpmkit.identrpm
 - Add workaround for the bug that keys not shortened in results in rpmkit.swapi
 - Fix logger inialization (add hander) code in rpmkit.swapi and rpmkit.identrpm
+- Add new module rpmkit.yum_makelistcache and its configuration example
 - Fix some PEP8 errors in rpmkit.swapi
 
 * Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11-1

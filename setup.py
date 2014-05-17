@@ -28,6 +28,7 @@ def list_files(tdir):
 data_files = [
     ("share/rpmkit/optimizer/pgroups.d/rhel-6-x86_64",
      list_files("data/optimizer/pgroups.d/rhel-6-x86_64/")),
+    ("/etc/rpmkit/yum_makelistcache.d/", list_files("etc/yum_makelistcache.d/")),
     ("/etc/rpmkit/optimizer.d/rhel-6-x86_64",
      list_files("etc/optimizer.d/rhel-6-x86_64/")),
     ("share/rpmkit/templates", list_files("data/templates/")),
