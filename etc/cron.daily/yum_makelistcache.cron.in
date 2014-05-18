@@ -19,8 +19,7 @@ for conf in $CONFDIR/*.ini; do
     $BIN_PROG -C $conf list -L updates
     ret=$?
     if test $ret -ne 0; then
-        echo "[ERROR] any error occurred. check your configuration!"
-        echo "[ERROR] (erroneous \$conf = $conf)"
+        echo "[ERROR] erroneous conf: $conf"
         break
     fi
 done
