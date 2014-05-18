@@ -21,6 +21,7 @@ import ConfigParser as configparser
 import bsddb
 import glob
 import logging
+import operator
 import optparse
 import os.path
 import os
@@ -40,8 +41,7 @@ LOG = logging.getLogger('yum_makelistcache')
 LOG.addHandler(logging.StreamHandler())
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
-# _RPM_KEYS = ("nevra", "name", "version", "release", "epoch", "arch")
-_RPM_KEYS = ("nevra", )
+_RPM_KEYS = ("nevra", "name", "epoch", "version", "release", "arch")
 
 
 def _is_bsd_hashdb(dbpath):
@@ -443,17 +443,34 @@ def load_conf(conf_path, sect="main"):
     return dict()
 
 
-def outputs_result(result, root, restype="updates"):
+DEFAULT_OUT_KEYS = dict(errata=["advisory", "type", "severity", "name",
+                                "epoch", "version", "release", "arch"],
+                        default=_RPM_KEYS)
+
+
+def outputs_result(result, root, restype="updates", keys=[]):
+    """
+    :param result: A list of result dicts :: [dict]
+    :param root: Log root dir
+    :param restype: Result type
+    :param keys: CSV headers
+    """
+    if not keys:
+        keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
+
+    result = sorted(result, key=operator.itemgetter(keys[0]))
+
     with open(logpath(root, restype + ".json"), 'w') as f:
-        json.dump(result, f)
+        json.dump(dict(data=result, ), f)
 
     with open(logpath(root, restype + ".csv"), 'w') as f:
-        # TODO:
-        # hdrs = sorted(result[0].keys())
-        # f.write(','.join(hdrs) + '\n')
+        if not keys:
+            keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
 
-        for r in sorted(result):
-            f.write(','.join(sorted(r.values())) + '\n')
+        f.write(','.join(keys) + '\n')
+        for d in result:
+            vals = [d.get(k, False) for k in keys]
+            f.write(','.join(v for v in vals if v) + '\n')
 
 
 def main(argv=sys.argv, cmds=_COMMANDS):
