@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#from rpmkit.swapi import main as swmain, shorten_dict_keynames as shorten
 from rpmkit.swapi import main as swmain
 from rpmkit.utils import groupby_key
 from itertools import izip_longest as izip

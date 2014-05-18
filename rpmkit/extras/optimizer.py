@@ -125,7 +125,7 @@ def init_ppaths_and_gpaths(ppaths=[os.curdir, _SYS_PROFILES_DIR_DEFAULT],
     return (ppaths, gpaths)
 
 
-## Plan:
+# Plan:
 # 1. load system/site-specific profile data
 # 2. load package groups files and:
 #    a. make up a list of necessary (kept) RPMs from ref. -> excludes list

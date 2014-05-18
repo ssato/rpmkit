@@ -43,7 +43,7 @@ def base_setup_excludes(base, excludes):
     :param excludes: A list of names or wildcards specifying packages must be
         excluded from the erasure list
     """
-    #if excludes:
+    # if excludes:
     #    matches = dnf.subject.Subject('*').get_best_query(base.sack)
     #    installed = matches.installed().run()
 

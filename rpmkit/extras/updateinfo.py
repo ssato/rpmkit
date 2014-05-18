@@ -279,7 +279,6 @@ def get_bzs_from_errata_desc_g(errata_desc, offline=False, bzkeys=_BZ_KEYS,
                     logging.warn("Failed to get BZ info: " + bzid)
                     continue
 
-                #print "*** bz=" + str(bz)
                 yield _update_bz(bz, heuristics=True)
             else:
                 yield dict(id=bzid, bug_id=bzid, url=urlfmt % bzid,
@@ -311,7 +310,7 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
 
             logging.info("Dumping errata - cve - cvss map data from RHN...")
             U.json_dump(errata_cves_map, cve_ref_path)
-            #assert bool(errata_cves_map), "errata_cache=" + errata_cache
+            # assert bool(errata_cves_map), "errata_cache=" + errata_cache
 
     adv = errata["advisory"]
 
@@ -669,13 +668,13 @@ def _is_newer_errata(errata, since=None):
 
     (y, m, d) = since.split('-')
     (y, m, d) = (int(y), int(m), int(d))
-    #logging.debug("Try to check the errata is newer than "
+    # logging.debug("Try to check the errata is newer than "
     #              "y=%d, m=%d, d=%d" % (y, m, d))
 
     # Set to dummy and old enough date if failed to get issue_date.
     issue_date = errata.get("issue_date", "1900-01-01")
     (e_y, e_m, e_d) = _date_from_errata_issue_data(issue_date)
-    #logging.debug("Issue date of the errata: y=%d, m=%d, d=%d" % (e_y, e_m,
+    # logging.debug("Issue date of the errata: y=%d, m=%d, d=%d" % (e_y, e_m,
     #                                                              e_d))
 
     if e_y < y:

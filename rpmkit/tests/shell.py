@@ -123,8 +123,8 @@ class Test_20_do_task(unittest.TestCase):
         # It seems that neighther 'subprocess.Popen("true",
         # cwd="/root").wait()' nor 'subprocess.Popen("cd /root && true",
         # shell=True).wait()' does not raise any exceptions these days:
-        #task = SH.Task("true", workdir="/root", timeout=10)
-        #task = SH.Task("cd /root && true", workdir="/root", timeout=10)
+        # task = SH.Task("true", workdir="/root", timeout=10)
+        # task = SH.Task("cd /root && true", workdir="/root", timeout=10)
 
         task = SH.Task("touch /root/.bashrc", timeout=10)
 

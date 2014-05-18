@@ -77,8 +77,7 @@ class Test_06_setup_root(unittest.TestCase):
         self.workdir = C.setup_workdir()
 
     def tearDown(self):
-        #C.cleanup_workdir(self.workdir)
-        pass
+        C.cleanup_workdir(self.workdir)
 
     def test_00_setup_root__exact_path(self):
         ppath = setup_Packages(self.workdir)

@@ -465,7 +465,7 @@ def select_from_list(xs, ref_xs=[]):
 
 def init_log(level):
     logging.getLogger().setLevel(level)
-    #anyconfig.set_loglevel(level)
+    # anyconfig.set_loglevel(level)
     logging.basicConfig(format="%(asctime)s %(name)s: [%(levelname)s] "
                         "%(message)s")
 

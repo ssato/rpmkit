@@ -117,7 +117,7 @@ def minify_packages(requires, packages):
                       for x, rs in requires if x == p))
         if rs:
             reqs += rs
-            #logging.debug("Excluded as required by %s: %s" % (p, rs))
+            # logging.debug("Excluded as required by %s: %s" % (p, rs))
 
     reqs = uniq(reqs)
     return ([p for p in packages if p not in reqs], reqs)
@@ -157,7 +157,7 @@ def find_groups_0(gps, ps_ref, ps_req):
             ) for g, ps in gps]                 # both ps_ref and ps_req.
 
     # filter out groups having no packages in ps_ref (t[1] => ps_found)
-    #return sorted((t for t in gps if t[1]), key=key_group, reverse=True)
+    # return sorted((t for t in gps if t[1]), key=key_group, reverse=True)
     gs = [t for t in gps if t[1]]
     for g in gs:
         logging.debug("Groups having packages in list: " + fmt_group(g))
@@ -185,7 +185,7 @@ def try_special_groups(gps, ps_ref, ps_req, specials=_SPECIAL_GROUPS):
             ) for g, ps in gps]                 # both ps_ref and ps_req.
 
     # filter out groups having no packages in ps_ref (t[1] => ps_found)
-    #return sorted((t for t in gps if t[1]), key=key_group, reverse=True)
+    # return sorted((t for t in gps if t[1]), key=key_group, reverse=True)
     gs = [t for t in gps if t[1]]
     for g in gs:
         logging.debug("Groups having packages in list: " + fmt_group(g))

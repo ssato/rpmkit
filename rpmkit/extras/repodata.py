@@ -199,8 +199,8 @@ def _find_package_from_provides(x, provides, packages):
     return uniq((p for p, pr in provides if x == pr and p in packages))
 
 
-#find_package_from_filelists = memoize(_find_package_from_filelists)
-#find_package_from_provides = memoize(_find_package_from_provides)
+# find_package_from_filelists = memoize(_find_package_from_filelists)
+# find_package_from_provides = memoize(_find_package_from_provides)
 find_package_from_filelists = _find_package_from_filelists
 find_package_from_provides = _find_package_from_provides
 
@@ -252,7 +252,7 @@ def _find_providing_packages(x, provides, filelists, packages):
 
 # It requires a lot of RAM if memoized, so disabled until I think of another
 # better implementations.
-#find_providing_packages = memoize(_find_providing_packages)
+# find_providing_packages = memoize(_find_providing_packages)
 find_providing_packages = _find_providing_packages
 
 
@@ -307,7 +307,7 @@ def _find_requires(x, requires, packages, exceptions=[]):
                    in requires if p == x)
 
 
-#find_requires = memoize(_find_requires)
+# find_requires = memoize(_find_requires)
 find_requires = _find_requires
 
 

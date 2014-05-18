@@ -130,7 +130,7 @@ def run(cmd, ofunc=_id, efunc=_id, timeout=None):
             oline = outq.get_nowait()
         except Q.Empty:
             # TODO: Too verbose.
-            #logging.debug("No output from stdout of #%d yet" % p.pid)
+            # logging.debug("No output from stdout of #%d yet" % p.pid)
             pass
         else:
             ofunc(oline)
@@ -140,7 +140,7 @@ def run(cmd, ofunc=_id, efunc=_id, timeout=None):
             eline = errq.get_nowait()
         except Q.Empty:
             # TODO: Too verbose.
-            #logging.debug("No output from stderr of #%d yet" % p.pid)
+            # logging.debug("No output from stderr of #%d yet" % p.pid)
             pass
         else:
             efunc(eline)
@@ -645,8 +645,8 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
     else:
         run_yum_cmd(root, ' '.join(yum_argv), logfiles=logfiles)
 
-    #sys.stdout.flush()
-    #sys.stderr.flush()
+    # sys.stdout.flush()
+    # sys.stderr.flush()
 
 
 if __name__ == '__main__':

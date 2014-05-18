@@ -1266,8 +1266,8 @@ def results_to_json_str(results, indent=2):
 
     >>> assert results_to_json_str("abc") == '"abc"'
 
-    #>>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
-    #'[123, "abc", {"x": "yz"}]'
+    # >>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
+    # '[123, "abc", {"x": "yz"}]'
 
     >>> results_to_json_str([123, "abc", {'x': "yz"}])
     '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
