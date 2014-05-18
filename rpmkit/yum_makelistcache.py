@@ -370,6 +370,47 @@ def yum_download(root, enablerepos=[], disablerepos=['*']):
         LOG.error("Failed to download udpates: " + err)
 
 
+DEFAULT_OUT_KEYS = dict(errata=["advisory", "type", "severity", "name",
+                                "epoch", "version", "release", "arch"],
+                        default=_RPM_KEYS)
+
+
+def load_conf(conf_path, sect="main"):
+    cp = configparser.SafeConfigParser()
+    try:
+        cp.read(conf_path)
+        return dict(cp.items(sect))
+    except Exception as e:
+        LOG.warn("Failed to load '%s': %s" % (conf_path, str(e)))
+
+    return dict()
+
+
+def outputs_result(result, root, restype="updates", keys=[]):
+    """
+    :param result: A list of result dicts :: [dict]
+    :param root: Log root dir
+    :param restype: Result type
+    :param keys: CSV headers
+    """
+    if not keys:
+        keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
+
+    result = sorted(result, key=operator.itemgetter(keys[0]))
+
+    with open(logpath(root, restype + ".json"), 'w') as f:
+        json.dump(dict(data=result, ), f)
+
+    with open(logpath(root, restype + ".csv"), 'w') as f:
+        if not keys:
+            keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
+
+        f.write(','.join(keys) + '\n')
+        for d in result:
+            vals = [d.get(k, False) for k in keys]
+            f.write(','.join(v for v in vals if v) + '\n')
+
+
 _USAGE = """%prog [Options] COMMAND
 
 Commands:
@@ -430,47 +471,6 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
-
-
-def load_conf(conf_path, sect="main"):
-    cp = configparser.SafeConfigParser()
-    try:
-        cp.read(conf_path)
-        return dict(cp.items(sect))
-    except Exception as e:
-        LOG.warn("Failed to load '%s': %s" % (conf_path, str(e)))
-
-    return dict()
-
-
-DEFAULT_OUT_KEYS = dict(errata=["advisory", "type", "severity", "name",
-                                "epoch", "version", "release", "arch"],
-                        default=_RPM_KEYS)
-
-
-def outputs_result(result, root, restype="updates", keys=[]):
-    """
-    :param result: A list of result dicts :: [dict]
-    :param root: Log root dir
-    :param restype: Result type
-    :param keys: CSV headers
-    """
-    if not keys:
-        keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
-
-    result = sorted(result, key=operator.itemgetter(keys[0]))
-
-    with open(logpath(root, restype + ".json"), 'w') as f:
-        json.dump(dict(data=result, ), f)
-
-    with open(logpath(root, restype + ".csv"), 'w') as f:
-        if not keys:
-            keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
-
-        f.write(','.join(keys) + '\n')
-        for d in result:
-            vals = [d.get(k, False) for k in keys]
-            f.write(','.join(v for v in vals if v) + '\n')
 
 
 def main(argv=sys.argv, cmds=_COMMANDS):
