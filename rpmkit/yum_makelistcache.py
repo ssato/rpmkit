@@ -380,7 +380,10 @@ def yum_download(root, enablerepos=[], disablerepos=['*']):
 
     (rc, err) = _run(cs, output)
 
+    # 'yum --downloadonly ..' will exit with 1 if any downloads found.
     if rc == 0:
+        LOG.info("No downloads.")
+    elif rc == 1:
         LOG.info("Download: OK")
     else:
         LOG.error("Failed to download udpates: " + err)
