@@ -440,7 +440,8 @@ _LIST_TYPES = (LIST_INSTALLED, LIST_UPDATES, LIST_ERRATA) \
             = ("installed", "updates", "errata")
 _DEFAULTS = dict(root=os.curdir, log=False, dist="rhel",
                  list_type=LIST_INSTALLED,
-                 enablerepo=[], disablerepo=[], conf=None, verbose=False)
+                 enablerepos=[], disablerepos=[], conf=None,
+                 verbose=False)
 
 
 def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
