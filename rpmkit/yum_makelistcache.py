@@ -324,8 +324,9 @@ def list_errata_g(root, opts=[], dist=None):
         reg = _reg_by_dist()
 
         for line in lines:
+            line = line.rstrip()
             if _is_errata_line(line, reg):
-                LOG.debug("Errata line: " + line)
+                # LOG.debug("Errata line: " + line)
                 yield parse_errata_line(line)
             else:
                 LOG.debug("Not errata line: " + line)
