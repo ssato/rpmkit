@@ -121,6 +121,16 @@ def _activate_repos(base, enablerepos=[], disablerepos=['*']):
     _toggle_repos(base, enablerepos, "enable")
 
 
+def _find_valid_attrs_g(obj, attrs=[]):
+    for a in attrs:
+        try:
+            if getattr(obj, a, None) is not None:
+                yield a
+        except (AttributeError, KeyError):
+            LOG.debug("Attr '%s' is missing in the obj" % a)
+            pass
+
+
 def yum_list(root, pkgnarrow="installed", enablerepos=[], disablerepos=['*'],
              keys=_RPM_KEYS):
     """
@@ -152,6 +162,9 @@ def yum_list(root, pkgnarrow="installed", enablerepos=[], disablerepos=['*'],
     else:
         LOG.error("Unknown pkgnarrow: %s" % pkgnarrow)
         ps = []
+
+    if ps:
+        keys = list(_find_valid_attrs_g(ps[0], keys))
 
     return [dict((k, getattr(p, k, None)) for k in keys) for p in ps]
 
