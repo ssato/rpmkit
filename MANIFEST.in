@@ -8,4 +8,5 @@ include examples/*
 include po/*.po
 recursive-include rpmkit *.py *.mo
 recursive-include data *.j2 *.yml
-recursive-include etc *.yml *.ini
+recursive-include etc *.yml *.ini *.cron
+include etc/cron.daily *.cron
