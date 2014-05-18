@@ -412,6 +412,9 @@ def outputs_result(result, root, restype="updates", keys=[]):
     if not keys:
         keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
 
+    if result:
+        keys = [(k if k in result[0]) for k in keys]
+
     result = sorted(result, key=operator.itemgetter(keys[0]))
 
     with open(logpath(root, restype + ".json"), 'w') as f:
