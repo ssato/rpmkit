@@ -37,7 +37,11 @@ except ImportError:
     import simplejson as json
 
 
-LOG = logging.getLogger('yum_makelistcache')
+NAME = "yum_makelistcache"
+
+logging.basicConfig(format="%(asctime)-15s [%(levelname)s] %(message)s")
+
+LOG = logging.getLogger(NAME)
 LOG.addHandler(logging.StreamHandler())
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
@@ -435,7 +439,8 @@ Examples:
 _COMMANDS = dict(l="list", d="download")
 _LIST_TYPES = (LIST_INSTALLED, LIST_UPDATES, LIST_ERRATA) \
             = ("installed", "updates", "errata")
-_DEFAULTS = dict(root=os.curdir, dist="rhel", list_type=LIST_INSTALLED,
+_DEFAULTS = dict(root=os.curdir, log=False, dist="rhel",
+                 list_type=LIST_INSTALLED,
                  enablerepo=[], disablerepo=[], conf=None, verbose=False)
 
 
@@ -451,6 +456,8 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
     p.add_option("-r", "--root", help="RPM DB root dir. By default, dir "
                  "in which the 'Packages' RPM DB exists or '../../../' "
                  "of that dir if 'Packages' exists under 'var/lib/rpm'.")
+    p.add_option("", "--log", action="store_true",
+                 help="Take run log ($logdir/%s.log) if given" % NAME)
     p.add_option("-d", "--dist", choices=("rhel", "fedora"),
                  help="Select distributions: fedora or rhel [%default]")
 
@@ -486,7 +493,7 @@ def main(argv=sys.argv, cmds=_COMMANDS):
 
     if options.conf:
         diff = load_conf(options.conf)
-        LOG.debug("diff=" + pprint.pformat(diff))
+        # LOG.debug("diff=" + pprint.pformat(diff))
         for k, v in diff.iteritems():
             if k in ('enablerepos', 'disablerepos'):
                 setattr(options, k, eval(v))
@@ -499,6 +506,10 @@ def main(argv=sys.argv, cmds=_COMMANDS):
     if not setup_root(options.root):
         LOG.error("setup_root failed. Aborting...")
         sys.exit(2)
+
+    if options.log:
+        LOG.addHandler(logging.FileHandler(logpath(options.root,
+                                                   NAME + ".log")))
 
     if args[0].startswith('l'):
         if options.list_type == LIST_ERRATA:
