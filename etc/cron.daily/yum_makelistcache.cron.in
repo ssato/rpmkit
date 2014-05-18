@@ -1,0 +1,34 @@
+#! /bin/bash
+set -e
+
+PROG=yum_makelistcache
+BIN_PROG=/usr/bin/${PROG}
+CONFDIR=/etc/rpmkit/${PROG}.d
+OUTDIR=/var/lib/${PROG}/root.d/
+
+LOCKFILE=/var/lock/${PROG}.lock
+
+export PATH=/usr/bin:/usr/sbin:/bin:/sbin
+
+
+test -f $LOCKFILE && exit 0
+trap "{ rm -f $LOCKFILE ; exit 255; }" EXIT
+touch $LOCKFILE
+
+for conf in $CONFDIR/*.ini; do
+    $BIN_PROG -C $conf list -L updates
+    ret=$?
+    if test $ret -ne 0; then
+        echo "[ERROR] any error occurred. check your configuration!"
+        echo "[ERROR] (erroneous \$conf = $conf)"
+        break
+    fi
+done
+
+/usr/bin/chcon -R -t httpd_sys_content_t $PROG
+
+test $ret -eq 0 && rm -f $LOCKFILE
+
+exit $ret
+
+# vim:sw=4:ts=4:et:
