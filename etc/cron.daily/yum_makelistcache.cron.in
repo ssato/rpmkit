@@ -12,7 +12,7 @@ export PATH=/usr/bin:/usr/sbin:/bin:/sbin
 
 
 test -f $LOCKFILE && exit 0
-trap "{ rm -f $LOCKFILE ; exit 255; }" EXIT
+trap "{ rm -f $LOCKFILE ; exit 255; }" INT TERM
 touch $LOCKFILE
 
 for conf in $CONFDIR/*.ini; do
