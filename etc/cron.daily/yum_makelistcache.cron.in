@@ -25,7 +25,7 @@ for conf in $CONFDIR/*.ini; do
     fi
 done
 
-/usr/bin/chcon -R -t httpd_sys_content_t $PROG
+/usr/bin/chcon -R -t httpd_sys_content_t $OUTDIR
 
 test $ret -eq 0 && rm -f $LOCKFILE
 
