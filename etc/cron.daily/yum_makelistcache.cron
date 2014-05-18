@@ -27,7 +27,6 @@ done
 /usr/bin/chcon -R -t httpd_sys_content_t $OUTDIR
 
 test $ret -eq 0 && rm -f $LOCKFILE
-
 exit $ret
 
 # vim:sw=4:ts=4:et:
