@@ -15,7 +15,6 @@ import rpmkit.swapi as RS
 import rpmkit.utils as RU
 import logging
 import multiprocessing
-import operator
 import optparse
 import os.path
 import os

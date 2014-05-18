@@ -16,7 +16,6 @@ import rpmkit.tests.common as C
 import os.path
 import os
 import shlex
-import sys
 import unittest
 
 

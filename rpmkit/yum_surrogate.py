@@ -30,7 +30,6 @@ import shutil
 import subprocess
 import sys
 import threading
-import time
 
 try:
     import json

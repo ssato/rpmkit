@@ -14,7 +14,6 @@ import anyconfig
 import logging
 import optparse
 import os.path
-import re
 import sys
 
 
@@ -135,7 +134,7 @@ def main(cmd_map=_ARGS_CMD_MAP):
         sys.exit(1)
 
     root = os.path.abspath(options.root)
-    all_rpms = [p["name"] for p in RR.list_installed_rpms(root)]
+    all_rpms = [x["name"] for x in RR.list_installed_rpms(root)]
 
     if options.excludes:
         if is_file(options.excludes):
@@ -208,7 +207,7 @@ def main(cmd_map=_ARGS_CMD_MAP):
             else:
                 with open(options.output, 'w') as out:
                     for x in xs:
-                        print(x, file=output)
+                        out.write(x + '\n')
         else:
             for x in xs:
                 print(x)

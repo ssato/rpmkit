@@ -12,9 +12,7 @@ import rpmkit.utils as RU
 import rpmkit.extras.rk_dnf as RED
 
 import anyconfig
-import anyconfig.utils as AU
 import bunch
-import dnf.exceptions
 import logging
 import optparse
 import os.path
@@ -73,6 +71,7 @@ def parse_install_pred(pexp, system_profile={}, fallback=None):
         try:
             return eval(pexp, system_profile)  # FIXME: Unsafe.
         except (NameError, SyntaxError) as e:
+            logging.warn("parse_install_pred: err=" + str(e))
             return fallback
 
 
@@ -209,10 +208,10 @@ def main():
         p.print_usage()
         sys.exit(1)
 
-    host_prof_specs = args[0]
+    # host_prof_specs = args[0]
 
     root = os.path.abspath(options.root)
-    all_rpms = [p["name"] for p in RR.list_installed_rpms(root)]
+    all_rpms = [x["name"] for x in RR.list_installed_rpms(root)]
 
     (excludes, removes) = make_excl_packages_list(options.ppaths,
                                                   options.gpaths)
@@ -224,8 +223,6 @@ def main():
         xs = RR.compute_removed(remove_candidates, root, excludes=excludes)
 
     data = dict(removed=xs, excludes=excludes)
-
-    output = open(options.output, 'w') if options.output else sys.stdout
 
     if options.output:
         anyconfig.dump(dict(data=data, ), options.output, forced_type="yaml")

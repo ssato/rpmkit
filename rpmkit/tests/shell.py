@@ -108,7 +108,7 @@ class Test_20_do_task(unittest.TestCase):
     def test_01_do_task__no_errors_but_not_return_0_and_exception_raised(self):
         task = SH.Task("false", timeout=10)
 
-        with self.assertRaises(SH.TaskError) as cm:
+        with self.assertRaises(SH.TaskError):
             SH.do_task(task)
 
     def test_02_do_task__no_errors_but_not_return_0(self):
@@ -128,7 +128,7 @@ class Test_20_do_task(unittest.TestCase):
 
         task = SH.Task("touch /root/.bashrc", timeout=10)
 
-        with self.assertRaises(SH.TaskError) as cm:
+        with self.assertRaises(SH.TaskError):
             SH.do_task(task, stop_on_error=True)
 
     def test_20_do_task__ignore_permission_denied_error(self):
@@ -142,7 +142,7 @@ class Test_20_do_task(unittest.TestCase):
     def test_30_do_task__timeout(self):
         task = SH.Task("sleep 10", timeout=1)
 
-        with self.assertRaises(SH.TaskError) as cm:
+        with self.assertRaises(SH.TaskError):
             SH.do_task(task)
 
     def test_31_do_task__timeout__w_rc(self):
@@ -164,7 +164,7 @@ class Test_30_run(unittest.TestCase):
             print("Skip this test because you're root.")
             return
 
-        with self.assertRaises(SH.TaskError) as cm:
+        with self.assertRaises(SH.TaskError):
             SH.run("ls /root", stop_on_error=True)
 
     def test_30_run__ignore_permission_denied_error(self):

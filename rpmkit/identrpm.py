@@ -14,17 +14,14 @@ import rpmkit.swapi as SW
 import rpmkit.utils as RU
 
 import anyconfig
-import commands
 import datetime
 import itertools
 import logging
 import multiprocessing
 import operator
 import optparse
-import os
 import pprint
 import re
-import shlex
 import sys
 
 
@@ -218,7 +215,7 @@ def get_rpm_details(pkg, options=[]):
     __validate_pkg(pkg, ['id'])
     try:
         return SW.call('packages.getDetails', [pkg['id']], options)[0]
-    except RuntimeError, IndexError:
+    except (RuntimeError, IndexError):
         LOG.warn("Failed to get details of the pkg#%(id)d" % pkg)
         return pkg
 
@@ -243,7 +240,7 @@ def find_rpm_by_nvrea(pkg, options=[]):
     try:
         return [get_rpm_details(p, options) for p in
                 SW.call('packages.findByNvrea', api_args, options)]
-    except RuntimeError, IndexError:
+    except (RuntimeError, IndexError):
         return []
 
 
@@ -296,7 +293,7 @@ def list_rpms_in_channel(pkg, channel, options=[]):
 
         return list(f(pkg, all_rpms))
 
-    except RuntimeError, IndexError:
+    except (RuntimeError, IndexError):
         return []
 
 
@@ -325,7 +322,7 @@ def find_rpm_by_search(pkg, options=[]):
     try:
         return [get_rpm_details(p, options) for p in
                 SW.call('packages.search.advanced', [arg_fmt % pkg], options)]
-    except RuntimeError, IndexError:
+    except (RuntimeError, IndexError):
         return []
 
 

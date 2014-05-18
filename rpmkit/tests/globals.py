@@ -15,7 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import rpmkit.globals as G
+import rpmkit.globals as TT
+import unittest
 
+
+class Test_00(unittest.TestCase):
+
+    def test_00_logger(self):
+        self.assertTrue(isinstance(TT.LOGGER, TT.logging.Logger))
 
 # vim:sw=4 ts=4 et:

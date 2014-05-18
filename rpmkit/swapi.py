@@ -47,10 +47,8 @@ import logging
 import optparse
 import os
 import os.path
-import pprint
 import random
 import re
-import shlex
 import subprocess
 import sys
 import time

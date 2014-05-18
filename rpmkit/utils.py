@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from rpmkit.memoize import memoize
+# from rpmkit.memoize import memoize
 from itertools import izip, takewhile
 
 import codecs
@@ -430,7 +430,7 @@ def select_from_list_g(xs, ref_xs=[]):
                 else:
                     reg = re.compile(r)
 
-            except Exception as e:  # NOTE: There's no special exc.
+            except Exception:  # NOTE: There's no special exc.
                 logging.warn("Not look a valid regex and maybe it's "
                              "just a string not found. Skipped: " + r)
                 continue

@@ -17,7 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from logging import DEBUG, INFO
-from operator import itemgetter
 
 import rpmkit.rpmutils as RU
 import rpmkit.yum_surrogate as YS
@@ -28,7 +27,6 @@ import logging
 import optparse
 import os
 import os.path
-import sys
 
 try:
     import json

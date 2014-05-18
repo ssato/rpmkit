@@ -110,7 +110,7 @@ def main(argv=sys.argv):
         os.makedirs(options.outdir)
 
     if options.download:
-        _res = RU.pcall(download_rpm,
+        _res = RU.pcall(download_rpm,  # flake8: noqa
                         [(rpm, options.outdir) for rpm in
                          list_latest_packages_in_the_channel_g(channel, True)])
     else:

@@ -16,7 +16,6 @@ import librepo
 import logging
 import os.path
 import shutil
-import sys
 import tempfile
 
 
@@ -123,7 +122,7 @@ def compute_removed(pkgspecs, root, excludes=[]):
     for pspec in pkgspecs:
         try:
             base.remove(pspec)
-            _transaction = base.resolve()
+            base.resolve()
             rs = [x.erased.name for x in
                   base.transaction.get_items(dnf.transaction.ERASE)]
             removes.extend(rs)

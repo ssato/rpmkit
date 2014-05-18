@@ -25,7 +25,6 @@ import operator
 import optparse
 import os.path
 import os
-import pprint
 import re
 import subprocess
 import sys
@@ -493,7 +492,6 @@ def main(argv=sys.argv, cmds=_COMMANDS):
 
     if options.conf:
         diff = load_conf(options.conf)
-        # LOG.debug("diff=" + pprint.pformat(diff))
         for k, v in diff.iteritems():
             if k in ('enablerepos', 'disablerepos'):
                 setattr(options, k, eval(v))

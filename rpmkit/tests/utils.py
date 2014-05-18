@@ -40,7 +40,7 @@ class Test_00(unittest.TestCase):
 
         TT.typecheck(A(), A)
 
-        with self.assertRaises(TypeError) as cm:
+        with self.assertRaises(TypeError):
             TT.typecheck(A(), str)
 
     def test_20_is_local(self):

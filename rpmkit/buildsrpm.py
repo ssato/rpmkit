@@ -75,8 +75,9 @@ def download_src0(rpmspec, url, out):
     try:
         download(url, out)
 
-    except urllib2.HTTPError, e:
-        logging.warn("Could not download source0 from: " + url)
+    except urllib2.HTTPError as e:
+        logging.warn("Could not download source0 from "
+                     "%s: err=%s" % (url, str(e)))
         url = raw_input("Input the correct URL of source0 > ")
 
         download(url, out)

@@ -22,22 +22,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from rpmkit.globals import DEBUG, INFO, _
-from operator import attrgetter, itemgetter
+from operator import itemgetter
 
-import rpmkit.globals as RG
 import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
 import rpmkit.swapi as SW
 import rpmkit.yum_surrogate as YS
 
-import datetime
 import logging
 import optparse
 import os
 import os.path
 import re
-import sys
 import tablib
 
 
@@ -709,7 +706,7 @@ def cve_socre_gt(cve, score=4.0, default=False):
     """
     try:
         return float(cve["score"]) >= score
-    except Exception as e:
+    except Exception:
         logging.warn("Failed to compare CVE's score: %s, score=%.1f" %
                      (str(cve), score))
 
@@ -729,6 +726,7 @@ def make_cve_sec_errata_dataset(workdir, csekeys=_CVE_SECERRATA_KEYS,
             any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
     cseds_title = _("Sec. Errata CVSS >= %.1f") % cvss_score
     cseds = _make_dataset(cses, csekeys, cseds_title)
+    return cseds
 
 
 def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,

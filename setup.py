@@ -2,7 +2,6 @@ from distutils.core import setup, Command
 from distutils.sysconfig import get_python_lib
 from glob import glob
 
-import datetime
 import os
 import os.path
 import sys
@@ -28,7 +27,8 @@ def list_files(tdir):
 data_files = [
     ("share/rpmkit/optimizer/pgroups.d/rhel-6-x86_64",
      list_files("data/optimizer/pgroups.d/rhel-6-x86_64/")),
-    ("/etc/rpmkit/yum_makelistcache.d/", list_files("etc/yum_makelistcache.d/")),
+    ("/etc/rpmkit/yum_makelistcache.d/",
+     list_files("etc/yum_makelistcache.d/")),
     ("/etc/cron.daily/", list_files("etc/cron.daily/")),
     ("/etc/rpmkit/optimizer.d/rhel-6-x86_64",
      list_files("etc/optimizer.d/rhel-6-x86_64/")),
@@ -96,23 +96,18 @@ class RpmCommand(SrpmCommand):
 
 
 setup(name=PACKAGE,
-    version=VERSION,
-    description="RPM toolKit",
-    author="Satoru SATOH",
-    author_email="ssato@redhat.com",
-    license="GPLv3+",
-    url="https://github.com/ssato/rpmkit",
-    packages=[
-        "rpmkit",
-        "rpmkit.extras",
-        "rpmkit.tests",
-    ],
-    scripts=glob("tools/*"),
-    data_files=data_files,
-    cmdclass={
-        "srpm": SrpmCommand,
-        "rpm":  RpmCommand,
-    },
-)
+      version=VERSION,
+      description="RPM toolKit",
+      author="Satoru SATOH",
+      author_email="ssato@redhat.com",
+      license="GPLv3+",
+      url="https://github.com/ssato/rpmkit",
+      packages=["rpmkit",
+                "rpmkit.extras",
+                "rpmkit.tests"],
+      scripts=glob("tools/*"),
+      data_files=data_files,
+      cmdclass={"srpm": SrpmCommand,
+                "rpm":  RpmCommand})
 
 # vim:sw=4:ts=4:et:

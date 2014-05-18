@@ -21,7 +21,6 @@
 from logging import DEBUG, INFO
 
 import rpmkit.yum_surrogate as YS
-import rpmkit.utils as RU
 
 import anyconfig
 import datetime
@@ -34,7 +33,6 @@ import os
 import sys
 import tempfile
 import xml.etree.cElementTree as ET
-import yaml
 
 
 def _tree_from_xml(xmlfile):

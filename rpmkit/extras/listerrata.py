@@ -19,7 +19,6 @@
 #
 from rpmkit.swapi import main as swmain
 from rpmkit.utils import groupby_key
-from itertools import izip_longest as izip
 from operator import itemgetter
 
 import calendar
@@ -30,7 +29,6 @@ import os
 import os.path
 import pprint
 import re
-import shlex
 import sys
 
 try:

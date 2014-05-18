@@ -21,15 +21,12 @@ from rpmkit.utils import concat, uniq, uconcat
 
 from itertools import izip, repeat
 from logging import DEBUG, INFO
-from operator import itemgetter
 
 import rpmkit.identrpm as RI
 import rpmkit.extras.repodata as RR
 import anyconfig
 import logging
 import optparse
-import os
-import os.path
 import sys
 
 

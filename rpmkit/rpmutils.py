@@ -23,10 +23,8 @@ import itertools
 import logging
 import operator
 import os
-import random
 import re
 import rpm
-import sys
 import yum
 import yum.rpmsack
 
