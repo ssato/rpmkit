@@ -413,7 +413,7 @@ def outputs_result(result, root, restype="updates", keys=[]):
         keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
 
     if result:
-        keys = [(k if k in result[0]) for k in keys]
+        keys = [k for k in keys if k in result[0]]
 
     result = sorted(result, key=operator.itemgetter(keys[0]))
 
