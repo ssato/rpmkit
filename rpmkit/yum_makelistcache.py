@@ -338,6 +338,8 @@ def _mk_repo_opts(enablerepos, disablerepos):
     """
     :note: Take care of the order of disabled and enabled repos.
     """
+    LOG.info("disabled=%s, enabled=%s" % (','.join(disablerepos),
+                                          ','.join(enablerepos)))
     return ["--disablerepo='%s'" % repo for repo in disablerepos] + \
            ["--enablerepo='%s'" % repo for repo in enablerepos]
 
@@ -378,6 +380,8 @@ def yum_download(root, enablerepos=[], disablerepos=['*']):
                                                      "update", "-y"]
 
     output = logpath(root, "yum_download.log")
+    LOG.info("Update RPMs will be donwloaded under: %s" %
+             os.path.join(root, "var/cache/.../<repo_id>/packages/"))
 
     (rc, err) = _run(cs, output)
 
@@ -422,9 +426,11 @@ def outputs_result(result, root, restype="updates", keys=[]):
     result = sorted(result, key=operator.itemgetter(keys[0]))
 
     with open(logpath(root, restype + ".json"), 'w') as f:
+        LOG.info("Dump JSON data: " + logpath(root, restype + ".json"))
         json.dump(dict(data=result, ), f)
 
     with open(logpath(root, restype + ".csv"), 'w') as f:
+        LOG.info("Dump CSV data: " + logpath(root, restype + ".csv"))
         if not keys:
             keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
 
@@ -432,6 +438,13 @@ def outputs_result(result, root, restype="updates", keys=[]):
         for d in result:
             vals = [d.get(k, False) for k in keys]
             f.write(','.join(v for v in vals if v) + '\n')
+
+
+def _set_loglevel(lvl):
+    if lvl not in (0, 1, 2):
+        lvl = 0
+
+    LOG.setLevel([logging.WARN, logging.INFO, logging.DEBUG][lvl])
 
 
 _USAGE = """%prog [Options] COMMAND
@@ -460,8 +473,7 @@ _LIST_TYPES = (LIST_INSTALLED, LIST_UPDATES, LIST_ERRATA) \
             = ("installed", "updates", "errata")
 _DEFAULTS = dict(root=os.curdir, log=False, dist="rhel",
                  list_type=LIST_INSTALLED,
-                 enablerepos=[], disablerepos=[], conf=None,
-                 verbose=False)
+                 enablerepos=[], disablerepos=[], conf=None, verbosity=0)
 
 
 def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
@@ -495,7 +507,10 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
     p.add_option_group(liog)
 
     p.add_option("-C", "--conf", help="Specify .ini style config file path")
-    p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
+    p.add_option("-v", "--verbose", action="count", dest="verbosity",
+                 help="Verbose mode")
+    p.add_option("-D", "--debug", action="store_const", dest="verbosity",
+                 const=2, help="Debug mode (same as -vv)")
 
     return p
 
@@ -509,7 +524,7 @@ def main(argv=sys.argv, cmds=_COMMANDS):
         p.print_help()
         sys.exit(3)
 
-    LOG.setLevel(logging.DEBUG if options.verbose else logging.INFO)
+    _set_loglevel(options.verbosity)
 
     if options.conf:
         diff = load_conf(options.conf)
@@ -527,8 +542,9 @@ def main(argv=sys.argv, cmds=_COMMANDS):
         sys.exit(2)
 
     if options.log:
-        LOG.addHandler(logging.FileHandler(logpath(options.root,
-                                                   NAME + ".log")))
+        logfile = logpath(options.root, NAME + ".log")
+        LOG.info("Log will be saved to: " + logfile)
+        LOG.addHandler(logging.FileHandler(logfile))
 
     if args[0].startswith('l'):
         if options.list_type == LIST_ERRATA:
