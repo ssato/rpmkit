@@ -1,0 +1,9 @@
+# Cached yum repo metadata and packages will be downloaded under this dir.
+#
+# Layout:
+#
+# * original RPM db: var/lib/rpm/[A-Z]*
+# * repo metadata (primary.xml, etc.): var/cache/yum/.../${repo_id}/
+# * Log and dumped data files (.json, .csv): var/log/
+# * Update RPMs downloaded: var/cache/yum/.../${repo_id}/packages/*.rpm
+#
