@@ -1,12 +1,12 @@
 #! /bin/bash
 set -e
 
-PROG=yum_makelistcache
-BIN_PROG=/usr/bin/${PROG}
-CONFDIR=/etc/rpmkit/${PROG}.d
-OUTDIR=/var/lib/${PROG}/root.d/
+NAME=yum_makelistcache
+BIN_NAME=/usr/bin/${NAME}
+CONFDIR=/etc/rpmkit/${NAME}.d
+OUTDIR=/var/lib/${NAME}/root.d/
 
-LOCKFILE=/var/lock/${PROG}.lock
+LOCKFILE=/var/lock/${NAME}.lock
 
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin
 
@@ -16,7 +16,7 @@ trap "{ rm -f $LOCKFILE ; exit 255; }" INT TERM
 touch $LOCKFILE
 
 for conf in $CONFDIR/*.ini; do
-    $BIN_PROG -C $conf list -L updates
+    $BIN_NAME -C $conf list -L updates
     ret=$?
     if test $ret -ne 0; then
         echo "[ERROR] erroneous conf: $conf"
