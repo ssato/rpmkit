@@ -27,6 +27,8 @@ def list_files(tdir):
 data_files = [
     ("share/rpmkit/optimizer/pgroups.d/rhel-6-x86_64",
      list_files("data/optimizer/pgroups.d/rhel-6-x86_64/")),
+    ("/var/lib/yum_makelistcache/root.d/",
+     list_files("data/yum_makelistcache/root.d/")),
     ("/etc/rpmkit/yum_makelistcache.d/",
      list_files("etc/yum_makelistcache.d/")),
     ("/etc/cron.daily/", list_files("etc/cron.daily/")),
