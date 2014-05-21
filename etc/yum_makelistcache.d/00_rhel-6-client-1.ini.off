@@ -5,5 +5,8 @@ root=/home/ssato/Desktop/rpmdbs/root/
 disablerepos=['*']
 enablerepos=['rhel-x86_64-server-6']
 verbose=1
+#debug=1
+#outdir=/var/lib/yum_makelistcache/root.d/
+outdir=/tmp/outdir.d
 # Choices: installed [default], updates and errata
 #list_type=updates

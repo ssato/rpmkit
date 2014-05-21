@@ -3,6 +3,9 @@ set -e
 
 NAME=yum_makelistcache
 
+# Set to 1 if you want to make ${NAME} to download update RPMs also.
+DOWNLOAD_UPDATES=0
+
 BIN_NAME=/usr/bin/${NAME}
 CONFDIR=/etc/rpmkit/${NAME}.d
 OUTDIR=/var/lib/${NAME}/root.d/
@@ -16,11 +19,19 @@ trap "{ rm -f $LOCKFILE ; exit 255; }" INT TERM
 touch $LOCKFILE
 
 for conf in $CONFDIR/*.ini; do
-    $BIN_NAME -C $conf list -L updates
+    $BIN_NAME -C $conf list -L all
     ret=$?
     if test $ret -ne 0; then
         echo "[ERROR] erroneous conf: $conf"
         break
+    fi
+    if test ${DOWNLOAD_UPDATES} -eq 1; then
+        $BIN_NAME -C $conf download
+        ret=$?
+        if test $ret -ne 0; then
+            echo "[ERROR] Failed to download, conf=$conf"
+            break
+        fi
     fi
 done
 
