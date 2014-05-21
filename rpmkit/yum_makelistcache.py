@@ -362,13 +362,15 @@ def _is_root():
     return os.getuid() == 0
 
 
-def yum_download(root, enablerepos=[], disablerepos=['*']):
+def yum_download(root, enablerepos=[], disablerepos=['*'], outdir=None):
     """
     List errata similar to "yum list-sec".
 
     :param root: RPM DB root dir in absolute path
     :param enablerepos: List of Yum repos to enable
     :param disablerepos: List of Yum repos to disable
+    :param outdir: Output dir. ``root``/var/cache/.../packages/ will be used
+        if it's None.
 
     :return: List of dicts contain each errata info
     yum update -y --downloadonly
@@ -378,6 +380,12 @@ def yum_download(root, enablerepos=[], disablerepos=['*']):
     cs = [] if _is_root() else ["fakeroot"]  # avoid unneeded check.
     cs += ["yum", "--installroot=" + root] + opts + ["--downloadonly",
                                                      "update", "-y"]
+
+    if outdir:
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+
+        cs += ["--downloaddir=" + outdir]
 
     output = logpath(root, "yum_download.log")
     LOG.info("Update RPMs will be donwloaded under: %s" %
@@ -410,10 +418,10 @@ def load_conf(conf_path, sect="main"):
     return dict()
 
 
-def outputs_result(result, root, restype="updates", keys=[]):
+def outputs_result(result, outdir, restype="updates", keys=[]):
     """
     :param result: A list of result dicts :: [dict]
-    :param root: Log root dir
+    :param outdir: Output dir
     :param restype: Result type
     :param keys: CSV headers
     """
@@ -425,12 +433,17 @@ def outputs_result(result, root, restype="updates", keys=[]):
 
     result = sorted(result, key=operator.itemgetter(keys[0]))
 
-    with open(logpath(root, restype + ".json"), 'w') as f:
-        LOG.info("Dump JSON data: " + logpath(root, restype + ".json"))
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
+    fpath = os.path.join(outdir, restype + ".json")
+    with open(fpath, 'w') as f:
+        LOG.info("Dump JSON data: " + fpath)
         json.dump(dict(data=result, ), f)
 
-    with open(logpath(root, restype + ".csv"), 'w') as f:
-        LOG.info("Dump CSV data: " + logpath(root, restype + ".csv"))
+    fpath = os.path.join(outdir, restype + ".csv")
+    with open(fpath, 'w') as f:
+        LOG.info("Dump CSV data: " + fpath)
         if not keys:
             keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
 
@@ -463,17 +476,21 @@ Examples:
   %prog --disablerepo='*' --enablerepo='rhel-x86_64-server-6' \\
      --root=/var/lib/yum_makelistcache/root.d/aaa l -L updates
 
+  # Save all (installed, updates and errata) list:
+  %prog --disablerepo='*' --enablerepo='rhel-x86_64-server-6' \\
+     --root=/var/lib/yum_makelistcache/root.d/aaa l -L all
+
   # Save update RPMs, similar to 'yum update --downloadonly':
   %prog --disablerepo='*' --enablerepo='rhel-x86_64-server-6' \\
      --root=/var/lib/yum_makelistcache/root.d/aaa d
 """
 
 _COMMANDS = dict(l="list", d="download")
-_LIST_TYPES = (LIST_INSTALLED, LIST_UPDATES, LIST_ERRATA) \
-            = ("installed", "updates", "errata")
+_LIST_TYPES = (LIST_INSTALLED, LIST_UPDATES, LIST_ERRATA, LIST_ALL) \
+            = ("installed", "updates", "errata", "all")
 _DEFAULTS = dict(root=os.curdir, log=False, dist="rhel",
-                 list_type=LIST_INSTALLED,
-                 enablerepos=[], disablerepos=[], conf=None, verbosity=0)
+                 list_type=LIST_INSTALLED, enablerepos=[], disablerepos=[],
+                 conf=None, outdir=None, verbosity=0)
 
 
 def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
@@ -507,6 +524,9 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
     p.add_option_group(liog)
 
     p.add_option("-C", "--conf", help="Specify .ini style config file path")
+    p.add_option("-O", "--outdir",
+                 help="Specify outputs dir, ex. '/tmp/root/sys_a/' "
+                      "[<root>/var/log/]")
     p.add_option("-v", "--verbose", action="count", dest="verbosity",
                  help="Verbose mode")
     p.add_option("-D", "--debug", action="store_const", dest="verbosity",
@@ -547,17 +567,32 @@ def main(argv=sys.argv, cmds=_COMMANDS):
         LOG.addHandler(logging.FileHandler(logfile))
 
     if args[0].startswith('l'):
-        if options.list_type == LIST_ERRATA:
+        if not options.outdir:
+            options.outdir = os.path.join(options.root, "var/log")
+
+        if options.list_type == LIST_ALL:
             res = yum_list_errata(options.root, options.enablerepos,
                                   options.disablerepos)
-        else:
-            res = yum_list(options.root, options.list_type,
-                           options.enablerepos, options.disablerepos,
-                           _RPM_KEYS)
+            outputs_result(res, options.outdir, LIST_ERRATA)
 
-        outputs_result(res, options.root, options.list_type)
+            for ltype in (LIST_INSTALLED, LIST_UPDATES):
+                res = yum_list(options.root, ltype, options.enablerepos,
+                               options.disablerepos, _RPM_KEYS)
+                outputs_result(res, options.outdir, ltype)
+
+        else:
+            if options.list_type == LIST_ERRATA:
+                res = yum_list_errata(options.root, options.enablerepos,
+                                      options.disablerepos)
+            else:
+                res = yum_list(options.root, options.list_type,
+                               options.enablerepos, options.disablerepos,
+                               _RPM_KEYS)
+
+            outputs_result(res, options.outdir, options.list_type)
     else:
-        yum_download(options.root, options.enablerepos, options.disablerepos)
+        yum_download(options.root, options.enablerepos, options.disablerepos,
+                     options.outdir)
 
 
 if __name__ == '__main__':
