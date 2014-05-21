@@ -2,10 +2,10 @@
 set -e
 
 NAME=yum_makelistcache
+
 BIN_NAME=/usr/bin/${NAME}
 CONFDIR=/etc/rpmkit/${NAME}.d
 OUTDIR=/var/lib/${NAME}/root.d/
-
 LOCKFILE=/var/lock/${NAME}.lock
 
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin
