@@ -94,9 +94,12 @@ def setup_root(root, readonly=True):
         return False
 
     if readonly:
-        for f in glob.glob(os.path.join(rpmdbdir, "[A-Z]*")):
+        fs = [f for f in glob.glob(os.path.join(rpmdbdir, "[A-Z]*"))
+              if os.access(f, os.W_OK)]
+
+        LOG.info("Drop write access perm: " + ', '.join(fs))
+        for f in fs:
             if os.access(f, os.W_OK):
-                LOG.info("Drop write access perm. to %s" % f)
                 os.chmod(f, 0o444)
 
     logdir = os.path.dirname(logpath(root, "list.log"))
