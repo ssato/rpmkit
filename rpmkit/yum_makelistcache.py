@@ -386,14 +386,16 @@ def yum_download(root, enablerepos=[], disablerepos=['*'], outdir=None):
             os.makedirs(outdir)
 
         cs += ["--downloaddir=" + outdir]
+    else:
+        outdir = os.path.join(root, "var/cache/.../<repo_id>/packages/")
 
     output = logpath(root, "yum_download.log")
-    LOG.info("Update RPMs will be donwloaded under: %s" %
-             os.path.join(root, "var/cache/.../<repo_id>/packages/"))
+    LOG.info("Update RPMs will be donwloaded under: " + outdir)
 
     (rc, err) = _run(cs, output)
 
-    # 'yum --downloadonly ..' will exit with 1 if any downloads found.
+    # It seems that 'yum --downloadonly ..' looks exiting with exit code 1 if
+    # any downloads found.
     if rc == 0:
         LOG.info("No downloads.")
     elif rc == 1:
