@@ -1,12 +1,13 @@
 # Sample configuration file in INI format for yum_makelistcache.
 [main]
 #root=/var/lib/yum_makelistcache/root.d/system_x
-root=/home/ssato/Desktop/rpmdbs/root/
-disablerepos=['*']
-enablerepos=['rhel-x86_64-server-6']
+root=/tmp/root
+disablerepos=*
+enablerepos=rhel-x86_64-server-6,rhel-x86_64-server-optional-6
 verbose=1
 #debug=1
 #outdir=/var/lib/yum_makelistcache/root.d/
-outdir=/tmp/outdir.d
-# Choices: installed [default], updates and errata
-#list_type=updates
+outdir=/tmp/root/outdir
+# Choices: installed [default], updates, errata or all
+list_type=updates
+downloaddir=/tmp/root/updates
