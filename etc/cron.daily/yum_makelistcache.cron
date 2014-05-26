@@ -7,12 +7,14 @@ NAME=yum_makelistcache
 DOWNLOAD_UPDATES=0
 
 BIN_NAME=/usr/bin/${NAME}
+COMMON_CONF=/etc/sysconfig/${NAME}
 CONFDIR=/etc/rpmkit/${NAME}.d
 OUTDIR=/var/lib/${NAME}/root.d/
 LOCKFILE=/var/lock/${NAME}.lock
 
 export PATH=/usr/bin:/usr/sbin:/bin:/sbin
 
+test -f ${COMMON_CONF} && source ${COMMON_CONF} || :
 
 test -f $LOCKFILE && exit 0
 trap "{ rm -f $LOCKFILE ; exit 255; }" INT TERM
@@ -32,6 +34,8 @@ for conf in $CONFDIR/*.ini; do
             echo "[ERROR] Failed to download, conf=$conf"
             break
         fi
+    else
+        :
     fi
 done
 
