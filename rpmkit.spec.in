@@ -79,7 +79,8 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
-%{_sysconfdir}/rpmkit/yum_makelistcache.d/*.ini*
+%config(noreplace) %{_sysconfdir}/sysconfig/*
+%{_sysconfdir}/yum_makelistcache.d/*.ini*
 %attr(0755,root,root) %{_sysconfdir}/cron.daily/yum_makelistcache.cron
 %{_localstatedir}/lib/yum_makelistcache/root.d/README
 
