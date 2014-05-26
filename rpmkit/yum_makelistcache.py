@@ -364,7 +364,7 @@ def _is_root():
 
 def yum_download(root, enablerepos=[], disablerepos=['*'], outdir=None):
     """
-    List errata similar to "yum list-sec".
+    Download update RPMs.
 
     :param root: RPM DB root dir in absolute path
     :param enablerepos: List of Yum repos to enable
