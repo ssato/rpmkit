@@ -1,5 +1,4 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-
 %define debug_package %{nil}
 
 Name:           rpmkit
@@ -17,12 +16,19 @@ BuildArch:      noarch
 BuildRequires:  python
 BuildRequires:  /usr/bin/pygettext.py
 Requires:       rpm-python
-Requires:       python-BeautifulSoup
 # To support 'list-sec' sub command in yum via yum-surrogate:
 Requires:       yum-plugin-security
 
 %description
 RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
+
+%package        swapi
+Summary:        Cli frontend for SpaceWalk API
+Requires:       %{name} = %{version}-%{release}
+Requires:       python-BeautifulSoup
+
+%description    swapi
+This package provides swapi, cli frontend for SpaceWalk API.
 
 %package        extras
 Summary:        Extra and experimental modules and tools in %{name}
@@ -67,17 +73,20 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/identrpm
 %{_bindir}/rpm2json
 %{_bindir}/rpmfy
-%{_bindir}/swapi
 %{_bindir}/yum_makelistcache
 %{_bindir}/yum-surrogate
 %{python_sitelib}/*.egg-info
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
-%{_localstatedir}/cache/swapi
 %{_sysconfdir}/rpmkit/yum_makelistcache.d/*.ini*
 %attr(0755,root,root) %{_sysconfdir}/cron.daily/yum_makelistcache.cron
 %{_localstatedir}/lib/yum_makelistcache/root.d/README
+
+%files          swapi
+%doc README.rst
+%{_bindir}/swapi
+%{_localstatedir}/cache/swapi
 
 %files          extras
 %doc README.rst examples
@@ -90,7 +99,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
-* Sat May 17 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
+* Mon May 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
 - Remove runtime dependency to gevent and implement some alternative routines
   with using multiprocessing module
 - Fixed some more PEP8 and pylint errors and warnings
@@ -116,6 +125,7 @@ rm -rf $RPM_BUILD_ROOT
 - Fix logger inialization (add hander) code in rpmkit.swapi and rpmkit.identrpm
 - Add new module rpmkit.yum_makelistcache and its configuration example
 - Fix some PEP8 errors in rpmkit.swapi
+- Split swapi into sub package (again)
 
 * Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11-1
 - Deprecated rpmkit.rpms2sqldb and related tools
