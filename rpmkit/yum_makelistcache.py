@@ -15,8 +15,6 @@
 Usage:
     su - apache -c 'yum_makelistcache [Options ...] ...'
 """
-import ConfigParser as configparser
-import bsddb
 import glob
 import logging
 import operator
@@ -27,6 +25,16 @@ import re
 import subprocess
 import sys
 import yum
+
+try:
+    import ConfigParser as configparser
+except ImportError:
+    import configparser
+
+try:
+    import bsddb
+except ImportError:
+    bsddb = None
 
 try:
     import json
@@ -49,6 +57,9 @@ def _is_bsd_hashdb(dbpath):
     FIXME: Is this enough to check if given file ``dbpath`` is RPM DB file ?
     """
     try:
+        if bsddb is None:
+            return True  # bsddb is not avialable in python3.
+
         bsddb.hashopen(dbpath, 'r')
     except:
         return False
@@ -550,7 +561,7 @@ def main(argv=sys.argv, cmds=_COMMANDS):
 
     if options.conf:
         diff = load_conf(options.conf)
-        for k, v in diff.iteritems():
+        for k, v in diff.items():
             if k in ('enablerepos', 'disablerepos'):
                 setattr(options, k, eval(v))
 
