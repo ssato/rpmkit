@@ -39,7 +39,6 @@ NAME = "yum_makelistcache"
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s] %(message)s")
 
 LOG = logging.getLogger(NAME)
-LOG.addHandler(logging.StreamHandler())
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
 _RPM_KEYS = ("nevra", "name", "epoch", "version", "release", "arch")
