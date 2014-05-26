@@ -11,3 +11,4 @@ recursive-include data *.j2 *.yml
 recursive-include etc *.yml *.ini *.ini.* *.cron
 include etc/cron.daily *.cron
 include etc/sysconfig *
+include etc/httpd/conf.d *.conf
