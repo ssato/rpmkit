@@ -15,8 +15,6 @@
 Usage:
     su - apache -c 'yum_makelistcache [Options ...] ...'
 """
-from __future__ import print_function
-
 import ConfigParser as configparser
 import bsddb
 import glob
