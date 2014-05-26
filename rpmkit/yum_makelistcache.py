@@ -554,7 +554,7 @@ def main(argv=sys.argv, cmds=_COMMANDS):
             if k in ('enablerepos', 'disablerepos'):
                 setattr(options, k, eval(v))
 
-            elif getattr(options, k, False):
+            elif getattr(options, k, None) is None:
                 setattr(options, k, v)
 
     options.root = os.path.abspath(options.root)  # Ensure abspath.
