@@ -541,7 +541,7 @@ def main(argv=sys.argv, cmds=_COMMANDS):
     p = option_parser()
     (options, args) = p.parse_args(argv[1:])
 
-    if not args or args[0] not in cmds.keys():
+    if not args or args[0] not in cmds:
         LOG.error("You must specify command")
         p.print_help()
         sys.exit(3)
