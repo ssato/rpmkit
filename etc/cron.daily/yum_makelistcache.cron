@@ -5,6 +5,7 @@ NAME=yum_makelistcache
 
 # Set to 1 if you want to make ${NAME} to download update RPMs also.
 DOWNLOAD_UPDATES=0
+DEBUG="-v"
 
 BIN_NAME=/usr/bin/${NAME}
 COMMON_CONF=/etc/sysconfig/${NAME}
@@ -21,14 +22,14 @@ trap "{ rm -f $LOCKFILE ; exit 255; }" INT TERM
 touch $LOCKFILE
 
 for conf in $CONFDIR/*.ini; do
-    $BIN_NAME -C $conf list -L all
+    $BIN_NAME -C $conf list -L all $DEBUG
     ret=$?
     if test $ret -ne 0; then
         echo "[ERROR] erroneous conf: $conf"
         break
     fi
     if test ${DOWNLOAD_UPDATES} -eq 1; then
-        $BIN_NAME -C $conf download
+        $BIN_NAME -C $conf download $DEBUG
         ret=$?
         if test $ret -ne 0; then
             echo "[ERROR] Failed to download, conf=$conf"
