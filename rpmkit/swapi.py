@@ -36,7 +36,6 @@
 from itertools import takewhile, izip, groupby
 from operator import itemgetter
 
-import BeautifulSoup
 import ConfigParser as configparser
 import cPickle as pickle
 import commands
@@ -54,6 +53,11 @@ import sys
 import time
 import urllib2
 import xmlrpclib
+
+try:
+    import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 
 try:
     from hashlib import md5  # python 2.5+
@@ -724,6 +728,11 @@ def get_cvss_for_cve(cve):
         return tag.string == "Base Score:"
 
     url_fmt = "http://nvd.nist.gov/cvss.cfm?version=2&name=%s&vector=(%s)"
+
+    if BeautifulSoup is None:
+        LOG.warn("Could not get CVSS data for given CVE %s as required "
+                 "BeautifulSoup module is not available." % cve)
+        return None
 
     try:
         data = urlread(cve2url(cve))
