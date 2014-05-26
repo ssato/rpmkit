@@ -22,6 +22,17 @@ Requires:       yum-plugin-security
 %description
 RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 
+%package        ylc
+Summary:        Yum list cache
+Requires:       %{name} = %{version}-%{release}
+Requires:       httpd
+%if 0%{?rhel}
+Requires:       yum-plugin-downloadonly
+%endif
+
+%description    ylc
+This package provides yum_makelistcache, its configuration and data files.
+
 %package        swapi
 Summary:        Cli frontend for SpaceWalk API
 Requires:       %{name} = %{version}-%{release}
@@ -73,15 +84,18 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/identrpm
 %{_bindir}/rpm2json
 %{_bindir}/rpmfy
-%{_bindir}/yum_makelistcache
 %{_bindir}/yum-surrogate
 %{python_sitelib}/*.egg-info
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
-%config(noreplace) %{_sysconfdir}/sysconfig/*
-%{_sysconfdir}/yum_makelistcache.d/*.ini*
+
+%files          ylc
+%{_bindir}/yum_makelistcache
 %attr(0755,root,root) %{_sysconfdir}/cron.daily/yum_makelistcache.cron
+%config(noreplace) %{_sysconfdir}/sysconfig/yum_makelistcache
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/yum_makelistcache.conf
+%{_sysconfdir}/yum_makelistcache.d/*.ini*
 %{_localstatedir}/lib/yum_makelistcache/root.d/README
 
 %files          swapi
