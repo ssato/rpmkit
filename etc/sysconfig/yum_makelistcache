@@ -1,0 +1,2 @@
+# Uncomment the following to enable update RPMs downloads in cron job:
+#DOWNLOAD_UPDATES=1
