@@ -15,6 +15,7 @@
 Usage:
     su - apache -c 'yum_makelistcache [Options ...] ...'
 """
+import commands
 import glob
 import logging
 import operator
@@ -22,7 +23,6 @@ import optparse
 import os.path
 import os
 import re
-import subprocess
 import sys
 import yum
 
@@ -287,33 +287,15 @@ def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':'):
 
 
 def _run(cmd, output=None, curdir=os.curdir):
-    """
-    :param cmd: List of command strings :: [str]
-    :param output: Path to the file to save command outputs
-    :param curdir: Current dir to run command
+    cmd_s = ' '.join(cmd)
+    LOG.info("Run '%s' in %s" % (cmd_s, curdir))
+    (rc, out) = commands.getstatusoutput("cd %s && %s" % (curdir, cmd_s))
 
-    :return: (returncode :: int, error_message :: str)
+    if output:
+        with open(output, 'w') as f:
+            f.write(out)
 
-    >>> (rc, err) = _run("timeout 10 ls /".split())
-    >>> rc == 0, err
-    (True, '')
-
-    >>> (rc, err) = _run("timeout 1 sleep 10".split())
-    >>> rc == 0, bool(err)
-    (False, True)
-    """
-    LOG.info("Run '%s' in %s" % (' '.join(cmd), curdir))
-    try:
-        if output:
-            with open(output, 'w') as f:
-                subprocess.check_call(cmd, cwd=curdir, stdout=f,
-                                      stderr=subprocess.PIPE)
-        else:
-            subprocess.check_call(cmd, cwd=curdir, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE)
-        return (0, '')
-    except subprocess.CalledProcessError as exc:
-        return (exc.returncode, str(exc))
+    return (rc, '' if rc == 0 else out)
 
 
 def list_errata_g(root, opts=[], dist=None):
@@ -327,7 +309,6 @@ def list_errata_g(root, opts=[], dist=None):
     """
     cs = ["yum", "--installroot=" + root] + opts + ["list-sec"]
     output = logpath(root, "yum_list-sec.log")
-
     (rc, err) = _run(cs, output)
 
     if rc == 0:
@@ -398,6 +379,7 @@ def yum_download(root, enablerepos=[], disablerepos=['*'], outdir=None):
 
         cs += ["--downloaddir=" + outdir]
     else:
+        # This is not used and just appears in log messages actually:
         outdir = os.path.join(root, "var/cache/.../<repo_id>/packages/")
 
     output = logpath(root, "yum_download.log")
@@ -424,7 +406,12 @@ def load_conf(conf_path, sect="main"):
     cp = configparser.SafeConfigParser()
     try:
         cp.read(conf_path)
-        return dict(cp.items(sect))
+        d = dict(cp.items(sect))
+
+        for k in ("disablerepos", "enablerepos"):
+            d[k] = d.get(k).split(',')  # TODO: safer impl.
+
+        return d
     except Exception as e:
         LOG.warn("Failed to load '%s': %s" % (conf_path, str(e)))
 
@@ -501,9 +488,9 @@ Examples:
 _COMMANDS = dict(l="list", d="download")
 _LIST_TYPES = (LIST_INSTALLED, LIST_UPDATES, LIST_ERRATA, LIST_ALL) \
             = ("installed", "updates", "errata", "all")
-_DEFAULTS = dict(root=os.curdir, log=False, dist="rhel",
-                 list_type=LIST_INSTALLED, enablerepos=[], disablerepos=[],
-                 conf=None, outdir=None, verbosity=0)
+_DEFAULTS = dict(root=os.curdir, log=False, list_type=LIST_INSTALLED,
+                 enablerepos=[], disablerepos=[],
+                 conf=None, outdir=None, downloaddir=None, verbosity=0)
 
 
 def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
@@ -520,8 +507,6 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
                  "of that dir if 'Packages' exists under 'var/lib/rpm'.")
     p.add_option("", "--log", action="store_true",
                  help="Take run log ($logdir/%s.log) if given" % NAME)
-    p.add_option("-d", "--dist", choices=("rhel", "fedora"),
-                 help="Select distributions: fedora or rhel [%default]")
 
     p.add_option('', "--enablerepo", action="append", dest="enablerepos",
                  help="specify additional repoids to query, can be "
@@ -536,6 +521,10 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
                           (", ".join(_LIST_TYPES), )))
     p.add_option_group(liog)
 
+    dog = optparse.OptionGroup(p, "'download' command options")
+    dog.add_option("-d", "--downloaddir", help="Dir to download update RPMs")
+    p.add_option_group(dog)
+
     p.add_option("-C", "--conf", help="Specify .ini style config file path")
     p.add_option("-O", "--outdir",
                  help="Specify outputs dir, ex. '/tmp/root/sys_a/' "
@@ -548,26 +537,21 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
     return p
 
 
-def main(argv=sys.argv, cmds=_COMMANDS):
+def main(argv=sys.argv, defaults=_DEFAULTS, cmds=_COMMANDS):
     p = option_parser()
     (options, args) = p.parse_args(argv[1:])
 
-    if not args or args[0] not in cmds:
+    if not args or args[0][0] not in cmds:
         LOG.error("You must specify command")
         p.print_help()
         sys.exit(3)
 
-    _set_loglevel(options.verbosity)
-
     if options.conf:
         diff = load_conf(options.conf)
-        for k, v in diff.items():
-            if k in ('enablerepos', 'disablerepos'):
-                setattr(options, k, eval(v))
+        p.set_defaults(**diff)
+        (options, args) = p.parse_args(argv[1:])
 
-            elif getattr(options, k, None) is None:
-                setattr(options, k, v)
-
+    _set_loglevel(options.verbosity)
     options.root = os.path.abspath(options.root)  # Ensure abspath.
 
     if not setup_root(options.root):
@@ -605,7 +589,7 @@ def main(argv=sys.argv, cmds=_COMMANDS):
             outputs_result(res, options.outdir, options.list_type)
     else:
         yum_download(options.root, options.enablerepos, options.disablerepos,
-                     options.outdir)
+                     options.downloaddir)
 
 
 if __name__ == '__main__':
