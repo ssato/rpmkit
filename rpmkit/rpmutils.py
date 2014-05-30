@@ -41,14 +41,21 @@ def rpm_header_from_rpmfile(rpmfile):
     """
     Read rpm.hdr from rpmfile.
     """
-    return rpm.TransactionSet().hdrFromFdno(open(rpmfile, "rb"))
+    with open(rpmfile, "rb") as f:
+        return rpm.TransactionSet().hdrFromFdno(f)
+
+    return None
 
 
 def _is_noarch(srpm):
     """
     Detect if given srpm is for noarch (arch-independent) package.
     """
-    return rpm_header_from_rpmfile(srpm)["arch"] == "noarch"
+    h = rpm_header_from_rpmfile(srpm)
+    if h is None:
+        return False  # TODO: What should be returned?
+
+    return h["arch"] == "noarch"
 
 
 is_noarch = RM.memoize(_is_noarch)
