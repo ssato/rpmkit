@@ -139,8 +139,8 @@ rm -rf $RPM_BUILD_ROOT
 - Add workaround for the bug that keys not shortened in results in rpmkit.swapi
 - Fix logger inialization (add hander) code in rpmkit.swapi and rpmkit.identrpm
 - Add new module rpmkit.yum_makelistcache and its configuration example
-- Fix some PEP8 errors in rpmkit.swapi
 - Split swapi into sub package (again)
+- Add ylc (yum_[make]listcache) sub package to cache updates/errata lists
 
 * Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11-1
 - Deprecated rpmkit.rpms2sqldb and related tools
