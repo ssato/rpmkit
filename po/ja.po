@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-06-04 17:58+JST\n"
+"POT-Creation-Date: 2014-06-04 18:01+JST\n"
 "PO-Revision-Date: 2013-12-17 01:00+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
