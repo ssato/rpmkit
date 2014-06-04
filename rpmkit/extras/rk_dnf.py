@@ -115,14 +115,13 @@ def compute_removed(pkgspecs, root, excludes=[]):
 
     # Load RPM DB (system repo) only.
     base.fill_sack(load_available_repos=False)
-    base.goal_parameters.allow_uninstall = True
     base_setup_excludes(base, excludes)
 
     removes = []
     for pspec in pkgspecs:
         try:
             base.remove(pspec)
-            base.resolve()
+            base.resolve(allow_erasing=True)
             rs = [x.erased.name for x in
                   base.transaction.get_items(dnf.transaction.ERASE)]
             removes.extend(rs)
