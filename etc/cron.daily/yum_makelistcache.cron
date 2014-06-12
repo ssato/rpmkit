@@ -6,6 +6,7 @@ NAME=yum_makelistcache
 DOWNLOAD=0
 DEBUG=""
 HARDLINK=0
+MAILTO="${YLC_MAILTO:-}"
 
 BIN_NAME=/usr/bin/${NAME}
 COMMON_CONF=/etc/sysconfig/${NAME}
@@ -35,6 +36,18 @@ done
 test "x$HARDLINK" = "x1" && hardlink -vv $OUTDIR
 
 rm -f $LOCKFILE
+
+if test "x${MAILTO}" = "x"; then
+    :
+else
+    timestamp="$(date -R)"
+    subj="[${NAME}] Status of generation of lists of RPMs: "
+    test "x${ret}" = "x0" && stat="OK" || stat="NG"
+    subj="${subj} ${stat} [${timestamp}]"
+
+    mail -s "${subj}" ${MAILTO}
+fi
+
 exit $ret
 
 # vim:sw=4:ts=4:et:
