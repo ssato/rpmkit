@@ -1,12 +1,11 @@
 # Global configurations:
 #
-# Set '-d' to the following variable (DOWNLOAD_OPT="-d") to enable update RPMs
-# downloads function:
-DOWNLOAD_OPT=""
+# Set 1 to download update RPMs add to the lists:
+DOWNLOAD=""
 #
 # Debug (-vv) or Verbose (-v):
 #DEBUG="-vv"
 DEBUG="-v"
 #
-# Set 1 if hardlink RPMs:
-HARDLINK=1
+# Set 1 if hardlink RPMs; recommend to set if DOWNLOAD=1:
+HARDLINK=0

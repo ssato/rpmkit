@@ -3,7 +3,7 @@ set -e
 
 NAME=yum_makelistcache
 
-DOWNLOAD_OPT=""
+DOWNLOAD=0
 DEBUG=""
 HARDLINK=0
 
@@ -20,9 +20,10 @@ trap "{ rm -f $LOCKFILE ; exit 255; }" INT TERM
 touch $LOCKFILE
 
 test -f ${COMMON_CONF} && source ${COMMON_CONF} || :
+test "x${DOWNLOAD}" = "x1" && DOWNLOAD_OPT="--download" || DOWNLOAD_OPT=""
 
 for conf in $CONFDIR/*.ini; do
-    $BIN_NAME -C $conf list $DEBUG $DOWNLOAD_OPT
+    $BIN_NAME -C $conf $DEBUG $DOWNLOAD_OPT
     ret=$?
     if test $ret -ne 0; then
         logger "[ERROR] erroneous conf: $conf"
