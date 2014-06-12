@@ -5,6 +5,7 @@ NAME=yum_makelistcache
 
 DOWNLOAD_OPT=""
 DEBUG=""
+HARDLINK=0
 
 BIN_NAME=/usr/bin/${NAME}
 COMMON_CONF=/etc/sysconfig/${NAME}
@@ -30,6 +31,7 @@ for conf in $CONFDIR/*.ini; do
 done
 
 /usr/bin/chcon -R -t httpd_sys_content_t $OUTDIR
+test "x$HARDLINK" = "x1" && hardlink -vv $OUTDIR
 
 rm -f $LOCKFILE
 exit $ret
