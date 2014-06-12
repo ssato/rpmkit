@@ -1,5 +1,9 @@
-# Uncomment the following to enable update RPMs downloads in cron job:
-#DOWNLOAD_UPDATES=1
+# Global configurations:
+#
+# Set '-d' to the following variable (DOWNLOAD_OPT="-d") to enable update RPMs
+# downloads function:
+DOWNLOAD_OPT=""
 #
 # Debug (-vv) or Verbose (-v):
 #DEBUG="-vv"
+DEBUG="-v"

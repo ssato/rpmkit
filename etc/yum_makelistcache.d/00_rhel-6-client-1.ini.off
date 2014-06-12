@@ -8,6 +8,5 @@ verbose=1
 #debug=1
 #outdir=/var/lib/yum_makelistcache/root.d/
 outdir=/tmp/root/outdir
-# Choices: installed [default], updates, errata or all
-list_type=updates
+download=1
 downloaddir=/tmp/root/updates
