@@ -142,42 +142,54 @@ def _find_valid_attrs_g(obj, attrs=[]):
             pass
 
 
-def yum_list(root, pkgnarrow="installed", enablerepos=[], disablerepos=['*'],
-             keys=_RPM_KEYS):
+def _init_yum_base(root, enablerepos=[], disablerepos=['*']):
     """
-    List installed or update RPMs similar to
-    "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
+    Initialize yum.YumBase object and return it.
 
     :param root: RPM DB root dir in absolute path
-    :param pkgnarrow: Packages list narrowing type
     :param enablerepos: List of Yum repos to enable
     :param disablerepos: List of Yum repos to disable
-    :param key: List of key names to construct dict contais RPM info
 
-    :return: List of dicts contain RPM info
+    :return: An instance of yum.YumBase initialized
     """
     base = yum.YumBase()
     base.preconf.root = root
     base.logger = base.verbose_logger = LOG
     _activate_repos(base, enablerepos, disablerepos)
+    return base
 
-    if pkgnarrow != "installed":
+
+_PKG_NARROWS = ("installed", "updates", "obsoletes")
+
+
+def yum_list(base, pkgnarrows=_PKG_NARROWS):
+    """
+    List installed or update RPMs similar to
+    "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
+
+    :param base: An initialized yum.YumBase object
+    :param pkgnarrows: List of types to narrrow packages list
+
+    :return: A dict contains lists of dicts of packages
+    """
+    if pkgnarrows != ("installed", ):
         base.repos.populateSack()
 
-    ygh = base.doPackageLists(pkgnarrow)
+    ret = dict()
 
-    if pkgnarrow == "all":
-        ps = ygh.available + ygh.installed
-    elif hasattr(ygh, pkgnarrow):
-        ps = getattr(ygh, pkgnarrow)
-    else:
-        LOG.error("Unknown pkgnarrow: %s" % pkgnarrow)
-        ps = []
+    for pn in pkgnarrows:
+        ygh = base.doPackageLists(pn)
+        ret[pn] = getattr(ygh, pn)
 
-    if ps:
-        keys = list(_find_valid_attrs_g(ps[0], keys))
+    return ret
 
-    return [dict((k, getattr(p, k, None)) for k in keys) for p in ps]
+
+def _pkgs2dicts(pkgs, keys=_RPM_KEYS):
+    if not pkgs:
+        return []
+
+    keys = list(_find_valid_attrs_g(pkgs[0], keys))
+    return [dict((k, getattr(p, k, None)) for k in keys) for p in pkgs]
 
 
 def _reg_by_dist(dist="rhel"):
@@ -460,44 +472,29 @@ def _set_loglevel(lvl):
     LOG.setLevel([logging.WARN, logging.INFO, logging.DEBUG][lvl])
 
 
-_USAGE = """%prog [Options] COMMAND
-
-Commands:
-  l[ist]       List installed (default) or update (-L/--list-type updates)
-               RPMs, or errata (-L/--list-type errata)
-  d[ownload]   Download update RPMs
+_USAGE = """%prog [Options]
 
 Examples:
-  # Save installed rpms list, similar to 'yum list installed':
+  # Save installed, update rpms and errata list corresponding to 'yum list
+  # installed' + 'yum check-updates' + 'yum list-sec':
   %prog --disablerepo='*' --enablerepo='rhel-x86_64-server-6' \\
-     --root=/var/lib/yum_makelistcache/root.d/aaa list
+     --root=/var/lib/yum_makelistcache/root.d/aaa
 
-  # Save updates list, similar to 'yum check-update':
+  # Similar to the above but also save update RPMs, similar to 'yum update
+  # --downloadonly':
   %prog --disablerepo='*' --enablerepo='rhel-x86_64-server-6' \\
-     --root=/var/lib/yum_makelistcache/root.d/aaa l -L updates
-
-  # Save all (installed, updates and errata) list:
-  %prog --disablerepo='*' --enablerepo='rhel-x86_64-server-6' \\
-     --root=/var/lib/yum_makelistcache/root.d/aaa l -L all
-
-  # Save update RPMs, similar to 'yum update --downloadonly':
-  %prog --disablerepo='*' --enablerepo='rhel-x86_64-server-6' \\
-     --root=/var/lib/yum_makelistcache/root.d/aaa d
+     --root=/var/lib/yum_makelistcache/root.d/aaa --download
 """
 
-_COMMANDS = dict(l="list", d="download")
-_LIST_TYPES = (LIST_INSTALLED, LIST_UPDATES, LIST_ERRATA, LIST_ALL) \
-            = ("installed", "updates", "errata", "all")
-_DEFAULTS = dict(root=os.curdir, log=False, list_type=LIST_INSTALLED,
-                 enablerepos=[], disablerepos=[],
-                 conf=None, outdir=None, downloaddir=None, verbosity=0)
+_DEFAULTS = dict(root=os.curdir, log=False,
+                 enablerepos=[], disablerepos=[], download=False,
+                 downloaddir=None, conf=None, outdir=None, verbosity=0)
 
 
-def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
+def option_parser(usage=_USAGE, defaults=_DEFAULTS):
     """
     :param usage: Usage text
     :param defaults: Option value defaults
-    :param cmds: Command list
     """
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
@@ -515,15 +512,9 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
                  help="specify repoids to disable, can be specified "
                       "multiple times")
 
-    liog = optparse.OptionGroup(p, "'list' command options")
-    liog.add_option("-L", "--list-type", choices=_LIST_TYPES,
-                    help=("Select list type from %s [%%default]" %
-                          (", ".join(_LIST_TYPES), )))
-    p.add_option_group(liog)
-
-    dog = optparse.OptionGroup(p, "'download' command options")
-    dog.add_option("-d", "--downloaddir", help="Dir to download update RPMs")
-    p.add_option_group(dog)
+    p.add_option("-d", "--download", help="Download update RPMs also")
+    p.add_option("", "--downloaddir",
+                 help="Dir to save update RPMs downloaded")
 
     p.add_option("-C", "--conf", help="Specify .ini style config file path")
     p.add_option("-O", "--outdir",
@@ -537,14 +528,9 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS, cmds=_COMMANDS):
     return p
 
 
-def main(argv=sys.argv, defaults=_DEFAULTS, cmds=_COMMANDS):
+def main(argv=sys.argv, pkgnarrows=_PKG_NARROWS):
     p = option_parser()
     (options, args) = p.parse_args(argv[1:])
-
-    if not args or args[0][0] not in cmds:
-        LOG.error("You must specify command")
-        p.print_help()
-        sys.exit(3)
 
     if options.conf:
         diff = load_conf(options.conf)
@@ -563,31 +549,25 @@ def main(argv=sys.argv, defaults=_DEFAULTS, cmds=_COMMANDS):
         LOG.info("Log will be saved to: " + logfile)
         LOG.addHandler(logging.FileHandler(logfile))
 
-    if args[0].startswith('l'):
-        if not options.outdir:
-            options.outdir = os.path.join(options.root, "var/log")
+    if not options.outdir:
+        options.outdir = os.path.join(options.root, "var/log")
 
-        if options.list_type == LIST_ALL:
-            res = yum_list_errata(options.root, options.enablerepos,
-                                  options.disablerepos)
-            outputs_result(res, options.outdir, LIST_ERRATA)
+    # Get errata list:
+    es = yum_list_errata(options.root, options.enablerepos,
+                         options.disablerepos)
+    outputs_result(es, options.outdir, "errata")
 
-            for ltype in (LIST_INSTALLED, LIST_UPDATES):
-                res = yum_list(options.root, ltype, options.enablerepos,
-                               options.disablerepos, _RPM_KEYS)
-                outputs_result(res, options.outdir, ltype)
+    # Get installed and update rpms list:
+    base = _init_yum_base(options.root, options.enablerepos,
+                          options.disablerepos)
+    pkgs = yum_list(base)
 
-        else:
-            if options.list_type == LIST_ERRATA:
-                res = yum_list_errata(options.root, options.enablerepos,
-                                      options.disablerepos)
-            else:
-                res = yum_list(options.root, options.list_type,
-                               options.enablerepos, options.disablerepos,
-                               _RPM_KEYS)
+    for narrow in pkgnarrows:
+        pdicts = _pkgs2dicts(pkgs[narrow])
+        outputs_result(pdicts, options.outdir, narrow)
 
-            outputs_result(res, options.outdir, options.list_type)
-    else:
+    # ... and download update rpms if wanted:
+    if options.download:
         yum_download(options.root, options.enablerepos, options.disablerepos,
                      options.downloaddir)
 
