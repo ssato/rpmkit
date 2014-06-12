@@ -512,7 +512,8 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS):
                  help="specify repoids to disable, can be specified "
                       "multiple times")
 
-    p.add_option("-d", "--download", help="Download update RPMs also")
+    p.add_option("-d", "--download", action="store_true",
+                 help="Download update RPMs also")
     p.add_option("", "--downloaddir",
                  help="Dir to save update RPMs downloaded")
 
