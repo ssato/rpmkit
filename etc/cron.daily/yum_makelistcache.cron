@@ -25,14 +25,14 @@ for conf in $CONFDIR/*.ini; do
     $BIN_NAME -C $conf list -L all $DEBUG
     ret=$?
     if test $ret -ne 0; then
-        echo "[ERROR] erroneous conf: $conf"
+        logger "[ERROR] erroneous conf: $conf"
         break
     fi
     if test ${DOWNLOAD_UPDATES} -eq 1; then
         $BIN_NAME -C $conf download $DEBUG
         ret=$?
         if test $ret -ne 0; then
-            echo "[ERROR] Failed to download, conf=$conf"
+            logger "[ERROR] Failed to download, conf=$conf"
             break
         fi
     else
@@ -42,7 +42,7 @@ done
 
 /usr/bin/chcon -R -t httpd_sys_content_t $OUTDIR
 
-test $ret -eq 0 && rm -f $LOCKFILE
+rm -f $LOCKFILE
 exit $ret
 
 # vim:sw=4:ts=4:et:
