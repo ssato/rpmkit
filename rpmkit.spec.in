@@ -25,6 +25,7 @@ RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 %package        ylc
 Summary:        Yum list cache
 Requires:       %{name} = %{version}-%{release}
+Requires:       hardlink
 Requires:       httpd
 %if 0%{?rhel}
 Requires:       yum-plugin-downloadonly
