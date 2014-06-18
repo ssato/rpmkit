@@ -33,6 +33,7 @@ data_files = [
     ("/etc/cron.daily/", list_files("etc/cron.daily/")),
     ("/etc/sysconfig/", list_files("etc/sysconfig/")),
     ("/etc/httpd/conf.d/", list_files("etc/httpd/conf.d/")),
+    ("/etc/httpd/passwd.d/", list_files("etc/httpd/passwd.d/")),
     ("/etc/rpmkit/optimizer.d/rhel-6-x86_64",
      list_files("etc/optimizer.d/rhel-6-x86_64/")),
     ("share/rpmkit/templates", list_files("data/templates/")),

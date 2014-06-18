@@ -96,6 +96,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755,root,root) %{_sysconfdir}/cron.daily/yum_makelistcache.cron
 %config(noreplace) %{_sysconfdir}/sysconfig/yum_makelistcache
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/yum_makelistcache.conf
+%config(noreplace) %{_sysconfdir}/httpd/passwd.d/yum_makelistcache
 %{_sysconfdir}/yum_makelistcache.d/*.ini*
 %{_localstatedir}/lib/yum_makelistcache/root.d/README
 
