@@ -1,0 +1,73 @@
+{%- if jquery_ui_css is not defined -%}
+{%-     set jquery_ui_css = '//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css' -%}
+{%- endif -%}
+{%- if jquery_url is not defined -%}
+{%-     set jquery_url = '//code.jquery.com/jquery-1.10.2.js' -%}
+{%- endif -%}
+{%- if jquery_ui_url is not defined -%}
+{%-     set jquery_ui_url = '//code.jquery.com/ui/1.10.4/jquery-ui.js' -%}
+{%- endif -%}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ title|default('ylc - top') }}</title>
+    {% if main_css is defined %}<link rel="stylesheet" href="{{ main_css }}">{% endif %}
+    <link rel="stylesheet" href="{{ jquery_ui_css }}">
+    <script src="{{ jquery_url }}"></script>
+    <script src="{{ jquery_ui_url }}"></script>
+    <script>
+$(function() {
+  $( "#tabs" ).tabs();
+});
+    </script>
+  </head>
+  <body>
+    <h1>{{ title|default('ylc - top') }}</h1>
+    <div id="summary">
+      <p>{{ summary|default('') }}</p>
+      <!--
+      <div id="enabledrepos">
+        <p>Enabled yum repos:</p>
+        <ul>
+          {% for repo in enabledrepos %}<li>{{ repo }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      -->
+    </div>
+    <div id="tabs">
+      <ul>
+        {% for tgt in targets %}<li><a href="#tabs-{{ loop.index }}">{{ tgt.title }}</a></li>
+        {% endfor %}
+      </ul>
+      {% for tgt in targets %}<div id="tabs-{{ loop.index }}">
+        <h2>{{ tgt.title }}</h2>
+        <ul>
+          <li>Updates:
+                [<a href="{{ tgt.out_relpath ) }}/updates.csv">CSV</a>] |
+                [<a href="{{ tgt.out_relpath ) }}/updates.json">JSON</a>]
+          </li>
+          <li>Errata:
+                [<a href="{{ tgt.out_relpath ) }}/errata.csv">CSV</a>] |
+                [<a href="{{ tgt.out_relpath ) }}/errata.json">JSON</a>]
+          </li>
+          <li>Installed RPMs:
+                [<a href="{{ tgt.out_relpath ) }}/installed.csv">CSV</a>] |
+                [<a href="{{ tgt.out_relpath ) }}/installed.json">JSON</a>]
+          </li>
+          <!--
+          <li>Obsolete RPMs:
+                [<a href="{{ tgt.out_relpath ) }}/obsoletes.csv">CSV</a>] |
+                [<a href="{{ tgt.out_relpath ) }}/obsoletes.json">JSON</a>]
+          </li>
+          -->
+        </ul>
+        errata.csv   installed.csv   obsoletes.csv   updates
+      </div>
+      {% endfor %}
+    </div>
+  </body>
+</html>
+<!-- vim:sw=2:ts=2:et:
+-->
