@@ -381,6 +381,7 @@ def yum_download(root, enablerepos=[], disablerepos=['*'], outdir=None):
     yum update -y --downloadonly
     """
     opts = _mk_repo_opts(enablerepos, disablerepos)
+    opts.append("--skip-broken")
 
     cs = [] if _is_root() else ["fakeroot"]  # avoid unneeded check.
     cs += ["yum", "--installroot=" + root] + opts + ["--downloadonly",
