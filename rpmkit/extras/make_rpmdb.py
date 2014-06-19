@@ -116,7 +116,7 @@ _SCRIPT_TEMPALTE = """
 set -ex
 
 rpmopts="--force --nodeps --justdb -Uvh"
-rpmroot=%(rpmroot)s
+rpmroot=%(rpmroot)s  # Maybe relpath
 
 test -d ${rpmroot} || mkdir -p ${rpmroot}
 
