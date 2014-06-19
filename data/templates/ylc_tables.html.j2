@@ -95,7 +95,7 @@ $(function() {
         <div id="summary-updates">
           <p>{{ summary_updates|default('Update RPMs: ') }}</p>
         </div>
-        <table id="updatesRpmsTable" class="updates" cellspacing="0" width="100%">
+        <table id="updatesRpmsTable" class="updates" cellspacing="0">
           <thead>
             <tr>
               <th>Name</th>
@@ -124,7 +124,7 @@ $(function() {
           <p>{{ summary_errata|default('Errata: ') }}</p>
           <p>Errata</p>
         </div>
-        <table id="errataTable" class="errata" cellspacing="0" width="100%">
+        <table id="errataTable" class="errata" cellspacing="0">
           <thead>
             <tr>
               <th>Advisory</th>
@@ -148,7 +148,7 @@ $(function() {
         <div id="summary-installed">
           <p>{{ summary_installed|default('Installed RPMs: ') }}</p>
         </div>
-        <table id="installedRpmsTable" class="installed" cellspacing="0" width="100%">
+        <table id="installedRpmsTable" class="installed" cellspacing="0">
           <thead>
             <tr>
               <th>Name</th>
