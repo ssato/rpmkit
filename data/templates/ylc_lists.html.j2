@@ -68,7 +68,10 @@ $(function() {
     </script>
   </head>
   <body>
-    <h1>{{ target.title|default('ylc - updates and installed RPMs, and errata lists') }}</h1>
+    <h1>{{ title|default('ylc - updates and installed RPMs, and errata lists') }}</h1>
+    <div id="summary">
+      <p>{{ summary|default('Here are update and installed RPMs, and errata lists.') }}</p>
+    </div>
     <div id="tabs">
       <div id="tabs-updates">
         <h2>Update RPMs</h2>
