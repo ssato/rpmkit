@@ -19,11 +19,20 @@
     <script>
 $(function() {
   $( "#tabs" ).tabs();
+  $.ajax({
+    url: "timestamp.txt",
+    dataType: "text"
+  }).done(function( timestamp ) {
+    $( "#timestamp" ).text( timestamp );
+  }).fail(function( timestamp ) {;
+    $( "#timestamp" ).text( "Unknown" );
+  });
 });
     </script>
   </head>
   <body>
     <h1>{{ title|default('ylc - top') }}</h1>
+    <p>Last-updated: <span id="timestamp"></span></p>
     <div id="tabs">
       <ul>
         {% for tgt in targets %}<li><a href="#tabs-{{ loop.index }}">{{ tgt.name }}</a></li>
