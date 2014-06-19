@@ -1,0 +1,152 @@
+{%- if jquery_ui_css is not defined -%}
+{%-     set jquery_ui_css = 'http://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css' -%}
+{%- endif -%}
+{%- if jquery_url is not defined -%}
+{%-     set jquery_url = 'http://code.jquery.com/jquery-1.10.2.js' -%}
+{%- endif -%}
+{%- if jquery_ui_url is not defined -%}
+{%-     set jquery_ui_url = 'http://code.jquery.com/ui/1.10.4/jquery-ui.js' -%}
+{%- endif -%}
+{%- if jquery_datatables_url is not defined -%}
+{%-     set jquery_datatables_url = 'http://cdn.datatables.net/1.10.0/js/jquery.dataTables.js' -%}
+{%- endif -%}
+{%- if jquery_datatables_css is not defined -%}
+{%-     set jquery_datatables_css = 'http://cdn.datatables.net/1.10.0/css/jquery.dataTables.css' -%}
+{%- endif -%}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ title|default('ylc - updates and installed RPMs, and errata lists') }}</title>
+    {% if main_css is defined %}<link rel="stylesheet" href="{{ main_css }}">{% endif %}
+    <link rel="stylesheet" href="{{ jquery_ui_css }}">
+    <link rel="stylesheet" href="{{ jquery_datatables_css }}">
+    <script src="{{ jquery_url }}"></script>
+    <script src="{{ jquery_ui_url }}"></script>
+    <script src="{{ jquery_datatables_url }}"></script>
+    <script>
+$(function() {
+  $( "#tabs" ).tabs();
+  $( "#updatesRpmsTable" ).dataTable(
+    {
+      "ajax": {
+        "url": "updates.json",
+        "dataSrc": "data"
+      },
+      "columns": [ { data: 'name' },
+                   { data: 'version' },
+                   { data: 'release' },
+                   { data: 'arch' },
+                   { data: 'epoch' } ]
+    }
+  );
+  $( "#errataTable" ).dataTable(
+    {
+      "ajax": {
+        "url": "errata.json",
+        "dataSrc": "data"
+      },
+      "columns": [ { data: 'advisory' },
+                   { data: 'type' },
+                   { data: 'severity' } ]
+    }
+  );
+  $( "#installedRpmsTable" ).dataTable(
+    {
+      "ajax": {
+        "url": "installed.json",
+        "dataSrc": "data"
+      },
+      "columns": [ { data: 'name' },
+                   { data: 'version' },
+                   { data: 'release' },
+                   { data: 'arch' },
+                   { data: 'epoch' } ]
+    }
+  );
+});
+    </script>
+  </head>
+  <body>
+    <h1>{{ target.title|default('ylc - updates and installed RPMs, and errata lists') }}</h1>
+    <div id="tabs">
+      <div id="tabs-updates">
+        <h2>Update RPMs</h2>
+        <div id="summary-updates">
+          <p>{{ summary_updates|default('Update RPMs: ') }}</p>
+        </div>
+        <table id="updatesRpmsTable" class="updates" cellspacing="0" width="100%">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Release</th>
+              <th>Arch</th>
+              <th>Epoch</th>
+            </tr>
+          </thead>
+          <tfoot>
+            <tr>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Release</th>
+              <th>Arch</th>
+              <th>Epoch</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div id="tabs-errata">
+        <h2>Errata</h2>
+        <div id="summary-errata">
+          <p>{{ summary_errata|default('Errata: ') }}</p>
+          <p>Errata</p>
+        </div>
+        <table id="errataTable" class="errata" cellspacing="0" width="100%">
+          <thead>
+            <tr>
+              <th>Advisory</th>
+              <th>Type</th>
+              <th>Severity</th>
+            </tr>
+          </thead>
+          <tfoot>
+            <tr>
+              <th>Advisory</th>
+              <th>Type</th>
+              <th>Severity</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div id="tabs-installed">
+        <h2>Installed RPMs</h2>
+        <div id="summary-installed">
+          <p>{{ summary_installed|default('Installed RPMs: ') }}</p>
+        </div>
+        <table id="installedRpmsTable" class="installed" cellspacing="0" width="100%">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Release</th>
+              <th>Arch</th>
+              <th>Epoch</th>
+            </tr>
+          </thead>
+          <tfoot>
+            <tr>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Release</th>
+              <th>Arch</th>
+              <th>Epoch</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </body>
+</html>
+<!-- vim:sw=2:ts=2:et:
+-->
