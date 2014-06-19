@@ -115,7 +115,7 @@ _SCRIPT_TEMPALTE = """
 #! /bin/bash
 set -ex
 
-rpmopts="--force --nodeps --justdb -Uvh"
+rpmopts="--force --nodeps --justdb --nosignature -Uvh"
 rpmroot=%(rpmroot)s  # Maybe relpath
 
 test -d ${rpmroot} || mkdir -p ${rpmroot}
