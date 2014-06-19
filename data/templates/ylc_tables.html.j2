@@ -94,6 +94,8 @@ $(function() {
         <h2>Update RPMs</h2>
         <div id="summary-updates">
           <p>{{ summary_updates|default('Update RPMs: ') }}</p>
+          <p>Files: [<a href="updates.csv">CSV</a>] |
+                    [<a href="updates.json">JSON</a>]</p>
         </div>
         <table id="updatesRpmsTable" class="updates" cellspacing="0">
           <thead>
@@ -122,7 +124,8 @@ $(function() {
         <h2>Errata</h2>
         <div id="summary-errata">
           <p>{{ summary_errata|default('Errata: ') }}</p>
-          <p>Errata</p>
+          <p>Files: [<a href="errata.csv">CSV</a>] |
+                    [<a href="errata.json">JSON</a>]</p>
         </div>
         <table id="errataTable" class="errata" cellspacing="0">
           <thead>
@@ -147,6 +150,8 @@ $(function() {
         <h2>Installed RPMs</h2>
         <div id="summary-installed">
           <p>{{ summary_installed|default('Installed RPMs: ') }}</p>
+          <p>Files: [<a href="installed.csv">CSV</a>] |
+                    [<a href="installed.json">JSON</a>]</p>
         </div>
         <table id="installedRpmsTable" class="installed" cellspacing="0">
           <thead>
