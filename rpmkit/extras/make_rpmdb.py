@@ -111,11 +111,25 @@ def download_rpms(pkg, outdir):
 
 _NCPUS = multiprocessing.cpu_count()
 
+_SCRIPT_TEMPALTE = """
+#! /bin/bash
+set -ex
+
+rpmopts="--force --nodeps --justdb -Uvh"
+rpmroot=%(rpmroot)s
+
+test -d ${rpmroot} || mkdir -p ${rpmroot}
+
+"""
+_SCRIPT_BODY_LINE = "rpm ${rpmopts} --root ${rpmroot} %(rpm_path)s"
+
 
 def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[],
                nprocs=_NCPUS, dryrun=False):
     """
     """
+    root = os.path.abspath(root)  # RPM root must be in abspath.
+
     if not rpmsdir.startswith(os.path.sep):  # relative path.
         rpmsdir = os.path.abspath(rpmsdir)
 
@@ -131,9 +145,10 @@ def make_rpmdb(rpmlist_path, rpmsdir=os.curdir, root=os.curdir, options=[],
 
     if dryrun:
         logging.info("Just print out commands may do same things: ")
+        print(_SCRIPT_TEMPALTE % {'rpmroot': root})
 
         for p in rpm_paths:
-            print("rpm --force --nodeps --justdb --root %s %s" % (root, p))
+            print(_SCRIPT_BODY_LINE % {'rpmroot': root, 'rpm_path': p})
     else:
         install_rpms(rpm_paths, root)
 
