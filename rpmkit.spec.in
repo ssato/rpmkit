@@ -29,6 +29,7 @@ Requires:       hardlink
 Requires:       httpd
 %if 0%{?rhel}
 Requires:       yum-plugin-downloadonly
+Requires(post): /sbin/service
 %endif
 
 %description    ylc
@@ -77,6 +78,9 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/{default,rhel-6-x86_64
 %clean
 rm -rf $RPM_BUILD_ROOT
 %endif
+
+%post           ylc
+/sbin/service httpd reload >/dev/null 2>&1 || :
 
 %files
 %defattr(-,root,root,-)
