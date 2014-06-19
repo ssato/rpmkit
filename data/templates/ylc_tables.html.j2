@@ -13,6 +13,13 @@
 {%- if jquery_datatables_css is not defined -%}
 {%-     set jquery_datatables_css = 'http://cdn.datatables.net/1.10.0/css/jquery.dataTables.css' -%}
 {%- endif -%}
+{#- see: http://www.datatables.net/manual/styling/jqueryui -#}
+{%- if jquery_datatables_ui_url is not defined -%}
+{%-     set jquery_datatables_ui_url = 'http://cdn.datatables.net/plug-ins/be7019ee387/integration/jqueryui/dataTables.jqueryui.js' -%}
+{%- endif -%}
+{%- if jquery_datatables_ui_css is not defined -%}
+{%-     set jquery_datatables_ui_css = 'http://cdn.datatables.net/plug-ins/be7019ee387/integration/jqueryui/dataTables.jqueryui.css' -%}
+{%- endif -%}
 <!doctype html>
 <html lang="en">
   <head>
@@ -21,9 +28,11 @@
     {% if main_css is defined %}<link rel="stylesheet" href="{{ main_css }}">{% endif %}
     <link rel="stylesheet" href="{{ jquery_ui_css }}">
     <link rel="stylesheet" href="{{ jquery_datatables_css }}">
+    <link rel="stylesheet" href="{{ jquery_datatables_ui_css }}">
     <script src="{{ jquery_url }}"></script>
     <script src="{{ jquery_ui_url }}"></script>
     <script src="{{ jquery_datatables_url }}"></script>
+    <script src="{{ jquery_datatables_ui_url }}"></script>
     <script>
 $(function() {
   $( "#tabs" ).tabs();
@@ -73,6 +82,11 @@ $(function() {
       <p>{{ summary|default('Here are update and installed RPMs, and errata lists.') }}</p>
     </div>
     <div id="tabs">
+      <ul>
+        <li><a href="#tabs-updates">Update RPMs</a></li>
+        <li><a href="#tabs-errata">Errata</a></li>
+        <li><a href="#tabs-installed">Installed RPMs</a></li>
+      </ul>
       <div id="tabs-updates">
         <h2>Update RPMs</h2>
         <div id="summary-updates">

@@ -34,8 +34,11 @@ $(function() {
         <h2>{{ tgt.name }}</h2>
         <div id="summary-{{ loop.index }}">
           <p>{{ tgt.summary|default('') }}</p>
+          {% if tgt.show_tables_link is defined and tgt.show_tables_link -%}
+          <p><a id="{{ tgt.name }}-tables" href="{{ tgt.baseurl }}/index.html">Details of lists</a></p>
+          {%- endif %}
           <!--
-          <div id="enabledrepos">
+          <div id="{{ tgt.name }}-enabledrepos">
             <p>Enabled yum repos:</p>
             <ul>
               {% for repo in tgt.enabledrepos %}<li>{{ repo }}</li>
