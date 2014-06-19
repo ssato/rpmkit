@@ -32,6 +32,8 @@ for conf in $CONFDIR/*.ini; do
     fi
 done
 
+LC_TIME=C date --rfc-2822 > ${OUTDIR}/timestamp.txt
+
 /usr/bin/chcon -R -t httpd_sys_content_t $OUTDIR
 test "x$HARDLINK" = "x1" && hardlink -vv $OUTDIR
 

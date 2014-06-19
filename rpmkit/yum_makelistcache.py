@@ -16,6 +16,7 @@ Usage:
     su - apache -c 'yum_makelistcache [Options ...] ...'
 """
 import commands
+import email.Utils
 import glob
 import logging
 import operator
@@ -448,10 +449,16 @@ def outputs_result(result, outdir, restype="updates", keys=[]):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
+    timestamp = email.Utils.formatdate()
+
+    fpath = os.path.join(outdir, "timestamp.txt")
+    with open(fpath, 'w') as f:
+        f.write(timestamp + '\n')
+
     fpath = os.path.join(outdir, restype + ".json")
     with open(fpath, 'w') as f:
         LOG.info("Dump JSON data: " + fpath)
-        json.dump(dict(data=result, ), f)
+        json.dump(dict(data=result, timestamp=timestamp), f)
 
     fpath = os.path.join(outdir, restype + ".csv")
     with open(fpath, 'w') as f:
