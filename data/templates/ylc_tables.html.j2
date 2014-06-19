@@ -42,6 +42,7 @@ $(function() {
         "url": "updates.json",
         "dataSrc": "data"
       },
+      "pageLength": 20,
       "columns": [ { data: 'name' },
                    { data: 'version' },
                    { data: 'release' },
@@ -55,6 +56,7 @@ $(function() {
         "url": "errata.json",
         "dataSrc": "data"
       },
+      "pageLength": 20,
       "columns": [ { data: 'advisory' },
                    { data: 'type' },
                    { data: 'severity' } ]
@@ -66,6 +68,7 @@ $(function() {
         "url": "installed.json",
         "dataSrc": "data"
       },
+      "pageLength": 20,
       "columns": [ { data: 'name' },
                    { data: 'version' },
                    { data: 'release' },
@@ -102,6 +105,7 @@ $(function() {
               <th>Epoch</th>
             </tr>
           </thead>
+          <!--
           <tfoot>
             <tr>
               <th>Name</th>
@@ -111,6 +115,7 @@ $(function() {
               <th>Epoch</th>
             </tr>
           </tfoot>
+          -->
         </table>
       </div>
       <div id="tabs-errata">
@@ -127,6 +132,7 @@ $(function() {
               <th>Severity</th>
             </tr>
           </thead>
+          <!--
           <tfoot>
             <tr>
               <th>Advisory</th>
@@ -134,6 +140,7 @@ $(function() {
               <th>Severity</th>
             </tr>
           </tfoot>
+          -->
         </table>
       </div>
       <div id="tabs-installed">
@@ -151,6 +158,7 @@ $(function() {
               <th>Epoch</th>
             </tr>
           </thead>
+          <!--
           <tfoot>
             <tr>
               <th>Name</th>
@@ -160,6 +168,7 @@ $(function() {
               <th>Epoch</th>
             </tr>
           </tfoot>
+          -->
         </table>
       </div>
     </div>
