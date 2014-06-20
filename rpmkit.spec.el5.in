@@ -1,0 +1,320 @@
+%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
+%define debug_package %{nil}
+
+Name:           rpmkit
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        Misc rpm and yum related utilities
+Group:          Development/Tools
+License:        GPLv3+
+URL:            https://github.com/ssato/rpmkit
+Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version}.tar.gz
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildArch:      noarch
+BuildRequires:  python
+BuildRequires:  /usr/bin/pygettext.py
+Requires:       rpm-python
+# To support 'list-sec' sub command in yum via yum-surrogate:
+Requires:       yum-security
+
+%description
+RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
+
+%package        ylc
+Summary:        Yum list cache
+Group:          Development/Tools
+Requires:       %{name} = %{version}-%{release}
+Requires:       hardlink
+Requires:       yum-downloadonly
+Requires(post): /sbin/service
+
+%description    ylc
+This package provides yum_makelistcache, its configuration and data files.
+
+%package        swapi
+Summary:        Cli frontend for SpaceWalk API
+Group:          Development/Tools
+Requires:       %{name} = %{version}-%{release}
+Requires:       python-BeautifulSoup
+
+%description    swapi
+This package provides swapi, cli frontend for SpaceWalk API.
+
+%package        extras
+Summary:        Extra and experimental modules and tools in %{name}
+Group:          Development/Tools
+Requires:       %{name} = %{version}-%{release}
+Requires:       dnf
+Requires:       python-anyconfig
+Requires:       python-bunch
+Requires:       graphviz
+Requires:       python-jinja2-cli
+Requires:       python-networkx
+# Commented to avoid rpmlint error 'E: explicit-lib-dependency':
+#Requires:       python-matplotlib
+#Requires:       python-tablib
+
+%description    extras
+This package provides experimental modules and tools of %{name}.
+
+%prep
+%setup -q
+
+%build
+%{__python} setup.py build
+
+%install
+rm -rf $RPM_BUILD_ROOT
+%{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
+
+# Dirty hack:
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/{default,rhel-6-x86_64}
+(cd $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/default && ln -s ../rhel-6-x86_64/00_server.yml ./)
+rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/*.egg-info
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%post           ylc
+/sbin/service httpd reload >/dev/null 2>&1 || :
+
+%files
+%defattr(-,root,root,-)
+%doc README.rst
+%{_bindir}/buildsrpm
+%{_bindir}/identrpm
+%{_bindir}/rpm2json
+%{_bindir}/rpmfy
+%{_bindir}/yum-surrogate
+%{python_sitelib}/rpmkit/*.py*
+%{python_sitelib}/rpmkit/tests/*.py*
+%{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
+
+%files          ylc
+%{_bindir}/yum_makelistcache
+%attr(0755,root,root) %{_sysconfdir}/cron.daily/yum_makelistcache.cron
+%config(noreplace) %{_sysconfdir}/sysconfig/yum_makelistcache
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/yum_makelistcache.conf
+%config(noreplace) %{_sysconfdir}/httpd/passwd.d/yum_makelistcache
+%{_sysconfdir}/yum_makelistcache.d/*.ini*
+%{_localstatedir}/lib/yum_makelistcache/root.d/README
+
+%files          swapi
+%doc README.rst
+%{_bindir}/swapi
+%{_localstatedir}/cache/swapi
+
+%files          extras
+%doc README.rst examples
+%{_bindir}/rk-*
+%{_sysconfdir}/rpmkit/optimizer.d/*/*.yml
+%{_datadir}/rpmkit/optimizer/*/*/*.yml
+%{_datadir}/rpmkit/templates/*.j2
+%{_datadir}/rpmkit/templates/css/*
+%{_datadir}/rpmkit/templates/js/*
+%{python_sitelib}/rpmkit/extras/*.py*
+
+%changelog
+* Mon May 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
+- Remove runtime dependency to gevent and implement some alternative routines
+  with using multiprocessing module
+- Fixed some more PEP8 and pylint errors and warnings
+- Some RPM spec cleanups from Kenjiro NAKAYAMA to comply with the latest
+  version of Fedora's Packaging guideline
+- Switch back to multiprocessing based function to run commands asynchronously
+  in rpmkit.shell from rpmkit.shell2.run in rpmkit.extras.depgraph
+- Deprecated and removed rpmkit.shell2 module
+- Remove runtime dependency to gevent and make use of mulitprocessing based
+  functions such like multiprocessing.Pool.map
+- Add 'updates' sub command to list update RPMs in rk-fake_yum
+- Fix some bugs in the code processing CVEs w/o CVSS metrics in
+  rpmkit.extras.updateinfo
+- add --nprocs option to control the number of task processes in
+  rpmkit.extras.make_rpmdb
+- remove the try-except block which catches all errors and hides type mismatch
+  error, and process CVEs w/o CVSS metrics correctly in
+  rpmkit.extras.updateinfo.get_errata_details()
+- Fix a long standing bug in rpmkit.swapi.call() does not process options and
+  arguments correctly
+- Make use of module specific logger in rpmkit.swapi and rpmkit.identrpm
+- Add workaround for the bug that keys not shortened in results in rpmkit.swapi
+- Fix logger inialization (add hander) code in rpmkit.swapi and rpmkit.identrpm
+- Add new module rpmkit.yum_makelistcache and its configuration example
+- Split swapi into sub package (again)
+- Add ylc (yum_[make]listcache) sub package to cache updates/errata lists
+
+* Sun Jan 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11-1
+- Deprecated rpmkit.rpms2sqldb and related tools
+- Removed deprecated Bunch module
+- Implemented downloads function in rpmkit.extras.list_latest_rpms (but very
+  experimental yet)
+- Add an experimental script (rpmkit/extras/make_updateinfo_xml.py) to generate
+  updateinfo.xml
+- I18n-ed and l10n-ed rpmkit.extras.updateinfo as a starting point
+- Add worksheet contains the list of RHSAs of which CVSS score >= 4.0 (this is
+  one of the PCIDSS requirements) in outputs of rk-updateinfo
+- Add an experimental script (rpmkit.extras.compsxml2json) to convert comps.xml
+  to JSON file
+- Add rpmkit.rpmutils.compute_removed() and its friends to compute removed RPMs
+  if given RPMs was uninstalled such like 'yum remove ...' does
+- Add a tool called rk-fake_yum to simulate 'yum remove ...', etc.
+- Make use of anyconfig to support various output formats in rk-fake_yum
+- Add --use-dnf option to use DNF (hawkey/libsolv) as a RPM dependency resolver
+  backend to fake_yum
+- Deprecated rpmkit.utils.uniq*
+- Add pylint checks in tests driver script
+- Fixed many PEP8 and pylint errors and warnings
+
+* Wed Dec 11 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.16-1
+- Add a virtual API called swapi.bugzilla.getDetails to rpmkit.swapi to get
+  Bugzilla information
+- Make bugzilla information related to errata added in errata JSON files by
+  rk-updateinfo (rpmkit.extras.updateinfo)
+- Add --since option to generate the worksheet to only list errata issued
+  later than given date
+- Other various enhancements and fixes especially in rk-updateinfo
+- Fixed many PEP8 errors and warnings
+
+* Sun Oct 20 2013 Satoru SATOH <satoru.satoh@gmail.com> - 0.2.10.15-1
+- Add new command 'rpmfy' and module 'rpmkit.rpmfy' to make [S]RPMs easily
+
+* Fri Jul 26 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.14-1
+- changed internal API of rpmkit.shell2.*(): removed Timeout class and just
+  make multiple timeouts passed one by one in args
+- Fixed some rpmlint errors and warnings
+
+* Thu Jul 18 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.13-1
+- [buildsrpm] make it run standalone
+- [buildsrpm] add --timeout option
+- [depgraph] implemented experimental dependency graph, DAG and trees dumping
+  functions and CLI frontend for them
+- [depgraph] implemented HTML reports generation function
+- make rpmkit.memoize.memoize() more robust: check if given arg fn is callable
+  and keep docstring of wrapped original function
+- Added missing dependency to python-networkx in extras sub-package
+- Cleanup this RPM SPEC file
+
+* Mon Jun 24 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.12-1
+- [yum-surrogate] promoted from extras to main
+- [yum-surrogate] some fixes around 'Packages' path and root processing
+- [yum-surrogate] make root and dist computed automatically if not given
+- [yum-surrogate] add new option -L to specify dir to output command log files
+- [yum-surrogate] other misc related fixes and enhancements
+- [updateinfo] add new command to get update info with using yum-surrogate
+- related small fixes and enhancements in rpmkit.rpmutils, etc.
+- removed rpmkit.extras.sqlminus
+
+* Fri May 10 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.11-1
+- [yum-surrogate] Add to surrogate running yum on hosts have access to yum
+  repos for hosts have no or only partial access to yum repos
+
+* Fri Mar  1 2013 Satoru SATOH <ssato@redhat.com> - 0.2.10.10-1
+- [swapi] Implemented experimental support of various output formats w/ tablib
+
+* Fri Dec 14 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.9-1
+- [swapi] Fixed bugs to get CVE and CVSS metrics correctly
+- [rk-repodata] Fixed module loading path
+
+* Thu Nov  8 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.8-1
+- [swapi] Important fixes in configure_with_options
+
+* Wed Nov  7 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.7-1
+- [swapi] Various fixes and refactoring, and also added some more test cases
+
+* Fri Oct 19 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.6-1
+- [swapi] Fixes around shorten_dict_keynames
+- Split into two RPMs
+
+* Tue Aug 21 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.5-1
+- Enhancement release including some experimental new modules and commands
+- [repodata] new command/module to generate 'resolved' metadata from installation DVDs
+- [minifyrpmlist] new command/module to minify given rpms list
+
+* Tue Jun 26 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.4-1
+- Enhancement release
+- [swapi] new command 'swapi.errata.getAll' to get all errata and CVEs from access.redhat.com
+
+* Mon Jun 25 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.3-1
+- Bug fix and enhancement release
+- [swapi] new command 'swapi.cve.getAll' to get all CVE data from access.redhat.com
+- Handle cases if package don't have "arch" key but have "arch_label" key
+
+* Mon Jun  4 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10.1-1
+- Bug fix release
+- Fixes and enhancements around rpmkit.shell.do_task by Masatake YAMATO <yamato@redhat.com>
+
+* Sun May 27 2012 Satoru SATOH <ssato@redhat.com> - 0.2.10-1
+- New upstream
+- Exported myrepo to another package to reduce extra dependencies
+
+* Sun May 20 2012 Satoru SATOH <ssato@redhat.com> - 0.2.9-1
+- New upstream
+- some updates and fixes in rpmkit.rhncachedb
+- fixed some bugs in newly introduced utility routines in rpmkit.rpmutils
+
+* Fri May 18 2012 Satoru SATOH <ssato@redhat.com> - 0.2.8-1
+- New upstream
+- new module and command, rhncachedb to create cache database of RHN
+- added some useful utility routines in rpmkit.rpmutils
+
+* Sat Mar  3 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6.20120303-1
+- Switched to multiprocessing module to avoid deadlock in threads
+
+* Wed Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6-2
+- Fixed a myrepo bug that default template search path list is not set
+- Moved some common parts from rpmkit.myrepo.* to rpmkit.{globals,utils}
+
+* Wed Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.6-1
+- New upstream
+- Fixed a bug that remote command is not used
+
+* Wed Feb 29 2012 Satoru SATOH <ssato@redhat.com> - 0.2.5-1
+- New upstream
+- Modularized myrepo and added some testing code for it
+- Switched template engine from Cheetah to Tenjin (built-in)
+
+* Thu Nov 17 2011 Satoru SATOH <ssato@redhat.com> - 0.2.4-1
+- New upstream
+- swapi: started to adding experimental virtual rpcs (swapi.cve.getCvss)
+- started to adding test cases separately
+- started to checking codes with pep8 command
+
+* Wed Nov  9 2011 Satoru SATOH <ssato@redhat.com> - 0.2.3.20111109-1
+- New snapshot release
+- swapi: changed scheme to construct caching dir path for each objects to avoid
+  too many subdirs made in caching top dir
+
+* Wed Nov  9 2011 Satoru SATOH <ssato@redhat.com> - 0.2.3-1
+- New upstream
+- swapi: various fixes and enhancements including no online access is needed if
+  cache is enough, system cache, read-only cache, pep8 error fixes, etc.
+
+* Thu Sep 15 2011 Satoru SATOH <ssato@redhat.com> - 0.2.2-1
+- New upstream
+- src/swapi: fixed a grave bug wrongly calls rpmkit.swapi.main()
+- swapi: fixed internal API breakage in main()
+- identrpm: added --debug option
+
+* Sun Sep 11 2011 Satoru SATOH <ssato@redhat.com> - 0.2.1-1
+- Bump version
+- identrpm: fixed some bugs in parse_package_label()
+
+* Sat Sep 10 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110910.1-1
+- identrpm: added new command to get metadata for given package labels
+- fixed some rpmlint errors
+- cleaned up some modules not used any more
+- swapi: added custom JSON encoder to format date strings in XML-RPC query results
+- swapi: make it allow setting cache expiration dates per API
+
+* Wed Aug 24 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110824.1-1
+- make %{_sysconfdir}/myrepo.d owned by this package: suggested by yamato@redhat.com
+
+* Thu Aug  4 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110804.1-1
+- myrepo: followed updates in packagemaker
+- myrepo: added unit / system test driver
+- all python code: moved into python_sitelib/rpmkit/ and arranged wrappers for each
+- bump up to 0.2.0
+
+* Mon Aug  1 2011 Satoru SATOH <ssato@redhat.com> - 0.1.20110801.1-1
+- Initial (static) packaging
