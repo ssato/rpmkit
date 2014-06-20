@@ -12,6 +12,7 @@ sys.path.append(curdir)
 PACKAGE = "rpmkit"
 VERSION = "0.2.12"
 SNAPSHOT_BUILD_MODE = False
+RHEL_5_BUILD = False
 
 # For daily snapshot versioning mode:
 if os.environ.get("_SNAPSHOT_BUILD", None) is not None:
@@ -53,8 +54,11 @@ class SrpmCommand(Command):
         --define \"_topdir %(rpmdir)s\" \
         --define \"_sourcedir %(rpmdir)s\" \
         --define \"_buildroot %(BUILDROOT)s\" \
-        %(rpmspec)s
-    """
+        %(rpmspec)s """
+
+    if RHEL_5_BUILD:
+        cmd_fmt += ("--define '_source_filedigest_algorithm md5' "
+                    "--define '_binary_filedigest_algorithm md5'")
 
     def initialize_options(self):
         pass
