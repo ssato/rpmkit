@@ -43,7 +43,7 @@ EOH
 function detect_dbtype () {
     local dbpath=$1
     # echo "$(file ${dbpath} | sed -r 's@^(.+/[A-Z][^:]+):.*\(([^,]+),.*@test "x${dbpath}" = "x\1" \&\& dbtype=$(echo \2 | tr A-z a-z) || :@g')"
-    file ${dbpath} | sed -r 's/.* DB \(([^,]+).*/\1/' | tr A-Z a-z                                                            ~/Desktop
+    file ${dbpath} | sed -r 's/.* DB \(([^,]+).*/\1/' | tr A-Z a-z
 }
 
 function err_root_not_exist () {
