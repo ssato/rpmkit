@@ -454,7 +454,7 @@ def outputs_result(result, outdir, restype="updates", keys=[]):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    timestamp = email.Utils.formatdate()
+    timestamp = email.Utils.formatdate(localtime=True)
 
     fpath = os.path.join(outdir, "timestamp.txt")
     with open(fpath, 'w') as f:
