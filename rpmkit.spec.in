@@ -100,7 +100,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/rpm2json
 %{_bindir}/rpmfy
 %{_bindir}/yum-surrogate
-%{_bindir}/rpmdb_migrate.sh
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
@@ -122,6 +121,7 @@ rm -rf $RPM_BUILD_ROOT
 %files          extras
 %doc README.rst examples
 %{_bindir}/rk-*
+%{_bindir}/rpmdb_migrate.sh
 %{_sysconfdir}/rpmkit/optimizer.d/*/*.yml
 %{_datadir}/rpmkit/optimizer/*/*/*.yml
 %{_datadir}/rpmkit/templates/*.j2
