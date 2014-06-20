@@ -43,7 +43,9 @@ EOH
 function detect_dbtype () {
     local dbpath=$1
     # echo "$(file ${dbpath} | sed -r 's@^(.+/[A-Z][^:]+):.*\(([^,]+),.*@test "x${dbpath}" = "x\1" \&\& dbtype=$(echo \2 | tr A-z a-z) || :@g')"
-    file ${dbpath} | sed -r 's/.* DB \(([^,]+).*/\1/' | tr A-Z a-z
+    test -f ${dbpath} && \
+        file ${dbpath} | sed -r 's/.* DB \(([^,]+).*/\1/' | tr A-Z a-z || \
+        echo "unknown"
 }
 
 function err_root_not_exist () {
@@ -105,33 +107,34 @@ if test "x$FROM_DIST" = "x"; then
     FROM_SYS_ROOT=/
 else
     FROM_SYS_ROOT=/var/lib/mock/${FROM_DIST}/root/
-    dump_bin=${FROM_SYS_ROOT}/usr/lib/rpm/rpmdb_dump
+    RPMDB_DUMP=${FROM_SYS_ROOT}/usr/lib/rpm/rpmdb_dump
+    FROM_SET_LIBPATH=$(ld_library_path_for_root ${FROM_SYS_ROOT})
 
     if test ! -d ${FROM_SYS_ROOT}; then
         err_root_not_exist ${FROM_SYS_ROOT} ${FROM_DIST}
         exit 1
     fi
-    if test ! -x ${dump_bin}; then
-        err_bin_not_exist ${dump_bin} ${FROM_DIST}
+    if test ! -x ${RPMDB_DUMP}; then
+        err_bin_not_exist ${RPMDB_DUMP} ${FROM_DIST}
         exit 1
     fi
-
-    ldpath=$(ld_library_path_for_root ${FROM_SYS_ROOT})
-    RPMDB_DUMP="LD_LIBRARY_PATH=${ldpath} ${dump_bin}"
 fi
 
 if test "x$TO_DIST" = "xCUR"; then
     TO_SYS_ROOT=/
 else
     TO_SYS_ROOT=/var/lib/mock/${TO_DIST}/root/
-    load_bin=${FROM_SYS_ROOT}/usr/lib/rpm/rpmdb_load
+    RPMDB_LOAD=${TO_SYS_ROOT}/usr/lib/rpm/rpmdb_load
+    TO_SET_LIBPATH=$(ld_library_path_for_root ${TO_SYS_ROOT})
 
     if test ! -d ${TO_SYS_ROOT}; then
         err_root_not_exist ${TO_SYS_ROOT} ${TO_DIST}
         exit 1
     fi
-    ldpath=$(ld_library_path_for_root ${TO_SYS_ROOT})
-    RPMDB_LOAD="LD_LIBRARY_PATH=${ldpath} ${load_bin}"
+    if test ! -x ${RPMDB_LOAD}; then
+        err_bin_not_exist ${RPMDB_LOAD} ${TO_DIST}
+        exit 1
+    fi
 fi
 
 if test -d ${OUTDIR}; then
@@ -143,13 +146,35 @@ fi
 
 for dbpath in ${FROM_RPMDB_ROOT}/var/lib/rpm/[A-Z]*; do
     dbname=${dbpath##*/}
-    dbtype=$(detect_dbtype ${TO_SYS_ROOT}/var/lib/rpm/${dbname})
     dumpfile=${OUTDIR}/${dbname}.txt
     outfile=${OUTDIR}/${dbname}
 
-    #${RPMDB_DUMP} -f ${dumpfile} ${dbpath} && \
-    #${RPMDB_LOAD} -t ${dbtype} -f ${dumpfile} ${outfile}
-    ${RPMDB_DUMP} ${dbpath} | ${RPMDB_LOAD} -t ${dbtype} ${outfile}
+    from_dbtype=$(detect_dbtype ${FROM_SYS_ROOT}/var/lib/rpm/${dbname})
+    to_dbpath=${TO_SYS_ROOT}/var/lib/rpm/${dbname}
+
+    if test -f ${to_dbpath}; then
+        to_dbtype=$(detect_dbtype ${to_dbpath})
+    else
+        cat << EOM
+[Warn] RPM DB ${dbname} should not exist in ${TO_DIST}.
+       Skip to convert ${dbname}.
+EOM
+        continue
+    fi
+
+    if test "${from_dbtype:?}" != "${to_dbtype:?}"; then
+        cat << EOM
+[Warn] DB type conversion (from ${from_dbtype} to ${to_dbtype}) is not supported yet.
+       Skip to convert ${dbname}.
+EOM
+        continue
+    fi
+
+    # TODO: How to convert between Btree and hash (-t just looks implying the input format) ?
+    # LD_LIBRARY_PATH=${TO_SET_LIBPATH} ${RPMDB_LOAD} -t ${from_dbtype} -f ${dumpfile} ${outfile}
+
+    LD_LIBRARY_PATH=${FROM_SET_LIBPATH} ${RPMDB_DUMP} -f ${dumpfile} ${dbpath} && \
+    LD_LIBRARY_PATH=${TO_SET_LIBPATH} ${RPMDB_LOAD} -f ${dumpfile} ${outfile}
 done
 
 # vim:sw=4:ts=4:et:
