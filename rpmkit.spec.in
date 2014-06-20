@@ -9,25 +9,32 @@ Group:          Development/Tools
 License:        GPLv3+
 URL:            https://github.com/ssato/rpmkit
 Source0:        https://github.com/ssato/rpmkit/tarball/master/%{name}-%{version}.tar.gz
-%if 0%{?rhel} && 0%{?rhel} <= 5
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-%endif
 BuildArch:      noarch
 BuildRequires:  python
 BuildRequires:  /usr/bin/pygettext.py
 Requires:       rpm-python
 # To support 'list-sec' sub command in yum via yum-surrogate:
+%if 0%{?rhel} && 0%{?el5}
+Requires:       yum-security
+%else
 Requires:       yum-plugin-security
+%endif
 
 %description
 RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
 
 %package        ylc
 Summary:        Yum list cache
+Group:          Development/Tools
 Requires:       %{name} = %{version}-%{release}
 Requires:       hardlink
 Requires:       httpd
-%if 0%{?rhel}
+%if 0%{?rhel} && 0%{?el5}
+Requires:       yum-downloadonly
+Requires(post): /sbin/service
+%endif
+%if 0%{?rhel} && 0%{?el6}
 Requires:       yum-plugin-downloadonly
 Requires(post): /sbin/service
 %endif
@@ -37,6 +44,7 @@ This package provides yum_makelistcache, its configuration and data files.
 
 %package        swapi
 Summary:        Cli frontend for SpaceWalk API
+Group:          Development/Tools
 Requires:       %{name} = %{version}-%{release}
 Requires:       python-BeautifulSoup
 
@@ -45,6 +53,7 @@ This package provides swapi, cli frontend for SpaceWalk API.
 
 %package        extras
 Summary:        Extra and experimental modules and tools in %{name}
+Group:          Development/Tools
 Requires:       %{name} = %{version}-%{release}
 Requires:       dnf
 Requires:       python-anyconfig
@@ -73,6 +82,7 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
 # Dirty hack:
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/{default,rhel-6-x86_64}
 (cd $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/default && ln -s ../rhel-6-x86_64/00_server.yml ./)
+rm -rf $RPM_BUILD_ROOT/%{python_sitelib}/*.egg-info
 
 %if 0%{?rhel} && 0%{?rhel} <= 5
 %clean
@@ -90,7 +100,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/rpm2json
 %{_bindir}/rpmfy
 %{_bindir}/yum-surrogate
-%{python_sitelib}/*.egg-info
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
