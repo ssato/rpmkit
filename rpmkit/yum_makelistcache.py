@@ -47,6 +47,16 @@ try:
 except SyntaxError:  # Older python (2.4.x in RHEL 5) doesn't like the above.
     _MODE_RO = eval('0444')
 
+try:
+    all
+except NameError:
+    def all(xs):
+        for x in xs:
+            if not x:
+                return False
+        return True
+
+
 NAME = "yum_makelistcache"
 
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s] %(message)s")
