@@ -16,6 +16,8 @@ USAGE="Usage: $0 [Options...] /path/to/your/rpmdb/root"
 FROM_DIST=
 TO_DIST=rhel-5-x86_64
 OUTDIR=$(mktemp -d -u)
+CLEANUP=0
+REBUILD=0
 
 RPMDB_DUMP="/usr/lib/rpm/rpmdb_dump"
 RPMDB_LOAD="/usr/lib/rpm/rpmdb_load"
@@ -78,12 +80,14 @@ function ld_library_path_for_root () {
     echo "$ldpath"
 }
 
-while getopts "F:T:O:h" opt
+while getopts "F:T:O:Crh" opt
 do
   case $opt in
     F) FROM_DIST="$OPTARG" ;;
     T) TO_DIST="$OPTARG" ;;
     O) OUTDIR="$OPTARG" ;;
+    C) CLEANUP=1 ;;
+    r) REBUILD=1 ;;
     h) show_help; exit 0 ;;
     \?) show_help; exit 1 ;;
   esac
@@ -159,22 +163,40 @@ for dbpath in ${FROM_RPMDB_ROOT}/var/lib/rpm/[A-Z]*; do
 [Warn] RPM DB ${dbname} should not exist in ${TO_DIST}.
        Skip to convert ${dbname}.
 EOM
+        if test "x${CLEANUP}" = "x1"; then
+            echo "[Warn] cleanup this db: ${dbpath}"
+            rm -f ${dbpath}
+        fi
         continue
     fi
 
-    if test "${from_dbtype:?}" != "${to_dbtype:?}"; then
-        cat << EOM
-[Warn] DB type conversion (from ${from_dbtype} to ${to_dbtype}) is not supported yet.
-       Skip to convert ${dbname}.
-EOM
-        continue
-    fi
-
-    # TODO: How to convert between Btree and hash (-t just looks implying the input format) ?
+   # TODO: How to convert between Btree and hash (-t just looks implying the input format) ?
     # LD_LIBRARY_PATH=${TO_SET_LIBPATH} ${RPMDB_LOAD} -t ${from_dbtype} -f ${dumpfile} ${outfile}
 
     LD_LIBRARY_PATH=${FROM_SET_LIBPATH} ${RPMDB_DUMP} -f ${dumpfile} ${dbpath} && \
     LD_LIBRARY_PATH=${TO_SET_LIBPATH} ${RPMDB_LOAD} -f ${dumpfile} ${outfile}
+
+    if test "${from_dbtype:?}" != "${to_dbtype:?}"; then
+        infile=${outfile}.${from_dbtype}
+        python=${TO_SYS_ROOT}/usr/bin/python
+
+        test "${from_dbtype}" = "hash" && indb_open="bsddb.hashopen" || indb_open="bsddb.btopen"
+        test "${to_dbtype}" = "hash" && outdb_open="bsddb.hashopen" || outdb_open="bsddb.btopen"
+
+        conv="import bsddb, operator; indb = ${indb_open}('${infile}', flag='r'); outdb = ${outdb_open}('${outfile}'); [operator.setitem(outdb, k, v) for k, v in indb.iteritems()]"
+
+        echo -ne "[Info] Try to convert from ${from_dbtype} to ${to_dbtype} ..."
+        mv ${outfile} ${infile} && LD_LIBRARY_PATH=${TO_SET_LIBPATH} ${python} -c "${conv}"
+        echo " Done"
+    fi
+
 done
+
+# Rebuild.
+if test "x${REBUILD}" = "x1"; then
+    echo -ne "[Info] Try to rebuild db in ${OUTDIR} ..."
+    LD_LIBRARY_PATH=${TO_SET_LIBPATH} ${TO_SYS_ROOT}/usr/bin/rpmdb --rebuilddb --dbpath ${OUTDIR}
+    echo " Done"
+fi
 
 # vim:sw=4:ts=4:et:

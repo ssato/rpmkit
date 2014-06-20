@@ -170,7 +170,12 @@ def _init_yum_base(root, enablerepos=[], disablerepos=['*']):
     :return: An instance of yum.YumBase initialized
     """
     base = yum.YumBase()
-    base.preconf.root = root
+
+    try:
+        base.preconf.root = root
+    except:
+        base.conf.installroot = root
+
     base.logger = base.verbose_logger = LOG
     _activate_repos(base, enablerepos, disablerepos)
     return base
