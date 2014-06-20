@@ -42,6 +42,10 @@ try:
 except ImportError:
     import simplejson as json
 
+try:
+    _MODE_RO = eval('0o444')
+except SyntaxError:  # Older python (2.4.x in RHEL 5) doesn't like the above.
+    _MODE_RO = eval('0444')
 
 NAME = "yum_makelistcache"
 
@@ -57,6 +61,8 @@ def _is_bsd_hashdb(dbpath):
     """
     FIXME: Is this enough to check if given file ``dbpath`` is RPM DB file ?
     """
+    return True
+
     try:
         if bsddb is None:
             return True  # bsddb is not avialable in python3.
@@ -109,7 +115,7 @@ def setup_root(root, readonly=True):
         LOG.info("Drop write access perm: " + ', '.join(fs))
         for f in fs:
             if os.access(f, os.W_OK):
-                os.chmod(f, 0o444)
+                os.chmod(f, _MODE_RO)
 
     logdir = os.path.dirname(logpath(root, "list.log"))
     if not os.path.exists(logdir):
@@ -194,7 +200,12 @@ def _pkgs2dicts(pkgs, keys=_RPM_KEYS):
 
 
 def _reg_by_dist(dist="rhel"):
-    return re.compile(r"^FEDORA-" if dist == "fedora" else r"^RH[SBE]A-")
+    if dist == "fedora":
+        reg = r"^FEDORA-"
+    else:
+        reg = r"^RH[SBE]A-"
+
+    return re.compile(reg)
 
 
 _RH_ERRATA_REG = _reg_by_dist("rhel")
@@ -305,10 +316,11 @@ def _run(cmd, output=None, curdir=os.curdir):
     (rc, out) = commands.getstatusoutput("cd %s && %s" % (curdir, cmd_s))
 
     if output:
-        with open(output, 'w') as f:
-            f.write(out)
+        f = open(output, 'w')
+        f.write(out)
+        f.close()
 
-    return (rc, '' if rc == 0 else out)
+    return (rc, rc == 0 and '' or out)
 
 
 def list_errata_g(root, opts=[], dist=None):
@@ -383,7 +395,7 @@ def yum_download(root, enablerepos=[], disablerepos=['*'], outdir=None):
     opts = _mk_repo_opts(enablerepos, disablerepos)
     opts.append("--skip-broken")
 
-    cs = [] if _is_root() else ["fakeroot"]  # avoid unneeded check.
+    cs = _is_root() and [] or ["fakeroot"]  # avoid unneeded check.
     cs += ["yum", "--installroot=" + root] + opts + ["--downloadonly",
                                                      "update", "-y"]
 
@@ -430,8 +442,9 @@ def load_conf(conf_path, sect="main"):
             d[k] = d.get(k).split(',')  # TODO: safer impl.
 
         return d
-    except Exception as e:
-        LOG.warn("Failed to load '%s': %s" % (conf_path, str(e)))
+    except Exception:
+        LOG.warn("Failed to load '%s'" % conf_path)
+        raise
 
     return dict()
 
@@ -457,24 +470,27 @@ def outputs_result(result, outdir, restype="updates", keys=[]):
     timestamp = email.Utils.formatdate(localtime=True)
 
     fpath = os.path.join(outdir, "timestamp.txt")
-    with open(fpath, 'w') as f:
-        f.write(timestamp + '\n')
+    f = open(fpath, 'w')
+    f.write(timestamp + '\n')
+    f.close()
 
     fpath = os.path.join(outdir, restype + ".json")
-    with open(fpath, 'w') as f:
-        LOG.info("Dump JSON data: " + fpath)
-        json.dump(dict(data=result, timestamp=timestamp), f)
+    f = open(fpath, 'w')
+    LOG.info("Dump JSON data: " + fpath)
+    json.dump(dict(data=result, timestamp=timestamp), f)
+    f.close()
 
     fpath = os.path.join(outdir, restype + ".csv")
-    with open(fpath, 'w') as f:
-        LOG.info("Dump CSV data: " + fpath)
-        if not keys:
-            keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
+    f = open(fpath, 'w')
+    LOG.info("Dump CSV data: " + fpath)
+    if not keys:
+        keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
 
-        f.write(','.join(keys) + '\n')
-        for d in result:
-            vals = [d.get(k, False) for k in keys]
-            f.write(','.join(v for v in vals if v) + '\n')
+    f.write(','.join(keys) + '\n')
+    for d in result:
+        vals = [d.get(k, False) for k in keys]
+        f.write(','.join(v for v in vals if v) + '\n')
+    f.close()
 
 
 def _set_loglevel(lvl):
