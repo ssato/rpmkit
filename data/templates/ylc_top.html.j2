@@ -33,6 +33,12 @@ $(function() {
   <body>
     <h1>{{ title|default('ylc - top') }}</h1>
     <p>Last-updated: <span id="timestamp"></span></p>
+    <p>Caution: These data is provided as just a reference information and we do
+       not guarantee the information is correct and/or up-to-date. Please refer
+       to the information provided at
+       <a href="https://access.redhat.com">the Red Hat wwww site</a> also to
+       get the latest and official information.
+    </p>
     <div id="tabs">
       <ul>
         {% for tgt in targets %}<li><a href="#tabs-{{ loop.index }}">{{ tgt.name }}</a></li>
