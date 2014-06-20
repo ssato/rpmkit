@@ -20,6 +20,9 @@ if os.environ.get("_SNAPSHOT_BUILD", None) is not None:
     SNAPSHOT_BUILD_MODE = True
     VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
 
+if os.environ.get("_RHEL_5_BUILD", None) is not None:
+    RHEL_5_BUILD = True
+
 
 def list_files(tdir):
     return [f for f in glob(os.path.join(tdir, '*')) if os.path.isfile(f)]
@@ -92,10 +95,17 @@ class SrpmCommand(Command):
             if not os.path.exists(sdir):
                 os.makedirs(sdir, 0755)
 
-        c = open(rpmspec + ".in").read()
+        if RHEL_5_BUILD:
+            rpmspec_src = rpmspec + '.el5.in'
+        else:
+            rpmspec_src = rpmspec + '.in'
+
+        c = open(rpmspec_src).read()
         open(rpmspec, "w").write(c.replace("@VERSION@", VERSION))
 
-        os.system(self.cmd_fmt % params)
+        cmd = self.cmd_fmt % params
+        sys.stdout.write("[Info] run cmd: %s w/ %s\n" % (cmd, rpmspec_src))
+        os.system(cmd)
 
 
 class RpmCommand(SrpmCommand):
