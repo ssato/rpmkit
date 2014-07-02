@@ -15,11 +15,7 @@ BuildRequires:  python
 BuildRequires:  /usr/bin/pygettext.py
 Requires:       rpm-python
 # To support 'list-sec' sub command in yum via yum-surrogate:
-%if 0%{?rhel} && 0%{?el5}
-Requires:       yum-security
-%else
 Requires:       yum-plugin-security
-%endif
 
 %description
 RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
@@ -30,14 +26,8 @@ Group:          Development/Tools
 Requires:       %{name} = %{version}-%{release}
 Requires:       hardlink
 Requires:       httpd
-%if 0%{?rhel} && 0%{?el5}
-Requires:       yum-downloadonly
-Requires(post): /sbin/service
-%endif
-%if 0%{?rhel} && 0%{?el6}
 Requires:       yum-plugin-downloadonly
 Requires(post): /sbin/service
-%endif
 
 %description    ylc
 This package provides yum_makelistcache, its configuration and data files.

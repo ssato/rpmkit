@@ -48,6 +48,18 @@ data_files = [
 ]
 
 
+def multi_replace(s, replaces):
+    """
+    >>> multi_replace("abc def", [("abc", "ABC"), ("def", "DEF")])
+    'ABC DEF'
+    """
+    if replaces:
+        for src, dst in replaces:
+            s = s.replace(src, dst)
+
+    return s
+
+
 class SrpmCommand(Command):
 
     user_options = []
@@ -96,15 +108,17 @@ class SrpmCommand(Command):
                 os.makedirs(sdir, 0755)
 
         if RHEL_5_BUILD:
-            rpmspec_src = rpmspec + '.el5.in'
+            replaces = [("@VERSION@", VERSION),
+                        ("yum-plugin-downloadonly", "yum-downloadonly"),
+                        ("yum-plugin-security", "yum-security")]
         else:
-            rpmspec_src = rpmspec + '.in'
+            replaces = [("@VERSION@", VERSION), ]
 
-        c = open(rpmspec_src).read()
-        open(rpmspec, "w").write(c.replace("@VERSION@", VERSION))
+        c = open(rpmspec + ".in").read()
+        open(rpmspec, "w").write(multi_replace(c, replaces))
 
         cmd = self.cmd_fmt % params
-        sys.stdout.write("[Info] run cmd: %s w/ %s\n" % (cmd, rpmspec_src))
+        sys.stdout.write("[Info] run cmd: %s w/ %s\n" % (cmd, rpmspec))
         os.system(cmd)
 
 
