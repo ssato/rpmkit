@@ -16,7 +16,7 @@ Usage:
     su - apache -c 'yum_makelistcache [Options ...] ...'
 """
 import commands
-import email.Utils
+import email.utils
 import glob
 import logging
 import operator
@@ -451,7 +451,7 @@ def load_conf(conf_path, sect="main"):
         try:
             d["download"] = bool(int(d.get("download", '0')))
         except:
-            d["download"] = false
+            d["download"] = False
 
         for k in ("disablerepos", "enablerepos"):
             d[k] = d.get(k).split(',')  # TODO: safer impl.
@@ -482,7 +482,7 @@ def outputs_result(result, outdir, restype="updates", keys=[]):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    timestamp = email.Utils.formatdate(localtime=True)
+    timestamp = email.utils.formatdate(localtime=True)
 
     fpath = os.path.join(outdir, "timestamp.txt")
     f = open(fpath, 'w')
