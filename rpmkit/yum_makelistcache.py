@@ -503,7 +503,8 @@ def outputs_result(result, outdir, restype="updates", keys=[]):
 
     f.write(','.join(keys) + '\n')
     for d in result:
-        vals = [d.get(k, ' ') for k in keys]
+        vals = [(' ' if v is None else v) for v in
+                (d.get(k, ' ') for k in keys)]
         f.write(','.join(v for v in vals) + '\n')
     f.close()
 
