@@ -16,7 +16,6 @@ Usage:
     su - apache -c 'yum_makelistcache [Options ...] ...'
 """
 import commands
-import email.utils
 import glob
 import logging
 import operator
@@ -55,6 +54,11 @@ except NameError:
             if not x:
                 return False
         return True
+
+try:
+    import email.utils as EU
+except ImportError:
+    import email.Utils as EU
 
 
 NAME = "yum_makelistcache"
@@ -464,6 +468,12 @@ def load_conf(conf_path, sect="main"):
     return dict()
 
 
+def ensure_not_none(val):
+    if val is None:
+        return ' '
+    else:
+        return val
+
 def outputs_result(result, outdir, restype="updates", keys=[]):
     """
     :param result: A list of result dicts :: [dict]
@@ -482,7 +492,7 @@ def outputs_result(result, outdir, restype="updates", keys=[]):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    timestamp = email.utils.formatdate(localtime=True)
+    timestamp = EU.formatdate(localtime=True)
 
     fpath = os.path.join(outdir, "timestamp.txt")
     f = open(fpath, 'w')
@@ -502,9 +512,9 @@ def outputs_result(result, outdir, restype="updates", keys=[]):
         keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
 
     f.write(','.join(keys) + '\n')
+
     for d in result:
-        vals = [(' ' if v is None else v) for v in
-                (d.get(k, ' ') for k in keys)]
+        vals = [ensure_not_none(v) for v in (d.get(k, ' ') for k in keys)]
         f.write(','.join(v for v in vals) + '\n')
     f.close()
 

@@ -48,7 +48,11 @@ $(function() {
       <div id="tabs-{{ loop.index }}">
         <h2>{{ tgt.name }}</h2>
         <div id="summary-{{ loop.index }}">
-          <p>{{ tgt.summary|default('') }}</p>
+          <p>{{ tgt.summary|default('') }}
+          {%- if tgt.settings_filename is defined and tgt.settings_filename -%}
+          : <span><a id="{{ tgt.name }}-settings" href="{{ tgt.baseurl }}/{{ tgt.settings_filename }}">{{ tgt.settings_title|default('Settings file') }}</a></span>
+          {%- endif %}
+          </p>
           {% if tgt.show_tables_link is defined and tgt.show_tables_link -%}
           <p><a id="{{ tgt.name }}-tables" href="{{ tgt.baseurl }}/index.html">Details of lists</a></p>
           {%- endif %}
