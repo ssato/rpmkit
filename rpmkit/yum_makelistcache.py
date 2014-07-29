@@ -55,10 +55,13 @@ except NameError:
                 return False
         return True
 
+
+# pylint: disable=E0611
 try:
     import email.utils as EU
 except ImportError:
     import email.Utils as EU
+# pylint: enable=E0611
 
 
 NAME = "yum_makelistcache"
@@ -473,6 +476,7 @@ def ensure_not_none(val):
         return ' '
     else:
         return val
+
 
 def outputs_result(result, outdir, restype="updates", keys=[]):
     """
