@@ -20,15 +20,23 @@
 {%- if jquery_datatables_ui_css is not defined -%}
 {%-     set jquery_datatables_ui_css = 'http://cdn.datatables.net/plug-ins/be7019ee387/integration/jqueryui/dataTables.jqueryui.css' -%}
 {%- endif -%}
+{%- if title is defined -%}
+{%-    set doc_title = title -%}
+{%- elif main.title is defined -%}
+{%-    set doc_title = main.title -%}
+{%- else -%}
+{%-    set doc_title = 'ylc - updates and installed RPMs, and errata tables' -%}
+{%- endif -%}
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>{{ title|default('ylc - updates and installed RPMs, and errata lists') }}</title>
+    <title>{{ doc_title }}{{ ': %s' % main.model if main.model is defined }}</title>
     {% if main_css is defined %}<link rel="stylesheet" href="{{ main_css }}">{% endif %}
     <link rel="stylesheet" href="{{ jquery_ui_css }}">
     <link rel="stylesheet" href="{{ jquery_datatables_css }}">
     <link rel="stylesheet" href="{{ jquery_datatables_ui_css }}">
+    <noscript>Please enable JavaScript in your browser to view this page as intended.</noscript>
     <script src="{{ jquery_url }}"></script>
     <script src="{{ jquery_ui_url }}"></script>
     <script src="{{ jquery_datatables_url }}"></script>
@@ -80,22 +88,22 @@ $(function() {
     </script>
   </head>
   <body>
-    <h1>{{ title|default('ylc - updates and installed RPMs, and errata lists') }}</h1>
+    <h1>{{ doc_title }}{{ ': %s' % main.model if main.model is defined }}</h1>
     <div id="summary">
-      <p>{{ summary|default('Here are update and installed RPMs, and errata lists.') }}</p>
+      <p>{{ summary|default('Here are update and installed RPMs, and errata list tables.') }}</p>
     </div>
     <div id="tabs">
       <ul>
-        <li><a href="#tabs-updates">Update RPMs</a></li>
-        <li><a href="#tabs-errata">Errata</a></li>
-        <li><a href="#tabs-installed">Installed RPMs</a></li>
+        <li><a href="#tab-updates">Update RPMs</a></li>
+        <li><a href="#tab-errata">Errata</a></li>
+        <li><a href="#tab-installed">Installed RPMs</a></li>
       </ul>
-      <div id="tabs-updates">
-        <h2>Update RPMs</h2>
-        <div id="summary-updates">
-          <p>{{ summary_updates|default('Update RPMs: ') }}</p>
-          <p>Files: [<a href="updates.csv">CSV</a>] |
-                    [<a href="updates.json">JSON</a>]</p>
+      <div id="tab-updates">
+        <h2>{{ updates_title|default('Update RPMs') }}</h2>
+        <div id="updates-summary">
+          <p>{{ updates_summary|default('Update RPMs: ') }}
+             [<a href="updates.csv">CSV</a>] | [<a href="updates.json">JSON</a>]
+          </p>
         </div>
         <table id="updatesRpmsTable" class="updates" cellspacing="0">
           <thead>
@@ -120,12 +128,12 @@ $(function() {
           -->
         </table>
       </div>
-      <div id="tabs-errata">
-        <h2>Errata</h2>
-        <div id="summary-errata">
-          <p>{{ summary_errata|default('Errata: ') }}</p>
-          <p>Files: [<a href="errata.csv">CSV</a>] |
-                    [<a href="errata.json">JSON</a>]</p>
+      <div id="tab-errata">
+        <h2>{{ errata_title|default('Errata') }}</h2>
+        <div id="errata-summary">
+          <p>{{ errata_summary|default('Errata: ') }}
+             [<a href="errata.csv">CSV</a>] | [<a href="errata.json">JSON</a>]
+          </p>
         </div>
         <table id="errataTable" class="errata" cellspacing="0">
           <thead>
@@ -146,12 +154,12 @@ $(function() {
           -->
         </table>
       </div>
-      <div id="tabs-installed">
-        <h2>Installed RPMs</h2>
-        <div id="summary-installed">
-          <p>{{ summary_installed|default('Installed RPMs: ') }}</p>
-          <p>Files: [<a href="installed.csv">CSV</a>] |
-                    [<a href="installed.json">JSON</a>]</p>
+      <div id="tab-installed">
+        <h2>{{ installed_title|default('Installed RPMs') }}</h2>
+        <div id="installed-summary">
+          <p>{{ installed_summary|default('Installed RPMs: ') }}
+             [<a href="installed.csv">CSV</a>] | [<a href="installed.json">JSON</a>]
+          </p>
         </div>
         <table id="installedRpmsTable" class="installed" cellspacing="0">
           <thead>

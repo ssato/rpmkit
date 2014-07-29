@@ -8,7 +8,7 @@
 {%-     set jquery_ui_url = 'http://code.jquery.com/ui/1.10.4/jquery-ui.js' -%}
 {%- endif -%}
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang|default('en') }}">
   <head>
     <meta charset="utf-8">
     <title>{{ title|default('ylc - top') }}</title>
@@ -33,11 +33,7 @@ $(function() {
   <body>
     <h1>{{ title|default('ylc - top') }}</h1>
     <p>Last-updated: <span id="timestamp"></span></p>
-    <p>Caution: These data is provided as just a reference information and we do
-       not guarantee the information is correct and/or up-to-date. Please refer
-       to the information provided at
-       <a href="https://access.redhat.com">the Red Hat wwww site</a> also to
-       get the latest and official information.
+    <p>{{ caution|default('Caution: These data is provided as just a reference information and we do not guarantee the information is correct and/or up-to-date. Please refer to the information provided at <a href="https://access.redhat.com">the Red Hat wwww site</a> also to get the latest and official information.') }}
     </p>
     <div id="tabs">
       <ul>
@@ -54,7 +50,7 @@ $(function() {
           {%- endif %}
           </p>
           {% if tgt.show_tables_link is defined and tgt.show_tables_link -%}
-          <p><a id="{{ tgt.name }}-tables" href="{{ tgt.baseurl }}/index.html">Details of lists</a></p>
+          <p><a id="{{ tgt.name }}-tables" href="{{ tgt.baseurl }}/index.html">{{ tables_link_desc|default('Details') }}</a></p>
           {%- endif %}
           <!--
           <div id="{{ tgt.name }}-enabledrepos">
