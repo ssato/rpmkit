@@ -25,6 +25,7 @@ install:
 script:
   - "./aux/runtest.sh"
 notifications:
-  #on_success: always # default: change
-  on_failure: always
+  email:
+    #on_success: always # default: change
+    on_failure: always
 
