@@ -1,6 +1,10 @@
 About
 ========
 
+.. image:: https://api.travis-ci.org/ssato/rpmkit.png?branch=master
+   :target: https://travis-ci.org/ssato/rpmkit
+   :alt: Test status
+
 This is a collection of some rpm related tools distributed under
 GPL3+/GPLv2+/MIT.
 
