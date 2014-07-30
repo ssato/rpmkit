@@ -175,10 +175,7 @@ def _list_installed_rpms(root='/', keys=RPM_BASIC_KEYS, yum=False):
                       key=itemgetter(*keys))
     else:
         ts = rpm_transactionset(root)
-
-        # pylint: disable=E1101
         mi = ts.dbMatch()
-        # pylint: enable=E1101
 
         ps = [h2nvrea(h, keys) for h in mi]
         del mi, ts

@@ -784,9 +784,7 @@ def dump_datasets(workdir, details=False, rpmkeys=_RPM_KEYS,
         book = tablib.Databook(datasets)
 
     with open(dataset_file_path(workdir), 'wb') as out:
-        # pylint: disable=E1103
         out.write(book.xls)
-        # pylint: enable=E1103
 
 
 _WARN_DETAILS_NOT_AVAIL = """\

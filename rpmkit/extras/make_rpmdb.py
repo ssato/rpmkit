@@ -89,10 +89,7 @@ def install_rpms(rpms, dbdir):
         logging.error("Unresolved deps: " + str(unresolved_deps))
         return
 
-    # pylint: disable=E1101
     ts.order()
-    # pylint: enable=E1101
-
     ts.run(runCallback, 1)
 
 
