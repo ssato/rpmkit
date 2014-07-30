@@ -21,6 +21,7 @@ from logging import DEBUG, INFO
 import rpmkit.rpmutils as RU
 import rpmkit.yum_surrogate as YS
 import rpmkit.extras.depgraph as RD
+import rpmkit.template as RT
 
 import codecs
 import logging
@@ -32,8 +33,6 @@ try:
     import json
 except ImportError:
     import simplejson as json
-
-from jinja2_cli.render import render
 
 
 _TEMPLATE_PATHS = [os.curdir, "/usr/share/rpmkit/templates"]
@@ -54,7 +53,7 @@ def renderfile(tmpl, workdir, ctx={}, subdir=None, tpaths=_TEMPLATE_PATHS):
     else:
         dst = os.path.join(workdir, tmpl[:-3])
 
-    s = render(tmpl, ctx, tpaths, ask=True)
+    s = RT.render(tmpl, ctx, tpaths, ask=True)
     copen(dst, "w").write(s)
 
 
@@ -79,7 +78,7 @@ def gen_depgraph_gv(root, workdir, template_paths=_TEMPLATE_PATHS,
 
     renderfile("rpm_dependencies.html.j2", workdir, ctx, tpaths=template_paths)
 
-    depgraph_s = render("rpm_dependencies.graphviz.j2", ctx,
+    depgraph_s = RT.render("rpm_dependencies.graphviz.j2", ctx,
                         template_paths, ask=True)
     src = os.path.join(workdir, "rpm_dependencies.graphviz")
 
