@@ -17,12 +17,12 @@
 #
 from logging import DEBUG, INFO
 from itertools import count
-from jinja2_cli.render import render
 
 import rpmkit.memoize as RM
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
 import rpmkit.shell as SH
+import rpmkit.template as RT
 
 import datetime
 import logging
@@ -311,7 +311,7 @@ def _renderfile(workdir, tmpl, ctx={}, tpaths=_TEMPLATE_PATHS):
         if not os.path.exists(d):
             os.makedirs(d)
 
-    s = render(tmpl, ctx, tpaths, ask=True)
+    s = RT.render(tmpl, ctx, tpaths, ask=True)
     U.copen(os.path.join(workdir, tmpl[:-3]), 'w').write(s)
 
 
@@ -339,7 +339,7 @@ def dump_gv_depgraph(root, workdir, tpaths=_TEMPLATE_PATHS,
     ctx = dict(dependencies=[(r, [p for p in ps if p != r]) for r, ps in
                              reqs.iteritems()])
 
-    depgraph_s = render("rpmdep_graph_gv.j2", ctx, tpaths, ask=True)
+    depgraph_s = RT.render("rpmdep_graph_gv.j2", ctx, tpaths, ask=True)
     src = os.path.join(workdir, "rpmdep_graph.dot")
     U.copen(src, 'w').write(depgraph_s)
 
