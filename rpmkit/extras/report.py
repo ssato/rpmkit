@@ -79,7 +79,7 @@ def gen_depgraph_gv(root, workdir, template_paths=_TEMPLATE_PATHS,
     renderfile("rpm_dependencies.html.j2", workdir, ctx, tpaths=template_paths)
 
     depgraph_s = RT.render("rpm_dependencies.graphviz.j2", ctx,
-                        template_paths, ask=True)
+                           template_paths, ask=True)
     src = os.path.join(workdir, "rpm_dependencies.graphviz")
 
     copen(src, 'w').write(depgraph_s)
