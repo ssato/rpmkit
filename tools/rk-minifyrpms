@@ -1,3 +1,0 @@
-#! /usr/bin/python
-import rpmkit.extras.minifyrpmlist as M
-M.main()
