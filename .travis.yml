@@ -21,6 +21,10 @@ before_script:
   - ln -s /usr/lib/python2.6/dist-packages/matplotlib $VIRTUAL_ENV/lib/python2.6/site-packages/
   - ln -s /usr/lib/python2.7/dist-packages/matplotlib $VIRTUAL_ENV/lib/python2.7/site-packages/
 install:
-    - if [[ $TRAVIS_PYTHON_VERSION < '2.6' ]]; then pip install --use-mirrors simplejson PyYAML pep8 pylint flake8 BeautifulSoup; else pip install --use-mirrors PyYAML pep8 pylint flake8 BeautifulSoup; fi
+  - if [[ $TRAVIS_PYTHON_VERSION < '2.6' ]]; then pip install --use-mirrors simplejson PyYAML pep8 pylint flake8 BeautifulSoup; else pip install --use-mirrors PyYAML pep8 pylint flake8 BeautifulSoup; fi
 script:
-    - "./aux/runtest.sh"
+  - "./aux/runtest.sh"
+notifications:
+  #on_success: always # default: change
+  on_failure: always
+
