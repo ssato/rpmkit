@@ -76,13 +76,12 @@ PROGRESSBAR_LEN = 50
 
 def download_updateinfo_xml(repo):
     """
-    TODO: This code is a quick and dirty hack; too much low level and I guess
-    there is a way to do same things in DNF/Hawkey level.
+    NOTE: This code is a quick and dirty hack.
 
     see also:
+        * https://github.com/akozumpl/dnf/pull/143
         * rhbz#850912 RFE: support updateinfo:
-          https://bugzilla.redhat.com/show_bug.cgi?id=850912
-
+        * rhbz#1101029: [rfe][plugins] yum-plugin-security (list-sec) or ...
         * http://tojaj.github.io/librepo/examples.html
 
     :param repo: An initialized :class:`dnf.repo.Repo` instance
@@ -139,7 +138,7 @@ def compute_removed(pkgspecs, root, excludes=[]):
     return (sorted(set(excludes)), sorted(set(removes)))
 
 
-def compute_updates(root, repos=[], updateinfo=False, setup_callbacks=False):
+def base_fill_sack(root, repos=[], updateinfo=False, setup_callbacks=False):
     """
     :param root: RPM DB root dir (relative or absolute)
     :param repos: A list of repos to enable or []. [] means that all available
@@ -180,6 +179,20 @@ def compute_updates(root, repos=[], updateinfo=False, setup_callbacks=False):
         for rid, repo in base.repos.iteritems():
             if repo.enabled:
                 download_updateinfo_xml(repo)
+
+    return base
+
+
+def compute_updates(root, repos=[], setup_callbacks=False):
+    """
+    :param root: RPM DB root dir (relative or absolute)
+    :param repos: A list of repos to enable or []. [] means that all available
+        system repos to be enabled.
+    :param setup_callbacks: Setup callbacks and progress bar displayed if True
+
+    :return: A pair of a list of packages
+    """
+    base = base_fill_sack(root, repos, True, setup_callbacks)
 
     # see :method:`run` in :class:`dnf.cli.commands.CheckUpdateCommand`.
     ypl = base.returnPkgLists(["updates"])

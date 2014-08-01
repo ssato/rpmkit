@@ -49,7 +49,6 @@ Requires:       dnf
 Requires:       python-anyconfig
 Requires:       python-bunch
 Requires:       graphviz
-Requires:       python-jinja2-cli
 Requires:       python-networkx
 # Commented to avoid rpmlint error 'E: explicit-lib-dependency':
 #Requires:       python-matplotlib
