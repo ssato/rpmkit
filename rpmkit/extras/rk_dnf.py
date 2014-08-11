@@ -11,13 +11,12 @@ from dnf.repo import _subst2tuples
 
 import dnf.base
 # import dnf.conf.read  # It exists in git but not available in
-                        # dnf-0.5.4-2.fc20.noarch
+#                       # dnf-0.5.4-2.fc20.noarch
 import dnf.cli.cli
 import dnf.exceptions
 import dnf.repo
 import dnf.subject
 import dnf.transaction
-import functools
 import glob
 import librepo
 import logging
@@ -32,7 +31,7 @@ import tempfile
 # following pull request is merged:
 #   https://github.com/akozumpl/dnf/pull/143/files
 #
-class _Handle(dnf.repo._Handle):
+class _Handle(dnf.repo._Handle, object):
 
     def __init__(self, gpgcheck, max_mirror_tries):
         super(_Handle, self).__init__(gpgcheck, max_mirror_tries)
@@ -81,7 +80,8 @@ class Repo(dnf.repo.Repo):
                 h.setopt(librepo.LRO_MIRRORLIST, mirrorlist)
                 h.setopt(librepo.LRO_FASTESTMIRROR, self.fastestmirror)
                 h.setopt(librepo.LRO_FASTESTMIRRORCACHE,
-                         os.path.join(self.basecachedir, 'fastestmirror.cache'))
+                         os.path.join(self.basecachedir,
+                                      'fastestmirror.cache'))
             else:
                 # use already resolved mirror list
                 h.setopt(librepo.LRO_URLS, self.metadata.mirrors)
@@ -97,8 +97,10 @@ class Repo(dnf.repo.Repo):
         h.fastestmirrorcb = self._md_pload._fastestmirror_cb
 
         # apply repo options
-        h.maxspeed = self.throttle if type(self.throttle) is int \
-                     else int(self.bandwidth * self.throttle)
+        if type(self.throttle) is int:
+            h.maxspeed = self.throttle
+        else:
+            h.maxspeed = int(self.bandwidth * self.throttle)
         h.proxy = self.proxy
         h.sslverifypeer = h.sslverifyhost = self.sslverify
 
@@ -107,7 +109,9 @@ class Repo(dnf.repo.Repo):
     @property
     def updateinfo_fn(self):
         """Added property."""
+        # pylint: disable=maybe-no-member
         return self.metadata.updateinfo_fn
+        # pylint: enable=maybe-no-member
 
 
 class BaseCli(dnf.cli.cli.BaseCli):
@@ -143,12 +147,14 @@ class BaseCli(dnf.cli.cli.BaseCli):
         else:
             self.logger.debug("not found updateinfo for: %s" % repo.name)
         repo.hawkey_repo = hrepo
+        # pylint: disable=no-member
         self._sack.load_yum_repo(hrepo, build_cache=True, load_filelists=True,
                                  load_presto=repo.deltarpm,
                                  load_updateinfo=bool(repo.updateinfo_fn))
+        # pylint: enable=no-member
 
     def readRepoConfig(self, parser, section):
-        repo = Repo(section, self.conf.cachedir)  # Changed: s/dnf.repo.Repo/Repo/
+        repo = Repo(section, self.conf.cachedir)  # Changed: s/dnf.repo.//
         try:
             repo.populate(parser, section, self.conf)
         except ValueError as e:
@@ -158,8 +164,8 @@ class BaseCli(dnf.cli.cli.BaseCli):
         # Ensure that the repo name is set
         if not repo.name:
             repo.name = section
-            self.logger.error(_('Repository %r is missing name in configuration, '
-                    'using id') % section)
+            self.logger.error(_('Repository %r is missing name in config, '
+                                'using id') % section)
         repo.name = ucd(repo.name)
 
         repo.substitutions.update(self.conf.substitutions)
