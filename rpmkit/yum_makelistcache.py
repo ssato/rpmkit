@@ -282,7 +282,7 @@ _RPM_ARCHS = ("i386", "i586", "i686", "x86_64", "ppc", "ia64", "s390",
               "s390x", "noarch")
 
 
-def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':'):
+def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':', hyperlink=True):
     """
     Parse a line in the output of 'yum list-sec'.
 
@@ -327,9 +327,15 @@ def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':'):
         epoch = '0'
         version = ev
 
+    # ex. https://rhn.redhat.com/errata/RHSA-2014-1052.html
+    url = "https://rhn.redhat.com/errata/%s.html" % advisory.replace(':', '-')
+
+    if hyperlink:
+        url = "<a href='%s'>%s</a>" % (url, url)
+
     return dict(advisory=advisory, type=etype, severity=severity,  # Errata
                 name=name, epoch=epoch, version=version,  # RPM package
-                release=release, arch=arch)
+                release=release, arch=arch, url=url)
 
 
 def _run(cmd, output=None, curdir=os.curdir):
@@ -446,7 +452,7 @@ def yum_download(root, enablerepos=[], disablerepos=['*'], outdir=None):
 
 
 DEFAULT_OUT_KEYS = dict(errata=["advisory", "type", "severity", "name",
-                                "epoch", "version", "release", "arch"],
+                                "epoch", "version", "release", "arch", "url"],
                         default=_RPM_KEYS)
 
 
