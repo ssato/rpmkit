@@ -488,12 +488,13 @@ def ensure_not_none(val):
         return val
 
 
-def outputs_result(result, outdir, restype="updates", header='', keys=[]):
+def outputs_result(result, outdir, restype="updates", header_file=None,
+                   keys=[]):
     """
     :param result: A list of result dicts :: [dict]
     :param outdir: Output dir
     :param restype: Result type
-    :param header: Header text in CSV and JSON outputs
+    :param header_file: Header text file embedded in CSV and JSON outputs
     :param keys: CSV headers
     """
     if not keys:
@@ -514,6 +515,10 @@ def outputs_result(result, outdir, restype="updates", header='', keys=[]):
     f.write(timestamp + '\n')
     f.close()
 
+    header = ""
+    if header_file:
+        header = _open(header_file).read()
+
     fpath = os.path.join(outdir, restype + ".json")
     f = open(fpath, 'w')
     LOG.info("Dump JSON data: " + fpath)
@@ -526,8 +531,11 @@ def outputs_result(result, outdir, restype="updates", header='', keys=[]):
     if not keys:
         keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
 
-    if header:
-        f.write(u"# %s\n" % unicode(header, 'utf-8'))
+    for h in header.splitlines():
+        if h.startswith(u"#"):
+            f.write(h + '\n')
+        else:
+            f.write(u"# " + h + '\n')
 
     f.write(','.join(keys) + '\n')
 
@@ -561,7 +569,7 @@ Examples:
 _DEFAULTS = dict(root=os.curdir, log=False,
                  enablerepos=[], disablerepos=[], download=False,
                  downloaddir=None, conf=None, outdir=None,
-                 header='', verbosity=0)
+                 header_file=None, verbosity=0)
 
 
 def option_parser(usage=_USAGE, defaults=_DEFAULTS):
@@ -599,9 +607,9 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS):
     p.add_option("-D", "--debug", action="store_const", dest="verbosity",
                  const=2, help="Debug mode (same as -vv)")
 
-    p.add_option("-H", "--header",
-                 help="Header text (must be in UTF-8) embedded in CSV and "
-                      "JSON outputs")
+    p.add_option("-H", "--header-file",
+                 help="Header text file (must be in UTF-8) embedded in CSV "
+                      "and JSON outputs")
     return p
 
 
@@ -632,7 +640,7 @@ def main(argv=sys.argv, pkgnarrows=_PKG_NARROWS):
     # Get errata list:
     es = yum_list_errata(options.root, options.enablerepos,
                          options.disablerepos)
-    outputs_result(es, options.outdir, "errata", options.header)
+    outputs_result(es, options.outdir, "errata", options.header_file)
 
     # Get installed and update rpms list:
     base = _init_yum_base(options.root, options.enablerepos,
@@ -641,7 +649,7 @@ def main(argv=sys.argv, pkgnarrows=_PKG_NARROWS):
 
     for narrow in pkgnarrows:
         pdicts = _pkgs2dicts(pkgs[narrow])
-        outputs_result(pdicts, options.outdir, narrow, options.header)
+        outputs_result(pdicts, options.outdir, narrow, options.header_file)
 
     # ... and download update rpms if wanted:
     if options.download:
