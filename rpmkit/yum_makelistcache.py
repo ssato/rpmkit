@@ -15,6 +15,7 @@
 Usage:
     su - apache -c 'yum_makelistcache [Options ...] ...'
 """
+import codecs
 import commands
 import glob
 import logging
@@ -72,6 +73,10 @@ LOG = logging.getLogger(NAME)
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
 _RPM_KEYS = ("nevra", "name", "epoch", "version", "release", "arch")
+
+
+def _open(path, flag='r', encoding="utf-8"):
+    return codecs.open(path, flag, encoding)
 
 
 def _is_bsd_hashdb(dbpath):
@@ -455,8 +460,11 @@ DEFAULT_OUT_KEYS = dict(errata=["advisory", "type", "severity", "name",
 def load_conf(conf_path, sect="main"):
     cp = configparser.SafeConfigParser()
     try:
-        cp.read(conf_path)
+        f = _open(conf_path, 'r', 'utf-8')
+        cp.readfp(f)
         d = dict(cp.items(sect))
+        f.close()
+
         try:
             d["download"] = bool(int(d.get("download", '0')))
         except:
@@ -480,11 +488,12 @@ def ensure_not_none(val):
         return val
 
 
-def outputs_result(result, outdir, restype="updates", keys=[]):
+def outputs_result(result, outdir, restype="updates", header='', keys=[]):
     """
     :param result: A list of result dicts :: [dict]
     :param outdir: Output dir
     :param restype: Result type
+    :param header: Header text in CSV and JSON outputs
     :param keys: CSV headers
     """
     if not keys:
@@ -508,14 +517,17 @@ def outputs_result(result, outdir, restype="updates", keys=[]):
     fpath = os.path.join(outdir, restype + ".json")
     f = open(fpath, 'w')
     LOG.info("Dump JSON data: " + fpath)
-    json.dump(dict(data=result, timestamp=timestamp), f)
+    json.dump(dict(data=result, header=header, timestamp=timestamp), f)
     f.close()
 
     fpath = os.path.join(outdir, restype + ".csv")
-    f = open(fpath, 'w')
+    f = _open(fpath, 'w')
     LOG.info("Dump CSV data: " + fpath)
     if not keys:
         keys = DEFAULT_OUT_KEYS.get(restype, DEFAULT_OUT_KEYS["default"])
+
+    if header:
+        f.write(u"# %s\n" % unicode(header, 'utf-8'))
 
     f.write(','.join(keys) + '\n')
 
@@ -548,7 +560,8 @@ Examples:
 
 _DEFAULTS = dict(root=os.curdir, log=False,
                  enablerepos=[], disablerepos=[], download=False,
-                 downloaddir=None, conf=None, outdir=None, verbosity=0)
+                 downloaddir=None, conf=None, outdir=None,
+                 header='', verbosity=0)
 
 
 def option_parser(usage=_USAGE, defaults=_DEFAULTS):
@@ -586,6 +599,9 @@ def option_parser(usage=_USAGE, defaults=_DEFAULTS):
     p.add_option("-D", "--debug", action="store_const", dest="verbosity",
                  const=2, help="Debug mode (same as -vv)")
 
+    p.add_option("-H", "--header",
+                 help="Header text (must be in UTF-8) embedded in CSV and "
+                      "JSON outputs")
     return p
 
 
@@ -616,7 +632,7 @@ def main(argv=sys.argv, pkgnarrows=_PKG_NARROWS):
     # Get errata list:
     es = yum_list_errata(options.root, options.enablerepos,
                          options.disablerepos)
-    outputs_result(es, options.outdir, "errata")
+    outputs_result(es, options.outdir, "errata", options.header)
 
     # Get installed and update rpms list:
     base = _init_yum_base(options.root, options.enablerepos,
@@ -625,7 +641,7 @@ def main(argv=sys.argv, pkgnarrows=_PKG_NARROWS):
 
     for narrow in pkgnarrows:
         pdicts = _pkgs2dicts(pkgs[narrow])
-        outputs_result(pdicts, options.outdir, narrow)
+        outputs_result(pdicts, options.outdir, narrow, options.header)
 
     # ... and download update rpms if wanted:
     if options.download:
