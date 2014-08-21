@@ -60,15 +60,17 @@ $(function() {
   );
   $( "#errataTable" ).dataTable(
     {
-      "ajax": {
-        "url": "errata.json",
-        "dataSrc": "data"
-      },
-      "pageLength": 20,
-      "columns": [ { data: 'advisory' },
-                   { data: 'type' },
-                   { data: 'severity' },
-                   { data: 'url' } ]
+      sAjaxSource: "errata.json",
+      sAjaxDataProp : "data",
+      pageLength: 20,
+      aoColumns: [ { sTitle: 'Advisory',
+                     mData: 'advisory',
+                     mRender: function(data, type, full) {
+                        return '<a href="https://rhn.redhat.com/errata/' + data.replace(':', '-') + '.html">' + data + '</a>';
+                     },
+                   },
+                   { sTitle: 'Errata Type', mData: 'type' },
+                   { sTitle: 'Severity (RHSA only)', mData: 'severity' } ]
     }
   );
   $( "#installedRpmsTable" ).dataTable(
