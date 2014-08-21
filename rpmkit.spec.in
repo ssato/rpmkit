@@ -101,7 +101,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/sysconfig/yum_makelistcache
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/yum_makelistcache.conf
 %config(noreplace) %{_sysconfdir}/httpd/passwd.d/yum_makelistcache
-%{_bindir}/tools/rpmkit-ylc-initial-setup.sh
+%{_bindir}/rpmkit-ylc-initial-setup.sh
 %{_sysconfdir}/yum_makelistcache.d/*.ini*
 %{_localstatedir}/lib/yum_makelistcache/root.d/README
 
