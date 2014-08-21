@@ -28,6 +28,8 @@ Requires:       hardlink
 Requires:       httpd
 Requires:       yum-plugin-downloadonly
 Requires(post): /sbin/service
+Requires:       httpd
+Requires:       chkconfig
 
 %description    ylc
 This package provides yum_makelistcache, its configuration and data files.
@@ -49,7 +51,6 @@ Requires:       dnf
 Requires:       python-anyconfig
 Requires:       python-bunch
 Requires:       graphviz
-Requires:       python-jinja2-cli
 Requires:       python-networkx
 # Commented to avoid rpmlint error 'E: explicit-lib-dependency':
 #Requires:       python-matplotlib
@@ -100,6 +101,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/sysconfig/yum_makelistcache
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/yum_makelistcache.conf
 %config(noreplace) %{_sysconfdir}/httpd/passwd.d/yum_makelistcache
+%{_bindir}/tools/rpmkit-ylc-initial-setup.sh
 %{_sysconfdir}/yum_makelistcache.d/*.ini*
 %{_localstatedir}/lib/yum_makelistcache/root.d/README
 
