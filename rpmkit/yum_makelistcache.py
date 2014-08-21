@@ -460,10 +460,8 @@ DEFAULT_OUT_KEYS = dict(errata=["advisory", "type", "severity", "name",
 def load_conf(conf_path, sect="main"):
     cp = configparser.SafeConfigParser()
     try:
-        f = _open(conf_path, 'r', 'utf-8')
-        cp.readfp(f)
+        cp.read(conf_path)
         d = dict(cp.items(sect))
-        f.close()
 
         try:
             d["download"] = bool(int(d.get("download", '0')))
