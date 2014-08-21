@@ -327,9 +327,11 @@ def parse_errata_line(line, archs=_RPM_ARCHS, ev_sep=':'):
         epoch = '0'
         version = ev
 
+    url = "https://rhn.redhat.com/errata/%s.html" % advisory.replace(':', '-')
+
     return dict(advisory=advisory, type=etype, severity=severity,  # Errata
                 name=name, epoch=epoch, version=version,  # RPM package
-                release=release, arch=arch)
+                release=release, arch=arch, url=url)
 
 
 def _run(cmd, output=None, curdir=os.curdir):
