@@ -110,6 +110,16 @@ except ImportError:
 """
 Examples:
 
+$ cat ~/.swapi/config
+[DEFAULT]
+server = my-satellite-server-0.example.com
+userid = my-satellite-user
+password = secret
+
+[rhn]
+server = rhn.redhat.com
+userid = rhn-user-johon-doe@example.com
+password = **********
 $ ./swapi.py --args=10821 packages.listDependencies
 [
   {
@@ -126,7 +136,7 @@ $ ./swapi.py --args=10821 packages.listDependencies
     "dependency_type": "provides"
   }
 ]
-$ ./swapi.py --list-args="10821,10822,10823" packages.getDetails
+$ ./swapi.py -P rhn --list-args="10821,10822,10823" packages.getDetails
 [
   {
     "package_size": "15653",
