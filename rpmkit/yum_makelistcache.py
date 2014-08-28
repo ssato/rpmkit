@@ -17,6 +17,7 @@ Usage:
 """
 import codecs
 import commands
+import datetime
 import glob
 import logging
 import operator
@@ -57,14 +58,6 @@ except NameError:
         return True
 
 
-# pylint: disable=E0611
-try:
-    import email.utils as EU
-except ImportError:
-    import email.Utils as EU
-# pylint: enable=E0611
-
-
 NAME = "yum_makelistcache"
 
 logging.basicConfig(format="%(asctime)-15s [%(levelname)s] %(message)s")
@@ -73,6 +66,21 @@ LOG = logging.getLogger(NAME)
 
 _RPM_DB_FILENAMES = ["Basenames", "Name", "Providename", "Requirename"]
 _RPM_KEYS = ("nevra", "name", "epoch", "version", "release", "arch")
+
+
+class JST(datetime.tzinfo):
+    def utcoffset(self, *args):
+        return datetime.timedelta(hours=9)
+
+    def dst(self, *args):
+        return datetime.timedelta(0)
+
+    def tzname(self, *args):
+        return "JST"
+
+
+def _localtime(tz=JST()):
+    return datetime.datetime.now(tz).strftime("%c %Z")
 
 
 def _open(path, flag='r', encoding="utf-8"):
@@ -506,7 +514,7 @@ def outputs_result(result, outdir, restype="updates", header_file=None,
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    timestamp = EU.formatdate(localtime=True)
+    timestamp = _localtime()
 
     fpath = os.path.join(outdir, "timestamp.txt")
     f = open(fpath, 'w')
