@@ -32,7 +32,9 @@ for conf in $CONFDIR/*.ini; do
     fi
 done
 
-test $ret -eq 0 && LC_TIME=C date --rfc-2822 > ${OUTDIR}/timestamp.txt || :
+# FIXME:
+# test $ret -eq 0 && LC_TIME=C date --rfc-2822 > ${OUTDIR}/timestamp.txt || :
+test $ret -eq 0 && python -c 'import rpmkit.yum_makelistcache as YM; print YM._localtime()' > ${OUTDIR}/timestamp.txt || :
 
 /usr/bin/chcon -R -t httpd_sys_content_t $OUTDIR
 test "x$HARDLINK" = "x1" && hardlink -vv $OUTDIR
