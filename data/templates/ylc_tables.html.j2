@@ -44,6 +44,14 @@
     <script>
 $(function() {
   $( "#tabs" ).tabs();
+  $.ajax({
+    url: "timestamp.txt",
+    dataType: "text"
+  }).done(function( timestamp ) {
+    $( "#timestamp" ).text( timestamp );
+  }).fail(function( timestamp ) {;
+    $( "#timestamp" ).text( "Unknown" );
+  });
   $( "#updatesRpmsTable" ).dataTable(
     {
       "ajax": {
@@ -92,6 +100,7 @@ $(function() {
   </head>
   <body>
     <h1>{{ doc_title }}{{ ': %s' % main.model if main.model is defined }}</h1>
+    <div>Last-updated: <span id="timestamp"></span></div>
     <div id="summary">
       <p>{{ summary|default('Here are update and installed RPMs, and errata list tables.') }}</p>
     </div>
