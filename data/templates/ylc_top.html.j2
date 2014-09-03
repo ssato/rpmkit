@@ -27,6 +27,16 @@ $(function() {
   }).fail(function( timestamp ) {;
     $( "#timestamp" ).text( "Unknown" );
   });
+  {% for tgt in targets -%}
+  $.ajax({
+    url: "{{ tgt.baseurl }}/timestamp.txt",
+    dataType: "text"
+  }).done(function( timestamp ) {
+    $( "#{{ tgt.name }}-timestamp" ).text( timestamp );
+  }).fail(function( timestamp ) {;
+    $( "#{{ tgt.name }}-timestamp" ).text( "Unknown" );
+  });
+  {% endfor %}
 });
     </script>
   </head>
@@ -52,6 +62,7 @@ $(function() {
           {% if tgt.show_tables_link is defined and tgt.show_tables_link -%}
           <p><a id="{{ tgt.name }}-tables" href="{{ tgt.baseurl }}/index.html">{{ tables_link_desc|default('Details') }}</a></p>
           {%- endif %}
+          <p>Last-updated (CSV/JSON data): <span id="{{ tgt.name }}-timestamp"></span></p>
           <!--
           <div id="{{ tgt.name }}-enabledrepos">
             <p>Enabled yum repos:</p>
