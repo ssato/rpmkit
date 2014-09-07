@@ -18,6 +18,15 @@ import os.path
 import shutil
 import tempfile
 
+try:
+    # NOTE: Required dnf >= 0.6.0
+    import dnf.cli.commands.updateinfo as DCCU
+except ImportError:
+    logging.warn("dnf >= 0.6.0 supports updateinfo is not available. "
+                 "FYI. dnf >= 0.6.0 for Fedora 20 is available from my copr "
+                 "repo: http://copr.fedoraproject.org/coprs/ssato/dnf/")
+    DCCU = None
+
 
 def base_create(root):
     """
@@ -176,10 +185,11 @@ def compute_updates(root, repos=[], updateinfo=False, setup_callbacks=False):
     base.fill_sack(load_system_repo='auto',
                    load_available_repos=base.repos.enabled())
 
-    if updateinfo:
-        for rid, repo in base.repos.iteritems():
-            if repo.enabled:
-                download_updateinfo_xml(repo)
+    if DCCU is None:
+        if updateinfo:
+            for rid, repo in base.repos.iteritems():
+                if repo.enabled:
+                    download_updateinfo_xml(repo)
 
     # see :method:`run` in :class:`dnf.cli.commands.CheckUpdateCommand`.
     ypl = base.returnPkgLists(["updates"])
