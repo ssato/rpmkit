@@ -45,6 +45,34 @@ def base_create(root):
     return base
 
 
+def base_create_2(root='/', repos=[]):
+    """
+    :param repos: A list of repos to enable or []. [] means that all available
+        system repos to be enabled.
+
+    :return: dnf.base.Base instance
+
+    :see: :function:`dnf.automatic.main.main`
+    """
+    base = dnf.Base()
+    if root != '/':
+        base.conf.installroot = base.conf.cachedir = os.path.abspath(root)
+
+    base.read_all_repos()
+    if repos:
+        for rid, repo in base.repos.iteritems():
+            if rid in enabled_repos:
+                repo.enable()
+                logging.debug("Enabled the repo: " + rid)
+            else:
+                repo.disable()
+
+    base.fill_sack()  # It will take some time to fetch repo metadata.
+    # base.resolve()
+
+    return base
+
+
 def base_setup_excludes(base, excludes):
     """
     :param base: An initialized dnf.cli.cli.BaseCli (dnf.base) object
