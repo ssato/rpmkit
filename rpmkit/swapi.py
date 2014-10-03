@@ -760,7 +760,7 @@ def get_cvss_for_cve(cve):
                     score=cvss_base_score,
                     url=url_fmt % (cve, cvss_base_metrics))
 
-    except Exception, e:
+    except Exception as e:
         LOG.warn("Could not get CVSS data: err=" + str(e))
 
     return None
@@ -817,7 +817,7 @@ def get_all_cve_g(raw=False):
 
                 yield d
 
-    except Exception, e:
+    except Exception as e:
         LOG.warn("Could not get CVE and CVSS data: err=" + str(e))
         yield  # None
 
@@ -869,7 +869,7 @@ def get_all_errata_g(raw=False):
                     LOG.warn("Invalid line: " + line)
                     continue
 
-    except Exception, e:
+    except Exception as e:
         LOG.warn("Could not get Errata vs. CVEs data: err=" + str(e))
 
 
@@ -1181,7 +1181,7 @@ class RpcApi(object):
 
             return ret
 
-        except xmlrpclib.Fault, m:
+        except xmlrpclib.Fault as m:
             raise RuntimeError("rpc: method '%s', args '%s'\nError message: "
                                "%s" % (method_name, str(args), m))
 
