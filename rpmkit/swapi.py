@@ -1816,7 +1816,7 @@ def realmain(argv):
     result = main(argv[1:])
 
     if not result:
-        print "{'data': []}"  # empty results
+        print results_to_json_str([], 0)  # empty results
         return 0
 
     (res, options) = result
