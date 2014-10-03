@@ -122,6 +122,9 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
+* Fri Oct  3 2014 Satoru SATOH <ssato@redhat.com> - 0.2.12.999-1
+- swapi: make it outputs valid JSON outputs to enable post processing w/ jq
+
 * Mon May 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
 - Remove runtime dependency to gevent and implement some alternative routines
   with using multiprocessing module
