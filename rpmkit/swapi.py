@@ -121,65 +121,81 @@ server = rhn.redhat.com
 userid = rhn-user-johon-doe@example.com
 password = **********
 $ ./swapi.py --args=10821 packages.listDependencies
-[
-  {
-    "dependency": "/usr/bin/perl",
-    "dependency_modifier": " ",
-    "dependency_type": "requires"
-  },
+{
+  "data": [
+    {
+      "dependency": "/usr/bin/perl",
+      "dependency_modifier": " ",
+      "dependency_type": "requires"
+    },
 
-    ... (snip) ...
+      ... (snip) ...
 
-  {
-    "dependency": "cvsmapfs",
-    "dependency_modifier": "= 1.3-7",
-    "dependency_type": "provides"
-  }
-]
+    {
+      "dependency": "cvsmapfs",
+      "dependency_modifier": "= 1.3-7",
+      "dependency_type": "provides"
+    }
+  ]
+}
 $ ./swapi.py -P rhn --list-args="10821,10822,10823" packages.getDetails
-[
-  {
-    "package_size": "15653",
-    "package_arch_label": "noarch",
-    "package_cookie": "porkchop.redhat.com 964488467",
-    "package_md5sum": "44971f49f5a521464c70038bd9641a8b",
-    "package_summary": "Extension for CVS to handle links\n",
-    "package_name": "cvsmapfs",
-    "package_epoch": "",
-    "package_checksums": {
-      "md5": "44971f49f5a521464c70038bd9641a8b"
-    },
+{
+  "data": [
+    {
+      "package_size": "15653",
+      "package_arch_label": "noarch",
+      "package_cookie": "porkchop.redhat.com 964488467",
+      "package_md5sum": "44971f49f5a521464c70038bd9641a8b",
+      "package_summary": "Extension for CVS to handle links\n",
+      "package_name": "cvsmapfs",
+      "package_epoch": "",
+      "package_checksums": {
+        "md5": "44971f49f5a521464c70038bd9641a8b"
+      },
 
-    ... (snip) ...
+      ... (snip) ...
 
-  {
-    "package_size": "3110234",
-    "package_arch_label": "i386",
-    "package_cookie": "porkchop.redhat.com 964465421",
-    "package_md5sum": "1919a8e06ee5c0916685cd04dff20776",
-    "package_summary": "SNNS documents\n",
-    "package_name": "SNNS-doc",
-    "package_epoch": "",
-    "package_checksums": {
-      "md5": "1919a8e06ee5c0916685cd04dff20776"
-    },
-    "package_payload_size": "5475688",
-    "package_version": "4.2",
-    "package_license": "Free Software",
-    "package_vendor": "Red Hat, Inc.",
-    "package_release": "7",
-    "package_last_modified_date": "2006-08-22 21:56:01.0",
-    "package_description": "This package includes the documents in ...\n",
-    "package_id": 10823,
-    "providing_channels": [
-      "redhat-powertools-i386-7.0",
-      "redhat-powertools-i386-7.1"
-    ],
-    "package_build_host": "porky.devel.redhat.com",
-    "package_build_date": "2000-07-24 19:07:23.0",
-    "package_file": "SNNS-doc-4.2-7.i386.rpm"
-  }
-]
+    {
+      "package_size": "3110234",
+      "package_arch_label": "i386",
+      "package_cookie": "porkchop.redhat.com 964465421",
+      "package_md5sum": "1919a8e06ee5c0916685cd04dff20776",
+      "package_summary": "SNNS documents\n",
+      "package_name": "SNNS-doc",
+      "package_epoch": "",
+      "package_checksums": {
+        "md5": "1919a8e06ee5c0916685cd04dff20776"
+      },
+      "package_payload_size": "5475688",
+      "package_version": "4.2",
+      "package_license": "Free Software",
+      "package_vendor": "Red Hat, Inc.",
+      "package_release": "7",
+      "package_last_modified_date": "2006-08-22 21:56:01.0",
+      "package_description": "This package includes the documents in ...\n",
+      "package_id": 10823,
+      "providing_channels": [
+        "redhat-powertools-i386-7.0",
+        "redhat-powertools-i386-7.1"
+      ],
+      "package_build_host": "porky.devel.redhat.com",
+      "package_build_date": "2000-07-24 19:07:23.0",
+      "package_file": "SNNS-doc-4.2-7.i386.rpm"
+    }
+  ]
+}
+$ python rpmkit/swapi.py -A 10821 packages.listDependencies | \
+> jq '.data[] | select(._type == "requires")'
+{
+    "_type": "requires",
+      "_modifier": "<= 3.0.4-1",
+        "": "rpmlib(CompressedFileNames)"
+}
+{
+    "_type": "requires",
+      "_modifier": "<= 4.0-1",
+        "": "rpmlib(PayloadFilesHavePrefix)"
+}
 $ ./swapi.py -vv --args=10821 \
 > -F "%(dependency)s:%(dependency_type)s" packages.listDependencies
 DEBUG:root: config_file = /home/ssato/.swapi/config
@@ -210,17 +226,18 @@ wireshark
 wireshark-gnome
 $
 $ ./swapi.py -A 10170***** -I 0 system.getDetails
-[{"building": "", "profile_name": "rhel-5-3-guest-1.net-1.local", ...}]
+{"data": [{"building": "", "profile_name": "rhel-5-3-guest-1.m2.local", ...}]}
 $ ./swapi.py -A '[10*****,{"city": "tokyo", "rack": "ep7"}]' system.setDetails
-[
-  1
-]
+{
+  "data": [
+    1
+  ]
+}
 $ ./swapi.py -A 10170***** -I 0 system.getDetails
-[{"building": "", ..."OS: redhat-release\nRelease: 5Server\n"...}]
+{"data": [{"building": "", ..."OS: redhat-release\nRelease: 5Server\n"...}]}
 $ ./swapi.py -A 10170***** -I 0 --no-cache system.getDetails
-[{"building": "", ..."OS: redhat-release\nRelease: 5Server\n"...}]
+{"data": [{"building": "", ..."OS: redhat-release\nRelease: 5Server\n"...}]}
 $
-
 """
 
 LOG = logging.getLogger('rpmkit.swapi')
