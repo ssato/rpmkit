@@ -60,7 +60,7 @@ Notes:
 
 Examples:
   # Run %prog on host accessible to any repos, for the host named
-  # rhel-6-client-2 which don't have access to any repos provide updates:
+  # rhel-6-client-2 which doesn't have access to any repos provide updates:
 
   # a. list repos:
   %prog ./rhel-6-client-2/Packages -- repolist
