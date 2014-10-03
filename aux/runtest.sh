@@ -4,6 +4,8 @@ set -e
 curdir=${0%/*}
 topdir=${curdir}/../
 
+# TODO: Do not try run coverage to other modules such as standard modules:
+# coverage report --include rpmkit/swapi.py rpmkit/swapi.py
 if `env | grep -q 'WITH_COVERAGE' 2>/dev/null`; then
     coverage_opts="--with-coverage --cover-tests --cover-inclusive"
 fi
