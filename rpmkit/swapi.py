@@ -1281,16 +1281,14 @@ def results_to_json_str(results, indent=2):
     """
     Serialize any given object ``results`` to JSON string.
 
-    >>> assert results_to_json_str("abc") == '"abc"'
+    >>> results_to_json_str("abc")
+    '{\\n  "data": "abc"\\n}'
 
-    # >>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
-    # '[123, "abc", {"x": "yz"}]'
-
-    >>> results_to_json_str([123, "abc", {'x': "yz"}])
-    '[\\n  123, \\n  "abc", \\n  {\\n    "x": "yz"\\n  }\\n]'
+    >>> results_to_json_str([123, 'abc', {'x':'yz'}], 0)
+    '{\\n"data": [\\n123, \\n"abc", \\n{\\n"x": "yz"\\n}\\n]\\n}'
     """
-    return json.dumps(results, ensure_ascii=False, indent=indent,
-                      cls=JSONEncoder)
+    return json.dumps(dict(data=results, ), ensure_ascii=False,
+                      indent=indent, cls=JSONEncoder)
 
 
 def parse_list_str(list_s, sep=','):
@@ -1798,7 +1796,7 @@ def realmain(argv):
     result = main(argv[1:])
 
     if not result:
-        print "[]"  # empty results
+        print "{'data': []}"  # empty results
         return 0
 
     (res, options) = result
