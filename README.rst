@@ -1,7 +1,12 @@
 About
 ========
 
-.. image:: https://api.travis-ci.org/ssato/rpmkit.png?branch=master
+.. Fedora/CentOS/RHEL environments are needed to test rpmkit but
+   Travis-CI does not provide such environment. :(
+   So it's disabled until I can find any CI services provide
+   such testing environment.
+
+.. .. image:: https://api.travis-ci.org/ssato/rpmkit.png?branch=master
    :target: https://travis-ci.org/ssato/rpmkit
    :alt: Test status
 
