@@ -61,7 +61,7 @@ def base_create_2(root='/', repos=[]):
     base.read_all_repos()
     if repos:
         for rid, repo in base.repos.iteritems():
-            if rid in enabled_repos:
+            if rid in repos:
                 repo.enable()
                 logging.debug("Enabled the repo: " + rid)
             else:
@@ -206,7 +206,9 @@ def compute_updates(root, repos=[], updateinfo=False, setup_callbacks=False):
     if setup_callbacks:
         (bar, base.ds_callback) = base.output.setup_progress_callbacks()
         base.repos.all.set_progress_bar(bar)
+        # pylint: disable=no-member
         base.repos.all.confirm_func = base.output._cli_confirm_gpg_key_import
+        # pylint: enable=no-member
 
     # It will take some time to get metadata from remote repos.
     # see :method:`run` in :class:`dnf.cli.cli.Cli`.
