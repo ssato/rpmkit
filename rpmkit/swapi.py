@@ -1281,6 +1281,9 @@ def results_to_json_str(results, indent=2):
     """
     Serialize any given object ``results`` to JSON string.
 
+    >>> results_to_json_str([])
+    '{\\n  "data": []\\n}'
+
     >>> results_to_json_str("abc")
     '{\\n  "data": "abc"\\n}'
 
