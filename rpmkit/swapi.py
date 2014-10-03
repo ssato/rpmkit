@@ -1815,6 +1815,9 @@ def main(argv):
 def realmain(argv):
     result = main(argv[1:])
 
+    if result is None:
+        return 1
+
     if not result:
         print results_to_json_str([], 0)  # empty results
         return 0
