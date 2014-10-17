@@ -294,7 +294,7 @@ def list_errata_from_rhns(distro, channels=[], swopts=[]):
                                                       distro["releases"][1],
                                                       distro["arch"],
                                                       end))
-        period.append(end)
+        period.append(prev_date(end))
 
     f = get_errata_list_from_rhns
     es = itertools.chain(*(f(c, period, list_pkgs=True, swopts=swopts) for c
