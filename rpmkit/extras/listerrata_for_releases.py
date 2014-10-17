@@ -357,9 +357,9 @@ def main():
                     channels=(options.channels or 'auto'),
                     nerrata=len(es), npackages=len(pkgs))
 
-    anyconfig.dump(dict(data=es, **metadata),
+    anyconfig.dump(dict(metadata=metadata, data=es),
                    os.path.join(options.workdir, "errata.json"))
-    anyconfig.dump(dict(data=pkgs, **metadata),
+    anyconfig.dump(dict(metadata=metadata, data=pkgs),
                    os.path.join(options.workdir, "errata_packages.json"))
 
 
