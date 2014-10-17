@@ -8,6 +8,7 @@ from gi.repository import Libosinfo as osinfo
 from logging import DEBUG, INFO
 
 import rpmkit.swapi
+import rpmkit.rpmutils
 import rpmkit.utils
 
 import anyconfig
@@ -305,7 +306,7 @@ def option_parser():
                    "rhel-5.4..5-x86_64" means "from rhel-5.4-x86_64 to
                    rhel-5.5-x86_64"."""
     defaults = dict(download=False, workdir=None, channels=[], arch="x86_64",
-                    swopts=[], verbose=False)
+                    all_versions=False, swopts=[], verbose=False)
 
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
@@ -317,6 +318,8 @@ def option_parser():
                  help="List of software channels in RHNS. These will be "
                       "guessed automatically if not given")
     p.add_option("-a", "--arch", help="Specify arch [%default]")
+    p.add_option("-A", "--all-versions", action="store_true",
+                 help="Collect all versions of packages [no; latest ones only]")
     p.add_option("", "--swopt", action="append", dest="swopts",
                  help="A list of swapi options, ex. --swopt='--verbose'")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -338,6 +341,7 @@ def main():
     es = list_errata_from_rhns(distro, options.channels, options.arch,
                                options.swopts)
     pkgs = list_errata_packages(es, options.swopts)
+    latest_pkgs = rpmkit.rpmutils.find_latests(pkgs)
 
     if options.workdir:
         if os.path.exists(options.workdir):
@@ -355,12 +359,19 @@ def main():
                     version="0.1", last_updated=_TODAY,
                     os=distro, arch=options.arch,
                     channels=(options.channels or 'auto'),
-                    nerrata=len(es), npackages=len(pkgs))
+                    nerrata=len(es), npackages=len(pkgs),
+                    nupdates=len(latest_pkgs))
 
     anyconfig.dump(dict(metadata=metadata, data=es),
                    os.path.join(options.workdir, "errata.json"))
     anyconfig.dump(dict(metadata=metadata, data=pkgs),
-                   os.path.join(options.workdir, "errata_packages.json"))
+                   os.path.join(options.workdir, "packages.json"))
+    anyconfig.dump(dict(metadata=metadata, data=pkgs),
+                   os.path.join(options.workdir, "update_packages.json"))
+
+    with open(os.path.join(options.workdir, "updates.txt"), 'w') as f:
+        for u in latest_pkgs:
+            f.write(u["path"] + '\n')
 
 
 if __name__ == "__main__":
