@@ -334,7 +334,8 @@ def main():
         p.print_help()
         sys.exit(1)
 
-    es = list_errata_from_rhns(args[0], options.channels, options.arch,
+    distro = args[0]
+    es = list_errata_from_rhns(distro, options.channels, options.arch,
                                options.swopts)
     pkgs = list_errata_packages(es, options.swopts)
 
@@ -350,9 +351,15 @@ def main():
                                            prefix="errata_for_releases-")
         logging.info("Created: " + options.workdir)
 
-    anyconfig.dump(dict(data=es, ),
+    metadata = dict(generator="rpmkit.extras.listerrata_for_releases",
+                    version="0.1", last_updated=_TODAY,
+                    os=distro, arch=options.arch,
+                    channels=(options.channels or 'auto'),
+                    nerrata=len(es), npackages=len(pkgs))
+
+    anyconfig.dump(dict(data=es, **metadata),
                    os.path.join(options.workdir, "errata.json"))
-    anyconfig.dump(dict(data=pkgs, ),
+    anyconfig.dump(dict(data=pkgs, **metadata),
                    os.path.join(options.workdir, "errata_packages.json"))
 
 
