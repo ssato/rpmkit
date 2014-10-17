@@ -284,9 +284,16 @@ def list_errata_from_rhns(distro, channels=[], swopts=[]):
 
     period = [get_distro_release_date(distro["os"], distro["version"],
                                       distro["release"]), ]
+    logging.info("{} released={}".format(distro["label"], period[0]))
+
     if distro["releases"][1] != -1:
         end = get_distro_release_date(distro["os"], distro["version"],
                                       distro["releases"][1])
+        logging.info("{}-{}.{}-{} released={}".format(distro["os"],
+                                                      distro["version"],
+                                                      distro["releases"][1],
+                                                      distro["arch"],
+                                                      end))
         period.append(end)
 
     f = get_errata_list_from_rhns
