@@ -255,6 +255,29 @@ def parse_distro(distro, arch="x86_64"):
         raise DistroParseError("Not a distro? : {}:\n{}".format(distro, e))
 
 
+def distro_resolve_release_dates(distro):
+    """
+    :param distro: A dict represents OS distribution
+    """
+    period = [get_distro_release_date(distro["os"], distro["version"],
+                                      distro["release"]), ]
+    logging.info("{} released={}".format(distro["label"], period[0]))
+
+    if distro["releases"][1] != -1:
+        end = get_distro_release_date(distro["os"], distro["version"],
+                                      distro["releases"][1])
+        logging.info("{}-{}.{}-{} released={}".format(distro["os"],
+                                                      distro["version"],
+                                                      distro["releases"][1],
+                                                      distro["arch"],
+                                                      end))
+        period.append(prev_date(end))
+        logging.info("period: {}..{}".format(*period))
+
+    distro["period"] = period
+    return distro
+
+
 def guess_rhns_channels_by_distro(distro):
     """
     :param distro: A dict represents OS distribution
@@ -283,24 +306,9 @@ def list_errata_from_rhns(distro, channels=[], swopts=[]):
         channels = guess_rhns_channels_by_distro(distro)
         assert channels, "No channels found for {label}".format(distro)
 
-    period = [get_distro_release_date(distro["os"], distro["version"],
-                                      distro["release"]), ]
-    logging.info("{} released={}".format(distro["label"], period[0]))
-
-    if distro["releases"][1] != -1:
-        end = get_distro_release_date(distro["os"], distro["version"],
-                                      distro["releases"][1])
-        logging.info("{}-{}.{}-{} released={}".format(distro["os"],
-                                                      distro["version"],
-                                                      distro["releases"][1],
-                                                      distro["arch"],
-                                                      end))
-        period.append(prev_date(end))
-        logging.info("period: {}..{}".format(*period))
-
     f = get_errata_list_from_rhns
-    es = itertools.chain(*(f(c, period, list_pkgs=True, swopts=swopts) for c
-                           in channels))
+    es = itertools.chain(*(f(c, distro["period"], list_pkgs=True,
+                             swopts=swopts) for c in channels))
     return rpmkit.utils.unique(es)
 
 
@@ -431,6 +439,7 @@ def main():
         sys.exit(1)
 
     distro = parse_distro(args[0], options.arch)
+    distro = distro_resolve_release_dates(distro)
 
     errata = list_errata_from_rhns(distro, options.channels, options.swopts)
     packages = list_errata_packages(errata, options.swopts)
