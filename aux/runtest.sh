@@ -3,9 +3,21 @@ set -e
 
 curdir=${0%/*}
 topdir=${curdir}/../
+nosetests_opts="-c ${curdir}/nose.cfg"
+nprocs=$(echo ${NOSE_PROCESSES})
 
 if `env | grep -q 'WITH_COVERAGE' 2>/dev/null`; then
-    coverage_opts="--with-coverage --cover-tests"
+    nosetests_opts="${nosetests_opts} --with-coverage --cover-tests"
+    nprocs=0  # It seems that coverage does not like parallel tests.
+fi
+
+if test "x${nprocs}" != "x0" ; then
+    if test -f /proc/cpuinfo; then
+        nprocs=$(sed -n '/^processor.*/p' /proc/cpuinfo | wc -l)
+        if test ${nprocs} -gt 0; then
+            nosetests_opts="${nosetests_opts} --processes=${nprocs}"
+        fi
+    fi
 fi
 
 function _pylint () {
@@ -24,7 +36,7 @@ if test $# -gt 0; then
     if test $check_with_pylint = 1; then
         for x in $@; do _pylint ${x%%:*}; done
     fi
-    PYTHONPATH=$topdir nosetests -c $curdir/nose.cfg ${coverage_opts} $@
+    PYTHONPATH=$topdir nosetests ${nosetests_opts} $@
 else
     # Find out python package dir and run tests for .py files under it.
     for d in ${topdir}/*; do
@@ -40,7 +52,7 @@ else
             break
         fi
     done
-    PYTHONPATH=$topdir nosetests -c $curdir/nose.cfg ${coverage_opts} --all-modules
+    PYTHONPATH=$topdir nosetests ${nosetests_opts} --all-modules
     test $check_with_flake8 = 1 && flake8 ${topdir}
 fi
 
