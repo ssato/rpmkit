@@ -34,7 +34,7 @@ def prev_date(date_s):
     >>> prev_date("2014-07-01")
     '2014-06-30'
     """
-    day = [int(d) for d in "2014-07-01".split('-')]
+    day = [int(d) for d in date_s.split('-')]
     prev = datetime.datetime(*day) - datetime.timedelta(1)
     return prev.strftime("%Y-%m-%d")
 
@@ -133,19 +133,20 @@ def get_errata_list_from_rhns(channels, period, details=False, list_pkgs=False,
     return set(es_g)
 
 
-def dicts_eq(lhs, rhs, strict=True):
+def dicts_eq(lhs, rhs, strict=False):
     """
     >>> dicts_eq({}, {})
     True
     >>> dicts_eq(dict(a=1, ), {})
     False
-    >>> dicts_eq(dict(a=1, ), dict(a=1, b=2), strict=False)
+    >>> dicts_eq(dict(a=1, ), dict(a=1, b=2))
     True
-    >>> dicts_eq(dict(a=1, ), dict(a=1, b=2), strict=True)
-    False
     >>> dicts_eq(dict(a=1, ), dict(a=2, ))
     False
+    >>> dicts_eq(dict(a=1, ), dict(a=1, b=2), strict=True)
+    False
     >>> dicts_eq({}, None)  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
     AssertionError: ...
     """
     for d in (lhs, rhs):
@@ -174,39 +175,47 @@ def parse_distro(distro, arch="x86_64"):
     :param arch: Default architecture
 
     >>> d = parse_distro("rhel-5.11-i386")
-    >>> dicts_eq(d, dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...                  version=5, releases=(11, -1), arch="i386"), False)
+    >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
+    ...               version=5, releases=(11, -1), arch="i386"), d)
     True
     >>> d = parse_distro("rhel-5.4..11")
-    >>> dicts_eq(d, dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...                  version=5, releases=(4, 11), arch="i386"), False)
+    >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
+    ...               version=5, releases=(4, 11), arch="x86_64"), d)
+    True
+    >>> d = parse_distro("rhel-5.4..11-i386")
+    >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
+    ...               version=5, releases=(4, 11), arch="i386"), d)
     True
     >>> d = parse_distro("rhel-6.5")
-    >>> dicts_eq(d, dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...                  version=6, releases=(5, -1), arch="x86_64"), False)
+    >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
+    ...               version=6, releases=(5, -1), arch="x86_64"), d)
     True
     >>> d = parse_distro("rhel-6.2..5-i386")
-    >>> dicts_eq(d, dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...                  version=6, releases=(2, 5), arch="i386"), False)
+    >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
+    ...               version=6, releases=(2, 5), arch="i386"), d)
     True
     >>> d = parse_distro("rhel-6")
-    >>> dicts_eq(d, dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...                  version=6, releases=(0, -1), arch="x86_64"), False)
+    >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
+    ...               version=6, releases=(0, -1), arch="x86_64"), d)
     True
     >>> d = parse_distro("fedora-20")
-    >>> dicts_eq(d, dict(os="fedora", # doctest: +NORMALIZE_WHITESPACE
-    ...                  version="20", releases=None, arch="x86_64"), False)
+    >>> dicts_eq(dict(os="fedora", # doctest: +NORMALIZE_WHITESPACE
+    ...               version=20, releases=None, arch="x86_64"), d)
     True
     >>> d = parse_distro("foo-20.1")  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
     DistroParseError: ...
     """
     try:
-        d = re.match(r"^(?P<os>fedora|rhel)-(?P<version>[0-9]+)"
-                     "(?:.(?P<release>\d+)(?:..(?P<release_2>\d+)?))?"
+        d = re.match(r"^(?P<os>fedora|rhel)-(?P<version>\d+)"
+                     "(?:\.(?P<release>\d+)(?:\.\.(?P<release_2>\d+))?)?"
                      "(?:-(?P<arch>.+))?$",
-                     distro)
+                     distro).groupdict()
 
         # Some special cases.
+        d["version"] = int(d["version"])
+        d["releases"] = None
+
         if d["os"] == "rhel":
             rel = 0 if d["release"] is None else int(d["release"])
             rel_2 = -1 if d["release_2"] is None else int(d["release_2"])
@@ -214,15 +223,13 @@ def parse_distro(distro, arch="x86_64"):
                 rel_2 = -1
 
             d["releases"] = (rel, rel_2)
-        else:
-            d["releases"] = None
 
         if d["arch"] is None:
             d["arch"] = arch
 
         return d
-    except:
-        raise DistroParseError("Not a distro? : " + str(distro))
+    except Exception as e:
+        raise DistroParseError("Not a distro? : {}:\n{}".format(distro, e))
 
 
 def guess_rhns_channels_by_distro(distro):
@@ -330,9 +337,12 @@ def main():
                 "Not a dir: " + options.workdir
         else:
             os.makedirs(options.workdir)
+            logging.info("Created: " + options.workdir)
     else:
         options.workdir = tempfile.mkdtemp(dir="/tmp",
                                            prefix="errata_for_releases-")
+        logging.info("Created: " + options.workdir)
+
     anyconfig.dump(dict(data=es, ),
                    os.path.join(options.workdir, "errata.json"))
     anyconfig.dump(dict(data=pkgs, ),
