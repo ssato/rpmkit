@@ -77,6 +77,7 @@ def get_osid(distro, version, release=0):
 
 def get_distro_release_date(distro, version, release=0):
     """
+    see also: https://access.redhat.com/articles/3078 (rhel)
 
     >>> get_distro_release_date("rhel", 5, 4)
     '2009-09-02'
