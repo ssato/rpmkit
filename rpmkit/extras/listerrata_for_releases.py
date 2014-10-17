@@ -91,6 +91,8 @@ def errata_get_details(errata, swopts=[]):
     :param swopts: A list of extra options for swapi
     """
     assert "advisory" in errata, "Not an errata dict?: " + str(errata)
+
+    logging.info("Try to fetch details of {advisory}".format(errata))
     details = rpmkit.swapi.call("errata.getDetails", errata["advisory"],
                                 swopts)
     errata.update(details)
@@ -102,17 +104,19 @@ def errata_get_relevant_package_list(errata, swopts=[]):
     :param errata: A dict contains basic errata info
     :param swopts: A list of extra options for swapi
     """
-    assert "advisory" in errata, "Not an errata dict?: " + str(errata)
-    pkgs = rpmkit.swapi.call("errata.listPackages", errata["advisory"], swopts)
-    errata["packages"] = pkgs
+    adv = errata.get("advisory", errata.get("advisory_name", None))
+    assert adv is not None, "Not a dict?: {}".format(errata)
+
+    logging.info("Try to fetch packages relevant to {}".format(adv))
+    errata["packages"] = rpmkit.swapi.call("errata.listPackages", adv, swopts)
     return errata
 
 
-def get_errata_list_from_rhns(channels, period, details=False, list_pkgs=False,
+def get_errata_list_from_rhns(channel, period, details=False, list_pkgs=False,
                               swopts=[]):
     """
-    :param channels: List of software channels in RHNS (RHN, RH Satellite),
-        ex. ['rhel-x86_64-server-5']
+    :param channel: List of software channels in RHNS (RHN, RH Satellite),
+        ex. 'rhel-x86_64-server-5'
     :param period: Range of date to get errata list within,
         ex. ["2014-01-01"], ["2009-01-31", "2010-02-01"]
     :param details: Get each errata detailed info additionally if True
@@ -121,16 +125,19 @@ def get_errata_list_from_rhns(channels, period, details=False, list_pkgs=False,
     :param swopts: A list of extra options for swapi
     """
     logging.info("Try to fetch errata info from RHNS...")
-    call = rpmkit.swapi.call
-    es_g = itertools.chain(call("channel.software.listErrata",
-                                [c] + period, swopts) for c in channels)
+    es = rpmkit.swapi.call("channel.software.listErrata", [channel] + period,
+                           swopts)
+    logging.info("Got {} errata in {} ({})".format(len(es), channel,
+                                                   '..'.join(period)))
     if details:
-        es_g = (errata_get_details(e) for e in es_g)
+        logging.info("Try to fetch errata details from RHNS...")
+        es = [errata_get_details(e) for e in es]
+
     if list_pkgs:
         logging.info("Try to fetch errata packages info from RHNS...")
-        es_g = (errata_get_relevant_package_list(e) for e in es_g)
+        es = [errata_get_relevant_package_list(e) for e in es]
 
-    return set(es_g)
+    return es
 
 
 def dicts_eq(lhs, rhs, strict=False):
@@ -237,11 +244,11 @@ def guess_rhns_channels_by_distro(distro):
     :param distro: A dict represents OS distribution
     """
     if distro["os"] == "rhel":
-        if distro["version"] == "4":
+        if distro["version"] == 4:
             return ["rhel-x86_64-as-4"]
-        elif distro["version"] == "5":
+        elif distro["version"] == 5:
             return ["rhel-x86_64-server-5"]
-        elif distro["version"] == "6":
+        elif distro["version"] == 6:
             return ["rhel-x86_64-server-6"]  # "rhel-x86_64-server-optional-6"]
         else:
             return []  # Not supported.
@@ -261,7 +268,7 @@ def list_errata_from_rhns(distro_s, channels=[], arch="x86_64", swopts=[]):
     distro = parse_distro(distro_s, arch)
     if not channels:
         channels = guess_rhns_channels_by_distro(distro)
-        assert channels, "Failed to guess channels for " + str(distro_s)
+        assert channels, "Failed to guess channels for {}".format(distro_s)
 
     period = [get_distro_release_date(distro["os"], distro["version"],
                                       distro["releases"][0]), ]
@@ -270,8 +277,10 @@ def list_errata_from_rhns(distro_s, channels=[], arch="x86_64", swopts=[]):
                                       distro["releases"][1])
         period.append(end)
 
-    return get_errata_list_from_rhns(channels, period, list_pkgs=True,
-                                     swopts=swopts)
+    f = get_errata_list_from_rhns
+    es = itertools.chain(*(f(c, period, list_pkgs=True, swopts=swopts) for c
+                           in channels))
+    return rpmkit.utils.unique(es)
 
 
 def list_errata_packages(errata, swopts=[]):
@@ -280,7 +289,8 @@ def list_errata_packages(errata, swopts=[]):
         packages (a dict of packages' info including path)
     :param swopts: A list of extra options for swapi
     """
-    return set(itertools.chain((p for p in e["packages"]) for e in errata))
+    ps = itertools.chain(*((p for p in e["packages"]) for e in errata))
+    return rpmkit.utils.unique(ps)
 
 
 def option_parser():
@@ -323,9 +333,6 @@ def main():
     if not args:
         p.print_help()
         sys.exit(1)
-
-    if options.verbose and "--verbose" not in options.swopts:
-        options.swopts.append("--verbose")
 
     es = list_errata_from_rhns(args[0], options.channels, options.arch,
                                options.swopts)
