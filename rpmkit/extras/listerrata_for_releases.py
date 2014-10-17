@@ -184,31 +184,38 @@ def parse_distro(distro, arch="x86_64"):
 
     >>> d = parse_distro("rhel-5.11-i386")
     >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...               version=5, releases=(11, -1), arch="i386"), d)
+    ...               version=5, release=11, releases=(11, -1),
+    ...               label="rhel-5.11-i386", arch="i386"), d)
     True
     >>> d = parse_distro("rhel-5.4..11")
     >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...               version=5, releases=(4, 11), arch="x86_64"), d)
+    ...               version=5, release=4, releases=(4, 11),
+    ...               label="rhel-5.4-x86_64", arch="x86_64"), d)
     True
     >>> d = parse_distro("rhel-5.4..11-i386")
     >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...               version=5, releases=(4, 11), arch="i386"), d)
+    ...               version=5, release=4, releases=(4, 11),
+    ...               label="rhel-5.4-i386", arch="i386"), d)
     True
     >>> d = parse_distro("rhel-6.5")
     >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...               version=6, releases=(5, -1), arch="x86_64"), d)
+    ...               version=6, release=5, releases=(5, -1),
+    ...               label="rhel-6.5-x86_64", arch="x86_64"), d)
     True
     >>> d = parse_distro("rhel-6.2..5-i386")
     >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...               version=6, releases=(2, 5), arch="i386"), d)
+    ...               version=6, release=2, releases=(2, 5),
+    ...               label="rhel-6.2-i386", arch="i386"), d)
     True
     >>> d = parse_distro("rhel-6")
     >>> dicts_eq(dict(os="rhel",  # doctest: +NORMALIZE_WHITESPACE
-    ...               version=6, releases=(0, -1), arch="x86_64"), d)
+    ...               version=6, release=0, releases=(0, -1),
+    ...               label="rhel-6.0-x86_64", arch="x86_64"), d)
     True
     >>> d = parse_distro("fedora-20")
     >>> dicts_eq(dict(os="fedora", # doctest: +NORMALIZE_WHITESPACE
-    ...               version=20, releases=None, arch="x86_64"), d)
+    ...               version=20, release=None, releases=None,
+    ...               label="fedora-20-x86_64", arch="x86_64"), d)
     True
     >>> d = parse_distro("foo-20.1")  # doctest: +ELLIPSIS
     Traceback (most recent call last):
@@ -224,17 +231,24 @@ def parse_distro(distro, arch="x86_64"):
         d["version"] = int(d["version"])
         d["releases"] = None
 
+        if d["arch"] is None:
+            d["arch"] = arch
+
         if d["os"] == "rhel":
             rel = 0 if d["release"] is None else int(d["release"])
             rel_2 = -1 if d["release_2"] is None else int(d["release_2"])
             if rel_2 != -1 and rel_2 <= rel:
                 rel_2 = -1
 
+            d["release"] = rel
             d["releases"] = (rel, rel_2)
 
-        if d["arch"] is None:
-            d["arch"] = arch
+        if d["release"] is None:
+            label = "{os}-{version}-{arch}".format(**d)
+        else:
+            label = "{os}-{version}.{release}-{arch}".format(**d)
 
+        d["label"] = label
         return d
     except Exception as e:
         raise DistroParseError("Not a distro? : {}:\n{}".format(distro, e))
@@ -257,22 +271,19 @@ def guess_rhns_channels_by_distro(distro):
     return []
 
 
-def list_errata_from_rhns(distro_s, channels=[], arch="x86_64", swopts=[]):
+def list_errata_from_rhns(distro, channels=[], swopts=[]):
     """
-    :param distro: A string represents distribution (of releases optionally),
-        ex. 'rhel-6.5-x86_64', 'fedora-20', 'rhel-5.4..11-i386'
+    :param distro: A dict represents OS distribution.
     :param channels: List of software channels in RHNS (RHN, RH Satellite),
         ex. ['rhel-x86_64-server-5']
-    :param arch: Default architecture
     :param swopts: A list of extra options for swapi
     """
-    distro = parse_distro(distro_s, arch)
     if not channels:
         channels = guess_rhns_channels_by_distro(distro)
-        assert channels, "Failed to guess channels for {}".format(distro_s)
+        assert channels, "No channels found for {label}".format(distro)
 
     period = [get_distro_release_date(distro["os"], distro["version"],
-                                      distro["releases"][0]), ]
+                                      distro["release"]), ]
     if distro["releases"][1] != -1:
         end = get_distro_release_date(distro["os"], distro["version"],
                                       distro["releases"][1])
@@ -292,6 +303,79 @@ def list_errata_packages(errata, swopts=[]):
     """
     ps = itertools.chain(*((p for p in e["packages"]) for e in errata))
     return rpmkit.utils.unique(ps)
+
+
+def gen_mkiso_script(isoname, isodir, distro, prefix='/'):
+    """
+    """
+    tmpl = """#! /bin/bash
+set -ex
+
+isoname={isoname}
+isodir={isodir}
+label={isoname}
+
+# prefix must be an absolute path.
+prefix=${{1:-{prefix}}}
+
+test -d $isodir || mkdir -p $isodir/rpms
+cp -f errata.csv $isodir/
+(
+cd $isodir/rpms
+for f in $(cat ../../updates.txt); do ln -s $prefix/$f ./; done
+createrepo --simple-md-filenames .
+cat << EOF > ../${{label}}.repo
+[${{label}}]
+name=${{label}}
+baseurl=file:///mnt/rpms
+metadata_expire=-1
+enabled=0
+gpgcheck=0
+EOF
+)
+mkisofs -f -J -r -R -V "$label" -o "$isoname".iso $isodir/
+"""
+    d = dict(prefix=prefix, isoname=isoname, isodir=isodir, today=_TODAY,
+             distro=distro)
+    return tmpl.format(**d)
+
+
+def output_results(errata, packages, updates, distro, workdir,
+                   channels=[]):
+    """
+    """
+    metadata = dict(generator="rpmkit.extras.listerrata_for_releases",
+                    version="0.1", last_updated=_TODAY,
+                    channels=(channels or 'auto'),
+                    nerrata=len(errata), npackages=len(packages),
+                    nupdates=len(updates))
+    metadata.update(distro)
+
+    anyconfig.dump(dict(metadata=metadata, data=errata),
+                   os.path.join(workdir, "errata.json"))
+    anyconfig.dump(dict(metadata=metadata, data=packages),
+                   os.path.join(workdir, "packages.json"))
+    anyconfig.dump(dict(metadata=metadata, data=updates),
+                   os.path.join(workdir, "updates.json"))
+
+    with open(os.path.join(workdir, "updates.txt"), 'w') as f:
+        for u in updates:
+            f.write(u["path"] + '\n')
+
+    with open(os.path.join(workdir, "errata.csv"), 'w') as f:
+        f.write("advisory,synopsis,issue_date,url\n")
+        for e in errata:
+            adv = e["advisory"]
+            adv_s = adv.replace(':', '-')
+            url = "https://rhn.redhat.com/errata/{}.html".format(adv_s)
+
+            f.write("{},{},{},{}\n".format(adv, e["synopsis"],
+                                           e["issue_date"], url))
+
+    isoname = "{label}-updates".format(**distro)
+    c = gen_mkiso_script(isoname, isoname, distro)
+    with open(os.path.join(workdir, "geniso.sh"), 'w') as f:
+        f.write(c)
 
 
 def option_parser():
@@ -319,7 +403,7 @@ def option_parser():
                       "guessed automatically if not given")
     p.add_option("-a", "--arch", help="Specify arch [%default]")
     p.add_option("-A", "--all-versions", action="store_true",
-                 help="Collect all versions of packages [no; latest ones only]")
+                 help="Collect all versions of packages [no; latests only]")
     p.add_option("", "--swopt", action="append", dest="swopts",
                  help="A list of swapi options, ex. --swopt='--verbose'")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -337,41 +421,25 @@ def main():
         p.print_help()
         sys.exit(1)
 
-    distro = args[0]
-    es = list_errata_from_rhns(distro, options.channels, options.arch,
-                               options.swopts)
-    pkgs = list_errata_packages(es, options.swopts)
-    latest_pkgs = rpmkit.rpmutils.find_latests(pkgs)
+    distro = parse_distro(args[0], options.arch)
+
+    errata = list_errata_from_rhns(distro, options.channels, options.swopts)
+    packages = list_errata_packages(errata, options.swopts)
+    updates = rpmkit.rpmutils.find_latests(packages)
 
     if options.workdir:
-        if os.path.exists(options.workdir):
-            assert os.path.isdir(options.workdir), \
-                "Not a dir: " + options.workdir
+        workdir = options.workdir
+        if os.path.exists(workdir):
+            assert os.path.isdir(workdir), "Not a dir: {}".format(workdir)
         else:
-            os.makedirs(options.workdir)
-            logging.info("Created: " + options.workdir)
+            os.makedirs(workdir)
+            logging.info("Created: {}".format(workdir))
     else:
-        options.workdir = tempfile.mkdtemp(dir="/tmp",
-                                           prefix="errata_for_releases-")
-        logging.info("Created: " + options.workdir)
+        workdir = tempfile.mkdtemp(dir="/tmp", prefix="errata_for_releases-")
+        logging.info("Created: {}".format(workdir))
 
-    metadata = dict(generator="rpmkit.extras.listerrata_for_releases",
-                    version="0.1", last_updated=_TODAY,
-                    os=distro, arch=options.arch,
-                    channels=(options.channels or 'auto'),
-                    nerrata=len(es), npackages=len(pkgs),
-                    nupdates=len(latest_pkgs))
-
-    anyconfig.dump(dict(metadata=metadata, data=es),
-                   os.path.join(options.workdir, "errata.json"))
-    anyconfig.dump(dict(metadata=metadata, data=pkgs),
-                   os.path.join(options.workdir, "packages.json"))
-    anyconfig.dump(dict(metadata=metadata, data=pkgs),
-                   os.path.join(options.workdir, "update_packages.json"))
-
-    with open(os.path.join(options.workdir, "updates.txt"), 'w') as f:
-        for u in latest_pkgs:
-            f.write(u["path"] + '\n')
+    output_results(errata, packages, updates, distro, workdir,
+                   options.channels)
 
 
 if __name__ == "__main__":
