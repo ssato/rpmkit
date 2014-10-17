@@ -52,7 +52,7 @@ else
             break
         fi
     done
-    PYTHONPATH=$topdir nosetests ${nosetests_opts} --all-modules
+    PYTHONPATH=$topdir nosetests ${nosetests_opts} --all-modules --exclude='rpmkit.extras.*'
     test $check_with_flake8 = 1 && flake8 ${topdir}
 fi
 
