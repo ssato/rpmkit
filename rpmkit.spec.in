@@ -52,6 +52,7 @@ Requires:       python-anyconfig
 Requires:       python-bunch
 Requires:       graphviz
 Requires:       python-networkx
+Requires:       libosinfo
 # Commented to avoid rpmlint error 'E: explicit-lib-dependency':
 #Requires:       python-matplotlib
 #Requires:       python-tablib
