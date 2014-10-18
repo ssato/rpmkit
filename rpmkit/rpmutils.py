@@ -310,12 +310,38 @@ def group_by_names_g(xs):
         yield (name, list(g))
 
 
-def find_latests(packages):
+def group_by_keys_g(xs, keys):
+    """
+
+    >>> xs = [
+    ...   {"name": "a", "arch": "x86_64", "val": 1},
+    ...   {"name": "b", "arch": "x86_64", "val": 2},
+    ...   {"name": "a", "arch": "i686", "val": 4},
+    ...   {"name": "b", "arch": "x86_64", "val": 5},
+    ...   {"name": "b", "arch": "i686", "val": 2},
+    ... ]
+    >>> zs = [
+    ...   (('a', 'i686'), [{'arch': 'i686', 'name': 'a', 'val': 4}]),
+    ...   (('a', 'x86_64'), [{'arch': 'x86_64', 'name': 'a', 'val': 1}]),
+    ...   (('b', 'i686'), [{'arch': 'i686', 'name': 'b', 'val': 2}]),
+    ...   (('b', 'x86_64'),
+    ...    [{'arch': 'x86_64', 'name': 'b', 'val': 2},
+    ...     {'arch': 'x86_64', 'name': 'b', 'val': 5}])
+    ... ]
+    >>> [(n, ys) for n, ys in group_by_keys_g(xs, ("name", "arch"))] == zs
+    True
+    """
+    _sort = lambda xs: sorted(xs, key=itemgetter(*keys))
+    for keys, g in itertools.groupby(_sort(xs), itemgetter(*keys)):
+        yield (keys, list(g))
+
+
+def find_latests(packages, keys=("name", )):
     """Find the latest packages from given packages.
 
     It's similar to find_latest() but given packages may have different names.
     """
-    return [find_latest(ps) for _n, ps in group_by_names_g(packages)]
+    return [find_latest(ps) for _n, ps in group_by_keys_g(packages, keys)]
 
 
 def p2s(package):
