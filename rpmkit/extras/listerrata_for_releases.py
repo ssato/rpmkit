@@ -255,6 +255,18 @@ def parse_distro(distro, arch="x86_64"):
         raise DistroParseError("Not a distro? : {}:\n{}".format(distro, e))
 
 
+def distro_guess_checksum_type(distro):
+    """
+    Guess distro's yum repo checksum type.
+
+    :param distro: A dict represents OS distribution
+    """
+    if distro["os"] == "rhel" and distro["version"] < 6:
+        return "md5"
+    else:
+        return "sha256"
+
+
 def distro_resolve_release_dates(distro):
     """
     :param distro: A dict represents OS distribution
@@ -274,8 +286,7 @@ def distro_resolve_release_dates(distro):
         period.append(prev_date(end))
         logging.info("period: {}..{}".format(*period))
 
-    distro["period"] = period
-    return distro
+    return period
 
 
 def guess_rhns_channels_by_distro(distro):
@@ -295,20 +306,36 @@ def guess_rhns_channels_by_distro(distro):
     return []
 
 
-def list_errata_from_rhns(distro, channels=[], swopts=[]):
+def distro_new(distro_s, arch="x86_64", channels=[]):
     """
-    :param distro: A dict represents OS distribution.
+    :param distro_s: A string represents distribution,
+        ex. 'rhel-6.5-x86_64', 'fedora-20'
+    :param arch: Default architecture
     :param channels: List of software channels in RHNS (RHN, RH Satellite),
         ex. ['rhel-x86_64-server-5']
-    :param swopts: A list of extra options for swapi
     """
+    distro = parse_distro(distro_s, arch)
+
     if not channels:
         channels = guess_rhns_channels_by_distro(distro)
         assert channels, "No channels found for {label}".format(distro)
 
+    distro["channels"] = channels
+    distro["checksum_type"] = distro_guess_checksum_type(distro)
+    distro["period"] = distro_resolve_release_dates(distro)
+    distro["name"] = "{os}-{version}.{release}-updates".format(**distro)
+
+    return distro
+
+
+def list_errata_from_rhns(distro, swopts=[]):
+    """
+    :param distro: A dict represents OS distribution.
+    :param swopts: A list of extra options for swapi
+    """
     f = get_errata_list_from_rhns
     es = itertools.chain(*(f(c, distro["period"], list_pkgs=True,
-                             swopts=swopts) for c in channels))
+                             swopts=swopts) for c in distro["channels"]))
     return rpmkit.utils.unique(es)
 
 
@@ -322,48 +349,68 @@ def list_errata_packages(errata, swopts=[]):
     return rpmkit.utils.unique(ps)
 
 
-def gen_mkiso_script(isoname, isodir, distro, prefix='/'):
+def gen_mkiso_script(distro, metadata, prefix='/'):
     """
+    Generate a script to make update iso image.
+
+    :param distro: A dict represents OS distribution.
     """
     tmpl = """#! /bin/bash
-set -ex
+set -e
 
-isoname={isoname}
-isodir={isodir}
-label={isoname}
+cd ${{0%/*}}/
+
+name={name}
+isodir=${{name}}
+checksum_type={checksum_type}
 
 # prefix must be an absolute path.
 prefix=${{1:-{prefix}}}
 
+if test ! -d ${{prefix}}/redhat; then
+    echo "[Error] ${prefix} does not look appropriate path holidng rpms."
+    exit 1
+fi
+
 test -d $isodir || mkdir -p $isodir/rpms
 cp -f errata.csv $isodir/
+cat << EOF > $isodir/metadata.txt
+channels={channels}
+num_of_errata={nerrata}
+num_of_update_rpms={nupdates}
+EOF
 (
 cd $isodir/rpms
 for f in $(cat ../../updates.txt); do ln -s $prefix/$f ./; done
-createrepo --simple-md-filenames .
-cat << EOF > ../${{label}}.repo
-[${{label}}]
-name=${{label}}
+createrepo --simple-md-filenames --no-database --checksum=${{checksum_type}} .
+cat << EOF > ../${{name}}.repo
+[${{name}}]
+name=${{name}}
 baseurl=file:///mnt/rpms
 metadata_expire=-1
 enabled=0
 gpgcheck=0
 EOF
 )
-mkisofs -f -J -r -R -V "$label" -o "$isoname".iso $isodir/
+mkisofs -f -J -r -R -V "$label" -o "$name".iso $isodir/
 """
-    d = dict(prefix=prefix, isoname=isoname, isodir=isodir, today=_TODAY,
-             distro=distro)
+    d = distro.copy()
+
+    d["prefix"] = prefix
+    d["today"] = _TODAY
+    d["channels"] = metadata["channels"]
+    d["nerrata"] = metadata["nerrata"]
+    d["nupdates"] = metadata["nupdates"]
+
     return tmpl.format(**d)
 
 
-def output_results(errata, packages, updates, distro, workdir,
-                   channels=[]):
+def output_results(errata, packages, updates, distro, workdir):
     """
     """
     metadata = dict(generator="rpmkit.extras.listerrata_for_releases",
                     version="0.1", last_updated=_TODAY,
-                    channels=(channels or 'auto'),
+                    channels=', '.join(distro["channels"]),
                     nerrata=len(errata), npackages=len(packages),
                     nupdates=len(updates))
     metadata.update(distro)
@@ -389,10 +436,10 @@ def output_results(errata, packages, updates, distro, workdir,
             f.write("{},{},{},{}\n".format(adv, e["synopsis"],
                                            e["issue_date"], url))
 
-    isoname = "{label}-updates".format(**distro)
-    c = gen_mkiso_script(isoname, isoname, distro)
-    with open(os.path.join(workdir, "geniso.sh"), 'w') as f:
-        f.write(c)
+    fn = os.path.join(workdir, "geniso.sh")
+    with open(fn, 'w') as f:
+        f.write(gen_mkiso_script(distro, metadata))
+    os.chmod(fn, 0o755)
 
 
 def option_parser():
@@ -438,10 +485,8 @@ def main():
         p.print_help()
         sys.exit(1)
 
-    distro = parse_distro(args[0], options.arch)
-    distro = distro_resolve_release_dates(distro)
-
-    errata = list_errata_from_rhns(distro, options.channels, options.swopts)
+    distro = distro_new(args[0], options.arch, options.channels)
+    errata = list_errata_from_rhns(distro, options.swopts)
     packages = list_errata_packages(errata, options.swopts)
     updates = rpmkit.rpmutils.find_latests(packages)
 
@@ -456,8 +501,7 @@ def main():
         workdir = tempfile.mkdtemp(dir="/tmp", prefix="errata_for_releases-")
         logging.info("Created: {}".format(workdir))
 
-    output_results(errata, packages, updates, distro, workdir,
-                   options.channels)
+    output_results(errata, packages, updates, distro, workdir)
 
 
 if __name__ == "__main__":
