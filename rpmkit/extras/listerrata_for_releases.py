@@ -300,12 +300,12 @@ def guess_rhns_channels_by_distro(distro):
     """
     if distro["os"] == "rhel":
         if distro["version"] == 4:
-            return ["rhel-{arch}-as-4".format(distro)]
+            return ["rhel-{arch}-as-4".format(**distro)]
         elif distro["version"] == 5:
-            return ["rhel-{arch}-server-5".format(distro)]
+            return ["rhel-{arch}-server-5".format(**distro)]
         elif distro["version"] == 6:
             # "rhel-x86_64-server-optional-6"]
-            return ["rhel-{arch}-server-6".format(distro)]
+            return ["rhel-{arch}-server-6".format(**distro)]
         else:
             return []  # Not supported.
 
@@ -329,7 +329,6 @@ def distro_new(distro_s, arch="x86_64", channels=[]):
     distro["channels"] = channels
     distro["checksum_type"] = distro_guess_checksum_type(distro)
     distro["period"] = distro_resolve_release_dates(distro)
-    distro["name"] = "{os}-{version}.{release}-updates".format(**distro)
 
     return distro
 
