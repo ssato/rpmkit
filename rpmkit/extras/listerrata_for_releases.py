@@ -87,7 +87,7 @@ def get_distro_release_date(distro, version, release=0):
     return osi.get_param_value("release-date")
 
 
-def errata_get_details(errata, swopts=[]):
+def errata_add_details(errata, swopts=[]):
     """
     :param errata: A dict contains basic errata info
     :param swopts: A list of extra options for swapi
@@ -101,7 +101,7 @@ def errata_get_details(errata, swopts=[]):
     return errata
 
 
-def errata_get_relevant_package_list(errata, swopts=[]):
+def errata_add_relevant_package_list(errata, ref_packages, swopts=[]):
     """
     :param errata: A dict contains basic errata info
     :param swopts: A list of extra options for swapi
@@ -109,8 +109,11 @@ def errata_get_relevant_package_list(errata, swopts=[]):
     adv = errata.get("advisory", errata.get("advisory_name", None))
     assert adv is not None, "Not a dict?: {}".format(errata)
 
-    logging.info("Try to fetch packages relevant to {}".format(adv))
-    errata["packages"] = rpmkit.swapi.call("errata.listPackages", adv, swopts)
+    logging.debug("Try to fetch packages relevant to {}".format(adv))
+    ps = rpmkit.swapi.call("errata.listPackages", adv, swopts)
+    ref_pids = [p["id"] for p in ref_packages]
+
+    errata["packages"] = [p for p in ps if p["id"] in ref_pids]
     return errata
 
 
@@ -133,11 +136,13 @@ def get_errata_list_from_rhns(channel, period, details=False, list_pkgs=False,
                                                    '..'.join(period)))
     if details:
         logging.info("Try to fetch errata details from RHNS...")
-        es = [errata_get_details(e) for e in es]
+        es = [errata_add_details(e) for e in es]
 
     if list_pkgs:
         logging.info("Try to fetch errata packages info from RHNS...")
-        es = [errata_get_relevant_package_list(e) for e in es]
+        rps = rpmkit.swapi.call("channel.software.listAllPackages",
+                                [channel], swopts)
+        es = [errata_add_relevant_package_list(e, rps, swopts) for e in es]
 
     return es
 
@@ -360,7 +365,7 @@ set -e
 
 cd ${{0%/*}}/
 
-name={name}
+name={label}-updates
 isodir=${{name}}
 checksum_type={checksum_type}
 
@@ -488,7 +493,7 @@ def main():
     distro = distro_new(args[0], options.arch, options.channels)
     errata = list_errata_from_rhns(distro, options.swopts)
     packages = list_errata_packages(errata, options.swopts)
-    updates = rpmkit.rpmutils.find_latests(packages)
+    updates = rpmkit.rpmutils.find_latests(packages, ("name", "arch_label"))
 
     if options.workdir:
         workdir = options.workdir
