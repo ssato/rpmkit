@@ -29,6 +29,7 @@ import rpmkit.rpmutils as RU
 import rpmkit.utils as U
 import rpmkit.swapi as SW
 import rpmkit.yum_surrogate as YS
+import rpmkit.yum_makelistcache as YLC
 
 import logging
 import optparse
@@ -148,16 +149,7 @@ def fetch_and_dump_errata_summary(root, workdir, dist=None, repos=[],
     :param repos: List of yum repos to fetch errata info
     :param filename: Output file basename
     """
-    logfiles = (os.path.join(workdir, "errata_summary_output.log"),
-                os.path.join(workdir, "errata_summary_error.log"))
-
-    if repos:
-        repos_s = ' '.join("--enablerepo='%s'" % r for r in repos)
-        opts = "--disablerepo='*' " + repos_s
-    else:
-        opts = ""
-
-    es = sorted((e for e in YS.list_errata_g(root, dist, logfiles, opts)),
+    es = sorted((e for e in YLC.yum_list_errata(root, repos)),
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
