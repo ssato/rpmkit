@@ -182,7 +182,8 @@ def _find_valid_attrs_g(obj, attrs=[]):
 _PKG_NARROWS = ("installed", "updates", "obsoletes")
 
 
-def yum_list(root, enablerepos=[], disablerepos=['*'], pkgnarrows=_PKG_NARROWS):
+def yum_list(root, enablerepos=[], disablerepos=['*'],
+             pkgnarrows=_PKG_NARROWS):
     """
     List installed or update RPMs similar to
     "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
