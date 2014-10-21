@@ -222,16 +222,6 @@ def setup_data(ppath, root, force=False, copy=False, refer_other_rpmdb=True,
                 copyfile(src, dst, force, copy)
 
 
-def is_bsd_hashdb(dbpath):
-    """FIXME"""
-    try:
-        bsddb.hashopen(dbpath, 'r')
-    except:
-        return False
-
-    return True
-
-
 def find_Packages_rpmdb(topdir):
     """
     Find the path to 'Packages' rpm database file under ``topdir``.
@@ -250,7 +240,7 @@ def find_Packages_rpmdb(topdir):
 
     p = candidates[0]
 
-    if not is_bsd_hashdb(p):
+    if not rpmkit.yum_makelistcache._is_bsd_hashdb(p):
         raise RuntimeError("Found but it was not BSD DB file: " + p)
 
     return p
@@ -338,107 +328,12 @@ def surrogate_operation(root, operation, logfiles=None):
     return (outs, errs, rc)
 
 
-def _is_errata_line(line, dist):
-    if dist == "fedora":
-        reg = re.compile(r"^FEDORA-")
-    else:  # RHEL:
-        reg = re.compile(r"^RH[SBE]A-")
-
-    return line and reg.match(line)
-
-
 def failure(cmd, result):
     (outs, errs, rc) = result
 
     raise RuntimeError("Could not get the result: "
                        "\nop='%s', rc=%d,\nout=%s\n"
                        "err=%s" % (cmd, rc, ''.join(outs), ''.join(errs)))
-
-
-def list_errata_g(root, dist=None, logfiles=None, opts=None):
-    """
-    A generator to return errata found in the output result of 'yum list-sec'
-    one by one.
-
-    :param root: Pivot root dir where var/lib/rpm/Packages of the target host
-                 exists, e.g. /root/host_a/
-    :param dist: Distribution name or None
-    :param logfiles: Pair of command's output and error log files
-    :param opts: Extra options for yum, e.g. "--enablerepo='...' ..."
-    """
-    if not dist:
-        dist = detect_dist()
-
-    yum_args = opts + " list-sec" if opts else "list-sec"
-    res = (outs, errs, rc) = surrogate_operation(root, yum_args, logfiles)
-
-    if rc == 0:
-        for line in outs:
-            if _is_errata_line(line, dist):
-                yield rpmkit.yum_makelistcache.parse_errata_line(line)
-            else:
-                logging.debug("Not errata line: " + line)
-    else:
-        failure(yum_args, res)
-
-
-def parse_update_line(line):
-    """
-
-    >>> s = "bind-libs.x86_64  32:9.8.2-0.17.rc1.el6_4.4  rhel-x86_64-server-6"
-    >>> p = parse_update_line(s)
-    >>> assert p["name"] == "bind-libs"
-    >>> assert p["arch"] == "x86_64"
-    >>> assert p["epoch"] == "32"
-    >>> assert p["version"] == "9.8.2"
-    >>> assert p["release"] == "0.17.rc1.el6_4.4"
-
-    >>> s = "perl-HTTP-Tiny.noarch   0.017-242.fc18   updates"
-    >>> p = parse_update_line(s)
-    >>> assert p["name"] == "perl-HTTP-Tiny"
-    >>> assert p["arch"] == "noarch"
-    >>> assert p["epoch"] == "0"
-    >>> assert p["version"] == "0.017"
-    >>> assert p["release"] == "242.fc18"
-    """
-    preg = re.compile(r"^(?P<name>[A-Za-z0-9][^.]+)[.](?P<arch>\w+) +" +
-                      r"(?:(?P<epoch>\d+):)?(?P<version>[^-]+)-" +
-                      r"(?P<release>\S+) +(?P<repo>\S+)$")
-
-    m = preg.match(line)
-    if m:
-        p = m.groupdict()
-        if p["epoch"] is None:
-            p["epoch"] = "0"
-
-        return p
-    else:
-        return dict()
-
-
-def list_updates_g(root, logfiles=None, *args):
-    """
-    FIXME: Ugly and maybe yum-version-dependent implementation.
-
-    A generator to return updates found in the output result of 'yum
-    check-update' one by one.
-
-    :param root: Pivot root dir where var/lib/rpm/Packages of the target host
-                 exists, e.g. /root/host_a/
-    :param logfiles: Pair of command's output and error log files
-    """
-    res = (outs, errs, rc) = surrogate_operation(root, "check-update",
-                                                 logfiles=logfiles)
-
-    # NOTE: 'yum check-update' looks returning non-zero exit code (e.g. 100)
-    # when there are any updates found.
-    if outs:
-        # It seems that yum prints out an empty line before listing updates.
-        for line in outs:
-            if line:
-                yield parse_update_line(line)
-    else:
-        failure("check-update", res)
 
 
 def run_yum_cmd(root, yum_args, logfiles, *args):
@@ -454,7 +349,7 @@ def run_yum_cmd(root, yum_args, logfiles, *args):
             failure(yum_args, res)
 
 
-_FORMATABLE_COMMANDS = {"check-update": list_updates_g,
+_FORMATABLE_COMMANDS = {"check-update": rpmkit.yum_makelistcache.yum_list,
                         "list-sec": rpmkit.yum_makelistcache.parse_errata_line}
 
 
