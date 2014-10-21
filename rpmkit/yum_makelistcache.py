@@ -179,15 +179,20 @@ def _find_valid_attrs_g(obj, attrs=[]):
             pass
 
 
-def _init_yum_base(root, enablerepos=[], disablerepos=['*']):
+_PKG_NARROWS = ("installed", "updates", "obsoletes")
+
+
+def yum_list(root, enablerepos=[], disablerepos=['*'], pkgnarrows=_PKG_NARROWS):
     """
-    Initialize yum.YumBase object and return it.
+    List installed or update RPMs similar to
+    "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
 
     :param root: RPM DB root dir in absolute path
     :param enablerepos: List of Yum repos to enable
     :param disablerepos: List of Yum repos to disable
+    :param pkgnarrows: List of types to narrrow packages list
 
-    :return: An instance of yum.YumBase initialized
+    :return: A dict contains lists of dicts of packages
     """
     base = yum.YumBase()
 
@@ -198,22 +203,7 @@ def _init_yum_base(root, enablerepos=[], disablerepos=['*']):
 
     base.logger = base.verbose_logger = LOG
     _activate_repos(base, enablerepos, disablerepos)
-    return base
 
-
-_PKG_NARROWS = ("installed", "updates", "obsoletes")
-
-
-def yum_list(base, pkgnarrows=_PKG_NARROWS):
-    """
-    List installed or update RPMs similar to
-    "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
-
-    :param base: An initialized yum.YumBase object
-    :param pkgnarrows: List of types to narrrow packages list
-
-    :return: A dict contains lists of dicts of packages
-    """
     if pkgnarrows != ("installed", ):
         base.repos.populateSack()
 
@@ -649,9 +639,7 @@ def main(argv=sys.argv, pkgnarrows=_PKG_NARROWS):
     outputs_result(es, options.outdir, "errata", options.header_file)
 
     # Get installed and update rpms list:
-    base = _init_yum_base(options.root, options.enablerepos,
-                          options.disablerepos)
-    pkgs = yum_list(base)
+    pkgs = yum_list(options.root, options.enablerepos, options.disablerepos)
 
     for narrow in pkgnarrows:
         pdicts = _pkgs2dicts(pkgs[narrow])
