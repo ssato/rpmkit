@@ -350,7 +350,7 @@ def run_yum_cmd(root, yum_args, logfiles, *args):
 
 
 _FORMATABLE_COMMANDS = {"check-update": rpmkit.yum_makelistcache.yum_list,
-                        "list-sec": rpmkit.yum_makelistcache.parse_errata_line}
+                        "list-sec": rpmkit.yum_makelistcache.list_errata_g}
 
 
 def option_parser(defaults=_DEFAULTS, usage=_USAGE,
