@@ -12,6 +12,7 @@ import rpmkit.updateinfo.subproc as TT
 import rpmkit.tests.common as C
 
 import os.path
+import os
 import unittest
 
 
@@ -28,14 +29,18 @@ class Test_10_effectful_functions(unittest.TestCase):
 
     def setUp(self):
         self.workdir = C.setup_workdir()
+        self.saved_nose_procs = os.environ.get("NOSE_PROCESSES", "0")
+        os.environ["NOSE_PROCESSES"] = "0"
 
     def tearDown(self):
         C.cleanup_workdir(self.workdir)
+        os.environ["NOSE_PROCESSES"] = self.saved_nose_procs
 
     def test_12_check_output_simple__str(self):
         outfile = os.path.join(self.workdir, "check_output_simple.out.txt")
         with open(outfile, 'w') as out:
-            self.assertEquals(TT.check_output_simple("echo OK", out), 0)
+            rc = TT.check_output_simple("echo OK", out)
+            self.assertEquals(rc, 0)
 
         self.assertEquals(open(outfile, 'r').read(), "OK\n")
 
@@ -62,5 +67,15 @@ class Test_10_effectful_functions(unittest.TestCase):
         self.assertEquals(err, [])
         self.assertEquals(rc, 0)
         self.assertEquals(open(outfile, 'r').read(), "OK\n")
+
+    def test_28_run__success__w_timeout(self):
+        """FIXME: timeout is not work yet.
+        """
+        return
+        (out, err, rc) = TT.run("sleep 10", timeout=3)
+
+        self.assertEquals(out, [])
+        self.assertEquals(err, [])
+        self.assertNotEquals(rc, 0)
 
 # vim:sw=4:ts=4:et:
