@@ -42,10 +42,11 @@ def check_output_simple(cmd, outfile, **kwargs):
     """
     assert isinstance(outfile, file), "Not a file object: %s" % str(outfile)
 
-    if is_string(cmd):
-        cmd = cmd.split()
+    if not is_string(cmd):
+        cmd = ' '.join(cmd)
 
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, **kwargs)
+    logging.debug("check_output_simple: cmd=%s" % cmd)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True, **kwargs)
 
     while True:
         out = proc.stdout.readline()
@@ -105,11 +106,12 @@ def run(cmd, ofunc=_id, efunc=_id, timeout=None, **kwargs):
 
     :return: (output :: [str] ,err_output :: [str], exitcode :: Int)
     """
-    if is_string(cmd):
-        cmd = cmd.split()
+    if not is_string(cmd):
+        cmd = ' '.join(cmd)
 
+    logging.debug("run: cmd=%s" % cmd)
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         bufsize=1, close_fds=True)
+                         bufsize=1, close_fds=True, shell=True)
     outq = Queue.Queue()
     errq = Queue.Queue()
 
