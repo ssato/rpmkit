@@ -12,8 +12,10 @@ import Queue
 import logging
 import os.path
 import os
+import signal
 import subprocess
 import threading
+import time
 
 
 def is_string(s, str_types=(str, unicode)):
@@ -46,7 +48,7 @@ def check_output_simple(cmd, outfile, **kwargs):
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, **kwargs)
 
     while True:
-        out = proc.stdout.readline(1)
+        out = proc.stdout.readline()
 
         if out == '':
             while True:  # It may be blocked forever.
@@ -73,6 +75,19 @@ def enqueue_output(outfd, queue):
 
 def _id(x):
     return x
+
+
+def _wait_and_kill(proc, timeout):
+    """
+    :param proc: Process object created by subprocess.Popen
+    :param timeout: Timeout in seconds
+    """
+    assert timeout > 0, "Invalid timeout: %s" % str(timeout)
+    time.sleep(timeout)
+    proc.terminate()
+
+    if proc.poll() is None:
+        proc.kill()
 
 
 def run(cmd, ofunc=_id, efunc=_id, timeout=None, **kwargs):
@@ -105,11 +120,18 @@ def run(cmd, ofunc=_id, efunc=_id, timeout=None, **kwargs):
         t.setDaemon(True)
         t.start()
 
-    if timeout is not None:
-        threading.Thread(target=p.kill)
-
     outs = []
     errs = []
+
+    def join_threads():
+        for t in oets:
+            t.join()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, join_threads)
+
+    if timeout is not None:
+        threading.Thread(target=_wait_and_kill, args=(p, timeout))
 
     while True:
         try:
@@ -133,8 +155,7 @@ def run(cmd, ofunc=_id, efunc=_id, timeout=None, **kwargs):
         if p.poll() is not None:
             break
 
-    for t in oets:
-        t.join()
+    join_threads()
 
     return (outs, errs, -1 if p.returncode is None else p.returncode)
 
