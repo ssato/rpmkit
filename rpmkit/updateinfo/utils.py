@@ -42,6 +42,19 @@ class JST(datetime.tzinfo):
         return "JST"
 
 
+LOG_FORMAT = "%(asctime)s %(name)s: [%(levelname)s] %(message)s"
+
+
+def logger_init(name=None, level=logging.WARN, fmt=LOG_FORMAT):
+    if fmt is not None:
+        logging.basicConfig(format=fmt)
+
+    lgr = logging.getLogger(name)
+    lgr.setLevel(level)
+
+    return lgr
+
+
 def local_timestamp(tz=JST()):
     return datetime.datetime.now(tz).strftime("%c %Z")
 
