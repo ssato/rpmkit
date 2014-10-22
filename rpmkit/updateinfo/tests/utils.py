@@ -38,8 +38,7 @@ class Test_20_check_rpmdb_root(unittest.TestCase):
                 shutil.copy(os.path.join('/', TT.RPMDB_SUBDIR, dbn), rpmdbdir)
 
     def tearDown(self):
-        pass
-        # C.cleanup_workdir(self.workdir)
+        C.cleanup_workdir(self.workdir)
 
     def test_10_check_rpmdb_root(self):
         self.assertTrue(TT.check_rpmdb_root(self.workdir))
