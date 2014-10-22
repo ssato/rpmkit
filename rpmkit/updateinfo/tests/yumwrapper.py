@@ -12,7 +12,6 @@ import rpmkit.updateinfo.yumwrapper as TT
 import rpmkit.updateinfo.utils as RUU
 import rpmkit.tests.common as C
 
-import logging
 import os.path
 import os
 import shutil
@@ -23,9 +22,6 @@ class Test_00(unittest.TestCase):
 
     def test_10_logdir(self):
         self.assertEquals(TT.logdir("/a/b/c"), "/a/b/c/var/log")
-
-
-logging.getLogger().setLevel(logging.DEBUG)
 
 
 class Test_10_effectful_functions(unittest.TestCase):
@@ -41,8 +37,7 @@ class Test_10_effectful_functions(unittest.TestCase):
                 shutil.copy(os.path.join('/', RUU.RPMDB_SUBDIR, dbn), rpmdbdir)
 
     def tearDown(self):
-        # C.cleanup_workdir(self.workdir)
-        pass
+        C.cleanup_workdir(self.workdir)
 
     def test_10_yum_list_errata__no_errata(self):
         es = TT.yum_list_errata(self.workdir, [], ['*'])
