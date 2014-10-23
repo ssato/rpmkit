@@ -301,7 +301,7 @@ def _is_root():
 
 
 # Wrapper functions of yum commands.
-def yum_list_errata(root, repos=[], disabled_repos=['*'], timeout=None):
+def list_errata(root, repos=[], disabled_repos=['*'], timeout=None):
     """
     Wrapper function of "yum list-sec" / "yum updateinfo list".
 
@@ -316,7 +316,7 @@ def yum_list_errata(root, repos=[], disabled_repos=['*'], timeout=None):
                               timeout))
 
 
-def yum_list_updates(root, repos=[], disabled_repos=['*'], timeout=None):
+def list_updates(root, repos=[], disabled_repos=['*'], timeout=None):
     """
     Wrapper function of "yum check-update".
 
@@ -332,8 +332,7 @@ def yum_list_updates(root, repos=[], disabled_repos=['*'], timeout=None):
                                           timeout) if p)
 
 
-def yum_download_updates(root, repos=[], disabled_repos=['*'],
-                         downloaddir=None):
+def download_updates(root, repos=[], disabled_repos=['*'], downloaddir=None):
     """
     Wrapper function of "yum --downloadonly --downloaddir=... update ...".
 

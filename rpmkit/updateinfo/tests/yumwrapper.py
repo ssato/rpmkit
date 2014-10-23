@@ -24,30 +24,30 @@ class Test_00(unittest.TestCase):
         self.assertEquals(TT.logdir("/a/b/c"), "/a/b/c/var/log")
 
 
-class Test_10_effectful_functions(unittest.TestCase):
+if RUU.is_rhel_or_fedora():
+    class Test_10_effectful_functions(unittest.TestCase):
 
-    def setUp(self):
-        self.workdir = C.setup_workdir()
+        def setUp(self):
+            self.workdir = C.setup_workdir()
 
-        if RUU.is_rhel_or_fedora():
             rpmdbdir = os.path.join(self.workdir, RUU.RPMDB_SUBDIR)
             os.makedirs(rpmdbdir)
 
             for dbn in RUU._RPM_DB_FILENAMES:
                 shutil.copy(os.path.join('/', RUU.RPMDB_SUBDIR, dbn), rpmdbdir)
 
-    def tearDown(self):
-        C.cleanup_workdir(self.workdir)
+        def tearDown(self):
+            C.cleanup_workdir(self.workdir)
 
-    def test_10_yum_list_errata__no_errata(self):
-        xs = TT.yum_list_errata(self.workdir, [], ['*'])
-        self.assertEquals(xs, [])
+        def test_10_list_errata__no_errata(self):
+            xs = TT.list_errata(self.workdir, [], ['*'])
+            self.assertEquals(xs, [])
 
-    def test_20_yum_list_updates__no_updates(self):
-        xs = TT.yum_list_updates(self.workdir, [], ['*'])
-        self.assertEquals(xs, [])
+        def test_20_list_updates__no_updates(self):
+            xs = TT.list_updates(self.workdir, [], ['*'])
+            self.assertEquals(xs, [])
 
-    def test_30_yum_download_updates__no_updates(self):
-        self.assertTrue(TT.yum_download_updates(self.workdir, [], ['*']))
+        def test_30_download_updates__no_updates(self):
+            self.assertTrue(TT.download_updates(self.workdir, [], ['*']))
 
 # vim:sw=4:ts=4:et:
