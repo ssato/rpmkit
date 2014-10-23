@@ -46,4 +46,11 @@ if RUU.is_rhel_or_fedora():
 
             self.assertNotEquals(pkgs["installed"], [])
 
+        def test_40_list_errata(self):
+            pass  # Not implemented yet.
+
+        def test_50_list_updates(self):
+            pkgs = TT.list_updates('/')
+            self.assertTrue(isinstance(pkgs, list))
+
 # vim:sw=4:ts=4:et:
