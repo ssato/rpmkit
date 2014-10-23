@@ -40,10 +40,14 @@ class Test_10_effectful_functions(unittest.TestCase):
         C.cleanup_workdir(self.workdir)
 
     def test_10_yum_list_errata__no_errata(self):
-        es = TT.yum_list_errata(self.workdir, [], ['*'])
-        self.assertEquals(es, [])
+        xs = TT.yum_list_errata(self.workdir, [], ['*'])
+        self.assertEquals(xs, [])
 
-    def test_20_yum_download_updates__no_updates(self):
+    def test_20_yum_list_updates__no_updates(self):
+        xs = TT.yum_list_updates(self.workdir, [], ['*'])
+        self.assertEquals(xs, [])
+
+    def test_30_yum_download_updates__no_updates(self):
         self.assertTrue(TT.yum_download_updates(self.workdir, [], ['*']))
 
 # vim:sw=4:ts=4:et:
