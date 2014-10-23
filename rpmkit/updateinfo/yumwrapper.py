@@ -8,8 +8,8 @@
 # PARTICULAR PURPOSE. You should have received a copy of GPLv3 along with this
 # software; if not, see http://www.gnu.org/licenses/gpl.html
 #
-import rpmkit.updateinfo.utils as RUU
 import rpmkit.updateinfo.subproc as RUS
+import rpmkit.updateinfo.utils as RUU
 
 import os.path
 import os
