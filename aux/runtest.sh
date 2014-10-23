@@ -4,7 +4,8 @@ set -e
 curdir=${0%/*}
 topdir=${curdir}/../
 nosetests_opts="-c ${curdir}/nose.cfg"
-nprocs=$(echo ${NOSE_PROCESSES})
+#nprocs=$(echo ${NOSE_PROCESSES})
+nprocs=1  # TODO: It seems that parallel run causes issues in some test cases.
 
 if `env | grep -q 'WITH_COVERAGE' 2>/dev/null`; then
     nosetests_opts="${nosetests_opts} --with-coverage --cover-tests"
