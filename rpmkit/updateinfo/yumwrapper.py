@@ -14,6 +14,7 @@ import rpmkit.updateinfo.utils as RUU
 import os.path
 import os
 import re
+import sys
 
 
 NAME = "rpmkit.updateinfo.yumwrapper"
@@ -203,29 +204,55 @@ def logdir(root, log_subdir="var/log"):
     return os.path.join(root, log_subdir)
 
 
+def run_command(root, command, opts=[], timeout=None, outdir=None):
+    """
+    Run yum command and get results.
+
+    :param root: Root dir where var/lib/rpm/ exist
+    :param command: Yum sub command, ex. 'list-sec'
+    :param opts: Extra options for yum, e.g. "--skip-broken ..."
+    :param timeout: yum execution timeout
+    :param outdir: Logging dir or None
+    """
+    if root == '/':  # It will refer the system's RPM DB.
+        # NOTE: Users except for root cannot make $root/var/log and write logs
+        # so try just logging out to stdout and stderr.
+        cs = ["yum"] + opts + [command]
+        (out, err, rc) = RUS.run(cs, sys.stdout.write, sys.stderr.write,
+                                 env={"LANG": "C"})
+    else:
+        root = os.path.abspath(root)
+
+        if outdir is None:
+            outdir = logdir(root)
+
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+
+        cs = ["yum", "--installroot=%s" % root] + opts + [command]
+
+        command_s = command.replace(' ', '_')
+        outpath = os.path.join(outdir, "yum_%s_log.txt" % command_s)
+        errpath = os.path.join(outdir, "yum_%s_log.err.txt" % command_s)
+
+        with open(outpath, 'w') as out:
+            with open(errpath, 'w') as err:
+                (out, err, rc) = RUS.run(cs, out.write, err.write,
+                                         timeout, env={"LANG": "C"})
+
+    return (out, err, rc)
+
+
 def list_errata_g(root, opts=[], timeout=None):
     """
     A generator to return errata found in the output result of 'yum list-sec'
     or 'yum updateinfo list' one by one.
 
     :param root: Root dir where var/lib/rpm/ exist
-    :param opts: Extra options for yum, e.g. "--skip-broke ..."
+    :param opts: Extra options for yum, e.g. "--skip-broken ..."
     :param timeout: yum execution timeout
     """
-    cs = ["yum", "--installroot=" + root] + opts + ["list-sec"]
-
-    # TODO: Should these have unique filenames ?
-    outdir = logdir(root)
-    outpath = os.path.join(outdir, "list_errata_log.txt")
-    errpath = os.path.join(outdir, "list_errata_log.err.txt")
-
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-
-    with open(outpath, 'w') as out:
-        with open(errpath, 'w') as err:
-            (outs, errs, rc) = RUS.run(cs, out.write, err.write,
-                                       env={"LANG": "C"}, timeout=timeout)
+    (outs, errs, rc) = run_command(root, "list-sec", opts, timeout)
 
     if rc == 0:
         for line in outs:
@@ -246,20 +273,7 @@ def list_updates_g(root, opts=[], timeout=None):
     :param opts: Extra options for yum, e.g. "--skip-broke ..."
     :param timeout: yum execution timeout
     """
-    cs = ["yum", "--installroot=" + root] + opts + ["check-update"]
-
-    # TODO: Should these have unique filenames ?
-    outdir = logdir(root)
-    outpath = os.path.join(outdir, "check_update_log.txt")
-    errpath = os.path.join(outdir, "check_update_log.err.txt")
-
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-
-    with open(outpath, 'w') as out:
-        with open(errpath, 'w') as err:
-            (outs, errs, rc) = RUS.run(cs, out.write, err.write,
-                                       env={"LANG": "C"}, timeout=timeout)
+    (outs, errs, rc) = run_command(root, "check-update", opts, timeout)
 
     # NOTE: 'yum check-update' looks returning non-zero exit code (e.g. 100)
     # when there are any updates found.

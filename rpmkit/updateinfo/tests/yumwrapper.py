@@ -39,15 +39,23 @@ if RUU.is_rhel_or_fedora():
         def tearDown(self):
             C.cleanup_workdir(self.workdir)
 
-        def test_10_list_errata__no_errata(self):
+        def test_10_run_command(self):
+            opts = ["--disablerepo='*'"]
+            for c in ("list-sec", "list installed"):
+                (out, err, rc) = TT.run_command(self.workdir, c, opts)
+                self.assertTrue(out)
+                self.assertFalse(err)
+                self.assertFalse(rc in (1, 2))
+
+        def test_20_list_errata__no_errata(self):
             xs = TT.list_errata(self.workdir, [], ['*'])
             self.assertEquals(xs, [])
 
-        def test_20_list_updates__no_updates(self):
+        def test_30_list_updates__no_updates(self):
             xs = TT.list_updates(self.workdir, [], ['*'])
             self.assertEquals(xs, [])
 
-        def test_30_download_updates__no_updates(self):
+        def test_40_download_updates__no_updates(self):
             self.assertTrue(TT.download_updates(self.workdir, [], ['*']))
 
 # vim:sw=4:ts=4:et:
