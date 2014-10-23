@@ -117,4 +117,34 @@ def list_packages(root, repos=[], repos_to_disable=['*'],
 
     return ret
 
+
+# functions to mimic some yum commands.
+def list_errata(root, repos=[], disabled_repos=['*'], **_kwargs):
+    """
+    function to mimic "yum list-sec" / "yum updateinfo list".
+
+    :param root: RPM DB root dir in absolute path
+    :param repos: List of Yum repos to enable
+    :param disabled_repos: List of Yum repos to disable
+
+    :return: List of dicts of errata info
+    """
+    raise NotImplementedError("This function is not implemented yet.")
+
+
+def list_updates(root, repos=[], disabled_repos=['*'], obsoletes=True,
+                 **_kwargs):
+    """
+    function to mimic "yum check-update".
+
+    :param root: RPM DB root dir in absolute path
+    :param repos: List of Yum repos to enable
+    :param disabled_repos: List of Yum repos to disable
+    :param obsoletes: Include obsoletes in updates list if True
+
+    :return: List of dicts of update RPMs info
+    """
+    xs = list_packages(root, repos, disabled_repos)
+    return xs["updates"] + xs["obsoletes"] if obsoletes else xs["updates"]
+
 # vim:sw=4:ts=4:et:
