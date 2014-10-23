@@ -40,7 +40,10 @@ class Test_20_check_rpmdb_root(unittest.TestCase):
     def tearDown(self):
         C.cleanup_workdir(self.workdir)
 
-    def test_10_check_rpmdb_root(self):
+    def test_10_mkdtemp(self):
+        self.assertTrue(os.path.exists(TT.mkdtemp(dir=self.workdir)))
+
+    def test_20_check_rpmdb_root(self):
         self.assertTrue(TT.check_rpmdb_root(self.workdir))
 
 # vim:sw=4:ts=4:et:

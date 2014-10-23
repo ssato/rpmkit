@@ -13,6 +13,7 @@ import datetime
 import logging
 import os.path
 import os
+import tempfile
 
 try:
     import bsddb
@@ -87,6 +88,10 @@ def _is_bsd_hashdb(dbpath):
 
 def is_rhel_or_fedora(relfile="/etc/redhat-release"):
     return os.path.exists(relfile)
+
+
+def mkdtemp(prefix="rpmkit-", dir="/tmp"):
+    return tempfile.mkdtemp(dir=dir, prefix=prefix)
 
 
 # It may depends on the versions of rpm:
