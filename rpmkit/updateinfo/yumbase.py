@@ -40,7 +40,7 @@ def _toggle_repos(base, repos, action):
             getattr(repo, action, noop)()
 
 
-def _activate_repos(base, repos=[], repos_to_disable=['*']):
+def _activate_repos(base, repos=[], disabled_repos=['*']):
     """
     :param base: yum.YumBase instance
     :param repos: A list of repos to enable
@@ -51,18 +51,18 @@ def _activate_repos(base, repos=[], repos_to_disable=['*']):
     """
     assert isinstance(base, yum.YumBase), "Wrong base object: %s" % str(base)
 
-    _toggle_repos(base, repos_to_disable, "disable")
+    _toggle_repos(base, disabled_repos, "disable")
     _toggle_repos(base, repos, "enable")
 
 
-def create(root, repos=[], repos_to_disable=['*']):
+def create(root, repos=[], disabled_repos=['*']):
     """
     Create an initialized yum.YumBase instance.
     Created instance has no enabled repos by default.
 
     :param root: RPM DB root dir in absolute path
     :param repos: List of Yum repos to enable
-    :param repos_to_disable: List of Yum repos to disable
+    :param disabled_repos: List of Yum repos to disable
 
     >>> import os.path
     >>> if os.path.exists("/etc/redhat-release"):
@@ -79,12 +79,12 @@ def create(root, repos=[], repos_to_disable=['*']):
         base.conf.installroot = root
 
     base.logger = base.verbose_logger = LOG
-    _activate_repos(base, repos, repos_to_disable)
+    _activate_repos(base, repos, disabled_repos)
 
     return base
 
 
-def list_packages(root, repos=[], repos_to_disable=['*'],
+def list_packages(root, repos=[], disabled_repos=['*'],
                   pkgnarrows=_PKG_NARROWS):
     """
     List installed or update RPMs similar to
@@ -92,7 +92,7 @@ def list_packages(root, repos=[], repos_to_disable=['*'],
 
     :param root: RPM DB root dir in absolute path
     :param repos: List of Yum repos to enable
-    :param repos_to_disable: List of Yum repos to disable
+    :param disabled_repos: List of Yum repos to disable
     :param pkgnarrows: List of types to narrrow packages list
 
     :return: A dict contains lists of dicts of packages
@@ -104,7 +104,7 @@ def list_packages(root, repos=[], repos_to_disable=['*'],
     ...         assert isinstance(pkgs[narrow], list)
     ...     assert pkgs["installed"]
     """
-    base = create(root, repos, repos_to_disable)
+    base = create(root, repos, disabled_repos)
 
     if pkgnarrows != ("installed", ):
         base.repos.populateSack()
