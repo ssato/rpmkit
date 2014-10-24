@@ -6,7 +6,7 @@
 # yum-surrogate.
 #
 # Copyright (C) 2013 Satoru SATOH <ssato@redhat.com>
-# Copyright (C) 2013 Red Hat, Inc.
+# Copyright (C) 2013, 2014 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,12 +24,12 @@
 from rpmkit.globals import DEBUG, INFO, _
 from operator import itemgetter
 
+import rpmkit.updateinfo.yumwrapper as RUY
+import rpmkit.updateinfo.utils as RUU
 import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
 import rpmkit.swapi as SW
-import rpmkit.yum_surrogate as YS
-import rpmkit.yum_makelistcache as YLC
 
 import logging
 import optparse
@@ -52,6 +52,8 @@ _RPM_KEYS = ("name", "version", "release", "epoch", "arch", "summary",
 _ERRATA_KEYS = ("advisory", "type", "severity")
 _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 _BZ_KEYS = ("bug_id", "summary", "priority", "severity")
+
+LOG = logging.getLogger("rpmkit.extras.updateinfo")
 
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
@@ -109,9 +111,9 @@ def dump_rpm_list(root, workdir, filename=_RPM_LIST_FILE, rpmkeys=_RPM_KEYS):
     :param filename: Output file basename
     :param rpmkeys: RPM keys to get info of package
     """
-    logging.debug("Get rpms for the root: " + root)
+    LOG.debug("Get rpms for the root: " + root)
     rpms = RU.list_installed_rpms(root, yum=True, keys=rpmkeys)
-    logging.debug("%d installed rpms found in %s" % (len(rpms), root))
+    LOG.debug("%d installed rpms found in %s" % (len(rpms), root))
 
     U.json_dump(rpms, rpm_list_path(workdir, filename))
 
@@ -139,17 +141,16 @@ def _mkedic(errata, packages, ekeys=_ERRATA_KEYS):
     return d
 
 
-def fetch_and_dump_errata_summary(root, workdir, dist=None, repos=[],
+def fetch_and_dump_errata_summary(root, workdir, repos=[],
                                   filename=_ERRATA_SUMMARY_FILE,
                                   ekeys=_ERRATA_KEYS):
     """
     :param root: RPM DB top dir
     :param workdir: Working dir to dump the result
-    :param dist: Specify target distribution explicitly
     :param repos: List of yum repos to fetch errata info
     :param filename: Output file basename
     """
-    es = sorted((e for e in YLC.yum_list_errata(root, repos)),
+    es = sorted((e for e in RUY.list_errata(root, repos)),
                 key=itemgetter("advisory"))
 
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
@@ -212,7 +213,7 @@ def mk_errata_map(offline):
             cve = cves_map.get(c)
 
             if not cve:
-                logging.warn(
+                LOG.warn(
                     "The CVE %s not found in master data " % c +
                     "downloaded from access.redhat.com"
                 )
@@ -265,7 +266,7 @@ def get_bzs_from_errata_desc_g(errata_desc, offline=False, bzkeys=_BZ_KEYS,
             if bz_details:
                 bz = get_bz_details(bzid, offline, bzkeys)
                 if not bz:
-                    logging.warn("Failed to get BZ info: " + bzid)
+                    LOG.warn("Failed to get BZ info: " + bzid)
                     continue
 
                 yield _update_bz(bz, heuristics=True)
@@ -275,7 +276,7 @@ def get_bzs_from_errata_desc_g(errata_desc, offline=False, bzkeys=_BZ_KEYS,
 
         except Exception as e:
             m = " Failed to get the bz info (bz#%s), exc=%s" % (bzid, e)
-            logging.warn(m)
+            LOG.warn(m)
 
 
 def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
@@ -294,10 +295,10 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
         if os.path.exists(cve_ref_path):
             errata_cves_map = U.json_load(cve_ref_path)
         else:
-            logging.info("Make up errata - cve - cvss map data from RHN...")
+            LOG.info("Make up errata - cve - cvss map data from RHN...")
             errata_cves_map = mk_errata_map(offline)
 
-            logging.info("Dumping errata - cve - cvss map data from RHN...")
+            LOG.info("Dumping errata - cve - cvss map data from RHN...")
             U.json_dump(errata_cves_map, cve_ref_path)
             # assert bool(errata_cves_map), "errata_cache=" + errata_cache
 
@@ -321,7 +322,7 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
                        for k, v in bzs.iteritems()]
         else:
             m = "Failed to get bzs w/ RHN API relevant to " + adv
-            logging.debug(m + ". So try to get them by some heuristics.")
+            LOG.debug(m + ". So try to get them by some heuristics.")
 
             bzs = list(get_bzs_from_errata_desc_g(errata["description"],
                                                   offline, bzkeys, bz_details))
@@ -330,7 +331,7 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
 
     except Exception as e:
         m = "Failed to get related bugzilla info %s, exc=%s" % (adv, e)
-        logging.warn(m)
+        LOG.warn(m)
         errata["bzs"] = []
 
     if adv.startswith("RHSA"):
@@ -347,14 +348,14 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
                     if dcve:
                         dcve = dcve[0]
                     else:
-                        logging.warn("Couldn't get CVSS metrics of " + cve)
+                        LOG.warn("Couldn't get CVSS metrics of " + cve)
                         dcve = dict(cve=cve, )
 
                     dcves.append(dcve)
 
                 errata["cves"] = dcves
             else:
-                logging.warn("Could not get relevant CVEs: " + adv)
+                LOG.warn("Could not get relevant CVEs: " + adv)
                 errata["cves"] = []
 
     errata["url"] = errata_url(adv)
@@ -545,7 +546,7 @@ def _fmt_bzs(bzs):
     try:
         bzs = [_fmt(bz) % bz for bz in bzs]
     except KeyError:
-        logging.warn("BZ Key error: " + str(bzs))
+        LOG.warn("BZ Key error: " + str(bzs))
         pass
 
     return bzs
@@ -657,13 +658,13 @@ def _is_newer_errata(errata, since=None):
 
     (y, m, d) = since.split('-')
     (y, m, d) = (int(y), int(m), int(d))
-    # logging.debug("Try to check the errata is newer than "
+    # LOG.debug("Try to check the errata is newer than "
     #              "y=%d, m=%d, d=%d" % (y, m, d))
 
     # Set to dummy and old enough date if failed to get issue_date.
     issue_date = errata.get("issue_date", "1900-01-01")
     (e_y, e_m, e_d) = _date_from_errata_issue_data(issue_date)
-    # logging.debug("Issue date of the errata: y=%d, m=%d, d=%d" % (e_y, e_m,
+    # LOG.debug("Issue date of the errata: y=%d, m=%d, d=%d" % (e_y, e_m,
     #                                                              e_d))
 
     if e_y < y:
@@ -699,7 +700,7 @@ def cve_socre_gt(cve, score=4.0, default=False):
     try:
         return float(cve["score"]) >= score
     except Exception:
-        logging.warn("Failed to compare CVE's score: %s, score=%.1f" %
+        LOG.warn("Failed to compare CVE's score: %s, score=%.1f" %
                      (str(cve), score))
 
     return default
@@ -784,16 +785,15 @@ Detailed errata and packages information of the detected distribution %s
 is not supported. So it will disabled this feature."""
 
 
-def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
+def modmain(root, workdir=None, offline=False, details=False,
             repos=[], force=False, rpmkeys=_RPM_KEYS, bzkeys=_BZ_KEYS,
             bz_details=True, start_date=None, verbose=False,
             warn_details_msg=_WARN_DETAILS_NOT_AVAIL):
     """
-    :param ppath: The path to 'Packages' RPM DB file
+    :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param workdir: Working dir to dump the result
     :param offline: True if get results only from local cache
     :param details: True if detailed errata and packages info is needed
-    :param dist: Specify target distribution explicitly
     :param repos: Specify yum repos to fetch errata and updates info
     :param force: Force overwrite the rpmdb file previously copied
     :param rpmkeys: RPM keys to get info of package
@@ -803,44 +803,37 @@ def modmain(ppath, workdir=None, offline=False, details=False, dist=None,
         than the date ``start_date``
     :param verbose: Verbose mode
     """
-    logging.getLogger().setLevel(DEBUG if verbose else INFO)
+    LOG.setLevel(DEBUG if verbose else INFO)
 
-    if not ppath:
-        ppath = raw_input(_("Path to the RPM DB 'Packages' > "))
+    if not root:
+        root = os.path.abspath(raw_input(_("Root of RPM DB > ")))
+
+    assert RUU.check_rpmdb_root(root, True), "Not a root of RPM DB: " + root
 
     if workdir:
         if not os.path.exists(workdir):
-            logging.info("Creating working dir: " + workdir)
+            LOG.info("Creating working dir: " + workdir)
             os.makedirs(workdir)
-
-        root = YS.setup_root(ppath, workdir, force=force)
     else:
-        root = YS.setup_root(ppath, force=force)
         workdir = root
 
-    logging.info("Dump RPM list...")
+    LOG.info("Dump RPM list...")
     dump_rpm_list(root, workdir, rpmkeys=rpmkeys)
 
-    logging.info("Dump Errata summaries...")
-    fetch_and_dump_errata_summary(root, workdir, dist, repos)
+    LOG.info("Dump Errata summaries...")
+    fetch_and_dump_errata_summary(root, workdir, repos)
 
     if details:
-        if not dist:
-            dist = YS.detect_dist()
+        LOG.info("Dump Errata details...")
+        dump_errata_list(workdir, offline, bzkeys, bz_details)
 
-        if dist == "rhel":
-            logging.info("Dump Errata details...")
-            dump_errata_list(workdir, offline, bzkeys, bz_details)
+        LOG.info("Update package list...")
+        dump_detailed_packages_list(workdir, offline, repos)
 
-            logging.info("Update package list...")
-            dump_detailed_packages_list(workdir, offline, repos)
-        else:
-            logging.warn(warn_details_msg % dist)
-
-    logging.info("Dump update RPM list from errata data...")
+    LOG.info("Dump update RPM list from errata data...")
     dump_updates_list(workdir)
 
-    logging.info("Dump dataset file from RPMs and Errata data...")
+    LOG.info("Dump dataset file from RPMs and Errata data...")
     dump_datasets(workdir, details, start_date=start_date)
 
 
@@ -849,7 +842,7 @@ def option_parser():
     Option parser.
     """
     defaults = dict(path=None, workdir=None, details=False, offline=False,
-                    dist=None, repos="", force=False, verbose=False,
+                    repos="", force=False, verbose=False,
                     bzkeys=None, bz_details=False, start_date=None)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_PATH
@@ -864,7 +857,6 @@ def option_parser():
                  help="Get errata details also from RHN / Satellite")
     p.add_option("", "--offline", action="store_true",
                  help="Run swapi on offline mode")
-    p.add_option("", "--dist", help="Specify distribution")
     p.add_option("", "--repos",
                  help="Comma separated yum repos to fetch errata info, "
                       "e.g. 'rhel-x86_64-server-6'. Please note that any "
@@ -893,22 +885,22 @@ def main():
     p = option_parser()
     (options, args) = p.parse_args()
 
-    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
+    LOG.setLevel(DEBUG if options.verbose else INFO)
 
     if args:
-        ppath = args[0]
+        root = args[0]
     else:
-        ppath = raw_input("Path to the 'Packages' RPM DB file > ")
+        root = raw_input("Root of RPM DB file > ")
 
-    assert os.path.exists(ppath), "RPM DB file looks not exist"
+    assert os.path.exists(root), "Root of RPM DB file looks not exist"
 
     if options.bzkeys:
         options.bzkeys = options.bzkeys.split(',')
 
     repos = options.repos.split(',')
 
-    modmain(ppath, options.workdir, options.offline, options.details,
-            options.dist, repos, options.force, bzkeys=options.bzkeys,
+    modmain(root, options.workdir, options.offline, options.details,
+            repos, options.force, bzkeys=options.bzkeys,
             bz_details=options.bz_details, start_date=options.since,
             verbose=options.verbose)
 
