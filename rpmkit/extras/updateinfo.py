@@ -29,7 +29,7 @@ import rpmkit.updateinfo.utils as RUU
 import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
-import rpmkit.swapi as SW
+import rpmkit.swapi
 
 import logging
 import optparse
@@ -157,7 +157,7 @@ def fetch_and_dump_errata_summary(root, workdir, repos=[],
     U.json_dump(es, errata_summary_path(workdir, filename))
 
 
-def _swapicall(api, offline=False, args=[]):
+def swapicall(api, offline=False, args=[]):
     """
     :param api: RHN or swapi's virtual API string
     :type api: str
@@ -167,10 +167,7 @@ def _swapicall(api, offline=False, args=[]):
     :type args: [str]
     """
     opts = ["--verbose", "--cacheonly"] if offline else ["--verbose"]
-    return SW.call(api, args, opts)
-
-
-swapicall = M.memoize(_swapicall)
+    return rpmkit.swapi.call(api, args, opts)
 
 
 def errata_url(errata):
