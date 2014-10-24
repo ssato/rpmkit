@@ -8,6 +8,8 @@
 # PARTICULAR PURPOSE. You should have received a copy of GPLv3 along with this
 # software; if not, see http://www.gnu.org/licenses/gpl.html
 #
+import rpmkit.utils as RU
+import itertools
 import logging
 import yum
 
@@ -107,7 +109,7 @@ def list_packages(root, repos=[], disabled_repos=['*'],
     base = create(root, repos, disabled_repos)
 
     if pkgnarrows != ("installed", ):
-        base.repos.populateSack()
+        base.repos.populateSack()  # It takes some time.
 
     ret = dict()
 
@@ -118,18 +120,73 @@ def list_packages(root, repos=[], disabled_repos=['*'],
     return ret
 
 
-# functions to mimic some yum commands.
-def list_errata(root, repos=[], disabled_repos=['*'], **_kwargs):
+def _notice_to_errata(notice):
     """
-    function to mimic "yum list-sec" / "yum updateinfo list".
+    Notice metadata examples:
+
+    packages:
+
+     'pkglist': [
+        {'name': 'Red Hat Enterprise Linux Server (v. 6 for 64-bit x86_64)',
+         'packages': [
+            {'arch': 'x86_64',
+             'epoch': '0',
+             'filename': 'xorg-x11-drv-fbdev-0.4.3-16.el6.x86_64.rpm',
+             'name': 'xorg-x11-drv-fbdev',
+             'release': '16.el6',
+             'src': 'xorg-x11-drv-fbdev-0.4.3-16.el6.src.rpm',
+             'sum': ('sha256', '8f3da83bb19c3776053c543002c9...'),
+             'version': '0.4.3'},
+             ...
+        },
+        ...
+     ]
+
+    cve in notice_metadata["references"]:
+
+    {'href': 'https://www.redhat.com/security/data/cve/CVE-2013-1994.html',
+     'id': 'CVE-2013-1994',
+     'title': 'CVE-2013-1994',
+     'type': 'cve'}
+    """
+    nmd = notice.get_metadata()
+
+    errata = dict(advisory=nmd["update_id"], synopsis=nmd["title"],
+                  description=nmd["description"], update_date=nmd["updated"],
+                  issue_date=nmd["issued"], solution=nmd["solution"],
+                  type=nmd["type"], severity=nmd["severity"])
+
+    errata["bzs"] = filter(lambda r: r.get("type") == "bugzilla",
+                           nmd.get("references", []))
+    errata["cves"] = filter(lambda r: r.get("type") == "cve",
+                            nmd.get("references", []))
+
+    errata["packages"] = RU.concat(nps["packages"] for nps in
+                                   errata["pkglist"])
+    return errata
+
+
+# functions to mimic some yum commands.
+def list_errata(root, repos=[], disabled_repos=['*']):
+    """
+    List applicable Errata.
 
     :param root: RPM DB root dir in absolute path
     :param repos: List of Yum repos to enable
     :param disabled_repos: List of Yum repos to disable
 
-    :return: List of dicts of errata info
+    :return: A dict contains lists of dicts of errata
     """
-    raise NotImplementedError("This function is not implemented yet.")
+    base = create(root, repos, disabled_repos)
+    base.repos.populateSack()
+
+    oldpkgtups = [t[1] for t in base.up.getUpdatesTuples()]
+    npss_g = itertools.ifilter(None,
+                               (base.upinfo.get_applicable_notices(o) for o
+                                in oldpkgtups))
+    es = itertools.chain(*((_notice_to_errata(t[1]) for t in ts) for ts
+                           in npss_g))
+    return list(es)
 
 
 def list_updates(root, repos=[], disabled_repos=['*'], obsoletes=True,

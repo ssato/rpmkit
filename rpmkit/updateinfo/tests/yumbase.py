@@ -47,7 +47,8 @@ if RUU.is_rhel_or_fedora():
             self.assertNotEquals(pkgs["installed"], [])
 
         def test_40_list_errata(self):
-            pass  # Not implemented yet.
+            es = TT.list_errata(self.workdir)
+            self.assertTrue(isinstance(es, list))
 
         def test_50_list_updates(self):
             pkgs = TT.list_updates('/')
