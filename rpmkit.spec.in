@@ -94,6 +94,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/yum-surrogate
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
+%{python_sitelib}/rpmkit/updateinfo/*.py*
+%{python_sitelib}/rpmkit/updateinfo/tests/*.py*
 %{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
 
 %files          ylc
