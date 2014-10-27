@@ -13,6 +13,7 @@ import datetime
 import logging
 import os.path
 import os
+import re
 import tempfile
 
 try:
@@ -130,5 +131,26 @@ def check_rpmdb_root(root, readonly=True, dbnames=_RPM_DB_FILENAMES):
             os.chmod(dbpath, _MODE_RO)
 
     return True
+
+
+RHERRATA_RE = re.compile(r"^RH[SBE]A-\d{4}[:-]\d{4}(?:-\d+)?$")
+
+
+def errata_url(advisory):
+    """
+    :param errata: Red Hat Errata Advisory name :: str
+
+    >>> errata_url("RHSA-2011:1073")
+    'http://rhn.redhat.com/errata/RHSA-2011-1073.html'
+    >>> errata_url("RHSA-2007:0967-2")
+    'http://rhn.redhat.com/errata/RHSA-2007-0967.html'
+    """
+    assert isinstance(advisory, str), "Not a string: %s" % str(advisory)
+    assert RHERRATA_RE.match(advisory), "Not a errata advisory: %s" % advisory
+
+    if advisory[-2] == "-":  # degenerate advisory names
+        advisory = advisory[:-2]
+
+    return "http://rhn.redhat.com/errata/%s.html" % advisory.replace(':', '-')
 
 # vim:sw=4:ts=4:et:
