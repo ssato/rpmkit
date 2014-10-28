@@ -18,14 +18,8 @@ import shutil
 import unittest
 
 
-class Test_00(unittest.TestCase):
-
-    def test_10_logdir(self):
-        self.assertEquals(TT.logdir("/a/b/c"), "/a/b/c/var/log")
-
-
 if RUU.is_rhel_or_fedora():
-    class Test_10_effectful_functions(unittest.TestCase):
+    class Test_10_Base__no_enabled_repos(unittest.TestCase):
 
         def setUp(self):
             self.workdir = C.setup_workdir()
@@ -36,26 +30,27 @@ if RUU.is_rhel_or_fedora():
             for dbn in RUU._RPM_DB_FILENAMES:
                 shutil.copy(os.path.join('/', RUU.RPMDB_SUBDIR, dbn), rpmdbdir)
 
+            self.base = TT.Base(self.workdir)
+
         def tearDown(self):
             C.cleanup_workdir(self.workdir)
 
-        def test_10_run_command(self):
-            opts = ["--disablerepo='*'"]
+        def test_10_run(self):
             for c in ("list-sec", "list installed"):
-                (out, err, rc) = TT.run_command(self.workdir, c, opts)
+                (out, err, rc) = self.base.run(c)
                 self.assertTrue(out)
                 self.assertFalse(err)
                 self.assertFalse(rc in (1, 2))
 
         def test_20_list_errata__no_errata(self):
-            xs = TT.list_errata(self.workdir, [], ['*'])
+            xs = self.base.list_errata()
             self.assertEquals(xs, [])
 
         def test_30_list_updates__no_updates(self):
-            xs = TT.list_updates(self.workdir, [], ['*'])
+            xs = self.base.list_updates()
             self.assertEquals(xs, [])
 
         def test_40_download_updates__no_updates(self):
-            self.assertTrue(TT.download_updates(self.workdir, [], ['*']))
+            self.assertTrue(self.base.download_updates())
 
 # vim:sw=4:ts=4:et:
