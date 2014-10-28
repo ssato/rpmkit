@@ -152,12 +152,12 @@ class Base(rpmkit.updateinfo.base.Base):
         self._toggle_repos(self.disabled_repos, "disable")
         self._toggle_repos(self.repos, "enable")
 
-    def list_packages(self, *pkgnarrows, extras=[]):
+    def list_packages(self, pkgnarrows=None, extras=[]):
         """
         List installed or update RPMs similar to
         "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
 
-        :param pkgnarrows: Package list narrowing factors
+        :param pkgnarrows: A list of package list narrowing factors
 
         :return: A dict contains lists of dicts of packages
 
@@ -190,7 +190,7 @@ class Base(rpmkit.updateinfo.base.Base):
         :return: List of dicts of extra RPMs info
         """
         eps = self.packages.get("extras", [])
-        return eps if eps else self.list_packages("extras", "distro-extras")
+        return eps if eps else self.list_packages(("extras", "distro-extras"))
 
     def list_installed(self, mark_extras=False):
         """
@@ -201,10 +201,10 @@ class Base(rpmkit.updateinfo.base.Base):
             return ips
 
         if mark_extras:
-            extras = self.list_packages("extras")["extras"]
-            ips = self.list_packages("installed", extras)["installed"]
+            extras = self.list_packages(("extras", ))["extras"]
+            ips = self.list_packages(("installed", ), extras)["installed"]
         else:
-            ips = self.list_packages("installed")["installed"]
+            ips = self.list_packages(("installed", ))["installed"]
 
         return ips
 
