@@ -11,6 +11,9 @@
 from rpmkit.globals import _
 
 import rpmkit.updateinfo.yumwrapper
+import rpmkit.updateinfo.yumbase
+import rpmkit.updateinfo.dnfbase
+
 import rpmkit.updateinfo.utils
 import rpmkit.memoize
 import rpmkit.utils as U
@@ -56,11 +59,11 @@ def errata_list_path(workdir, filename=_ERRATA_LIST_FILE):
     return os.path.join(workdir, filename)
 
 
-def errata_cve_map_path(workdir):
+def updates_file_path(workdir, filename=_UPDATES_LIST_FILE):
     """
     :param workdir: Working dir to dump the result
     """
-    return os.path.join(workdir, "errata_cve_map.json")
+    return os.path.join(workdir, filename)
 
 
 def dataset_file_path(workdir):
@@ -69,13 +72,6 @@ def dataset_file_path(workdir):
     :param filename: Output file basename
     """
     return os.path.join(workdir, "errata_summary.xls")
-
-
-def updates_file_path(workdir, filename=_UPDATES_LIST_FILE):
-    """
-    :param workdir: Working dir to dump the result
-    """
-    return os.path.join(workdir, filename)
 
 
 def mk_cve_vs_cvss_map():
@@ -128,6 +124,46 @@ def add_cvss_for_errata(errata, cve_cvss_map={}):
     return errata
 
 
+def _fmt_cve(cve):
+    if 'score' in cve:
+        return '%(cve)s (score=%(score)s, metrics=%(metrics)s, url=%(url)s)'
+    else:
+        return '%(cve)s (CVSS=N/A)'
+
+
+def _fmt_cvess(cves):
+    """
+    :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
+    :return: List of CVE strings
+    """
+    try:
+        cves = [_fmt_cve(c) % c for c in cves]
+    except KeyError:
+        pass
+
+    return cves
+
+
+def _fmt_bzs(bzs):
+    """
+    :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
+    :return: List of CVE strings
+    """
+    def _fmt(bz):
+        if "summary" in bz:
+            return "bz#%(id)s: %(summary)s (%(url)s"
+        else:
+            return "bz#%(id)s (%(url)s"
+
+    try:
+        bzs = [_fmt(bz) % bz for bz in bzs]
+    except KeyError:
+        LOG.warn("BZ Key error: " + str(bzs))
+        pass
+
+    return bzs
+
+
 def _make_cell_data(x, key, default="N/A"):
     if key == "cves":
         cves = x.get("cves", [])
@@ -170,55 +206,6 @@ def _make_dataset(list_data, headers=None, title=None):
 _DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
                          "description", "issue_date", "update_date",
                          "url", "cves", "bzs"]
-
-
-def _fmt_cve(cve):
-    if 'score' in cve:
-        return '%(cve)s (score=%(score)s, metrics=%(metrics)s, url=%(url)s)'
-    else:
-        return '%(cve)s (CVSS=N/A)'
-
-
-def _fmt_cvess(cves):
-    """
-    :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
-    :return: List of CVE strings
-    """
-    try:
-        cves = [_fmt_cve(c) % c for c in cves]
-    except KeyError:
-        pass
-
-    return cves
-
-
-def _fmt_bzs(bzs):
-    """
-    :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
-    :return: List of CVE strings
-    """
-    def _fmt(bz):
-        if "summary" in bz:
-            return "bz#%(id)s: %(summary)s (%(url)s"
-        else:
-            return "bz#%(id)s (%(url)s"
-
-    try:
-        bzs = [_fmt(bz) % bz for bz in bzs]
-    except KeyError:
-        LOG.warn("BZ Key error: " + str(bzs))
-        pass
-
-    return bzs
-
-
-def _updates_list_g(workdir, ukeys=_UPDATE_KEYS):
-    data = U.json_load(updates_file_path(workdir))
-
-    for u in data["updates"]:
-        u["advisories"] = ", ".join(u["advisories"])
-        yield u
-
 
 _ERRATA_TYPES_MAP = dict(SA="RHSA", BA="RHBA", EA="RHEA")
 
