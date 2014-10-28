@@ -38,9 +38,9 @@ _ERRATA_KEYS = ("advisory", "type", "severity")
 _UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
 _BZ_KEYS = ("bug_id", "summary", "priority", "severity")
 
-BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper,
-                yum=rpmkit.updateinfo.yumbase,
-                dnf=rpmkit.updateinfo.dnfbase)
+BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper.Base,
+                yumbase=rpmkit.updateinfo.yumbase.Base,
+                dnfbase=rpmkit.updateinfo.dnfbase.Base)
 
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
@@ -395,8 +395,8 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
-def modmain(root, workdir=None, repos=[], backend="yumwrapper", verbose=False,
-            **kwargs):
+def modmain(root, workdir=None, repos=[], backend="yumbase", verbose=False,
+            backends=BACKENDS, **kwargs):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
@@ -406,7 +406,7 @@ def modmain(root, workdir=None, repos=[], backend="yumwrapper", verbose=False,
     global LOG
     LOG.setLevel(logging.DEBUG if verbose else logging.INFO)
 
-    if rpmkit.updateinfo.utils.check_rpmdb_root(root, True):
+    if not rpmkit.updateinfo.utils.check_rpmdb_root(root, True):
         raise RuntimeError("Not a root of RPM DB: %s" % root)
 
     if workdir is None:
@@ -417,7 +417,8 @@ def modmain(root, workdir=None, repos=[], backend="yumwrapper", verbose=False,
             LOG.info("Creating working dir: %s", workdir)
             os.makedirs(workdir)
 
-    base = rpmkit.updateinfo.yumwrapper.Base(root, repos, workdir=workdir)
+    backend = backends.get(backend, rpmkit.updateinfo.yumbase.Base)
+    base = backend(root, repos, workdir=workdir)
 
     LOG.info("Dump Installed RPMs list loaded from: %s", base.root)
     ips = base.list_installed(mark_extras=True)
