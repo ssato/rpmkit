@@ -56,7 +56,7 @@ def _notice_to_errata(notice):
     errata = dict(advisory=nmd["update_id"], synopsis=nmd["title"],
                   description=nmd["description"], update_date=nmd["updated"],
                   issue_date=nmd["issued"], solution=nmd["solution"],
-                  type=nmd["type"], severity=nmd["severity"])
+                  type=nmd["type"], severity=nmd.get("severity", "N/A"))
 
     errata["bzs"] = filter(lambda r: r.get("type") == "bugzilla",
                            nmd.get("references", []))
@@ -68,7 +68,7 @@ def _notice_to_errata(notice):
     return errata
 
 
-def _to_pkg(pkg):
+def _to_pkg(pkg, extras=[]):
     """
     Convert Package object, instance of yum.rpmsack.RPMInstalledPackage,
     yum.sqlitesack..YumAvailablePackageSqlite, etc., to
@@ -78,9 +78,18 @@ def _to_pkg(pkg):
 
     NOTE: Take care of rpm db session.
     """
+    if extras:
+        if pkg.name in (p.name for p in extras):
+            originally_from = pkg.vendor
+        else:
+            originally_from = "Unknown"
+    else:
+        originally_from = "TBD"
+
     return rpmkit.updateinfo.base.Package(pkg.name, pkg.version, pkg.release,
                                           pkg.arch, pkg.epoch, pkg.summary,
-                                          pkg.vendor, pkg.buildhost)
+                                          pkg.vendor, pkg.buildhost,
+                                          originally_from=originally_from)
 
 
 class Base(rpmkit.updateinfo.base.Base):
@@ -143,7 +152,7 @@ class Base(rpmkit.updateinfo.base.Base):
         self._toggle_repos(self.disabled_repos, "disable")
         self._toggle_repos(self.repos, "enable")
 
-    def list_packages(self, *pkgnarrows):
+    def list_packages(self, *pkgnarrows, extras=[]):
         """
         List installed or update RPMs similar to
         "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
@@ -163,21 +172,41 @@ class Base(rpmkit.updateinfo.base.Base):
         if not pkgnarrows:
             pkgnarrows = _PKG_NARROWS
 
-        if pkgnarrows != ("installed", ):
+        if len(pkgnarrows) > 1 or pkgnarrows[0] != "installed":
             self.base.repos.populateSack()  # It takes some time.
 
         for pn in pkgnarrows:
             ygh = self.base.doPackageLists(pn)
-            self.packages[pn] = [_to_pkg(p) for p in getattr(ygh, pn)]
+            self.packages[pn] = [_to_pkg(p, extras) for p in getattr(ygh, pn)]
 
         return self.packages
 
-    def list_installed(self):
+    def list_extras(self):
+        """
+        Method to mimic "yum list extras" to list the packages installed on the
+        system that are not available in any yum repository listed in the
+        config file.
+
+        :return: List of dicts of extra RPMs info
+        """
+        eps = self.packages.get("extras", [])
+        return eps if eps else self.list_packages("extras", "distro-extras")
+
+    def list_installed(self, mark_extras=False):
         """
         :return: List of dicts of installed RPMs info
         """
         ips = self.packages.get("installed", [])
-        return ips if ips else self.list_packages("installed")["installed"]
+        if ips:
+            return ips
+
+        if mark_extras:
+            extras = self.list_packages("extras")["extras"]
+            ips = self.list_packages("installed", extras)["installed"]
+        else:
+            ips = self.list_packages("installed")["installed"]
+
+        return ips
 
     def list_updates(self, obsoletes=True):
         """
