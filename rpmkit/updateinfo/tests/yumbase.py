@@ -19,7 +19,7 @@ import unittest
 
 
 if RUU.is_rhel_or_fedora():
-    class Test_10_effectful_functions(unittest.TestCase):
+    class Test_10_Base(unittest.TestCase):
 
         def setUp(self):
             self.workdir = C.setup_workdir()
@@ -30,16 +30,17 @@ if RUU.is_rhel_or_fedora():
             for dbn in RUU._RPM_DB_FILENAMES:
                 shutil.copy(os.path.join('/', RUU.RPMDB_SUBDIR, dbn), rpmdbdir)
 
+            self.base = TT.Base(self.workdir)
+
         def tearDown(self):
             C.cleanup_workdir(self.workdir)
 
         def test_10_create(self):
-            base = TT.create(self.workdir)
-            self.assertTrue(isinstance(base, TT.yum.YumBase))
-            self.assertEquals(base.repos.listEnabled(), [])
+            self.assertTrue(isinstance(self.base.base, TT.yum.YumBase))
+            self.assertEquals(self.base.base.repos.listEnabled(), [])
 
         def test_20_list_packages(self):
-            pkgs = TT.list_packages('/')
+            pkgs = self.base.list_packages()
 
             for narrow in TT._PKG_NARROWS:
                 self.assertTrue(isinstance(pkgs[narrow], list))
@@ -47,11 +48,11 @@ if RUU.is_rhel_or_fedora():
             self.assertNotEquals(pkgs["installed"], [])
 
         def test_40_list_errata(self):
-            es = TT.list_errata(self.workdir)
+            es = self.base.list_errata()
             self.assertTrue(isinstance(es, list))
 
         def test_50_list_updates(self):
-            pkgs = TT.list_updates('/')
+            pkgs = self.base.list_updates()
             self.assertTrue(isinstance(pkgs, list))
 
 # vim:sw=4:ts=4:et:
