@@ -75,11 +75,13 @@ def _to_pkg(pkg, extras=[]):
     rpmkit.updateinfo.base.Package object.
 
     :param pkg: Package object which Base.list_installed(), etc. returns
+    :param extras: A list of dicts represent extra packages which is installed
+        but not available from yum repos available.
 
     NOTE: Take care of rpm db session.
     """
     if extras:
-        if pkg.name in (p.name for p in extras):
+        if pkg.name in (e["name"] for e in extras):
             originally_from = pkg.vendor
         else:
             originally_from = "Unknown"
@@ -190,7 +192,7 @@ class Base(rpmkit.updateinfo.base.Base):
         :return: List of dicts of extra RPMs info
         """
         eps = self.packages.get("extras", [])
-        return eps if eps else self.list_packages(("extras", "distro-extras"))
+        return eps if eps else self.list_packages(("extras", ))["extras"]
 
     def list_installed(self, mark_extras=False):
         """
