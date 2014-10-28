@@ -283,8 +283,8 @@ class Base(rpmkit.updateinfo.base.Base):
         """
         self.prepare()
 
-        if fakeroot:
-            cs = _is_root() and [] or ["fakeroot"]  # to avoid unneeded check.
+        # To avoid unneeded check.
+        cs = _is_root() and ["yum"] or ["fakeroot", "yum"]
 
         if self.root == '/':  # It will refer the system's RPM DB.
             # NOTE: Users except for root cannot make $root/var/log and write
