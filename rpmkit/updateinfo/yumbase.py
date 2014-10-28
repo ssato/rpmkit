@@ -1,7 +1,6 @@
 #
 # Copyright (C) 2014 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
-#
 # License: GPLv3+
 #
 import rpmkit.utils as RU
