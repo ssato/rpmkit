@@ -126,7 +126,7 @@ class Base(rpmkit.updateinfo.base.Base):
         self._toggle_repos(self.disabled_repos, "disable")
         self._toggle_repos(self.repos, "enable")
 
-    def list_packages(self, pkgnarrows=_PKG_NARROWS):
+    def list_packages(self, *pkgnarrows):
         """
         List installed or update RPMs similar to
         "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
@@ -143,6 +143,9 @@ class Base(rpmkit.updateinfo.base.Base):
         ...         assert isinstance(pkgs[narrow], list)
         ...     assert pkgs["installed"]
         """
+        if not pkgnarrows:
+            pkgnarrows = _PKG_NARROWS
+
         if pkgnarrows != ("installed", ):
             self.base.repos.populateSack()  # It takes some time.
 
@@ -151,6 +154,13 @@ class Base(rpmkit.updateinfo.base.Base):
             self.packages[pn] = getattr(ygh, pn)
 
         return self.packages
+
+    def list_installed(self):
+        """
+        :return: List of dicts of installed RPMs info
+        """
+        ips = self.packages.get("installed", [])
+        return ips if ips else self.list_packages("installed")["installed"]
 
     def list_updates(self, obsoletes=True):
         """

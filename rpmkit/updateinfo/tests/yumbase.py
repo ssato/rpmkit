@@ -47,6 +47,12 @@ if RUU.is_rhel_or_fedora():
 
             self.assertNotEquals(pkgs["installed"], [])
 
+        def test_30_list_installed(self):
+            pkgs = self.base.list_installed()
+
+            self.assertTrue(isinstance(pkgs, list))
+            self.assertNotEquals(pkgs, [])
+
         def test_40_list_errata(self):
             es = self.base.list_errata()
             self.assertTrue(isinstance(es, list))
