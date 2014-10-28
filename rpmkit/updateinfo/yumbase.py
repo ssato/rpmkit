@@ -8,6 +8,7 @@ import rpmkit.utils as RU
 
 import itertools
 import logging
+import os.path
 import yum
 
 
@@ -63,8 +64,23 @@ def _notice_to_errata(notice):
                             nmd.get("references", []))
 
     errata["packages"] = RU.concat(nps["packages"] for nps in
-                                   errata["pkglist"])
+                                   nmd.get("pkglist", []))
     return errata
+
+
+def _to_pkg(pkg):
+    """
+    Convert Package object, instance of yum.rpmsack.RPMInstalledPackage,
+    yum.sqlitesack..YumAvailablePackageSqlite, etc., to
+    rpmkit.updateinfo.base.Package object.
+
+    :param pkg: Package object which Base.list_installed(), etc. returns
+
+    NOTE: Take care of rpm db session.
+    """
+    return rpmkit.updateinfo.base.Package(pkg.name, pkg.version, pkg.release,
+                                          pkg.arch, pkg.epoch, pkg.summary,
+                                          pkg.vendor, pkg.buildhost)
 
 
 class Base(rpmkit.updateinfo.base.Base):
@@ -89,10 +105,11 @@ class Base(rpmkit.updateinfo.base.Base):
         self.base = yum.YumBase()
 
         try:
-            self.base.preconf.root = root
+            self.base.conf.installroot = self.root
         except AttributeError:
-            self.base.conf.installroot = root
+            self.base.preconf.root = self.root
 
+        self.base.conf.cachedir = os.path.join(self.root, "var/cache")
         self.base.logger = self.base.verbose_logger = LOG
         self._activate_repos()
 
@@ -151,7 +168,7 @@ class Base(rpmkit.updateinfo.base.Base):
 
         for pn in pkgnarrows:
             ygh = self.base.doPackageLists(pn)
-            self.packages[pn] = getattr(ygh, pn)
+            self.packages[pn] = [_to_pkg(p) for p in getattr(ygh, pn)]
 
         return self.packages
 
