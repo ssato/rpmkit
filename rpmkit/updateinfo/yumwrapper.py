@@ -8,13 +8,16 @@
 # PARTICULAR PURPOSE. You should have received a copy of GPLv3 along with this
 # software; if not, see http://www.gnu.org/licenses/gpl.html
 #
-import rpmkit.updateinfo.subproc as RUS
-import rpmkit.updateinfo.utils as RUU
+import rpmkit.updateinfo.base
+import rpmkit.updateinfo.subproc
+import rpmkit.updateinfo.utils
 
+import itertools
 import os.path
 import os
 import re
 import sys
+import tempfile
 
 
 NAME = "rpmkit.updateinfo.yumwrapper"
@@ -23,7 +26,7 @@ UPDATE_REG = re.compile(r"^(?P<name>[A-Za-z0-9][^.]+)[.](?P<arch>\w+) +"
                         r"(?:(?P<epoch>\d+):)?(?P<version>[^-]+)-"
                         r"(?P<release>\S+) +(?P<repo>\S+)$")
 
-LOG = RUU.logger_init(NAME)
+LOG = rpmkit.updateinfo.utils.logger_init(NAME)
 
 
 def _is_errata_line(line, reg=ERRATA_REG):
@@ -200,96 +203,24 @@ def _parse_update_line(line, reg=UPDATE_REG):
         return dict()
 
 
-def logdir(root, log_subdir="var/log"):
-    return os.path.join(root, log_subdir)
-
-
-def run_command(root, command, opts=[], timeout=None, outdir=None):
+def _run(cmd, ofunc=sys.stdout.write, efunc=sys.stderr.write,
+         timeout=None, **kwargs):
     """
-    Run yum command and get results.
+    An wrapper furnction for rpmkit.updateinfo.subproc.run
 
-    :param root: Root dir where var/lib/rpm/ exist
-    :param command: Yum sub command, ex. 'list-sec'
-    :param opts: Extra options for yum, e.g. "--skip-broken ..."
-    :param timeout: yum execution timeout
-    :param outdir: Logging dir or None
+    :param cmd: Command string[s]
+    :param ofunc: Function to process output line by line
+        ex. sys.stdout.write :: str => line -> IO (), etc.
+    :param efunc: Function to process error line by line
+        ex. sys.stderr.write :: str => line -> IO (), etc.
+    :param timeout: Timeout to wait for the finish of execution of
+        ``cmd`` in seconds or None to wait it forever
+    :param kwargs: Extra arguments passed to subprocess.Popen
+
+    :return: (output :: [str] ,err_output :: [str], exitcode :: Int)
     """
-    if root == '/':  # It will refer the system's RPM DB.
-        # NOTE: Users except for root cannot make $root/var/log and write logs
-        # so try just logging out to stdout and stderr.
-        cs = ["yum"] + opts + [command]
-        (out, err, rc) = RUS.run(cs, sys.stdout.write, sys.stderr.write,
-                                 env={"LANG": "C"})
-    else:
-        root = os.path.abspath(root)
-
-        if outdir is None:
-            outdir = logdir(root)
-
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-
-        cs = ["yum", "--installroot=%s" % root] + opts + [command]
-
-        command_s = command.replace(' ', '_')
-        outpath = os.path.join(outdir, "yum_%s_log.txt" % command_s)
-        errpath = os.path.join(outdir, "yum_%s_log.err.txt" % command_s)
-
-        with open(outpath, 'w') as out:
-            with open(errpath, 'w') as err:
-                (out, err, rc) = RUS.run(cs, out.write, err.write,
-                                         timeout, env={"LANG": "C"})
-
-    return (out, err, rc)
-
-
-def list_errata_g(root, opts=[], timeout=None):
-    """
-    A generator to return errata found in the output result of 'yum list-sec'
-    or 'yum updateinfo list' one by one.
-
-    :param root: Root dir where var/lib/rpm/ exist
-    :param opts: Extra options for yum, e.g. "--skip-broken ..."
-    :param timeout: yum execution timeout
-    """
-    (outs, errs, rc) = run_command(root, "list-sec", opts, timeout)
-
-    if rc == 0:
-        for line in outs:
-            if _is_errata_line(line):
-                yield _parse_errata_line(line)
-            else:
-                LOG.debug("Not errata line: %s" % line.rstrip())
-    else:
-        LOG.error("Failed to fetch the errata list: %s" % ''.join(errs))
-
-
-def list_updates_g(root, opts=[], timeout=None):
-    """
-    A generator to return updates found in the output result of
-    'yum check-update'.
-
-    :param root: Root dir where var/lib/rpm/ exist
-    :param opts: Extra options for yum, e.g. "--skip-broke ..."
-    :param timeout: yum execution timeout
-    """
-    (outs, errs, rc) = run_command(root, "check-update", opts, timeout)
-
-    # NOTE: 'yum check-update' looks returning non-zero exit code (e.g. 100)
-    # when there are any updates found.
-    #
-    # see also: /usr/share/yum-cli/yummain.py#main
-    if rc in (0, 100):
-        for line in outs:
-            if line:
-                line = line.rstrip()
-                p = _parse_update_line(line)
-                if p:
-                    yield p
-                else:
-                    LOG.debug("Not errata line: %s" % line)
-    else:
-        LOG.error("Failed to fetch the updates list: %s" % ''.join(errs))
+    return rpmkit.updateinfo.subproc.run(cmd, ofunc, efunc, timeout,
+                                         env={"LANG": "C"}, **kwargs)
 
 
 def _mk_repo_opts(repos=[], disabled_repos=[]):
@@ -314,91 +245,158 @@ def _is_root():
     return os.getuid() == 0
 
 
-# Wrapper functions of yum commands.
-def list_errata(root, repos=[], disabled_repos=['*'], timeout=None):
-    """
-    Wrapper function of "yum list-sec" / "yum updateinfo list".
+class Base(rpmkit.updateinfo.base.Base):
 
-    :param root: RPM DB root dir in absolute path
-    :param repos: List of Yum repos to enable
-    :param disabled_repos: List of Yum repos to disable
-    :param timeout: yum execution timeout
+    def __init__(self, root='/', repos=[], disabled_repos=['*'], workdir=None,
+                 timeout=None, **kwargs):
+        """
+        :param root: RPM DB root dir
+        :param repos: A list of repos to enable
+        :param disabled_repos: A list of repos to disable
+        :param workdir: Working dir to save logs and results
 
-    :return: List of dicts of errata info
-    """
-    return list(list_errata_g(root, _mk_repo_opts(repos, disabled_repos),
-                              timeout))
+        >>> base = Base()
+        """
+        super(Base, self).__init__(root, repos, disabled_repos, workdir,
+                                   **kwargs)
+        self.repo_opts = _mk_repo_opts(repos, disabled_repos)
+        self.ready = False
 
+    def prepare(self):
+        if self.ready:
+            return
 
-def list_updates(root, repos=[], disabled_repos=['*'], timeout=None):
-    """
-    Wrapper function of "yum check-update".
+        if self.root == '/':
+            self.workdir = tempfile.mkdtemp(dir="/tmp", prefix=NAME)
+        else:
+            if not os.path.exists(self.workdir):
+                os.makedirs(self.workdir)
 
-    :param root: RPM DB root dir in absolute path
-    :param repos: List of Yum repos to enable
-    :param disabled_repos: List of Yum repos to disable
-    :param timeout: yum execution timeout
+        self.ready = True
 
-    :return: List of dicts of errata info
-    """
-    return list(p for p in list_updates_g(root,
-                                          _mk_repo_opts(repos, disabled_repos),
-                                          timeout) if p)
+    def run(self, command, opts=[], fakeroot=False):
+        """
+        Run yum command and get results.
 
+        :param command: Yum sub command, ex. 'list-sec'
+        :param extra_opts: Extra options for yum, e.g. "--skip-broken ..."
+        """
+        self.prepare()
 
-def download_updates(root, repos=[], disabled_repos=['*'], downloaddir=None):
-    """
-    Wrapper function of "yum --downloadonly --downloaddir=... update ...".
+        if fakeroot:
+            cs = _is_root() and [] or ["fakeroot"]  # to avoid unneeded check.
 
-    :param root: RPM DB root dir in absolute path
-    :param repos: List of Yum repos to enable
-    :param disabled_repos: List of Yum repos to disable
-    :param downloaddir: Dir to save downloaded RPMs.
-        ``root``/var/cache/.../packages/ will be used if it's None.
-    :param timeout: yum execution timeout
+        if self.root == '/':  # It will refer the system's RPM DB.
+            # NOTE: Users except for root cannot make $root/var/log and write
+            # logs so try just logging out to stdout and stderr.
+            cs.extend(opts + [command])
+            (out, err, rc) = _run(cs)
+        else:
+            cs.extend(["--installroot=%s" % self.root] + opts + [command])
 
-    :return: True if success else False
-    """
-    opts = _mk_repo_opts(repos, disabled_repos)
-    opts.append("--skip-broken")
+            command_s = command.replace(' ', '_')
+            outpath = os.path.join(self.workdir, "yum_%s_log.txt" % command_s)
+            errpath = os.path.join(self.workdir,
+                                   "yum_%s_log.err.txt" % command_s)
 
-    cs = _is_root() and [] or ["fakeroot"]  # to avoid unneeded check.
-    cs.extend(["yum", "--installroot=" + root] + opts +
-              ["--downloadonly", "update", "-y"])
+            with open(outpath, 'w') as out:
+                with open(errpath, 'w') as err:
+                    (out, err, rc) = _run(cs, out.write, err.write)
 
-    if downloaddir is None:
-        # This is not used and does not need to be a real path.
-        downloaddir = os.path.join(root, "var/cache/.../<repo_id>/packages/")
-    else:
-        if not os.path.exists(downloaddir):
-            os.makedirs(downloaddir)
+        return (out, err, rc)
 
-        cs.append("--downloaddir=" + downloaddir)
+    def list_errata_g(self, extra_opts=[]):
+        """
+        A generator to return errata found in the output result of 'yum
+        list-sec' or 'yum updateinfo list' one by one.
+        """
+        (outs, errs, rc) = self.run("list-sec", self.repo_opts + extra_opts)
 
-    # TODO: Should these have unique filenames ?
-    outdir = logdir(root)
-    outpath = os.path.join(outdir, "download_updates_log.txt")
-    errpath = os.path.join(outdir, "download_updates_log.err.txt")
+        if rc == 0:
+            for line in outs:
+                if _is_errata_line(line):
+                    yield _parse_errata_line(line)
+                else:
+                    LOG.debug("Not errata line: %s" % line.rstrip())
+        else:
+            LOG.error("Failed to fetch the errata list: %s" % ''.join(errs))
 
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
+    def list_updates_g(self, extra_opts=[]):
+        """
+        A generator to return updates found in the output result of
+        'yum check-update'.
+        """
+        (outs, errs, rc) = self.run("check-update",
+                                    self.repo_opts + extra_opts)
 
-    LOG.info("Update RPMs will be donwloaded under: " + downloaddir)
+        # NOTE: 'yum check-update' looks returning non-zero exit code
+        # (e.g. 100) when there are any updates found.
+        #
+        # see also: /usr/share/yum-cli/yummain.py#main
+        if rc in (0, 100):
+            for line in outs:
+                if line:
+                    line = line.rstrip()
+                    p = _parse_update_line(line)
+                    if p:
+                        yield p
+                    else:
+                        LOG.debug("Not errata line: %s" % line)
+        else:
+            LOG.error("Failed to fetch the updates list: %s" % ''.join(errs))
 
-    with open(outpath, 'w') as out:
-        with open(errpath, 'w') as err:
-            (_out, err, rc) = RUS.run(cs, out.write, err.write,
-                                      env={"LANG": "C"})
+    def list_installed(self):
+        raise NotImplementedError("list_installed")
 
-    # It seems that 'yum --downloadonly ..' exits with exit code 1 if any
-    # downloads found. So we have to take of such cases also.
-    if rc == 0:
-        LOG.info("No downloads.")
-    elif rc == 1:
-        LOG.info("Download: OK")
-    else:
-        LOG.error("Failed to download udpates: " + err)
+    def list_errata(self):
+        """
+        Method wraps "yum list-sec" / "yum updateinfo list".
 
-    return rc in (0, 1)
+        :return: List of dicts of errata info
+        """
+        return list(self.list_errata_g())
+
+    def list_updates(self):
+        """
+        Method wraps "yum check-update".
+
+        :return: List of dicts of errata info
+        """
+        return list(itertools.ifilter(None, self.list_updates_g()))
+
+    def download_updates(self, downloaddir=None):
+        """
+        Method wraps "yum --downloadonly --downloaddir=... update ...".
+
+        :param downloaddir: Dir to save downloaded RPMs.
+            ``root``/var/cache/.../packages/ will be used if it's None.
+
+        :return: True if success else False
+        """
+        opts = self.repo_opts + ["--downloadonly", "--skip-broken", "-y"]
+
+        if downloaddir is None:
+            # This is not used and does not need to be a real path.
+            downloaddir = os.path.join(self.root,
+                                       "var/cache/.../<repo_id>/packages/")
+        else:
+            if not os.path.exists(downloaddir):
+                os.makedirs(downloaddir)
+
+            opts.append("--downloaddir=" + downloaddir)
+
+        LOG.info("Update RPMs will be donwloaded under: " + downloaddir)
+        (out, err, rc) = self.run("update", opts, fakeroot=True)
+
+        # It seems that 'yum --downloadonly ..' exits with exit code 1 if any
+        # downloads found. So we have to take of such cases also.
+        if rc == 0:
+            LOG.info("No downloads.")
+        elif rc == 1:
+            LOG.info("Download: OK")
+        else:
+            LOG.error("Failed to download udpates: " + err)
+
+        return rc in (0, 1)
 
 # vim:sw=4:ts=4:et:
