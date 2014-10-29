@@ -6,6 +6,7 @@
 import rpmkit.updateinfo.base
 import rpmkit.utils as RU
 
+import collections
 import itertools
 import logging
 import os.path
@@ -88,6 +89,9 @@ def _to_pkg(pkg, extras=[]):
             originally_from = "Unknown"
     else:
         originally_from = "TBD"
+
+    if isinstance(pkg, collections.Mapping):
+        return pkg
 
     return rpmkit.updateinfo.base.Package(pkg.name, pkg.version, pkg.release,
                                           pkg.arch, pkg.epoch, pkg.summary,
@@ -198,7 +202,7 @@ class Base(rpmkit.updateinfo.base.Base):
         self._load_repos()
 
         ygh = self.base.doPackageLists(pkgnarrow)
-        xs = getattr(ygh, pkgnarrow, [])
+        xs = [_to_pkg(p) for p in getattr(ygh, pkgnarrow, [])]
         self.packages[pkgnarrow] = xs
 
         return xs
