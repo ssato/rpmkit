@@ -83,6 +83,8 @@ def _notice_to_errata(notice):
     errata["packages"] = RU.concat(nps["packages"] for nps in
                                    nmd.get("pkglist", []))
 
+    errata["package_names"] = ','.join(RU.uniq(p["name"] for p
+                                               in errata["packages"]))
     errata["url"] = rpmkit.updateinfo.utils.errata_url(errata["advisory"])
 
     return errata
