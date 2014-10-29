@@ -150,9 +150,8 @@ def fetch_and_dump_errata_summary(root, workdir, repos=[],
     :param repos: List of yum repos to fetch errata info
     :param filename: Output file basename
     """
-    es = sorted((e for e in RUY.list_errata(root, repos)),
-                key=itemgetter("advisory"))
-
+    base = RUY.Base(root, repos, workdir=workdir)
+    es = sorted((e for e in base.list_errata()), key=itemgetter("advisory"))
     es = [_mkedic(e, ps) for e, ps in U.groupby_key(es, itemgetter(*ekeys))]
     U.json_dump(es, errata_summary_path(workdir, filename))
 
