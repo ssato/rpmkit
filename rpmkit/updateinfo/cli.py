@@ -119,8 +119,7 @@ def add_cvss_for_errata(errata, cve_cvss_map={}):
     if not adv.startswith("RHSA") or not cves:
         return errata
 
-    errata["cves"] = [get_cve_details(cve, cve_cvss_map) for cve in cves]
-
+    errata["cves"] = [get_cve_details(cve["id"], cve_cvss_map) for cve in cves]
     return errata
 
 
@@ -395,6 +394,12 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
+def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
+                backends=BACKENDS):
+    LOG.info("Try backend: %s", backend)
+    return backends.get(backend, fallback)
+
+
 def modmain(root, workdir=None, repos=[], backend="yumbase", verbose=False,
             backends=BACKENDS, **kwargs):
     """
@@ -417,17 +422,18 @@ def modmain(root, workdir=None, repos=[], backend="yumbase", verbose=False,
             LOG.info("Creating working dir: %s", workdir)
             os.makedirs(workdir)
 
-    backend = backends.get(backend, rpmkit.updateinfo.yumbase.Base)
-    base = backend(root, repos, workdir=workdir)
+    backend = get_backend(backend)(root, repos, workdir=workdir)
+    LOG.debug("root=%s, repos=%s, workdir=%s", root, ','.join(repos),
+              workdir)
 
     LOG.info("Dump Installed RPMs list loaded from: %s", base.root)
-    ips = base.list_installed(mark_extras=True)
+    ips = base.list_installed()
     LOG.info("%d Installed RPMs found", len(ips))
     U.json_dump(dict(data=ips, ), rpm_list_path(base.workdir))
 
     LOG.info("Dump Errata list...")
-    cvemap = mk_cve_vs_cvss_map()
-    es = [add_cvss_for_errata(e, cvemap) for e in base.list_errata()]
+    es = [add_cvss_for_errata(e, mk_cve_vs_cvss_map()) for e
+          in base.list_errata()]
     LOG.info("%d Errata found for installed rpms", len(es))
     U.json_dump(dict(data=es, ), errata_list_path(base.workdir))
 
@@ -451,7 +457,7 @@ def option_parser():
     p.set_defaults(**defaults)
 
     p.add_option("-w", "--workdir", help="Working dir [%default]")
-    p.add_option("", "--repo", dest="repos",
+    p.add_option("", "--repo", dest="repos", action="append",
                  help="Comma separated yum repos to fetch errata info, "
                       "e.g. 'rhel-x86_64-server-6'. Please note that any "
                       "other repos are disabled if this option was set.")
