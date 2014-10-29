@@ -15,7 +15,7 @@ import yum
 LOG = logging.getLogger("rpmkit.updateinfo.yumbase")
 
 _REPO_ACTIONS = (_REPO_ENABLE, _REPO_DISABLE) = ("enable", "disable")
-_PKG_NARROWS = ("installed", "updates", "obsoletes")
+_PKG_NARROWS = ["installed", "updates", "obsoletes"]
 
 
 def noop(*args, **kwargs):
@@ -96,7 +96,8 @@ def _to_pkg(pkg, extras=[]):
 
 class Base(rpmkit.updateinfo.base.Base):
 
-    def __init__(self, root, repos=[], disabled_repos=['*'], **kwargs):
+    def __init__(self, root='/', repos=[], disabled_repos=['*'],
+                 load_available_repos=True, **kwargs):
         """
         Create an initialized yum.YumBase instance.
         Created instance has no enabled repos by default.
@@ -104,10 +105,12 @@ class Base(rpmkit.updateinfo.base.Base):
         :param root: RPM DB root dir in absolute path
         :param repos: List of Yum repos to enable
         :param disabled_repos: List of Yum repos to disable
+        :param load_available_repos: It will populates the package sack from
+            the repositories if True
 
         >>> import os.path
         >>> if os.path.exists("/etc/redhat-release"):
-        ...     base = Base('/')
+        ...     base = Base()
         ...     assert isinstance(base.base, yum.YumBase)
         ...     base.base.repos.listEnabled() == []
         True
@@ -125,6 +128,8 @@ class Base(rpmkit.updateinfo.base.Base):
         self._activate_repos()
 
         self.packages = dict()
+        self.load_available_repos = load_available_repos
+        self.exclude_extras = True
 
     def _toggle_repos(self, repos, action):
         """
@@ -154,7 +159,15 @@ class Base(rpmkit.updateinfo.base.Base):
         self._toggle_repos(self.disabled_repos, "disable")
         self._toggle_repos(self.repos, "enable")
 
-    def list_packages(self, pkgnarrows=None, extras=[]):
+    def _load_available_repos(self):
+        """
+        Populates the package sack from the repositories.  Network access
+        happens if any non-local repos activated and it will take some time
+        to finish.
+        """
+        self.base.repos.populateSack()
+
+    def list_packages(self, *pkgnarrows):
         """
         List installed or update RPMs similar to
         "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
@@ -171,44 +184,32 @@ class Base(rpmkit.updateinfo.base.Base):
         ...         assert isinstance(pkgs[narrow], list)
         ...     assert pkgs["installed"]
         """
+        if self.load_available_repos:
+            self._load_available_repos()
+
         if not pkgnarrows:
             pkgnarrows = _PKG_NARROWS
 
-        if len(pkgnarrows) > 1 or pkgnarrows[0] != "installed":
-            self.base.repos.populateSack()  # It takes some time.
+        if self.exclude_extras and not self.packages.get("extras"):
+            extras = self.base.doPackageLists("extras")["extras"]
+            self.packages["extras"] = extras
 
         for pn in pkgnarrows:
             ygh = self.base.doPackageLists(pn)
-            self.packages[pn] = [_to_pkg(p, extras) for p in getattr(ygh, pn)]
+            self.packages[pn] = [_to_pkg(p, self.packages.get("extras", []))
+                                 for p in getattr(ygh, pn)]
 
-        return self.packages
+        if len(pkgnarrows) == 1:
+            return self.packages[pkgnarrows[0]]
+        else:
+            return self.packages
 
-    def list_extras(self):
-        """
-        Method to mimic "yum list extras" to list the packages installed on the
-        system that are not available in any yum repository listed in the
-        config file.
-
-        :return: List of dicts of extra RPMs info
-        """
-        eps = self.packages.get("extras", [])
-        return eps if eps else self.list_packages(("extras", ))["extras"]
-
-    def list_installed(self, mark_extras=False):
+    def list_installed(self):
         """
         :return: List of dicts of installed RPMs info
         """
         ips = self.packages.get("installed", [])
-        if ips:
-            return ips
-
-        if mark_extras:
-            extras = self.list_packages(("extras", ))["extras"]
-            ips = self.list_packages(("installed", ), extras)["installed"]
-        else:
-            ips = self.list_packages(("installed", ))["installed"]
-
-        return ips
+        return ips if ips else self.list_packages("installed")
 
     def list_updates(self, obsoletes=True):
         """
