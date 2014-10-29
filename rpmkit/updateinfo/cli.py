@@ -13,13 +13,13 @@ from rpmkit.globals import _
 import rpmkit.updateinfo.yumwrapper
 import rpmkit.updateinfo.yumbase
 import rpmkit.updateinfo.dnfbase
-
 import rpmkit.updateinfo.utils
 import rpmkit.memoize
 import rpmkit.utils as U
 import rpmkit.swapi
 
 import logging
+import operator
 import optparse
 import os
 import os.path
@@ -35,7 +35,7 @@ _UPDATES_LIST_FILE = "updates.json"
 _RPM_KEYS = ("name", "version", "release", "epoch", "arch", "summary",
              "vendor", "buildhost")
 _ERRATA_KEYS = ("advisory", "type", "severity")
-_UPDATE_KEYS = ("name", "version", "release", "epoch", "arch", "advisories")
+_UPDATE_KEYS = ("name", "version", "release", "epoch", "arch")
 _BZ_KEYS = ("bug_id", "summary", "priority", "severity")
 
 BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper.Base,
@@ -229,7 +229,8 @@ def classify_errata(errata):
     return _ERRATA_TYPES_MAP[errata["advisory"][2:4]]
 
 
-def _make_summary_dataset(workdir, rpms, errata, updates):
+def _make_summary_dataset(workdir, rpms, errata, updates, imp_rhsas=[],
+                          imp_rhbas=[], score=4.0):
     """
     :param rpms: List of RPM info.
     :param errata: List of Errata info.
@@ -245,6 +246,7 @@ def _make_summary_dataset(workdir, rpms, errata, updates):
 
     U.json_dump(dict(rhsa=rhsa, rhsa_cri=rhsa_cri, rhsa_imp=rhsa_imp,
                      rhba=rhba, rhea=rhea,
+                     important_rhsa=imp_rhsas, important_rhba=imp_rhbas,
                      rpmnames_need_updates=rpmnames_need_updates),
                 os.path.join(workdir, "summary.json"))
 
@@ -256,6 +258,9 @@ def _make_summary_dataset(workdir, rpms, errata, updates):
           (_("# of Installed RPMs"), len(rpms), "", ""),
           (_("# of RPMs (names) need to be updated"),
            len(rpmnames_need_updates), "", ""),
+          (_("# of 'Important' Security Errata (CVSS Score >= %.1f)" % score),
+           len(imp_rhsas), "", ""),
+          (_("# of 'Important' Bug Errata (keyword)"), len(imp_rhbas), "", ""),
           (_("The rate of RPMs (names) need any updates / RPMs (names) [%]"),
            100 * len(rpmnames_need_updates) / len(rpmnames), "", "")]
 
@@ -363,13 +368,18 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
         than the date ``start_date``. Along with this, detailed errata info
         will be gotten if this date was not None and a valid date strings.
     """
-    datasets = [_make_summary_dataset(workdir, rpms, errata, updates),
-                _make_dataset(rpms, rpmkeys, _("Installed RPMs")),
+    rpms = sorted(rpms, key=operator.itemgetter("name", "epoch", "version",
+                                                "release"))
+    errata = sorted(errata, cmp=rpmkit.updateinfo.utils.cmp_errata)
+    updates = sorted(updates, key=operator.itemgetter("name", "epoch",
+                                                      "version", "release"))
+
+    datasets = [_make_dataset(rpms, rpmkeys, _("Installed RPMs")),
                 _make_dataset(errata, ekeys + ("package_names", ),
                               _("Errata")),
                 _make_dataset(updates, ukeys, _("Update RPMs"))]
 
-    extra_ds = []
+    special_ds = []
 
     eds = _make_dataset(errata, dekeys, _("Errata Details"))
 
@@ -384,10 +394,13 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
     ibeds_keys = ("advisory", "description", "url")
     ibeds = _make_dataset(ibes, ibeds_keys, ibeds_title)
 
-    extra_ds = [ibeds, cseds, eds]
+    summary_ds = _make_summary_dataset(workdir, rpms, errata, updates,
+                                       cses, ibes)
+
+    special_ds = [summary_ds, cseds, ibeds, eds]
 
     if start_date is None:
-        book = tablib.Databook(datasets + extra_ds)
+        book = tablib.Databook(special_ds + datasets)
     else:
         es = [e for e in errata if _is_newer_errata(e, start_date)]
         eds2 = _make_dataset(es, dekeys,
@@ -402,8 +415,8 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
         es2 = _make_dataset(errata, ekeys + ("package_names", ),
                             _("Errata (%s ~)") % start_date)
 
-        extra_ds = [es2, eds2, cseds]
-        book = tablib.Databook(extra_ds + datasets)
+        special_ds = [es2, eds2, cseds]
+        book = tablib.Databook(special_ds + datasets)
 
     with open(dataset_file_path(workdir), 'wb') as out:
         out.write(book.xls)
