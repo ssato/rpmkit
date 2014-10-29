@@ -193,6 +193,7 @@ class Base(rpmkit.updateinfo.base.Base):
         if self.load_available_repos and not self.populated:
             LOG.debug("Loading yum repo metadata from repos: %s",
                       ','.join(r.id for r in self.base.repos.listEnabled()))
+            self.base._getTs()
             self.base._getSacks()
             self.base._getUpdates()
             self.populated = True
