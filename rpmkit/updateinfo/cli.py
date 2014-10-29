@@ -391,7 +391,7 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
     ibes = [e for e in errata if any(kw in e["description"] for kw
                                      in keywords)]
     ibeds_title = _("Bug Errata selected by keywords")
-    ibeds_keys = ("advisory", "description", "url")
+    ibeds_keys = ("advisory", "synopsis", "url")
     ibeds = _make_dataset(ibes, ibeds_keys, ibeds_title)
 
     summary_ds = _make_summary_dataset(workdir, rpms, errata, updates,
