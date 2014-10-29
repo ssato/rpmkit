@@ -4,6 +4,7 @@
 # License: GPLv3+
 #
 import rpmkit.updateinfo.base
+import rpmkit.updateinfo.utils
 import rpmkit.utils as RU
 
 import collections
@@ -81,6 +82,9 @@ def _notice_to_errata(notice):
 
     errata["packages"] = RU.concat(nps["packages"] for nps in
                                    nmd.get("pkglist", []))
+
+    errata["url"] = rpmkit.updateinfo.utils.errata_url(errata["advisory"])
+
     return errata
 
 
