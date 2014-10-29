@@ -87,23 +87,26 @@ def mk_cve_vs_cvss_map():
 @rpmkit.memoize.memoize
 def get_cve_details(cve, cve_cvss_map={}):
     """
-    :param cve: CVE ID, ex. CVE-2014-3660
+    :param cve: A dict represents CVE :: {id:, url:, ...}
     :param cve_cvss_map: A dict :: {cve: cve_and_cvss_data}
 
     :return: A dict represents CVE and its CVSS metrics
     """
-    dcve = cve_cvss_map.get(cve)
+    cveid = cve.get("id", cve.get("cve"))
+    dcve = cve_cvss_map.get(cveid)
     if dcve:
-        return dcve
+        cve.update(**dcve)
+        return cve
 
-    dcve = rpmkit.swapi.call("swapi.cve.getCvss", [cve])
+    dcve = rpmkit.swapi.call("swapi.cve.getCvss", [cveid])
     if dcve:
         dcve = dcve[0]  # :: dict
     else:
-        LOG.warn("Could not get CVSS metrics of %s", cve)
-        dcve = dict(cve=cve, )
+        LOG.warn("Could not get CVSS metrics of %s", cveid)
+        dcve = dict(cve=cveid, )
 
-    return dcve
+    cve.update(**dcve)
+    return cve
 
 
 def add_cvss_for_errata(errata, cve_cvss_map={}):
@@ -116,10 +119,10 @@ def add_cvss_for_errata(errata, cve_cvss_map={}):
     adv = errata["advisory"]
     cves = errata.get("cves", [])
 
-    if not adv.startswith("RHSA") or not cves:
+    if not cves:
         return errata
 
-    errata["cves"] = [get_cve_details(cve["id"], cve_cvss_map) for cve in cves]
+    errata["cves"] = [get_cve_details(cve, cve_cvss_map) for cve in cves]
     return errata
 
 
@@ -139,6 +142,8 @@ def _fmt_cvess(cves):
         cves = [_fmt_cve(c) % c for c in cves]
     except KeyError:
         pass
+    except Exception as e:
+        raise RuntimeError("Wrong CVEs: %s, exc=%s" % (str(cves), str(e)))
 
     return cves
 
@@ -166,7 +171,10 @@ def _fmt_bzs(bzs):
 def _make_cell_data(x, key, default="N/A"):
     if key == "cves":
         cves = x.get("cves", [])
-        return ", ".join(_fmt_cvess(cves)) if cves else default
+        try:
+            return ", ".join(_fmt_cvess(cves)) if cves else default
+        except Exception as e:
+            raise RuntimeError("Wrong CVEs: %s, exc=%s" % (str(cves), str(e)))
 
     elif key == "bzs":
         bzs = x.get("bzs", [])
