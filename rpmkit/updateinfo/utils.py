@@ -26,6 +26,13 @@ try:
 except SyntaxError:  # Older python (2.4.x in RHEL 5) doesn't like the above.
     _MODE_RO = eval('0444')
 
+# cmp is missing in python >= 3.0.
+try:
+    cmp
+except NameError:
+    def cmp(a, b):
+        return (a > b) - (a < b)
+
 RPMDB_SUBDIR = "var/lib/rpm"
 
 
@@ -152,5 +159,48 @@ def errata_url(advisory):
         advisory = advisory[:-2]
 
     return "http://rhn.redhat.com/errata/%s.html" % advisory.replace(':', '-')
+
+
+RHSA_SEV_MAP = dict(Critical=0, Important=1, Moderate=2, Low=3)
+
+
+def rhsa_sev_to_int(sev, sevmap=RHSA_SEV_MAP):
+    return sevmap.get(sev, 100)
+
+
+def errata_type_to_int(adv):
+    if adv.startswith("RHSA"):
+        return 0
+    elif adv.startswith("RHBA"):
+        return 1
+    else:
+        return 2
+
+
+def cmp_errata(lhs, rhs):
+    """
+    :param lhs: A dict represents errata info
+    :param rhs: Likewise
+
+    >>> lhs = dict(advisory="RHSA-2009:1238", severity="Important")
+    >>> rhs = dict(advisory="RHSA-2009:1364", severity="Low")
+    >>> cmp_errata(lhs, rhs)
+    -1
+    >>> rhs2 = dict(advisory="RHBA-2009:1403", )
+    >>> cmp_errata(lhs, rhs2)
+    -1
+    """
+    lhs_adv = lhs["advisory"]
+    rhs_adv = rhs["advisory"]
+
+    if lhs_adv[:4] == rhs_adv[:4]:
+        lhs_sev = lhs.get("severity")
+        if lhs_sev:
+            rhs_sev = rhs.get("severity")
+            return cmp(rhsa_sev_to_int(lhs_sev), rhsa_sev_to_int(rhs_sev))
+
+        return cmp(lhs_adv, rhs_adv)
+    else:
+        return cmp(errata_type_to_int(lhs_adv), errata_type_to_int(rhs_adv))
 
 # vim:sw=4:ts=4:et:
