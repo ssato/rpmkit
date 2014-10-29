@@ -116,9 +116,7 @@ def add_cvss_for_errata(errata, cve_cvss_map={}):
     :param errata: Basic errata info, {advisory, type, severity, ...}
     :param cve_cvss_map: A dict :: {cve: cve_and_cvss_data}
     """
-    adv = errata["advisory"]
     cves = errata.get("cves", [])
-
     if not cves:
         return errata
 
