@@ -24,6 +24,19 @@ def noop(*args, **kwargs):
     pass
 
 
+RHBZ_URL_BASE = "https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id="
+
+
+def normalize_bz(bz, urlbase=RHBZ_URL_BASE):
+    """
+    Normalize bz dict came from updateinfo.
+    """
+    bz["summary"] = bz["title"]
+    bz["url"] = bz.get("href", urlbase + str(bz["id"]))
+
+    return bz
+
+
 def _notice_to_errata(notice):
     """
     Notice metadata examples:
@@ -60,8 +73,9 @@ def _notice_to_errata(notice):
                   issue_date=nmd["issued"], solution=nmd["solution"],
                   type=nmd["type"], severity=nmd.get("severity", "N/A"))
 
-    errata["bzs"] = filter(lambda r: r.get("type") == "bugzilla",
-                           nmd.get("references", []))
+    errata["bzs"] = [normalize_bz(bz) for bz in
+                     filter(lambda r: r.get("type") == "bugzilla",
+                            nmd.get("references", []))]
     errata["cves"] = filter(lambda r: r.get("type") == "cve",
                             nmd.get("references", []))
 
