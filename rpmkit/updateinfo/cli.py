@@ -42,6 +42,8 @@ BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper.Base,
                 yumbase=rpmkit.updateinfo.yumbase.Base,
                 dnfbase=rpmkit.updateinfo.dnfbase.Base)
 
+RHBA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault"]
+
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
     """
@@ -353,7 +355,8 @@ _CVE_SECERRATA_KEYS = ["advisory", "severity", "cves", "synopsis",
 def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
                   ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
                   ukeys=_UPDATE_KEYS, start_date=None,
-                  csekeys=_CVE_SECERRATA_KEYS, cvss_score=4.0):
+                  csekeys=_CVE_SECERRATA_KEYS, cvss_score=4.0,
+                  keywords=RHBA_KEYWORDS):
     """
     :param workdir: Working dir to dump the result
     :param start_date: Add an optional worksheet to list only errata newer
@@ -375,7 +378,13 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
     cseds_title = _("Sec. Errata CVSS >= %.1f") % cvss_score
     cseds = _make_dataset(cses, csekeys, cseds_title)
 
-    extra_ds = [eds, cseds]
+    ibes = [e for e in errata if any(kw in e["description"] for kw
+                                     in keywords)]
+    ibeds_title = _("Bug Errata selected by keywords")
+    ibeds_keys = ("advisory", "description", "url")
+    ibeds = _make_dataset(ibes, ibeds_keys, ibeds_title)
+
+    extra_ds = [ibeds, cseds, eds]
 
     if start_date is None:
         book = tablib.Databook(datasets + extra_ds)
@@ -407,7 +416,7 @@ def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
 
 
 def modmain(root, workdir=None, repos=[], backend="yumbase", verbose=False,
-            backends=BACKENDS, **kwargs):
+            backends=BACKENDS, keywords=RHBA_KEYWORDS, **kwargs):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
@@ -454,7 +463,7 @@ def modmain(root, workdir=None, repos=[], backend="yumbase", verbose=False,
 
 def option_parser():
     defaults = dict(path=None, workdir=None, repos=[], backend="yumwrapper",
-                    verbose=False)
+                    keywords=RHBA_KEYWORDS, verbose=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_ROOT
 
@@ -470,6 +479,10 @@ def option_parser():
     p.add_option("-B", "--backend", choices=BACKENDS.keys(),
                  help="Specify backend to get updates and errata. Choices: "
                       "%s [%%default]" % ', '.join(BACKENDS.keys()))
+    p.add_option("-k", "--keyword", dest="keywords", action="append",
+                 help="Keyword to select more 'important' bug errata. "
+                      "You can specify this multiple times. "
+                      "[%s]" % ', '.join(RHBA_KEYWORDS))
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -483,7 +496,7 @@ def main():
     assert os.path.exists(root), "Not found RPM DB Root: %s" % root
 
     modmain(root, options.workdir, repos=options.repos,
-            verbose=options.verbose)
+            verbose=options.verbose, keywords=options.keywords)
 
 
 if __name__ == '__main__':
