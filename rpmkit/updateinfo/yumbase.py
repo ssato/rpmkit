@@ -181,8 +181,8 @@ class Base(rpmkit.updateinfo.base.Base):
         it's common way to disable all repos w/ glob pattern repo name *and
         then* enable specific repos.
         """
-        self._toggle_repos(self.disabled_repos, "disable")
-        self._toggle_repos(self.repos, "enable")
+        self._toggle_repos(self.disabled_repos, _REPO_DISABLE)
+        self._toggle_repos(self.repos, _REPO_ENABLE)
 
     def _load_repos(self):
         """
