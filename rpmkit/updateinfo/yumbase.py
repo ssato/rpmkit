@@ -15,7 +15,8 @@ import yum
 LOG = logging.getLogger("rpmkit.updateinfo.yumbase")
 
 _REPO_ACTIONS = (_REPO_ENABLE, _REPO_DISABLE) = ("enable", "disable")
-_PKG_NARROWS = ["installed", "updates", "obsoletes"]
+_PKG_NARROWS = ["installed", "available", "updates", "extras", "obsoletes",
+                "recent"]
 
 
 def noop(*args, **kwargs):
@@ -129,7 +130,7 @@ class Base(rpmkit.updateinfo.base.Base):
 
         self.packages = dict()
         self.load_available_repos = load_available_repos
-        self.exclude_extras = True
+        self.populated = False
 
     def _toggle_repos(self, repos, action):
         """
@@ -159,57 +160,62 @@ class Base(rpmkit.updateinfo.base.Base):
         self._toggle_repos(self.disabled_repos, "disable")
         self._toggle_repos(self.repos, "enable")
 
-    def _load_available_repos(self):
+    def _load_repos(self):
         """
         Populates the package sack from the repositories.  Network access
         happens if any non-local repos activated and it will take some time
         to finish.
         """
-        self.base.repos.populateSack()
+        if self.load_available_repos and not self.populated:
+            LOG.debug("Loading yum repo metadata from repos: %s",
+                      ','.join(r.id for r in self.base.repos.listEnabled()))
+            self.base._getSacks()
+            self.base._getUpdates()
+            self.populated = True
 
-    def list_packages(self, *pkgnarrows):
+    def list_packages(self, pkgnarrow="installed"):
         """
         List installed or update RPMs similar to
         "repoquery --pkgnarrow=updates --all --plugins --qf '%{nevra}'".
 
-        :param pkgnarrows: A list of package list narrowing factors
-
+        :param pkgnarrow: Package list narrowing factor
         :return: A dict contains lists of dicts of packages
+
+        TODO: Find out better and correct ways to activate repo and sacks.
 
         >>> import os.path
         >>> if os.path.exists("/etc/redhat-release"):
-        ...     base = Base('/')
+        ...     base = Base()
         ...     pkgs = base.list_packages()
-        ...     for narrow in _PKG_NARROWS:
-        ...         assert isinstance(pkgs[narrow], list)
-        ...     assert pkgs["installed"]
+        ...     assert isinstance(pkgs, list)
         """
-        if self.load_available_repos:
-            self._load_available_repos()
+        assert pkgnarrow in _PKG_NARROWS, "Invalid pkgnarrow: " + pkgnarrow
 
-        if not pkgnarrows:
-            pkgnarrows = _PKG_NARROWS
+        xs = self.packages.get(pkgnarrow)
+        if xs:
+            return xs
 
-        if self.exclude_extras and not self.packages.get("extras"):
-            extras = self.base.doPackageLists("extras")["extras"]
-            self.packages["extras"] = extras
+        self._load_repos()
 
-        for pn in pkgnarrows:
-            ygh = self.base.doPackageLists(pn)
-            self.packages[pn] = [_to_pkg(p, self.packages.get("extras", []))
-                                 for p in getattr(ygh, pn)]
+        ygh = self.base.doPackageLists(pkgnarrow)
+        xs = getattr(ygh, pkgnarrow, [])
+        self.packages[pkgnarrow] = xs
 
-        if len(pkgnarrows) == 1:
-            return self.packages[pkgnarrows[0]]
-        else:
-            return self.packages
+        return xs
 
     def list_installed(self):
         """
         :return: List of dicts of installed RPMs info
+
+        see also: yum.updateinfo.exclude_updates
         """
-        ips = self.packages.get("installed", [])
-        return ips if ips else self.list_packages("installed")
+        extras = self.list_packages("extras")
+
+        ygh = self.base.doPackageLists("installed")
+        ips = [_to_pkg(p, extras) for p in ygh.installed]
+        self.packages["installed"] = ips
+
+        return ips
 
     def list_updates(self, obsoletes=True):
         """
@@ -218,16 +224,13 @@ class Base(rpmkit.updateinfo.base.Base):
         :param obsoletes: Include obsoletes in updates list if True
         :return: List of dicts of update RPMs info
         """
-        ups = self.packages.get("updates", [])
-        obs = self.packages.get("obsoletes", [])
+        ups = self.list_packages("updates")
 
-        if ups and obs and obsoletes:
+        if obsoletes:
+            obs = self.list_packages("obsoletes")
             return ups + obs
-        elif ups and not obsoletes:
+        else:
             return ups
-
-        xs = self.list_packages()
-        return xs["updates"] + xs["obsoletes"] if obsoletes else xs["updates"]
 
     def list_errata(self):
         """
@@ -239,8 +242,7 @@ class Base(rpmkit.updateinfo.base.Base):
 
         :return: A dict contains lists of dicts of errata
         """
-        self.base.repos.populateSack()
-
+        self._load_repos()
         oldpkgtups = [t[1] for t in self.base.up.getUpdatesTuples()]
         npss_g = itertools.ifilter(None,
                                    (self.base.upinfo.get_applicable_notices(o)

@@ -39,14 +39,6 @@ if RUU.is_rhel_or_fedora():
             self.assertTrue(isinstance(self.base.base, TT.yum.YumBase))
             self.assertEquals(self.base.base.repos.listEnabled(), [])
 
-        def test_20_list_packages(self):
-            pkgs = self.base.list_packages()
-
-            for narrow in TT._PKG_NARROWS:
-                self.assertTrue(isinstance(pkgs[narrow], list))
-
-            self.assertNotEquals(pkgs["installed"], [])
-
         def test_30_list_installed(self):
             pkgs = self.base.list_installed()
 
