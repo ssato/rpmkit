@@ -422,7 +422,7 @@ def modmain(root, workdir=None, repos=[], backend="yumbase", verbose=False,
             LOG.info("Creating working dir: %s", workdir)
             os.makedirs(workdir)
 
-    backend = get_backend(backend)(root, repos, workdir=workdir)
+    base = get_backend(backend)(root, repos, workdir=workdir)
     LOG.debug("root=%s, repos=%s, workdir=%s", root, ','.join(repos),
               workdir)
 
