@@ -648,11 +648,14 @@ def shorten_dict_keynames(d, prefix=None):
     if isinstance(d, str):  # FIXME: Dirty hack!
         return d
 
-    if prefix is None:
-        prefix = longest_common_prefix(*(k.lower() for k in d.keys()))
-        LOG.debug("computed prefix='%s'" % prefix)
+    if len(d.keys()) > 1:
+        if prefix is None:
+            prefix = longest_common_prefix(*(k.lower() for k in d.keys()))
+            LOG.debug("computed prefix='%s'" % prefix)
 
-    return dict((k.lower().replace(prefix, ''), v) for k, v in d.iteritems())
+        return dict((k.lower().replace(prefix, ''), v) for k, v in d.iteritems())
+    else:
+        return d
 
 
 def urlread(url, data=None, headers={}):
