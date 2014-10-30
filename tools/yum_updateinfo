@@ -1,0 +1,8 @@
+#! /usr/bin/python -tt
+#
+import rpmkit.updateinfo.cli
+import sys
+
+rpmkit.updateinfo.cli.main(sys.argv)
+
+# vim:sw=4:ts=4:et:
