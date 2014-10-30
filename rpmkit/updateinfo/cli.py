@@ -389,12 +389,18 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
 
     eds = _make_dataset(errata, dekeys, _("Errata Details"))
 
-    cseds_title = _("Sec. Errata CVSS >= %.1f") % cvss_score
+    cseds_title = _("RHSAs - CVSS >= %.1f") % cvss_score
     cses = [e for e in errata if e.get("cves", False) and
             any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
     cseds = _make_dataset(cses, csekeys, cseds_title)
 
-    ibeds_title = _("Bug Errata selected by keywords")
+    ciseds_title = _("Critical or Important RHSAs")
+    cises = [e for e in errata
+            if e.get("severity") in ("Critical", "Important")]
+    cisekeys = ["advisory", "severity", "synopsis", "issue_date", "url"]
+    ciseds = _make_dataset(cises, cisekeys, ciseds_title)
+
+    ibeds_title = _("RHBAs selected by keywords")
     ibes = [e for e in errata if any(kw in e["description"] for kw
                                      in keywords)]
     ibeds_keys = ("advisory", "synopsis", "url")
@@ -403,7 +409,7 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
     summary_ds = _make_summary_dataset(workdir, rpms, errata, updates,
                                        cses, ibes)
 
-    special_ds = [summary_ds, cseds, ibeds, eds]
+    special_ds = [summary_ds, cseds, ciseds, ibeds, eds]
 
     if start_date is None:
         book = tablib.Databook(special_ds + datasets)
@@ -428,14 +434,44 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
         out.write(book.xls)
 
 
+def compute_delta(refdir, errata, updates):
+    """
+    :param refdir: Dir has reference data files: packages.json, errata.json
+        and updates.json
+    :param errata: A list of errata
+    :param updates: A list of update packages
+    """
+    emsg = "Reference %s not found: %s"
+    assert os.path.exists(refdir), emsg % ("data dir", refdir)
+
+    ref_es_file = os.path.join(refdir, "errata.json")
+    ref_us_file = os.path.join(refdir, "updates.json")
+    assert os.path.exists(ref_es_file), emsg % ("errata file", ref_es_file)
+    assert os.path.exists(ref_us_file), emsg % ("updates file", ref_us_file)
+
+    ref_es_data = U.json_load(ref_es_file)
+    ref_us_data = U.json_load(ref_us_file)
+    LOG.info("Loaded reference errata and updates file")
+
+    nevra_keys = ("name", "epoch", "version", "release", "arch")
+    ref_eadvs = U.uniq(e["advisory"] for e in ref_es_data["data"])
+    ref_nevras = U.uniq([p[k] for k in nevra_keys] for p in
+                        ref_us_data["data"])
+
+    return ([e for e in errata if e["advisory"] in ref_eadvs],
+            [u for u in updates if [u[k] for k in nevra_keys]
+             in ref_nevras])
+
+
 def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
                 backends=BACKENDS):
     LOG.info("Try backend: %s", backend)
     return backends.get(backend, fallback)
 
 
-def modmain(root, workdir=None, repos=[], backend="yumbase", verbose=False,
-            backends=BACKENDS, keywords=RHBA_KEYWORDS, **kwargs):
+def modmain(root, workdir=None, repos=[], backend="yumbase",
+            keywords=RHBA_KEYWORDS, refdir=None, verbose=False,
+            backends=BACKENDS, **kwargs):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
@@ -476,13 +512,17 @@ def modmain(root, workdir=None, repos=[], backend="yumbase", verbose=False,
     LOG.info("%d Update RPMs found for installed rpms", len(es))
     U.json_dump(dict(data=us, ), updates_file_path(base.workdir))
 
+    if refdir:
+        LOG.info("Computing delta errata and updates for data in %s", refdir)
+        (es, us) = compute_delta(refdir, es, us)
+
     LOG.info("Dump dataset file from RPMs and Errata data...")
     dump_datasets(workdir, ips, es, us)
 
 
 def option_parser():
     defaults = dict(path=None, workdir=None, repos=[], backend="yumwrapper",
-                    keywords=RHBA_KEYWORDS, verbose=False)
+                    keywords=RHBA_KEYWORDS, refdir=None, verbose=False)
 
     p = optparse.OptionParser("""%prog [Options...] RPMDB_ROOT
 
@@ -502,6 +542,9 @@ def option_parser():
                  help="Keyword to select more 'important' bug errata. "
                       "You can specify this multiple times. "
                       "[%s]" % ', '.join(RHBA_KEYWORDS))
+    p.add_option("-R", "--refdir",
+                 help="Output 'delta' result compared to the data in "
+                      "specified dir")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
 
     return p
@@ -515,7 +558,8 @@ def main():
     assert os.path.exists(root), "Not found RPM DB Root: %s" % root
 
     modmain(root, options.workdir, repos=options.repos,
-            verbose=options.verbose, keywords=options.keywords)
+            keywords=options.keywords, refdir=options.refdir,
+            verbose=options.verbose)
 
 
 if __name__ == '__main__':
