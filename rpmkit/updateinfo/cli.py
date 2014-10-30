@@ -241,6 +241,8 @@ def _make_summary_dataset(workdir, rpms, errata, updates, imp_rhsas=[],
     rhsa = [e for e in errata if classify_errata(e) == "RHSA"]
     rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
     rhsa_imp = [e for e in rhsa if e.get("severity") == "Important"]
+    rhsa_cri_or_imp = [e for e in rhsa
+                       if e.get("severity") in ("Important", "Critical")]
     rhba = [e for e in errata if classify_errata(e) == "RHBA"]
     rhea = [e for e in errata if classify_errata(e) == "RHEA"]
     rpmnames_need_updates = U.uniq(u["name"] for u in updates)
@@ -254,6 +256,8 @@ def _make_summary_dataset(workdir, rpms, errata, updates, imp_rhsas=[],
 
     ds = [(_("# of Security Errata (critical)"), len(rhsa_cri), "", ""),
           (_("# of Security Errata (important)"), len(rhsa_imp), "", ""),
+          (_("# of Security Errata (critical or important)"),
+           len(rhsa_cri_or_imp), "", ""),
           (_("# of Security Errata (all)"), len(rhsa), "", ""),
           (_("# of Bug Errata"), len(rhba), "", ""),
           (_("# of Enhancement Errata"), len(rhea), "-", ""),
@@ -385,14 +389,14 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
 
     eds = _make_dataset(errata, dekeys, _("Errata Details"))
 
+    cseds_title = _("Sec. Errata CVSS >= %.1f") % cvss_score
     cses = [e for e in errata if e.get("cves", False) and
             any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
-    cseds_title = _("Sec. Errata CVSS >= %.1f") % cvss_score
     cseds = _make_dataset(cses, csekeys, cseds_title)
 
+    ibeds_title = _("Bug Errata selected by keywords")
     ibes = [e for e in errata if any(kw in e["description"] for kw
                                      in keywords)]
-    ibeds_title = _("Bug Errata selected by keywords")
     ibeds_keys = ("advisory", "synopsis", "url")
     ibeds = _make_dataset(ibes, ibeds_keys, ibeds_title)
 
