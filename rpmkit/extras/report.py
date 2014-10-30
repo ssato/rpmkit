@@ -19,9 +19,9 @@
 from logging import DEBUG, INFO
 
 import rpmkit.rpmutils as RU
-import rpmkit.yum_surrogate as YS
 import rpmkit.extras.depgraph as RD
 import rpmkit.template as RT
+import rpmkit.updateinfo.subproc as RUS
 
 import codecs
 import logging
@@ -88,7 +88,7 @@ def gen_depgraph_gv(root, workdir, template_paths=_TEMPLATE_PATHS,
     (outlog, errlog) = (os.path.join(workdir, "graphviz_out.log"),
                         os.path.join(workdir, "graphviz_err.log"))
 
-    (out, err, rc) = YS.run("%s -Tsvg -o %s %s" % (engine, output, src))
+    (out, err, rc) = RUS.run("%s -Tsvg -o %s %s" % (engine, output, src))
 
     copen(outlog, 'w').write(out)
     copen(errlog, 'w').write(err)
@@ -169,7 +169,7 @@ def modmain(ppath, workdir=None, template_paths=_TEMPLATE_PATHS,
         ppath = raw_input("Path to the RPM DB 'Packages' > ")
 
     ppath = os.path.normpath(ppath)
-    root = YS.setup_root(ppath, force=True)
+    root = os.path.join(ppath, "var/lib/rpm")
 
     if not workdir:
         workdir = root

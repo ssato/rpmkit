@@ -33,7 +33,7 @@ def failure(cmd, outs, errs, rc):
 
 
 def run_yum_cmd(root, yum_args, *args):
-    (outs, errs, rc) = RUY.run_command(root, yum_args)
+    (outs, errs, rc) = RUY._run(["yum", "--installroot", root, yum_args])
 
     if rc == 0:
         print ''.join(outs)
@@ -82,8 +82,20 @@ Examples:
 """
 
 
-_FORMATABLE_COMMANDS = {"check-update": RUY.list_updates_g,
-                        "list-sec": RUY.list_errata_g}
+def list_errata_g(root, *args):
+    base = RUY.Base(root)
+    for e in base.list_errata_g(args):
+        yield e
+
+
+def list_updates_g(root, *args):
+    base = RUY.Base(root)
+    for u in base.list_updates_g(args):
+        yield u
+
+
+_FORMATABLE_COMMANDS = {"check-update": list_updates_g,
+                        "list-sec": list_errata_g}
 
 
 def option_parser(usage=_USAGE, fmt_cmds=_FORMATABLE_COMMANDS):
@@ -169,7 +181,7 @@ def main(argv=sys.argv, fmtble_cmds=_FORMATABLE_COMMANDS):
         if f is None:
             run_yum_cmd(root, ' '.join(yum_argv))
         else:
-            res = [x for x in f(root)]
+            res = [x for x in f(root, *yum_argv)]
             json.dump(res, sys.stdout, indent=2)
             print
     else:
