@@ -38,6 +38,16 @@ def normalize_bz(bz, urlbase=RHBZ_URL_BASE):
     return bz
 
 
+def normalize_cve(cve):
+    """
+    Normalize cve dict came from updateinfo.
+    """
+    cve["cve"] = cve["id"]
+    cve["url"] = cve["href"]
+
+    return cve
+
+
 def _notice_to_errata(notice):
     """
     Notice metadata examples:
@@ -77,8 +87,9 @@ def _notice_to_errata(notice):
     errata["bzs"] = [normalize_bz(bz) for bz in
                      filter(lambda r: r.get("type") == "bugzilla",
                             nmd.get("references", []))]
-    errata["cves"] = filter(lambda r: r.get("type") == "cve",
-                            nmd.get("references", []))
+    errata["cves"] = [normalize_cve(cve) for cve in
+                      filter(lambda r: r.get("type") == "cve",
+                             nmd.get("references", []))]
 
     errata["packages"] = RU.concat(nps["packages"] for nps in
                                    nmd.get("pkglist", []))

@@ -103,6 +103,8 @@ def get_cve_details(cve, cve_cvss_map={}):
     dcve = rpmkit.swapi.call("swapi.cve.getCvss", [cveid])
     if dcve:
         dcve = dcve[0]  # :: dict
+        dcve["nvd_url"] = dcve["url"]
+        dcve["url"] = cve["url"]
     else:
         LOG.warn("Could not get CVSS metrics of %s", cveid)
         dcve = dict(cve=cveid, )
