@@ -614,6 +614,24 @@ def longest_common_prefix(*args):
     return ''.join(x[0] for x in takewhile(all_eq, izip(*args)))
 
 
+def should_shorten_keys(keys):
+    """
+    >>> should_shorten_keys(("123456", ))
+    False
+    >>> should_shorten_keys(("123456", "1345", "1456"))
+    False
+    >>> should_shorten_keys(("channel_label", "channel_name"))
+    True
+    """
+    if len(keys) > 1:
+        if all('_' in k for k in keys):
+            return True
+        if all('-' in k for k in keys):
+            return True
+
+    return False
+
+
 def shorten_dict_keynames(d, prefix=None):
     """
     It seems that API key names are shortened a bit at a time. The keys having
@@ -648,9 +666,10 @@ def shorten_dict_keynames(d, prefix=None):
     if isinstance(d, str):  # FIXME: Dirty hack!
         return d
 
-    if len(d.keys()) > 1:
+    dkeys = d.keys()
+    if should_shorten_keys(dkeys):
         if prefix is None:
-            prefix = longest_common_prefix(*(k.lower() for k in d.keys()))
+            prefix = longest_common_prefix(*(k.lower() for k in dkeys))
             LOG.debug("computed prefix='%s'" % prefix)
 
         return dict((k.lower().replace(prefix, ''), v) for k, v in d.iteritems())
