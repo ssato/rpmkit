@@ -672,7 +672,8 @@ def shorten_dict_keynames(d, prefix=None):
             prefix = longest_common_prefix(*(k.lower() for k in dkeys))
             LOG.debug("computed prefix='%s'" % prefix)
 
-        return dict((k.lower().replace(prefix, ''), v) for k, v in d.iteritems())
+        return dict((k.lower().replace(prefix, ''), v) for k, v
+                    in d.iteritems())
     else:
         return d
 
