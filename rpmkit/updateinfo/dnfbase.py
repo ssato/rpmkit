@@ -153,23 +153,23 @@ class Base(rpmkit.updateinfo.base.Base):
         # see :method:`run` in :class:`dnf.cli.cli.Cli`.
         base.fill_sack(load_system_repo="auto")
 
-    def list_installed(self):
+    def list_installed_impl(self, **kwargs):
         """
         >>> if os.path.exists("/etc/redhat-release"):
         ...     base = Base(cacheonly=True)
-        ...     ipkgs = base.list_installed()
+        ...     ipkgs = base.list_installed_impl()
         ...     assert len(ipkgs) > 0
         """
         self.prepare()
         return self.base.sack.query().installed().run()
 
-    def list_updates(self, obsoletes=True):
+    def list_updates_impl(self, obsoletes=True, **kwargs):
         """
         :param obsoletes: Include obsoletes in updates list if True
 
         >>> if os.path.exists("/etc/redhat-release"):
         ...     base = Base(repos=['*'], disabled_repos=[], cacheonly=True)
-        ...     xs = base.list_updates()
+        ...     xs = base.list_updates_impl()
         ...     assert isinstance(xs, list), str(xs)
         """
         self.prepare("all")
@@ -181,7 +181,7 @@ class Base(rpmkit.updateinfo.base.Base):
 
         return ups
 
-    def list_errata(self):
+    def list_errata_impl(self, **kwargs):
         """
         TBD.
         """
