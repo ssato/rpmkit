@@ -176,7 +176,9 @@ class Base(rpmkit.updateinfo.base.Base):
         self.load_repos()
 
         # see :method:`check_updates` in :class:`dnf.cli.cli.BaseCli`
-        ups = self.base.check_updates(print_=False).run()
+        ups = self.base.check_updates(print_=False)
+        if not isinstance(ups, list):
+            ups = ups.run()
         # del self.base.ts  # Needed to release RPM DB session ?
 
         return ups
