@@ -6,6 +6,7 @@
 """
 import rpmkit.updateinfo.utils
 
+import collections
 import logging
 import os.path
 
@@ -29,18 +30,40 @@ class Base(object):
         self.workdir = root if workdir is None else workdir
         self.repos = repos
         self.disabled_repos = disabled_repos
+        self.packages = collections.defaultdict(list)
 
     def is_rpmdb_available(self, readonly=False):
         return rpmkit.updateinfo.utils.check_rpmdb_root(self.root, readonly)
 
-    def list_installed(self):
-        return []
+    def list_installed(self, **kwargs):
+        xs = self.packages("installed")
+        if not xs:
+            xs = self.list_installed_impl(**kwargs)
 
-    def list_updates(self):
-        return []
+        return xs
 
-    def list_errata(self):
-        return []
+    def list_updates(self, **kwargs):
+        xs = self.packages("updates")
+        if not xs:
+            xs = self.list_updates_impl(**kwargs)
+
+        return xs
+
+    def list_errata(self, **kwargs):
+        xs = self.packages("errata")
+        if not xs:
+            xs = self.list_errata_impl(**kwargs)
+
+        return xs
+
+    def list_installed_impl(self, **kwargs):
+        raise NotImplementedError("list_installed_impl")
+
+    def list_updates_impl(self, **kwargs):
+        raise NotImplementedError("list_updates_impl")
+
+    def list_errata_impl(self, **kwargs):
+        raise NotImplementedError("list_errata_impl")
 
 
 def may_be_rebuilt(vendor, buildhost):
