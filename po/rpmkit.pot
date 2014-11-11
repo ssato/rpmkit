@@ -1,0 +1,137 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2014-10-31 03:13+JST\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: ENCODING\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:605
+#: ./aux/..//rpmkit/updateinfo/cli.py:257
+msgid "# of Security Errata (critical)"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:606
+#: ./aux/..//rpmkit/updateinfo/cli.py:258
+msgid "# of Security Errata (important)"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:607
+#: ./aux/..//rpmkit/updateinfo/cli.py:261
+msgid "# of Security Errata (all)"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:608
+#: ./aux/..//rpmkit/updateinfo/cli.py:262
+msgid "# of Bug Errata"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:609
+#: ./aux/..//rpmkit/updateinfo/cli.py:263
+msgid "# of Enhancement Errata"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:610
+#: ./aux/..//rpmkit/updateinfo/cli.py:264
+msgid "# of Installed RPMs"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:611
+#: ./aux/..//rpmkit/updateinfo/cli.py:265
+msgid "# of RPMs (names) need to be updated"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:613
+#: ./aux/..//rpmkit/updateinfo/cli.py:270
+msgid "The rate of RPMs (names) need any updates / RPMs (names) [%]"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:617
+#: ./aux/..//rpmkit/updateinfo/cli.py:274
+msgid "Summary"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:618
+#: ./aux/..//rpmkit/updateinfo/cli.py:275
+msgid "comments"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:618
+#: ./aux/..//rpmkit/updateinfo/cli.py:275
+msgid "item"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:618
+#: ./aux/..//rpmkit/updateinfo/cli.py:275
+msgid "rating"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:618
+#: ./aux/..//rpmkit/updateinfo/cli.py:275
+msgid "value"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:716
+#: ./aux/..//rpmkit/extras/updateinfo.py:749
+msgid "Sec. Errata CVSS >= %.1f"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:736
+#: ./aux/..//rpmkit/updateinfo/cli.py:383
+msgid "Installed RPMs"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:738
+#: ./aux/..//rpmkit/updateinfo/cli.py:385
+msgid "Errata"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:739
+#: ./aux/..//rpmkit/updateinfo/cli.py:386
+msgid "Update RPMs"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:745
+#: ./aux/..//rpmkit/updateinfo/cli.py:390
+msgid "Errata Details"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:759
+#: ./aux/..//rpmkit/updateinfo/cli.py:419
+msgid "Errata Details (%s ~)"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:768
+#: ./aux/..//rpmkit/updateinfo/cli.py:428
+msgid "Errata (%s ~)"
+msgstr ""
+
+#: ./aux/..//rpmkit/extras/updateinfo.py:805
+msgid "Root of RPM DB > "
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/cli.py:259
+msgid "# of Security Errata (critical or important)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/cli.py:269
+msgid "# of 'Important' Bug Errata (keyword)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/cli.py:392
+msgid "RHSAs - CVSS >= %.1f"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/cli.py:403
+msgid "RHBAs selected by keywords"
+msgstr ""
+
