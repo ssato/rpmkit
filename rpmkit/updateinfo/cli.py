@@ -509,7 +509,7 @@ def modmain(root, workdir=None, repos=[], backend="yumbase",
 
     LOG.info("Dump Update RPMs list...")
     us = base.list_updates()
-    LOG.info("%d Update RPMs found for installed rpms", len(es))
+    LOG.info("%d Update RPMs found for installed rpms", len(us))
     U.json_dump(dict(data=us, ), updates_file_path(base.workdir))
 
     if refdir:
