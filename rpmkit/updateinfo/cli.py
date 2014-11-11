@@ -516,6 +516,14 @@ def modmain(root, workdir=None, repos=[], backend="yumbase",
         LOG.info("Computing delta errata and updates for data in %s", refdir)
         (es, us) = compute_delta(refdir, es, us)
 
+        LOG.info("%d Delta Errata found for installed rpms", len(es))
+        U.json_dump(dict(data=es, ), errata_list_path(base.workdir,
+                                                      "errata_delta.json"))
+
+        LOG.info("%d Delta Update RPMs found for installed rpms", len(us))
+        U.json_dump(dict(data=us, ), updates_file_path(base.workdir,
+                                                       "updates_delta.json"))
+
     LOG.info("Dump dataset file from RPMs and Errata data...")
     dump_datasets(workdir, ips, es, us)
 
