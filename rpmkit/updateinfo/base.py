@@ -30,10 +30,13 @@ class Base(object):
         self.workdir = root if workdir is None else workdir
         self.repos = repos
         self.disabled_repos = disabled_repos
-        self.packages = collections.defaultdict(list)
+        self._packages = collections.defaultdict(list)
 
     def is_rpmdb_available(self, readonly=False):
         return rpmkit.updateinfo.utils.check_rpmdb_root(self.root, readonly)
+
+    def packages(self, pkgnarrow):
+        return self._packages[pkgnarrow]
 
     def list_installed(self, **kwargs):
         xs = self.packages("installed")
