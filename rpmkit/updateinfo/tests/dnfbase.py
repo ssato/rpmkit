@@ -40,6 +40,7 @@ if RUU.is_rhel_or_fedora():
             self.assertTrue(isinstance(pkgs, list))
 
         def test_40_list_errata(self):
-            pass
+            es = self.base.list_errata()
+            self.assertTrue(isinstance(es, list))
 
 # vim:sw=4:ts=4:et:

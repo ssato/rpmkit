@@ -6,10 +6,14 @@
 """Some utility routines utilize DNF/Hawkey.
 """
 import rpmkit.updateinfo.base
+import rpmkit.utils
 
+import collections
 import dnf.cli.cli
 import dnf
+import hawkey
 import logging
+import operator
 import os.path
 
 try:
@@ -68,6 +72,97 @@ def _activate_repos(base, repos=[], disabled_repos=['*']):
     _toggle_repos(base, repos, _REPO_ENABLE)
 
 
+def _to_pkg(pkg, extras=[]):
+    """
+    Convert Package object :: hawkey.Package to rpmkit.updateinfo.base.Package
+    object.
+
+    :param pkg: Package object which Base.list_installed(), etc. returns
+    :param extras: A list of dicts represent extra packages which is installed
+        but not available from yum repos available.
+    """
+    if extras:
+        if pkg.name in (e["name"] for e in extras):
+            originally_from = pkg.packager  # FIXME
+        else:
+            originally_from = "Unknown"
+    else:
+        originally_from = "TBD"
+
+    if isinstance(pkg, collections.Mapping):
+        return pkg
+
+    # TODO: hawkey.Package.packager != vendor, buildhost is not available, etc.
+    return rpmkit.updateinfo.base.Package(pkg.name, pkg.v, pkg.r, pkg.a,
+                                          pkg.epoch, pkg.summary,
+                                          pkg.packager, "N/A",
+                                          originally_from=originally_from)
+
+
+# see dnf.cli.commands.updateinfo.UpdateInfoCommand.TYPE2LABEL:
+HADV_TYPE2LABEL = {hawkey.ADVISORY_BUGFIX: 'bugfix',
+                   hawkey.ADVISORY_ENHANCEMENT: 'enhancement',
+                   hawkey.ADVISORY_SECURITY: 'security',
+                   hawkey.ADVISORY_UNKNOWN: 'unknown'}
+
+HAREF_TYPE2LABEL = {hawkey.REFERENCE_BUGZILLA: "bugzilla",
+                    hawkey.REFERENCE_CVE: "cve",
+                    hawkey.REFERENCE_VENDOR: "vendor",
+                    hawkey.REFERENCE_UNKNOWN: "unknown"}
+
+
+def type_from_hawkey_adv(hadv):
+    return HADV_TYPE2LABEL[hadv.type]
+
+
+def type_from_hawkey_aref(haref):
+    return HAREF_TYPE2LABEL[haref.type]
+
+
+def get_severity_from_hadv(hadv, default="N/A"):
+    sevref_base = "https://access.redhat.com/security/updates/classification/#"
+
+    if hadv.type != hawkey.ADVISORY_SECURITY:
+        return default
+
+    sevrefs = [r for r in hadv.references if r.title is None]
+    if not sevrefs or not sevrefs[0].startswith(sevref_base):
+        return default
+
+    return sevrefs[0].replace(sevref_base, '').title()
+
+
+def hawkey_adv_to_errata(hadv):
+    """
+    Make an errata dict from _hawkey.Advisory object.
+
+    :param hadv: A _hawkey.Advisory object
+    """
+    assert hadv.id, "Not _hawkey.Advisory ?: {}".format(hadv)
+        
+    errata = dict(advisory=hadv.id, synopsis=hadv.title,
+                  description=hadv.description,
+                  update_date=hadv.update.strftime("%Y-%m-%d"),
+                  issue_date=hadv.update.strftime("%Y-%m-%d"),  # TODO
+                  type=type_from_hawkey_adv(hadv),
+                  severity=get_severity_from_hadv(hadv),  # FIXME
+                  )
+
+    errata["bzs"] = [dict(id=r.id, summary=r.title, url=r.url) for r
+                     in hadv.references if r.type == hawkey.REFERENCE_BUGZILLA]
+
+    errata["cves"] = [dict(id=r.id, cve=r.id, url=r.url) for r
+                     in hadv.references if r.type == hawkey.REFERENCE_CVE]
+
+    errata["packages"] = [dict(name=p.name, arch=p.arch, evr=p.evr) for p
+                          in hadv.packages]
+
+    errata["package_names"] = rpmkit.utils.uniq(p.name for p in hadv.packages)
+    errata["url"] = rpmkit.updateinfo.utils.errata_url(hadv.id)
+
+    return errata
+
+
 class Base(rpmkit.updateinfo.base.Base):
 
     def __init__(self, root='/', repos=[], disabled_repos=['*'],
@@ -102,6 +197,11 @@ class Base(rpmkit.updateinfo.base.Base):
         # TODO: Ugly
         self.ready_list_install = False
         self.ready_list_x = False
+
+        # see: :method:`__init__` of the class
+        # :class:`dnf.cli.commands.updateinfo.UpdateInfoCommand`
+        self._ina2evr_cache = None
+        self._hpackages = collections.defaultdict(list)
 
     def prepare(self, pkgnarrow="installed"):
         if pkgnarrow == "installed":  # Make it just loading RPM DB.
@@ -161,7 +261,13 @@ class Base(rpmkit.updateinfo.base.Base):
         ...     assert len(ipkgs) > 0
         """
         self.prepare()
-        return self.base.sack.query().installed().run()
+        ips = self.base.sack.query().installed()
+        if not isinstance(ips, list):
+            ips = ips.run()
+
+        self._hpackages["installed"] = ips
+
+        return [_to_pkg(p) for p in ips]
 
     def list_updates_impl(self, obsoletes=True, **kwargs):
         """
@@ -181,12 +287,72 @@ class Base(rpmkit.updateinfo.base.Base):
             ups = ups.run()
         # del self.base.ts  # Needed to release RPM DB session ?
 
-        return ups
+        self._hpackages["updates"] = ups
+
+        # TODO: Pass extras.
+        return [_to_pkg(p) for p in ups]
+
+    def refresh_installed_cache(self):
+        """
+        see :method:`refresh_installed_cache` of the class
+        :class:`dnf.cli.commands.updateinfo.UpdateInfoCommand`.
+        """
+        self._ina2evr_cache = {(p.name, p.arch): p.evr for p in
+                               self._hpackages["installed"]}
+
+    def _cmp_installed(self, apkg, op):
+        ievr = self._ina2evr_cache.get((apkg.name, apkg.arch), None)
+        if ievr is None:
+            return False
+
+        return op(self.base.sack.evr_cmp(ievr, apkg.evr), 0)
+
+    def _older_installed(self, apkg):
+        """
+        Stolen from :class:`dnf.cli.commands.updateinfo.UpdateInfoCommand`.
+        """
+        return self._cmp_installed(apkg, operator.lt)
+
+    def _newer_equal_installed(self, apkg):
+        """
+        Stolen from :class:`dnf.cli.commands.updateinfo.UpdateInfoCommand`.
+        """
+        return self._cmp_installed(apkg, operator.ge)
+
+    def _apackage_advisory_installeds(self, pkgs, cmptype, req_apkg, specs=()):
+        """
+        Stolen from :class:`dnf.cli.commands.updateinfo.UpdateInfoCommand`.
+        """
+        for package in pkgs:
+            for advisory in package.get_advisories(cmptype):
+                for apkg in advisory.packages:
+                    if req_apkg(apkg):
+                        # installed = self._newer_equal_installed(apkg)
+                        # yield apkg, advisory, installed
+                        yield advisory  # we just need advisory object.
+
+    def list_available_errata(self, specs=()):
+        """
+        Stolen from :method:`available_apkg_adv_insts` in
+        :class:`dnf.cli.commands.updateinfo.UpdateInfoCommand`.
+        """
+        return self._apackage_advisory_installeds(self._hpackages["installed"],
+                                                  DCCU.hawkey.GT,
+                                                  self._older_installed,
+                                                  specs)
 
     def list_errata_impl(self, **kwargs):
         """
-        TBD.
+        Stolen from :class:`dnf.cli.commands.updateinfo.UpdateInfoCommand`.
+
+        TODO: Maybe it's better to inherit that class or write dnf plugin
+        to acomplish the goal.
         """
-        raise NotImplementedError("dnfbase.Base.list_updates")
+        self.prepare("all")
+        self.load_repos()
+        self.refresh_installed_cache()
+
+        hadvs = rpmkit.utils.uniq(self.list_available_errata())
+        return [hawkey_adv_to_errata(hadv) for hadv in hadvs]
 
 # vim:sw=4:ts=4:et:
