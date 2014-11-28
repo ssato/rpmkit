@@ -18,6 +18,7 @@ import rpmkit.memoize
 import rpmkit.utils as U
 import rpmkit.swapi
 
+import datetime
 import logging
 import operator
 import os
@@ -25,7 +26,8 @@ import os.path
 import tablib
 
 
-LOG = logging.getLogger("rpmkit.updateinfo.cli")
+LOG = logging.getLogger("rpmkit.updateinfo")
+TIMESTAMP = datetime.datetime.now().strftime("%F %T")
 
 _RPM_LIST_FILE = "packages.json"
 _ERRATA_LIST_FILE = "errata.json"
@@ -500,6 +502,12 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
     base = get_backend(backend)(root, repos, workdir=workdir)
     LOG.debug("root=%s, repos=%s, workdir=%s", root, ','.join(repos),
               workdir)
+
+    LOG.info("Dump metadata first...")
+    U.json_dump(dict(root=root, repos=repos, backend=str(backend),
+                     keywords=keywords, refdir=refdir,
+                     generated=TIMESTAMP),
+                os.path.join(workdir, "metadata.json"))
 
     LOG.info("Dump Installed RPMs list loaded from: %s", base.root)
     ips = base.list_installed()
