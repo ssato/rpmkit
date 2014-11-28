@@ -528,28 +528,31 @@ def modmain(root, workdir=None, repos=[], backend="yumbase",
     dump_datasets(workdir, ips, es, us)
 
 
-def option_parser():
-    defaults = dict(path=None, workdir=None, repos=[], backend="yumwrapper",
-                    keywords=RHBA_KEYWORDS, refdir=None, verbose=False)
+_DEFAULTS = dict(path=None, workdir=None, repos=[], backend="yumwrapper",
+                 keywords=RHBA_KEYWORDS, refdir=None, verbose=False)
+_USAGE = """\
+%prog [Options...] RPMDB_ROOT
 
-    p = optparse.OptionParser("""%prog [Options...] RPMDB_ROOT
+    where RPMDB_ROOT = RPM DB root having var/lib/rpm from the target host"""
 
-    where RPMDB_ROOT = RPM DB root having var/lib/rpm from the target host""")
 
+def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=BACKENDS):
+    p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
 
     p.add_option("-w", "--workdir", help="Working dir [%default]")
     p.add_option("", "--repo", dest="repos", action="append",
-                 help="Comma separated yum repos to fetch errata info, "
-                      "e.g. 'rhel-x86_64-server-6'. Please note that any "
-                      "other repos are disabled if this option was set.")
-    p.add_option("-B", "--backend", choices=BACKENDS.keys(),
+                 help="Yum repo to fetch errata info, e.g. "
+                      "'rhel-x86_64-server-6'. It can be given multiple times "
+                      "to specify multiple yum repos. Note: Any other repos "
+                      "are disabled if this option was set.")
+    p.add_option("-B", "--backend", choices=backends.keys(),
                  help="Specify backend to get updates and errata. Choices: "
-                      "%s [%%default]" % ', '.join(BACKENDS.keys()))
+                      "%s [%%default]" % ', '.join(backends.keys()))
     p.add_option("-k", "--keyword", dest="keywords", action="append",
                  help="Keyword to select more 'important' bug errata. "
                       "You can specify this multiple times. "
-                      "[%s]" % ', '.join(RHBA_KEYWORDS))
+                      "[%s]" % ', '.join(defaults["keywords"]))
     p.add_option("-R", "--refdir",
                  help="Output 'delta' result compared to the data in "
                       "specified dir")
