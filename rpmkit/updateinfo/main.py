@@ -296,10 +296,15 @@ def _is_newer_errata(errata, since=None):
     """
     NOTE: issue_date format: month/day/year, e.g. 12/16/10
 
+    :errata: A dict {advisory:, issue_date:, } represents an errata
+    :since: Limit date in the formats, YY/MM/DD or YY-MM-DD
+
     >>> e = dict(advisory="RHBA-2010:0993", issue_date="12/16/10")
     >>> _is_newer_errata(e, None)
     True
     >>> _is_newer_errata(e, "2010-11-01")
+    True
+    >>> _is_newer_errata(e, "2010/11/01")
     True
     >>> _is_newer_errata(e, "2010-12-16")
     False
@@ -309,7 +314,7 @@ def _is_newer_errata(errata, since=None):
     if since is None:
         return True  # Unknown
 
-    (y, m, d) = since.split('-')
+    (y, m, d) = since.split('-' if '-' in since else '/')
     (y, m, d) = (int(y), int(m), int(d))
     # LOG.debug("Try to check the errata is newer than "
     #              "y=%d, m=%d, d=%d" % (y, m, d))
