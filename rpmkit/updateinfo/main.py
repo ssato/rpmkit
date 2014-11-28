@@ -401,7 +401,7 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
             any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
     cseds = _make_dataset(cses, csekeys, cseds_title)
 
-    ciseds_title = "Critical or Important RHSAs"
+    ciseds_title = _("Critical or Important RHSAs")
     cises = [e for e in errata
              if e.get("severity") in ("Critical", "Important")]
     cisekeys = ["advisory", "severity", "synopsis", "issue_date", "url"]
