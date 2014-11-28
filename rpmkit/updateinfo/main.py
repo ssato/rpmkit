@@ -27,7 +27,6 @@ import tablib
 
 
 LOG = logging.getLogger("rpmkit.updateinfo")
-TIMESTAMP = datetime.datetime.now().strftime("%F %T")
 
 _RPM_LIST_FILE = "packages.json"
 _ERRATA_LIST_FILE = "errata.json"
@@ -496,7 +495,7 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
     LOG.info("Dump metadata first...")
     U.json_dump(dict(root=root, repos=repos, backend=str(backend),
                      keywords=keywords, refdir=refdir,
-                     generated=TIMESTAMP),
+                     generated=datetime.datetime.now().strftime("%F %T")),
                 os.path.join(workdir, "metadata.json"))
 
     LOG.info("Dump Installed RPMs list loaded from: %s", base.root)
