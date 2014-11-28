@@ -397,7 +397,7 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
     eds = _make_dataset(errata, dekeys, _("Errata Details"))
 
     cseds_title = _("RHSAs - CVSS >= %.1f") % cvss_score
-    cses = [e for e in errata if e.get("cves", False) and
+    cses = [e for e in errata if e.get("severity") and e.get("cves", False) and
             any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
     cseds = _make_dataset(cses, csekeys, cseds_title)
 
