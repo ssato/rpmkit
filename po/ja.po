@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-11-28 14:17+JST\n"
+"POT-Creation-Date: 2014-11-28 15:27+JST\n"
 "PO-Revision-Date: 2014-11-28 14:16+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
@@ -86,32 +86,32 @@ msgid "Sec. Errata CVSS >= %.1f"
 msgstr "重要 RHSA - CVSS score >= %.1f"
 
 #: aux/..//rpmkit/extras/updateinfo.py:736
-#: aux/..//rpmkit/updateinfo/main.py:390
+#: aux/..//rpmkit/updateinfo/main.py:384
 msgid "Installed RPMs"
 msgstr "インストール RPM"
 
 #: aux/..//rpmkit/extras/updateinfo.py:738
-#: aux/..//rpmkit/updateinfo/main.py:392
+#: aux/..//rpmkit/updateinfo/main.py:386
 msgid "Errata"
 msgstr "エラータ"
 
 #: aux/..//rpmkit/extras/updateinfo.py:739
-#: aux/..//rpmkit/updateinfo/main.py:393
+#: aux/..//rpmkit/updateinfo/main.py:387
 msgid "Update RPMs"
 msgstr "更新 RPM"
 
 #: aux/..//rpmkit/extras/updateinfo.py:745
-#: aux/..//rpmkit/updateinfo/main.py:397
+#: aux/..//rpmkit/updateinfo/main.py:391
 msgid "Errata Details"
 msgstr "エラータ詳細"
 
 #: aux/..//rpmkit/extras/updateinfo.py:759
-#: aux/..//rpmkit/updateinfo/main.py:426
+#: aux/..//rpmkit/updateinfo/main.py:420
 msgid "Errata Details (%s ~)"
 msgstr "エラータ詳細 (%s ~)"
 
 #: aux/..//rpmkit/extras/updateinfo.py:768
-#: aux/..//rpmkit/updateinfo/main.py:435
+#: aux/..//rpmkit/updateinfo/main.py:429
 msgid "Errata (%s ~)"
 msgstr "エラータ (%s ~)"
 
@@ -127,15 +127,15 @@ msgstr "Critical / Important RHSA の数"
 msgid "# of 'Important' Bug Errata (keyword)"
 msgstr "重要バグエラータ (キーワード抽出) の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:399
+#: aux/..//rpmkit/updateinfo/main.py:393
 msgid "RHSAs - CVSS >= %.1f"
 msgstr "重要 RHSA - CVSS score >= %.1f"
 
-#: aux/..//rpmkit/updateinfo/main.py:404
+#: aux/..//rpmkit/updateinfo/main.py:398
 msgid "Critical or Important RHSAs"
 msgstr "Critical または Important RHSAs"
 
-#: aux/..//rpmkit/updateinfo/main.py:410
+#: aux/..//rpmkit/updateinfo/main.py:404
 msgid "RHBAs selected by keywords"
 msgstr "キーワード抽出による重要 RHBA"
 

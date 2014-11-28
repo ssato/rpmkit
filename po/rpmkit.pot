@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-11-28 14:17+JST\n"
+"POT-Creation-Date: 2014-11-28 15:27+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -86,32 +86,32 @@ msgid "Sec. Errata CVSS >= %.1f"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:736
-#: ./aux/..//rpmkit/updateinfo/main.py:390
+#: ./aux/..//rpmkit/updateinfo/main.py:384
 msgid "Installed RPMs"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:738
-#: ./aux/..//rpmkit/updateinfo/main.py:392
+#: ./aux/..//rpmkit/updateinfo/main.py:386
 msgid "Errata"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:739
-#: ./aux/..//rpmkit/updateinfo/main.py:393
+#: ./aux/..//rpmkit/updateinfo/main.py:387
 msgid "Update RPMs"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:745
-#: ./aux/..//rpmkit/updateinfo/main.py:397
+#: ./aux/..//rpmkit/updateinfo/main.py:391
 msgid "Errata Details"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:759
-#: ./aux/..//rpmkit/updateinfo/main.py:426
+#: ./aux/..//rpmkit/updateinfo/main.py:420
 msgid "Errata Details (%s ~)"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:768
-#: ./aux/..//rpmkit/updateinfo/main.py:435
+#: ./aux/..//rpmkit/updateinfo/main.py:429
 msgid "Errata (%s ~)"
 msgstr ""
 
@@ -127,15 +127,15 @@ msgstr ""
 msgid "# of 'Important' Bug Errata (keyword)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:399
+#: ./aux/..//rpmkit/updateinfo/main.py:393
 msgid "RHSAs - CVSS >= %.1f"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:404
+#: ./aux/..//rpmkit/updateinfo/main.py:398
 msgid "Critical or Important RHSAs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:410
+#: ./aux/..//rpmkit/updateinfo/main.py:404
 msgid "RHBAs selected by keywords"
 msgstr ""
 

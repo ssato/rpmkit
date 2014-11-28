@@ -386,8 +386,6 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
                               _("Errata")),
                 _make_dataset(updates, ukeys, _("Update RPMs"))]
 
-    special_ds = []
-
     eds = _make_dataset(errata, dekeys, _("Errata Details"))
 
     cseds_title = _("RHSAs - CVSS >= %.1f") % cvss_score
@@ -412,9 +410,7 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
 
     special_ds = [summary_ds, cseds, ciseds, ibeds, eds]
 
-    if start_date is None:
-        book = tablib.Databook(special_ds + datasets)
-    else:
+    if start_date is not None:
         es = [e for e in errata if _is_newer_errata(e, start_date)]
         eds2 = _make_dataset(es, dekeys,
                              _("Errata Details (%s ~)") % start_date)
@@ -429,7 +425,8 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
                             _("Errata (%s ~)") % start_date)
 
         special_ds = [es2, eds2, cseds]
-        book = tablib.Databook(special_ds + datasets)
+
+    book = tablib.Databook(special_ds + datasets)
 
     with open(dataset_file_path(workdir), 'wb') as out:
         out.write(book.xls)
