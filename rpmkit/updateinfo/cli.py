@@ -9,13 +9,16 @@
 # License: GPLv3+
 #
 import rpmkit.updateinfo.main as RUM
+import datetime
 import optparse
 import os.path
 
 
-_DEFAULTS = dict(path=None, workdir=None, repos=[],
-                 backend=RUM.DEFAULT_BACKEND, keywords=RUM.RHBA_KEYWORDS,
-                 refdir=None, verbose=False)
+_TODAY = datetime.datetime.now().strftime("%F")
+_DEFAULTS = dict(path=None, workdir="/tmp/rk-updateinfo-{}".format(_TODAY),
+                 repos=[], backend=RUM.DEFAULT_BACKEND,
+                 keywords=RUM.RHBA_KEYWORDS, refdir=None,
+                 verbose=False)
 _USAGE = """\
 %prog [Options...] RPMDB_ROOT
 
