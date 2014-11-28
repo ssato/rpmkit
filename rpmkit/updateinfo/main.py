@@ -490,8 +490,8 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
             LOG.info("Creating working dir: %s", workdir)
             os.makedirs(workdir)
 
-    base = get_backend(backend)(root, repos, workdir=workdir)
     LOG.info("root=%s, workdir=%s, repos=%s", root, workdir, ','.join(repos))
+    base = get_backend(backend)(root, repos, workdir=workdir)
 
     LOG.info("Dump metadata first...")
     U.json_dump(dict(root=root, repos=repos, backend=str(backend),
