@@ -468,17 +468,17 @@ def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
 
 
 def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
-         keywords=RHBA_KEYWORDS, refdir=None, verbose=False,
-         backends=BACKENDS, **kwargs):
+         keywords=RHBA_KEYWORDS, refdir=None, backends=BACKENDS, **kwargs):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
+    :param workdir: Working dir to save results
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
     :param backend: Backend module to use to get updates and errata
-    :param verbose: Verbose mode
+    :param keywords: Keyword list to filter 'important' RHBAs
+    :param refdir: A dir holding reference data previously generated to
+        compute delta (updates since that data)
+    :param backends: Backend list
     """
-    global LOG
-    LOG.setLevel(logging.DEBUG if verbose else logging.INFO)
-
     if not rpmkit.updateinfo.utils.check_rpmdb_root(root, True):
         raise RuntimeError("Not a root of RPM DB: %s" % root)
 

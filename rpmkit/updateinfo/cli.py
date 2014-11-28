@@ -10,6 +10,7 @@
 #
 import rpmkit.updateinfo.main as RUM
 import datetime
+import logging
 import optparse
 import os.path
 
@@ -57,9 +58,9 @@ def main():
     root = args[0] if args else raw_input("Root of RPM DB files > ")
     assert os.path.exists(root), "Not found RPM DB Root: %s" % root
 
+    RUM.LOG.setLevel(logging.DEBUG if options.verbose else logging.INFO)
     RUM.main(root, options.workdir, repos=options.repos,
-             keywords=options.keywords, refdir=options.refdir,
-             verbose=options.verbose)
+             keywords=options.keywords, refdir=options.refdir)
 
 
 if __name__ == '__main__':
