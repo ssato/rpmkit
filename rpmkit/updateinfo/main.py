@@ -491,8 +491,7 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
             os.makedirs(workdir)
 
     base = get_backend(backend)(root, repos, workdir=workdir)
-    LOG.debug("root=%s, repos=%s, workdir=%s", root, ','.join(repos),
-              workdir)
+    LOG.info("root=%s, workdir=%s, repos=%s", root, workdir, ','.join(repos))
 
     LOG.info("Dump metadata first...")
     U.json_dump(dict(root=root, repos=repos, backend=str(backend),
