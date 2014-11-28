@@ -381,12 +381,6 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
         than the date ``start_date``. Along with this, detailed errata info
         will be gotten if this date was not None and a valid date strings.
     """
-    rpms = sorted(rpms, key=operator.itemgetter("name", "epoch", "version",
-                                                "release"))
-    errata = sorted(errata, cmp=rpmkit.updateinfo.utils.cmp_errata)
-    updates = sorted(updates, key=operator.itemgetter("name", "epoch",
-                                                      "version", "release"))
-
     datasets = [_make_dataset(rpms, rpmkeys, _("Installed RPMs")),
                 _make_dataset(errata, ekeys + ("package_names", ),
                               _("Errata")),
@@ -510,7 +504,9 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
                 os.path.join(workdir, "metadata.json"))
 
     LOG.info("Dump Installed RPMs list loaded from: %s", base.root)
-    ips = base.list_installed()
+    ips = sorted(base.list_installed(),
+                 key=operator.itemgetter("name", "epoch", "version",
+                                         "release"))
     LOG.info("%d Installed RPMs found", len(ips))
     U.json_dump(dict(data=ips, ), rpm_list_path(base.workdir))
 
@@ -536,6 +532,10 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
         LOG.info("%d Delta Update RPMs found for installed rpms", len(us))
         U.json_dump(dict(data=us, ), updates_file_path(base.workdir,
                                                        "updates_delta.json"))
+
+    es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
+    us = sorted(us, key=operator.itemgetter("name", "epoch", "version",
+                                            "release"))
 
     LOG.info("Dump dataset file from RPMs and Errata data...")
     dump_datasets(workdir, ips, es, us)
