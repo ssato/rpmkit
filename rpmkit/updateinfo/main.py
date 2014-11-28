@@ -376,9 +376,13 @@ def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
                   keywords=RHBA_KEYWORDS):
     """
     :param workdir: Working dir to dump the result
+    :param rpms: A list of installed RPMs
+    :param errata: A list of applicable errata
+    :param updates: A list of update RPMs
     :param start_date: Add an optional worksheet to list only errata newer
         than the date ``start_date``. Along with this, detailed errata info
         will be gotten if this date was not None and a valid date strings.
+    :param keywords: Keyword list to filter 'important' RHBAs
     """
     datasets = [_make_dataset(rpms, rpmkeys, _("Installed RPMs")),
                 _make_dataset(errata, ekeys + ("package_names", ),
