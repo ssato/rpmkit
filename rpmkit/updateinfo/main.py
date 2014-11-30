@@ -453,7 +453,7 @@ def errata_complement_g(errata, updates):
         yield e
 
 
-def analize_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
+def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     """
     :param errata: A list of applicable errata sorted by severity
         if it's RHSA and advisory in ascending sequence
@@ -566,7 +566,7 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
     """
-    data = dict(errata=analize_errata(errata, updates, score, keywords),
+    data = dict(errata=analyze_errata(errata, updates, score, keywords),
                 rpms=rpms, installed=rpms, updates=updates,
                 rpmnames_need_updates=U.uniq(u["name"] for u in updates))
     U.json_dump(data, os.path.join(workdir, "summary.json"))
