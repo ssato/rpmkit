@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-11-30 13:40+JST\n"
+"POT-Creation-Date: 2014-11-30 13:57+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -126,6 +126,18 @@ msgstr ""
 msgid "# of 'Important' Bug Errata (keyword)"
 msgstr ""
 
+#: ./aux/..//rpmkit/updateinfo/main.py:513
+msgid "# of 'Important' Security Errata (CVSS Score >= %.1f)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:516
+msgid "# of 'Important' Bug Errata (CVSS Score >= %.1f)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:519
+msgid "# of RPMs need to be updated by Bug Errata (CVSS Score >= %.1f)"
+msgstr ""
+
 #: ./aux/..//rpmkit/updateinfo/main.py:530
 msgid "# of Update RPMs"
 msgstr ""
@@ -152,5 +164,13 @@ msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:589
 msgid "Updates by RHBAs (Keyword)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:595
+msgid "RHSAs (CVSS score >= %.1f)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:597
+msgid "RHBAs (CVSS score >= %.1f)"
 msgstr ""
 
