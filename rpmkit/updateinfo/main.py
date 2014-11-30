@@ -600,7 +600,9 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
                                  ("advisory", "severity", "synopsis",
                                   "cves_s", "cvsses_s", "url"),
                                  _("RHSAs (CVSS score >= %.1f)") % score),
-                   _make_dataset(data["errata"]["rhba_by_cvss_score"], ekeys,
+                   _make_dataset(data["errata"]["rhba_by_cvss_score"],
+                                 ("advisory", "synopsis", "cves_s",
+                                  "cvsses_s", "url"),
                                  _("RHBAs (CVSS score >= %.1f)") % score)]
         main_ds.extend(cvss_ds)
 
