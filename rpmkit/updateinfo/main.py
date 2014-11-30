@@ -609,7 +609,6 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
 
 def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
                 backends=BACKENDS):
-    LOG.info("Try backend: %s", backend)
     return backends.get(backend, fallback)
 
 
@@ -637,11 +636,11 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND, score=-1,
             LOG.info("Creating working dir: %s", workdir)
             os.makedirs(workdir)
 
-    LOG.info("root=%s, workdir=%s, repos=%s", root, workdir, ','.join(repos))
     base = get_backend(backend)(root, repos, workdir=workdir)
+    LOG.info("Dump metadata at first: root=%s, repos=%s, backend=%s",
+             root, ','.join(repos), base.name)
 
-    LOG.info("Dump metadata first...")
-    U.json_dump(dict(root=root, repos=repos, backend=str(backend),
+    U.json_dump(dict(root=root, repos=repos, backend=base.name,
                      keywords=keywords, refdir=refdir,
                      generated=datetime.datetime.now().strftime("%F %T")),
                 os.path.join(workdir, "metadata.json"))
