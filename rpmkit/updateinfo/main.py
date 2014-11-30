@@ -592,11 +592,9 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
         cvss_ds = [_make_dataset(data["errata"]["rhsa_by_cvss_score"],
                                  ("advisory", "severity", "synopsis",
                                   "cves_s", "cvsses_s", "url"),
-                                 _("Important RHSAs (CVSS Score >= "
-                                   "%.1f)" % score)),
+                                 _("Important RHSAs (CVSS >= %.1f)" % score)),
                    _make_dataset(data["errata"]["rhba_by_cvss_score"], ekeys,
-                                 _("Important RHBAs (CVSS Score >= "
-                                   "%.1f)" % score))]
+                                 _("Important RHBAs (CVSS >= %.1f)" % score))]
         main_ds.extend(cvss_ds)
 
     book = tablib.Databook(summary_ds + main_ds + base_ds)
