@@ -286,7 +286,7 @@ def cve_socre_ge(cve, score=DEFAULT_CVSS_SCORE, default=False):
     :return: True if given CVE's socre is greater or equal to given score.
     """
     try:
-        return float(cve["score"]) >= score
+        return float(cve["score"]) >= float(score)
     except Exception:
         LOG.warn("Failed to compare CVE's score: %s, score=%.1f",
                  str(cve), score)
@@ -442,7 +442,7 @@ def errata_complement_g(errata):
         yield e
 
 
-def analize_errata(errata, updates, score=None, keywords=ERRATA_KEYWORDS):
+def analize_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     """
     :param errata: A list of applicable errata sorted by severity
         if it's RHSA and advisory in ascending sequence
@@ -467,7 +467,7 @@ def analize_errata(errata, updates, score=None, keywords=ERRATA_KEYWORDS):
     rhba = [e for e in errata if is_rhba(e)]
     rhba_by_kwds = list(errata_matches_keywords_g(rhba, keywords))
 
-    if score is None:
+    if score < 0:
         rhsa_by_score = []
         rhba_by_score = []
         us_of_rhba_by_score = []
@@ -490,7 +490,7 @@ def analize_errata(errata, updates, score=None, keywords=ERRATA_KEYWORDS):
                 rhea=rhea)
 
 
-def make_summary_dataset(workdir, data, score=None):
+def make_summary_dataset(workdir, data, score=-1):
     """
     :param workdir: Working dir to dump the result
     :param data: RPMs, Update RPMs and various errata data summarized
@@ -507,7 +507,7 @@ def make_summary_dataset(workdir, data, score=None):
           (_("# of 'Important' Bug Errata (keyword)"),
            len(data["errata"]["rhba_by_kwds"]), "", "")]
 
-    if score is None:
+    if score < 0:
         cvss_ds = []
     else:
         cvss_ds = [(_("# of 'Important' Security Errata (CVSS Score >= "
@@ -538,7 +538,7 @@ def make_summary_dataset(workdir, data, score=None):
     return dataset
 
 
-def dump_datasets(workdir, rpms, errata, updates, score=None,
+def dump_datasets(workdir, rpms, errata, updates, score=-1,
                   keywords=ERRATA_KEYWORDS):
     """
     :param workdir: Working dir to dump the result
@@ -570,37 +570,36 @@ def dump_datasets(workdir, rpms, errata, updates, score=None,
                              _("Errata")),
                _make_dataset(rpms, rpmkeys, _("Installed RPMs"))]
 
-    rhsa_keys = ("advisory", "severity", "synopsis", "url")
+    ekeys = ("advisory", "synopsis", "url", "package_names")
     urpmkeys = ("name", "version", "release", "epoch", "arch")
 
-    main_ds = [_make_dataset(data["errata"]["rhsa_cri"], rhsa_keys,
+    main_ds = [_make_dataset(data["errata"]["rhsa_cri"], ekeys,
                              _("Critical RHSAs")),
-               _make_dataset(data["errata"]["rhsa_imp"], rhsa_keys,
+               _make_dataset(data["errata"]["us_of_rhsa_cri"], urpmkeys,
+                             _("Update RPMs by RHSAs (Critical)")),
+               _make_dataset(data["errata"]["rhsa_imp"], ekeys,
                              _("Important RHSAs")),
+               _make_dataset(data["errata"]["us_of_rhsa_imp"], urpmkeys,
+                             _("Updates by RHSAs (Important)")),
                _make_dataset(data["errata"]["rhba_by_kwds"],
-                             ("advisory", "synopsis", "keywords", "url"),
-                             _("Important RHBAs (keyword)"))]
+                             ("advisory", "synopsis", "keywords", "url",
+                              "package_names"),
+                             _("Important RHBAs (keyword)")),
+               _make_dataset(data["errata"]["us_of_rhba_by_kwds"], urpmkeys,
+                             _("Updates by RHBAs (Keyword)"))]
 
-    if score is not None:
+    if score >= 0:
         cvss_ds = [_make_dataset(data["errata"]["rhsa_by_cvss_score"],
                                  ("advisory", "severity", "synopsis",
                                   "cves_s", "cvsses_s", "url"),
                                  _("Important RHSAs (CVSS Score >= "
                                    "%.1f)" % score)),
-                   _make_dataset(data["errata"]["rhba_by_cvss_score"],
-                                 rhsa_keys,
+                   _make_dataset(data["errata"]["rhba_by_cvss_score"], ekeys,
                                  _("Important RHBAs (CVSS Score >= "
                                    "%.1f)" % score))]
         main_ds.extend(cvss_ds)
 
-    others_ds = [_make_dataset(data["errata"]["us_of_rhsa_cri"], urpmkeys,
-                               _("Update RPMs by RHSAs (Critical)")),
-                 _make_dataset(data["errata"]["us_of_rhsa_imp"], urpmkeys,
-                               _("Updates by RHSAs (Important)")),
-                 _make_dataset(data["errata"]["us_of_rhba_by_kwds"], urpmkeys,
-                               _("Updates by RHBAs (Keyword)"))]
-
-    book = tablib.Databook(summary_ds + main_ds + others_ds + base_ds)
+    book = tablib.Databook(summary_ds + main_ds + base_ds)
 
     with open(dataset_file_path(workdir), 'wb') as out:
         out.write(book.xls)
@@ -612,13 +611,14 @@ def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
     return backends.get(backend, fallback)
 
 
-def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
+def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND, score=-1,
          keywords=ERRATA_KEYWORDS, refdir=None, backends=BACKENDS, **kwargs):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param workdir: Working dir to save results
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
     :param backend: Backend module to use to get updates and errata
+    :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
@@ -666,7 +666,7 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
     us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
 
     LOG.info("Dump dataset file from RPMs and Errata data...")
-    dump_datasets(workdir, ips, es, us)
+    dump_datasets(workdir, ips, es, us, score, keywords)
 
     if refdir:
         LOG.info("Computing delta errata and updates for data in %s", refdir)
@@ -687,6 +687,6 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
         us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
 
         LOG.info("Dump dataset file from RPMs and Errata data...")
-        dump_datasets(workdir, ips, es, us)
+        dump_datasets(workdir, ips, es, us, score, keywords)
 
 # vim:sw=4:ts=4:et:
