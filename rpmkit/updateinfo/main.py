@@ -199,7 +199,7 @@ def _make_dataset(list_data, headers=None, title=None):
         dataset.title = title
 
     if headers:
-        dataset.headers = headers
+        dataset.headers = [h.rstrip('_s') for h in headers]
 
         for x in list_data:
             dataset.append([_make_cell_data(x, h) for h in headers])
@@ -367,8 +367,8 @@ def list_updates_from_errata(errata, updates):
     :param errata: A list of errata dict
     :param updates: A list of an update package, tuple of (N, E, V, R, A)
     """
-    return sorted((u for u in U.uconcat(e.get("packages", []) for e in errata)
-                   if p2nevra(u) in updates), key=itemgetter("name"))
+    return sorted((u for u in U.uconcat(e.get("updates", []) for e in errata)),
+                  key=itemgetter("name"))
 
 
 def compute_delta(refdir, errata, updates):
@@ -429,14 +429,18 @@ def higher_score_cve_errata_g(errata, score=DEFAULT_CVSS_SCORE):
             yield e
 
 
-def errata_complement_g(errata):
+def errata_complement_g(errata, updates):
     """
     TODO: What should be complemented?
 
     :param errata: A list of errata
+    :param updates: A list of update packages
     """
+    unames = U.uniq(u["name"] for u in updates)
     for e in errata:
-        e["package_names"] = U.uniq(p["name"] for p in e.get("packages", []))
+        e["updates"] = U.uniq(p for p in e.get("packages", [])
+                              if p["name"] in unames)
+        e["update_names"] = U.uniq(u["name"] for u in e["updates"])
         e["bzs_s"] = ", ".join("rhbz#%s" % bz["id"] for bz in e.get("bzs", []))
 
         yield e
@@ -450,7 +454,7 @@ def analize_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
     """
-    errata = list(errata_complement_g(errata))
+    errata = list(errata_complement_g(errata, updates))
 
     rhsa = [e for e in errata if e.get("severity", None) is not None]
     rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
@@ -570,11 +574,11 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
                _make_dataset(errata,
                              ("advisory", "type", "severity", "synopsis",
                               "description", "issue_date", "update_date",
-                              "url", "cves_s", "bzs_s", "package_names"),
+                              "url", "cves_s", "bzs_s", "update_names"),
                              _("Errata Details")),
                _make_dataset(rpms, rpmkeys, _("Installed RPMs"))]
 
-    ekeys = ("advisory", "synopsis", "url", "package_names")
+    ekeys = ("advisory", "synopsis", "url", "update_names")
     urpmkeys = ("name", "version", "release", "epoch", "arch")
 
     main_ds = [_make_dataset(data["errata"]["rhsa_cri"], ekeys,
@@ -587,7 +591,7 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
                              _("Updates by RHSAs (Important)")),
                _make_dataset(data["errata"]["rhba_by_kwds"],
                              ("advisory", "synopsis", "keywords", "url",
-                              "package_names"),
+                              "update_names"),
                              _("RHBAs (keyword)")),
                _make_dataset(data["errata"]["us_of_rhba_by_kwds"], urpmkeys,
                              _("Updates by RHBAs (Keyword)"))]
