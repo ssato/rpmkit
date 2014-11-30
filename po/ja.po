@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-11-30 13:57+JST\n"
-"PO-Revision-Date: 2014-11-30 13:56+0900\n"
+"POT-Creation-Date: 2014-11-30 22:01+JST\n"
+"PO-Revision-Date: 2014-11-30 22:00+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
 "Language: ja\n"
@@ -16,22 +16,22 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 #: aux/..//rpmkit/extras/updateinfo.py:605
-#: aux/..//rpmkit/updateinfo/main.py:499
+#: aux/..//rpmkit/updateinfo/main.py:501
 msgid "# of Security Errata (critical)"
-msgstr "重大度 Critical のセキュリティエラータの数"
+msgstr "セキュリティエラータ (Critical) の数"
 
 #: aux/..//rpmkit/extras/updateinfo.py:606
-#: aux/..//rpmkit/updateinfo/main.py:501
+#: aux/..//rpmkit/updateinfo/main.py:503
 msgid "# of Security Errata (important)"
-msgstr "重大度 Important のセキュリティエラータの数"
+msgstr "セキュリティエラータ (Important) の数"
 
 #: aux/..//rpmkit/extras/updateinfo.py:607
-#: aux/..//rpmkit/updateinfo/main.py:523
+#: aux/..//rpmkit/updateinfo/main.py:530
 msgid "# of Security Errata (all)"
 msgstr "すべてのセキュリティエラータの数"
 
 #: aux/..//rpmkit/extras/updateinfo.py:608
-#: aux/..//rpmkit/updateinfo/main.py:525
+#: aux/..//rpmkit/updateinfo/main.py:532
 msgid "# of Bug Errata"
 msgstr "バグ修正エラータの数"
 
@@ -40,7 +40,7 @@ msgid "# of Enhancement Errata"
 msgstr "機能拡張エラータの数"
 
 #: aux/..//rpmkit/extras/updateinfo.py:610
-#: aux/..//rpmkit/updateinfo/main.py:529
+#: aux/..//rpmkit/updateinfo/main.py:536
 msgid "# of Installed RPMs"
 msgstr "インストールされている RPM パッケージの数"
 
@@ -53,27 +53,27 @@ msgid "The rate of RPMs (names) need any updates / RPMs (names) [%]"
 msgstr "更新が必要な RPM パッケージ (名) の割合 [%]"
 
 #: aux/..//rpmkit/extras/updateinfo.py:617
-#: aux/..//rpmkit/updateinfo/main.py:533
+#: aux/..//rpmkit/updateinfo/main.py:540
 msgid "Summary"
 msgstr "概要"
 
 #: aux/..//rpmkit/extras/updateinfo.py:618
-#: aux/..//rpmkit/updateinfo/main.py:534
+#: aux/..//rpmkit/updateinfo/main.py:541
 msgid "comments"
 msgstr "コメント"
 
 #: aux/..//rpmkit/extras/updateinfo.py:618
-#: aux/..//rpmkit/updateinfo/main.py:534
+#: aux/..//rpmkit/updateinfo/main.py:541
 msgid "item"
 msgstr "項目"
 
 #: aux/..//rpmkit/extras/updateinfo.py:618
-#: aux/..//rpmkit/updateinfo/main.py:534
+#: aux/..//rpmkit/updateinfo/main.py:541
 msgid "rating"
 msgstr "評価"
 
 #: aux/..//rpmkit/extras/updateinfo.py:618
-#: aux/..//rpmkit/updateinfo/main.py:534
+#: aux/..//rpmkit/updateinfo/main.py:541
 msgid "value"
 msgstr "値"
 
@@ -83,22 +83,21 @@ msgid "Sec. Errata CVSS >= %.1f"
 msgstr "RHSA (CVSS >= %.1f)"
 
 #: aux/..//rpmkit/extras/updateinfo.py:736
-#: aux/..//rpmkit/updateinfo/main.py:571
+#: aux/..//rpmkit/updateinfo/main.py:575
 msgid "Installed RPMs"
 msgstr "インストール RPM"
 
 #: aux/..//rpmkit/extras/updateinfo.py:738
-#: aux/..//rpmkit/updateinfo/main.py:570
 msgid "Errata"
 msgstr "エラータ"
 
 #: aux/..//rpmkit/extras/updateinfo.py:739
-#: aux/..//rpmkit/updateinfo/main.py:562
+#: aux/..//rpmkit/updateinfo/main.py:569
 msgid "Update RPMs"
 msgstr "更新 RPM"
 
 #: aux/..//rpmkit/extras/updateinfo.py:745
-#: aux/..//rpmkit/updateinfo/main.py:567
+#: aux/..//rpmkit/updateinfo/main.py:574
 msgid "Errata Details"
 msgstr "エラータ詳細"
 
@@ -114,62 +113,70 @@ msgstr "エラータ (%s ~)"
 msgid "Root of RPM DB > "
 msgstr "RPM データベースのルート [/] > "
 
-#: aux/..//rpmkit/updateinfo/main.py:503
+#: aux/..//rpmkit/updateinfo/main.py:505
 msgid "# of RPMs need to be updated by Security Errata (critical)"
 msgstr "セキュリティエラータ (Critical) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:505
+#: aux/..//rpmkit/updateinfo/main.py:507
 msgid "# of RPMs need to be updated by Security Errata (important)"
 msgstr "セキュリティエラータ (Important) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:507
-msgid "# of 'Important' Bug Errata (keyword)"
-msgstr "重要バグエラータ (キーワード抽出) の数"
+#: aux/..//rpmkit/updateinfo/main.py:509
+msgid "# of Bug Errata (keyword)"
+msgstr "バグエラータ (キーワード) の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:513
-msgid "# of 'Important' Security Errata (CVSS Score >= %.1f)"
-msgstr "重要セキュリティエラータ (CVSS スコア >= %.1f) の数"
+#: aux/..//rpmkit/updateinfo/main.py:511
+msgid "# of RPMs need to be updated by Bug Errata (keyword)"
+msgstr "バグエラータ (キーワード) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:516
-msgid "# of 'Important' Bug Errata (CVSS Score >= %.1f)"
-msgstr "重要バグエラータ (CVSS スコア >= %.1f) の数"
+#: aux/..//rpmkit/updateinfo/main.py:517
+msgid "# of Security Errata (CVSS Score >= %.1f)"
+msgstr "セキュリティエラータ (CVSS スコア >= %.1f) の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:519
+#: aux/..//rpmkit/updateinfo/main.py:520
+msgid "# of Bug Errata (CVSS Score >= %.1f)"
+msgstr "バグエラータ (CVSS スコア >= %.1f) の数"
+
+#: aux/..//rpmkit/updateinfo/main.py:523
+msgid "# of RPMs need to be updated by Security Errata (CVSS Score >= %.1f)"
+msgstr "セキュリティエラータ (CVSS スコア >= %.1f) による更新 RPM の数"
+
+#: aux/..//rpmkit/updateinfo/main.py:526
 msgid "# of RPMs need to be updated by Bug Errata (CVSS Score >= %.1f)"
 msgstr "バグエラータ (CVSS スコア >= %.1f) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:530
+#: aux/..//rpmkit/updateinfo/main.py:537
 msgid "# of Update RPMs"
 msgstr "更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:577
-msgid "Critical RHSAs"
-msgstr "RHSAs (Critical)"
+#: aux/..//rpmkit/updateinfo/main.py:581
+msgid "RHSAs (Critical)"
+msgstr "RHSA (Critical)"
 
-#: aux/..//rpmkit/updateinfo/main.py:579
+#: aux/..//rpmkit/updateinfo/main.py:583
 msgid "Update RPMs by RHSAs (Critical)"
 msgstr "RHSA (Critical) による更新 RPM"
 
-#: aux/..//rpmkit/updateinfo/main.py:581
-msgid "Important RHSAs"
-msgstr "RHSAs (Important)"
+#: aux/..//rpmkit/updateinfo/main.py:585
+msgid "RHSAs (Important)"
+msgstr "RHSA (Important)"
 
-#: aux/..//rpmkit/updateinfo/main.py:583
+#: aux/..//rpmkit/updateinfo/main.py:587
 msgid "Updates by RHSAs (Important)"
 msgstr "RHSA (Important) による更新 RPM"
 
-#: aux/..//rpmkit/updateinfo/main.py:587
-msgid "Important RHBAs (keyword)"
-msgstr "重要 RHBA (キーワード抽出)"
+#: aux/..//rpmkit/updateinfo/main.py:591
+msgid "RHBAs (keyword)"
+msgstr "RHBA (キーワード)"
 
-#: aux/..//rpmkit/updateinfo/main.py:589
+#: aux/..//rpmkit/updateinfo/main.py:593
 msgid "Updates by RHBAs (Keyword)"
-msgstr "RHBA (keyword) による更新 RPM"
+msgstr "RHBA (キーワード) による更新 RPM"
 
-#: aux/..//rpmkit/updateinfo/main.py:595
+#: aux/..//rpmkit/updateinfo/main.py:599
 msgid "RHSAs (CVSS score >= %.1f)"
 msgstr "RHSA (CVSS スコア >= %.1f)"
 
-#: aux/..//rpmkit/updateinfo/main.py:597
+#: aux/..//rpmkit/updateinfo/main.py:601
 msgid "RHBAs (CVSS score >= %.1f)"
 msgstr "RHBA (CVSS スコア >= %.1f)"

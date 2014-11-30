@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-11-30 13:57+JST\n"
+"POT-Creation-Date: 2014-11-30 22:01+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,22 +16,22 @@ msgstr ""
 
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:605
-#: ./aux/..//rpmkit/updateinfo/main.py:499
+#: ./aux/..//rpmkit/updateinfo/main.py:501
 msgid "# of Security Errata (critical)"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:606
-#: ./aux/..//rpmkit/updateinfo/main.py:501
+#: ./aux/..//rpmkit/updateinfo/main.py:503
 msgid "# of Security Errata (important)"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:607
-#: ./aux/..//rpmkit/updateinfo/main.py:523
+#: ./aux/..//rpmkit/updateinfo/main.py:530
 msgid "# of Security Errata (all)"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:608
-#: ./aux/..//rpmkit/updateinfo/main.py:525
+#: ./aux/..//rpmkit/updateinfo/main.py:532
 msgid "# of Bug Errata"
 msgstr ""
 
@@ -40,7 +40,7 @@ msgid "# of Enhancement Errata"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:610
-#: ./aux/..//rpmkit/updateinfo/main.py:529
+#: ./aux/..//rpmkit/updateinfo/main.py:536
 msgid "# of Installed RPMs"
 msgstr ""
 
@@ -53,27 +53,27 @@ msgid "The rate of RPMs (names) need any updates / RPMs (names) [%]"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:617
-#: ./aux/..//rpmkit/updateinfo/main.py:533
+#: ./aux/..//rpmkit/updateinfo/main.py:540
 msgid "Summary"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:618
-#: ./aux/..//rpmkit/updateinfo/main.py:534
+#: ./aux/..//rpmkit/updateinfo/main.py:541
 msgid "comments"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:618
-#: ./aux/..//rpmkit/updateinfo/main.py:534
+#: ./aux/..//rpmkit/updateinfo/main.py:541
 msgid "item"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:618
-#: ./aux/..//rpmkit/updateinfo/main.py:534
+#: ./aux/..//rpmkit/updateinfo/main.py:541
 msgid "rating"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:618
-#: ./aux/..//rpmkit/updateinfo/main.py:534
+#: ./aux/..//rpmkit/updateinfo/main.py:541
 msgid "value"
 msgstr ""
 
@@ -83,22 +83,21 @@ msgid "Sec. Errata CVSS >= %.1f"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:736
-#: ./aux/..//rpmkit/updateinfo/main.py:571
+#: ./aux/..//rpmkit/updateinfo/main.py:575
 msgid "Installed RPMs"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:738
-#: ./aux/..//rpmkit/updateinfo/main.py:570
 msgid "Errata"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:739
-#: ./aux/..//rpmkit/updateinfo/main.py:562
+#: ./aux/..//rpmkit/updateinfo/main.py:569
 msgid "Update RPMs"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:745
-#: ./aux/..//rpmkit/updateinfo/main.py:567
+#: ./aux/..//rpmkit/updateinfo/main.py:574
 msgid "Errata Details"
 msgstr ""
 
@@ -114,63 +113,71 @@ msgstr ""
 msgid "Root of RPM DB > "
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:503
+#: ./aux/..//rpmkit/updateinfo/main.py:505
 msgid "# of RPMs need to be updated by Security Errata (critical)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:505
+#: ./aux/..//rpmkit/updateinfo/main.py:507
 msgid "# of RPMs need to be updated by Security Errata (important)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:507
-msgid "# of 'Important' Bug Errata (keyword)"
+#: ./aux/..//rpmkit/updateinfo/main.py:509
+msgid "# of Bug Errata (keyword)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:513
-msgid "# of 'Important' Security Errata (CVSS Score >= %.1f)"
+#: ./aux/..//rpmkit/updateinfo/main.py:511
+msgid "# of RPMs need to be updated by Bug Errata (keyword)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:516
-msgid "# of 'Important' Bug Errata (CVSS Score >= %.1f)"
+#: ./aux/..//rpmkit/updateinfo/main.py:517
+msgid "# of Security Errata (CVSS Score >= %.1f)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:519
+#: ./aux/..//rpmkit/updateinfo/main.py:520
+msgid "# of Bug Errata (CVSS Score >= %.1f)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:523
+msgid "# of RPMs need to be updated by Security Errata (CVSS Score >= %.1f)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:526
 msgid "# of RPMs need to be updated by Bug Errata (CVSS Score >= %.1f)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:530
+#: ./aux/..//rpmkit/updateinfo/main.py:537
 msgid "# of Update RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:577
-msgid "Critical RHSAs"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:579
-msgid "Update RPMs by RHSAs (Critical)"
-msgstr ""
-
 #: ./aux/..//rpmkit/updateinfo/main.py:581
-msgid "Important RHSAs"
+msgid "RHSAs (Critical)"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:583
-msgid "Updates by RHSAs (Important)"
+msgid "Update RPMs by RHSAs (Critical)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:585
+msgid "RHSAs (Important)"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:587
-msgid "Important RHBAs (keyword)"
+msgid "Updates by RHSAs (Important)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:589
+#: ./aux/..//rpmkit/updateinfo/main.py:591
+msgid "RHBAs (keyword)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:593
 msgid "Updates by RHBAs (Keyword)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:595
+#: ./aux/..//rpmkit/updateinfo/main.py:599
 msgid "RHSAs (CVSS score >= %.1f)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:597
+#: ./aux/..//rpmkit/updateinfo/main.py:601
 msgid "RHBAs (CVSS score >= %.1f)"
 msgstr ""
 
