@@ -143,7 +143,7 @@ def _flatten(xss):
         return [xss]
 
 
-def unique_(xs, sort=True, key=None, reverse=False, use_set=False):
+def unique_(xs, sort=True, cmp=None, key=None, reverse=False, use_set=False):
     """
     Returns new list of no duplicated items.
     If ``sort`` is True, result list will be sorted.
@@ -169,14 +169,14 @@ def unique_(xs, sort=True, key=None, reverse=False, use_set=False):
     [0, 3, 1, 2, 4, 5]
     """
     if use_set:
-        return sorted(set(xs), key=key, reverse=reverse)
+        return sorted(set(xs), cmp=cmp, key=key, reverse=reverse)
 
     acc = []
     for x in xs:
         if x not in acc:
             acc.append(x)
 
-    return sorted(acc, key=key, reverse=reverse) if sort else acc
+    return sorted(acc, cmp=cmp, key=key, reverse=reverse) if sort else acc
 
 
 def groupby_key(xs, keyfunc):
