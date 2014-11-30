@@ -362,6 +362,13 @@ def p2nevra(pkg):
             pkg["arch"])
 
 
+def p2na(pkg):
+    """
+    :param pkg: A dict represents package info including N, E, V, R, A
+    """
+    return (pkg["name"], pkg["arch"])
+
+
 def list_updates_from_errata(errata, updates):
     """
     :param errata: A list of errata dict
@@ -436,10 +443,10 @@ def errata_complement_g(errata, updates):
     :param errata: A list of errata
     :param updates: A list of update packages
     """
-    unames = U.uniq(u["name"] for u in updates)
+    unas = set(p2na(u) for u in updates)
     for e in errata:
         e["updates"] = U.uniq(p for p in e.get("packages", [])
-                              if p["name"] in unames)
+                              if p2na(p) in unas)
         e["update_names"] = U.uniq(u["name"] for u in e["updates"])
         e["bzs_s"] = ", ".join("rhbz#%s" % bz["id"] for bz in e.get("bzs", []))
 
