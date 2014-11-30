@@ -199,7 +199,7 @@ def _make_dataset(list_data, headers=None, title=None):
         dataset.title = title
 
     if headers:
-        dataset.headers = [h.rstrip('_s') for h in headers]
+        dataset.headers = [h.replace('_s', '') for h in headers]
 
         for x in list_data:
             dataset.append([_make_cell_data(x, h) for h in headers])
