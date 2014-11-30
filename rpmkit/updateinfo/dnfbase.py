@@ -164,6 +164,7 @@ def hawkey_adv_to_errata(hadv):
 
 
 class Base(rpmkit.updateinfo.base.Base):
+    name = "rpmkit.updateinfo.dnfbase"
 
     def __init__(self, root='/', repos=[], disabled_repos=['*'],
                  workdir=None, cli=True, cacheonly=False, **kwargs):

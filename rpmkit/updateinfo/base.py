@@ -15,6 +15,7 @@ LOG = logging.getLogger("rpmkit.updateinfo.base")
 
 
 class Base(object):
+    name = 'rpmkit.updateinfo.base'
 
     def __init__(self, root='/', repos=[], disabled_repos=['*'],
                  workdir=None, **kwargs):

@@ -131,6 +131,7 @@ def _to_pkg(pkg, extras=[]):
 
 
 class Base(rpmkit.updateinfo.base.Base):
+    name = "rpmkit.updateinfo.yumbase"
 
     def __init__(self, root='/', repos=[], disabled_repos=['*'],
                  load_available_repos=True, **kwargs):

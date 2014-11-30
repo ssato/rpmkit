@@ -241,6 +241,7 @@ def _is_root():
 
 
 class Base(rpmkit.updateinfo.base.Base):
+    name = "rpmkit.updateinfo.yumwrapper"
 
     def __init__(self, root='/', repos=[], disabled_repos=['*'], workdir=None,
                  timeout=None, **kwargs):
