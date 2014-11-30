@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-11-30 12:51+JST\n"
+"POT-Creation-Date: 2014-11-30 13:40+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -135,22 +135,22 @@ msgid "Critical RHSAs"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:579
-msgid "Important RHSAs"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:582
-msgid "Important RHBAs (keyword)"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:597
 msgid "Update RPMs by RHSAs (Critical)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:599
+#: ./aux/..//rpmkit/updateinfo/main.py:581
+msgid "Important RHSAs"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:583
 msgid "Updates by RHSAs (Important)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:601
+#: ./aux/..//rpmkit/updateinfo/main.py:587
+msgid "Important RHBAs (keyword)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:589
 msgid "Updates by RHBAs (Keyword)"
 msgstr ""
 
