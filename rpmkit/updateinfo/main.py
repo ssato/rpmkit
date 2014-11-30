@@ -354,14 +354,6 @@ def errata_group_and_sort_by_updates(errata):
     pass
 
 
-def p2nevra(pkg):
-    """
-    :param pkg: A dict represents package info including N, E, V, R, A
-    """
-    return (pkg["name"], pkg["epoch"], pkg["version"], pkg["release"],
-            pkg["arch"])
-
-
 def p2na(pkg):
     """
     :param pkg: A dict represents package info including N, E, V, R, A
@@ -369,13 +361,14 @@ def p2na(pkg):
     return (pkg["name"], pkg["arch"])
 
 
-def list_updates_from_errata(errata, updates):
+def list_updates_from_errata(errata):
     """
     :param errata: A list of errata dict
-    :param updates: A list of an update package, tuple of (N, E, V, R, A)
     """
-    return sorted((u for u in U.uconcat(e.get("updates", []) for e in errata)),
-                  key=itemgetter("name"))
+    sargs = dict(cmp=rpmkit.rpmutils.pcmp, reversed=True)
+    us = U.uniq(U.concat(e.get("updates", []) for e in errata), **sargs)
+    return [sorted(g, **sargs)[0] for k, g in
+            itertools.groupby(us, itemgetter("name"))]
 
 
 def compute_delta(refdir, errata, updates):
@@ -467,11 +460,9 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
     rhsa_imp = [e for e in rhsa if e.get("severity") == "Important"]
 
-    us_ref = [p2nevra(u) for u in updates]
-
     # TODO: degenerate errata by listing only latest update rpms:
-    us_of_rhsa_cri = list_updates_from_errata(rhsa_cri, us_ref)
-    us_of_rhsa_imp = list_updates_from_errata(rhsa_imp, us_ref)
+    us_of_rhsa_cri = list_updates_from_errata(rhsa_cri)
+    us_of_rhsa_imp = list_updates_from_errata(rhsa_imp)
 
     is_rhba = lambda e: e["advisory"].startswith("RHBA")
 
@@ -485,10 +476,10 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     else:
         rhsa_by_score = list(higher_score_cve_errata_g(rhsa, score))
         rhba_by_score = list(higher_score_cve_errata_g(rhba, score))
-        us_of_rhsa_by_score = list_updates_from_errata(rhsa_by_score, us_ref)
-        us_of_rhba_by_score = list_updates_from_errata(rhba_by_score, us_ref)
+        us_of_rhsa_by_score = list_updates_from_errata(rhsa_by_score)
+        us_of_rhba_by_score = list_updates_from_errata(rhba_by_score)
 
-    us_of_rhba_by_kwds = list_updates_from_errata(rhba_by_kwds, us_ref)
+    us_of_rhba_by_kwds = list_updates_from_errata(rhba_by_kwds)
 
     rhea = [e for e in errata if e["advisory"].startswith("RHEA")]
 
@@ -674,8 +665,8 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND, score=-1,
     LOG.info("%d Update RPMs found for installed rpms", len(us))
     U.json_dump(dict(data=us, ), updates_file_path(base.workdir))
 
-    es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
-    us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
+    es = U.uniq(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
+    us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
 
     LOG.info("Dump dataset file from RPMs and Errata data...")
     dump_datasets(workdir, ips, es, us, score, keywords)
