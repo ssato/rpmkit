@@ -18,7 +18,7 @@ import os.path
 _TODAY = datetime.datetime.now().strftime("%F")
 _DEFAULTS = dict(path=None, workdir="/tmp/rk-updateinfo-{}".format(_TODAY),
                  repos=[], backend=RUM.DEFAULT_BACKEND,
-                 keywords=RUM.RHBA_KEYWORDS, refdir=None,
+                 keywords=RUM.ERRATA_KEYWORDS, refdir=None,
                  verbose=False)
 _USAGE = """\
 %prog [Options...] RPMDB_ROOT
