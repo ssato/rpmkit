@@ -511,13 +511,13 @@ def make_summary_dataset(workdir, data, score=-1):
         cvss_ds = []
     else:
         cvss_ds = [(_("# of 'Important' Security Errata (CVSS Score >= "
-                      "%.1f)" % score),
+                      "%.1f)") % score,
                     len(data["errata"]["rhsa_by_cvss_score"]), "", ""),
                    (_("# of 'Important' Bug Errata (CVSS Score >= "
-                      "%.1f)" % score),
+                      "%.1f)") % score,
                     len(data["errata"]["rhba_by_cvss_score"]), "", ""),
                    (_("# of RPMs need to be updated by Bug Errata "
-                      "(CVSS Score >= %.1f)" % score),
+                      "(CVSS Score >= %.1f)") % score,
                     len(data["errata"]["us_of_rhba_by_cvss_score"]), "", "")]
 
     others_ds = [(_("# of Security Errata (all)"),
@@ -592,9 +592,9 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
         cvss_ds = [_make_dataset(data["errata"]["rhsa_by_cvss_score"],
                                  ("advisory", "severity", "synopsis",
                                   "cves_s", "cvsses_s", "url"),
-                                 _("Important RHSAs (CVSS >= %.1f)" % score)),
+                                 _("RHSAs (CVSS score >= %.1f)") % score),
                    _make_dataset(data["errata"]["rhba_by_cvss_score"], ekeys,
-                                 _("Important RHBAs (CVSS >= %.1f)" % score))]
+                                 _("RHBAs (CVSS score >= %.1f)") % score)]
         main_ds.extend(cvss_ds)
 
     book = tablib.Databook(summary_ds + main_ds + base_ds)
