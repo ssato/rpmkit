@@ -474,6 +474,7 @@ def analize_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     else:
         rhsa_by_score = list(higher_score_cve_errata_g(rhsa, score))
         rhba_by_score = list(higher_score_cve_errata_g(rhba, score))
+        us_of_rhsa_by_score = list_updates_from_errata(rhsa_by_score, us_ref)
         us_of_rhba_by_score = list_updates_from_errata(rhba_by_score, us_ref)
 
     us_of_rhba_by_kwds = list_updates_from_errata(rhba_by_kwds, us_ref)
@@ -486,6 +487,7 @@ def analize_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
                 rhba=rhba, rhba_by_kwds=rhba_by_kwds,
                 rhba_by_cvss_score=rhba_by_score,
                 us_of_rhba_by_kwds=us_of_rhba_by_kwds,
+                us_of_rhsa_by_cvss_score=us_of_rhsa_by_score,
                 us_of_rhba_by_cvss_score=us_of_rhba_by_score,
                 rhea=rhea)
 
@@ -504,18 +506,23 @@ def make_summary_dataset(workdir, data, score=-1):
            len(data["errata"]["us_of_rhsa_cri"]), "", ""),
           (_("# of RPMs need to be updated by Security Errata (important)"),
            len(data["errata"]["us_of_rhsa_imp"]), "", ""),
-          (_("# of 'Important' Bug Errata (keyword)"),
-           len(data["errata"]["rhba_by_kwds"]), "", "")]
+          (_("# of Bug Errata (keyword)"),
+           len(data["errata"]["rhba_by_kwds"]), "", ""),
+          (_("# of RPMs need to be updated by Bug Errata (keyword)"),
+           len(data["errata"]["us_of_rhba_by_kwds"]), "", "")]
 
     if score < 0:
         cvss_ds = []
     else:
-        cvss_ds = [(_("# of 'Important' Security Errata (CVSS Score >= "
+        cvss_ds = [(_("# of Security Errata (CVSS Score >= "
                       "%.1f)") % score,
                     len(data["errata"]["rhsa_by_cvss_score"]), "", ""),
-                   (_("# of 'Important' Bug Errata (CVSS Score >= "
+                   (_("# of Bug Errata (CVSS Score >= "
                       "%.1f)") % score,
                     len(data["errata"]["rhba_by_cvss_score"]), "", ""),
+                   (_("# of RPMs need to be updated by Security Errata "
+                      "(CVSS Score >= %.1f)") % score,
+                    len(data["errata"]["us_of_rhsa_by_cvss_score"]), "", ""),
                    (_("# of RPMs need to be updated by Bug Errata "
                       "(CVSS Score >= %.1f)") % score,
                     len(data["errata"]["us_of_rhba_by_cvss_score"]), "", "")]
@@ -563,28 +570,25 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
                _make_dataset(errata,
                              ("advisory", "type", "severity", "synopsis",
                               "description", "issue_date", "update_date",
-                              "url", "cves_s", "bzs_s"),
+                              "url", "cves_s", "bzs_s", "package_names"),
                              _("Errata Details")),
-               _make_dataset(errata,
-                             ("advisory", "severity", "package_names", "url"),
-                             _("Errata")),
                _make_dataset(rpms, rpmkeys, _("Installed RPMs"))]
 
     ekeys = ("advisory", "synopsis", "url", "package_names")
     urpmkeys = ("name", "version", "release", "epoch", "arch")
 
     main_ds = [_make_dataset(data["errata"]["rhsa_cri"], ekeys,
-                             _("Critical RHSAs")),
+                             _("RHSAs (Critical)")),
                _make_dataset(data["errata"]["us_of_rhsa_cri"], urpmkeys,
                              _("Update RPMs by RHSAs (Critical)")),
                _make_dataset(data["errata"]["rhsa_imp"], ekeys,
-                             _("Important RHSAs")),
+                             _("RHSAs (Important)")),
                _make_dataset(data["errata"]["us_of_rhsa_imp"], urpmkeys,
                              _("Updates by RHSAs (Important)")),
                _make_dataset(data["errata"]["rhba_by_kwds"],
                              ("advisory", "synopsis", "keywords", "url",
                               "package_names"),
-                             _("Important RHBAs (keyword)")),
+                             _("RHBAs (keyword)")),
                _make_dataset(data["errata"]["us_of_rhba_by_kwds"], urpmkeys,
                              _("Updates by RHBAs (Keyword)"))]
 
