@@ -365,11 +365,10 @@ def list_updates_from_errata(errata):
     """
     :param errata: A list of errata dict
     """
-    sargs = dict(cmp=rpmkit.rpmutils.pcmp, reverse=True)
     us = sorted(U.uconcat(e.get("updates", []) for e in errata),
                 key=itemgetter("name"))
-    return [sorted(g, **sargs)[0] for k, g in
-            itertools.groupby(us, itemgetter("name"))]
+    return [sorted(g, cmp=rpmkit.rpmutils.pcmp, reverse=True)[0] for k, g
+            in itertools.groupby(us, itemgetter("name"))]
 
 
 def compute_delta(refdir, errata, updates):
