@@ -9,16 +9,19 @@
 # License: GPLv3+
 #
 from rpmkit.globals import _
+from operator import itemgetter
 
 import rpmkit.updateinfo.yumwrapper
 import rpmkit.updateinfo.yumbase
 import rpmkit.updateinfo.dnfbase
 import rpmkit.updateinfo.utils
 import rpmkit.memoize
+import rpmkit.rpmutils
 import rpmkit.utils as U
 import rpmkit.swapi
 
 import datetime
+import itertools
 import logging
 import operator
 import os
@@ -32,18 +35,12 @@ _RPM_LIST_FILE = "packages.json"
 _ERRATA_LIST_FILE = "errata.json"
 _UPDATES_LIST_FILE = "updates.json"
 
-_RPM_KEYS = ("name", "version", "release", "epoch", "arch", "summary",
-             "vendor", "buildhost")
-_ERRATA_KEYS = ("advisory", "type", "severity")
-_UPDATE_KEYS = ("name", "version", "release", "epoch", "arch")
-_BZ_KEYS = ("bug_id", "summary", "priority", "severity")
-
 BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper.Base,
                 yumbase=rpmkit.updateinfo.yumbase.Base,
                 dnfbase=rpmkit.updateinfo.dnfbase.Base)
 DEFAULT_BACKEND = BACKENDS["yumbase"]
-
-RHBA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault"]
+ERRATA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault"]
+DEFAULT_CVSS_SCORE = 4.0
 
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
@@ -213,74 +210,6 @@ def _make_dataset(list_data, headers=None, title=None):
     return dataset
 
 
-_DETAILED_ERRATA_KEYS = ["advisory", "type", "severity", "synopsis",
-                         "description", "issue_date", "update_date",
-                         "url", "cves", "bzs"]
-
-_ERRATA_TYPES_MAP = dict(SA="RHSA", BA="RHBA", EA="RHEA")
-
-
-def classify_errata(errata):
-    """Classify errata by its type, RH(SA|BA|EA).
-
-    :param errata: An errata dict
-
-    >>> assert classify_errata(dict(advisory="RHSA-2012:1236")) == "RHSA"
-    >>> assert classify_errata(dict(advisory="RHBA-2012:1224")) == "RHBA"
-    >>> assert classify_errata(dict(advisory="RHEA-2012:0226")) == "RHEA"
-    """
-    return _ERRATA_TYPES_MAP[errata["advisory"][2:4]]
-
-
-def _make_summary_dataset(workdir, rpms, errata, updates, imp_rhsas=[],
-                          imp_rhbas=[], score=4.0):
-    """
-    :param rpms: List of RPM info.
-    :param errata: List of Errata info.
-    :param updates: List of update RPM info.
-    """
-    rhsa = [e for e in errata if classify_errata(e) == "RHSA"]
-    rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
-    rhsa_imp = [e for e in rhsa if e.get("severity") == "Important"]
-    rhsa_cri_or_imp = [e for e in rhsa
-                       if e.get("severity") in ("Important", "Critical")]
-    rhba = [e for e in errata if classify_errata(e) == "RHBA"]
-    rhea = [e for e in errata if classify_errata(e) == "RHEA"]
-    rpmnames_need_updates = U.uniq(u["name"] for u in updates)
-    rpmnames = U.uniq(r["name"] for r in rpms)
-
-    U.json_dump(dict(rhsa=rhsa, rhsa_cri=rhsa_cri, rhsa_imp=rhsa_imp,
-                     rhba=rhba, rhea=rhea,
-                     important_rhsa=imp_rhsas, important_rhba=imp_rhbas,
-                     rpmnames_need_updates=rpmnames_need_updates),
-                os.path.join(workdir, "summary.json"))
-
-    ds = [(_("# of Security Errata (critical)"), len(rhsa_cri), "", ""),
-          (_("# of Security Errata (important)"), len(rhsa_imp), "", ""),
-          (_("# of Security Errata (critical or important)"),
-           len(rhsa_cri_or_imp), "", ""),
-          (_("# of Security Errata (all)"), len(rhsa), "", ""),
-          (_("# of Bug Errata"), len(rhba), "", ""),
-          (_("# of Enhancement Errata"), len(rhea), "-", ""),
-          (_("# of Installed RPMs"), len(rpms), "", ""),
-          (_("# of RPMs (names) need to be updated"),
-           len(rpmnames_need_updates), "", ""),
-          (_("# of 'Important' Security Errata (CVSS Score >= %.1f)" % score),
-           len(imp_rhsas), "", ""),
-          (_("# of 'Important' Bug Errata (keyword)"), len(imp_rhbas), "", ""),
-          (_("The rate of RPMs (names) need any updates / RPMs (names) [%]"),
-           100 * len(rpmnames_need_updates) / len(rpmnames), "", "")]
-
-    dataset = tablib.Dataset()
-    dataset.title = _("Summary")
-    dataset.headers = (_("item"), _("value"), _("rating"), _("comments"))
-
-    for d in ds:
-        dataset.append(d)
-
-    return dataset
-
-
 def _date_from_errata_issue_data(date_s):
     """
     NOTE: Errata issue_date and update_date format: month/day/year,
@@ -342,7 +271,7 @@ def _is_newer_errata(errata, since=None):
     return True
 
 
-def cve_socre_gt(cve, score=4.0, default=False):
+def cve_socre_ge(cve, score=DEFAULT_CVSS_SCORE, default=False):
     """
     :param cve: A dict contains CVE and CVSS info.
     :param score: Lowest score to select CVEs (float). It's Set to 4.0 (PCIDSS
@@ -365,74 +294,81 @@ def cve_socre_gt(cve, score=4.0, default=False):
     return default
 
 
-_CVE_SECERRATA_KEYS = ["advisory", "severity", "cves", "synopsis",
-                       "issue_date", "url"]
-
-
-def dump_datasets(workdir, rpms, errata, updates, rpmkeys=_RPM_KEYS,
-                  ekeys=_ERRATA_KEYS, dekeys=_DETAILED_ERRATA_KEYS,
-                  ukeys=_UPDATE_KEYS, start_date=None,
-                  csekeys=_CVE_SECERRATA_KEYS, cvss_score=4.0,
-                  keywords=RHBA_KEYWORDS):
+def has_higher_score_cve(errata, score=DEFAULT_CVSS_SCORE):
     """
-    :param workdir: Working dir to dump the result
-    :param rpms: A list of installed RPMs
-    :param errata: A list of applicable errata
-    :param updates: A list of update RPMs
-    :param start_date: Add an optional worksheet to list only errata newer
-        than the date ``start_date``. Along with this, detailed errata info
-        will be gotten if this date was not None and a valid date strings.
-    :param keywords: Keyword list to filter 'important' RHBAs
+    :param errata: A dict represents errata info
+    :param score: Limit value of CVSS base metrics score or None
     """
-    datasets = [_make_dataset(rpms, rpmkeys, _("Installed RPMs")),
-                _make_dataset(errata, ekeys + ("package_names", ),
-                              _("Errata")),
-                _make_dataset(updates, ukeys, _("Update RPMs"))]
+    if errata.get("cves", False):
+        return any(cve_socre_ge(cve, score) for cve in errata["cves"])
 
-    eds = _make_dataset(errata, dekeys, _("Errata Details"))
+    return False
 
-    cseds_title = _("RHSAs - CVSS >= %.1f") % cvss_score
-    cses = [e for e in errata if e.get("severity") and e.get("cves", False) and
-            any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
-    cseds = _make_dataset(cses, csekeys, cseds_title)
 
-    ciseds_title = _("Critical or Important RHSAs")
-    cises = [e for e in errata
-             if e.get("severity") in ("Critical", "Important")]
-    cisekeys = ["advisory", "severity", "synopsis", "issue_date", "url"]
-    ciseds = _make_dataset(cises, cisekeys, ciseds_title)
+@rpmkit.memoize.memoize
+def errata_list_unique_src_updates(errata):
+    """
+    :param errata: A dict represents errata info
+    """
+    return [sorted(g, key=itemgetter("name"))[0] for k, g in
+            itertools.groupby(sorted(errata.get("packages", []),
+                                     key=itemgetter("src")),
+                              itemgetter("src"))]
 
-    ibeds_title = _("RHBAs selected by keywords")
-    ibes = [e for e in errata if any(kw in e["description"] for kw
-                                     in keywords)]
-    ibeds_keys = ("advisory", "synopsis", "url")
-    ibeds = _make_dataset(ibes, ibeds_keys, ibeds_title)
 
-    summary_ds = _make_summary_dataset(workdir, rpms, errata, updates,
-                                       cses, ibes)
+@rpmkit.memoize.memoize
+def is_subset_or_older_errata(errata, errata_ref):
+    """
+    Return True if `errata` has relevant update packages which is a subset of
+    ones of `errata_ref` or has same relevant update packages older than ones
+    of `errata_ref`. That is, return True if `errata` is not needed to apply
+    because `errata_ref` subsumes `errata` and application of `errata_ref` is
+    enough.
 
-    special_ds = [summary_ds, cseds, ciseds, ibeds, eds]
+    :param errata: A dict represents errata info
+    :param errata_ref: A dict represents errata info to compare with
 
-    if start_date is not None:
-        es = [e for e in errata if _is_newer_errata(e, start_date)]
-        eds2 = _make_dataset(es, dekeys,
-                             _("Errata Details (%s ~)") % start_date)
+    :return: True if update packages of `errata` is a sub set of ones of
+        `errata_ref` or `errata_ref` can become an alternative of `errata`.
+    """
+    us = sorted(errata_list_unique_src_updates(errata))
+    rs = sorted(errata_list_unique_src_updates(errata_ref))
 
-        cses = [e for e in es if e.get("cves", []) and
-                any(cve_socre_gt(cve, cvss_score) for cve in e["cves"])]
-        cseds = _make_dataset(cses, csekeys, cseds_title)
+    if len(us) > len(rs):
+        return False  # `errata` has updates not in `errata_ref`.
 
-        es_diff = [e["advisory"] for e in es]
-        errata = [e for e in es if e["advisory"] in es_diff]
-        es2 = _make_dataset(errata, ekeys + ("package_names", ),
-                            _("Errata (%s ~)") % start_date)
+    uns = set(p["name"] for p in us)
+    rns = set(p["name"] for p in rs)
 
-        special_ds = [es2, eds2, cseds]
+    if uns <= rns:
+        return all(rpmkit.rpmutils.pcmp(u, r) < 0 for u, r
+                   in itertools.izip(us, rs))
 
-    book = tablib.Databook(special_ds + datasets)
+    return False
 
-    with open(dataset_file_path(workdir), 'wb') as out:
-        out.write(book.xls)
+
+def errata_group_and_sort_by_updates(errata):
+    """
+    :param errata: A list of errata dict
+    """
+    pass
+
+
+def p2nevra(pkg):
+    """
+    :param pkg: A dict represents package info including N, E, V, R, A
+    """
+    return (pkg["name"], pkg["epoch"], pkg["version"], pkg["release"],
+            pkg["arch"])
+
+
+def list_updates_from_errata(errata, updates):
+    """
+    :param errata: A list of errata dict
+    :param updates: A list of an update package, tuple of (N, E, V, R, A)
+    """
+    return sorted((u for u in U.uconcat(e.get("packages", []) for e in errata)
+                   if p2nevra(u) in updates), key=itemgetter("name"))
 
 
 def compute_delta(refdir, errata, updates):
@@ -464,6 +400,212 @@ def compute_delta(refdir, errata, updates):
              in ref_nevras])
 
 
+def errata_matches_keywords_g(errata, keywords=ERRATA_KEYWORDS):
+    """
+    :param errata: A list of errata
+    :param keywords: Keyword list to filter 'important' RHBAs
+    """
+    for e in errata:
+        mks = [k for k in keywords if k in e["description"]]
+        if mks:
+            e["keywords"] = mks
+            yield e
+
+
+def higher_score_cve_errata_g(errata, score=DEFAULT_CVSS_SCORE):
+    """
+    :param errata: A list of errata
+    :param score: CVSS base metrics score
+    """
+    for e in errata:
+        cves = errata.get("cves", [])
+        if cves and any(cve_socre_ge(cve, score) for cve in cves):
+            cvsses_s = ", ".join("{cve} ({score}, {metrics})".format(**c)
+                                 for c in cves)
+            cves_s = ", ".join("{cve} ({url})".format(**c) for c in cves)
+            e["cvsses_s"] = cvsses_s
+            e["cves_s"] = cves_s
+
+            yield e
+
+
+def errata_complement_g(errata):
+    """
+    TODO: What should be complemented?
+
+    :param errata: A list of errata
+    """
+    for e in errata:
+        e["package_names"] = U.uniq(p["name"] for p in e.get("packages", []))
+        e["bzs_s"] = ", ".join("rhbz#%s" % bz["id"] for bz in e.get("bzs", []))
+
+        yield e
+
+
+def analize_errata(errata, updates, score=None, keywords=ERRATA_KEYWORDS):
+    """
+    :param errata: A list of applicable errata sorted by severity
+        if it's RHSA and advisory in ascending sequence
+    :param updates: A list of update packages
+    :param score: CVSS base metrics score
+    :param keywords: Keyword list to filter 'important' RHBAs
+    """
+    errata = list(errata_complement_g(errata))
+
+    rhsa = [e for e in errata if e.get("severity", None) is not None]
+    rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
+    rhsa_imp = [e for e in rhsa if e.get("severity") == "Important"]
+
+    us_ref = [p2nevra(u) for u in updates]
+
+    # TODO: degenerate errata by listing only latest update rpms:
+    us_of_rhsa_cri = list_updates_from_errata(rhsa_cri, us_ref)
+    us_of_rhsa_imp = list_updates_from_errata(rhsa_imp, us_ref)
+
+    is_rhba = lambda e: e["advisory"].startswith("RHBA")
+
+    rhba = [e for e in errata if is_rhba(e)]
+    rhba_by_kwds = list(errata_matches_keywords_g(rhba, keywords))
+
+    if score is None:
+        rhsa_by_score = []
+        rhba_by_score = []
+        us_of_rhba_by_score = []
+    else:
+        rhsa_by_score = list(higher_score_cve_errata_g(rhsa, score))
+        rhba_by_score = list(higher_score_cve_errata_g(rhba, score))
+        us_of_rhba_by_score = list_updates_from_errata(rhba_by_score, us_ref)
+
+    us_of_rhba_by_kwds = list_updates_from_errata(rhba_by_kwds, us_ref)
+
+    rhea = [e for e in errata if e["advisory"].startswith("RHEA")]
+
+    return dict(rhsa=rhsa, rhsa_cri=rhsa_cri, rhsa_imp=rhsa_imp,
+                rhsa_by_cvss_score=rhsa_by_score,
+                us_of_rhsa_cri=us_of_rhsa_cri, us_of_rhsa_imp=us_of_rhsa_imp,
+                rhba=rhba, rhba_by_kwds=rhba_by_kwds,
+                rhba_by_cvss_score=rhba_by_score,
+                us_of_rhba_by_kwds=us_of_rhba_by_kwds,
+                us_of_rhba_by_cvss_score=us_of_rhba_by_score,
+                rhea=rhea)
+
+
+def make_summary_dataset(workdir, data, score=None):
+    """
+    :param workdir: Working dir to dump the result
+    :param data: RPMs, Update RPMs and various errata data summarized
+    :param score: CVSS base metrics score limit
+    """
+    ds = [(_("# of Security Errata (critical)"),
+           len(data["errata"]["rhsa_cri"]), "", ""),
+          (_("# of Security Errata (important)"),
+           len(data["errata"]["rhsa_imp"]), "", ""),
+          (_("# of RPMs need to be updated by Security Errata (critical)"),
+           len(data["errata"]["us_of_rhsa_cri"]), "", ""),
+          (_("# of RPMs need to be updated by Security Errata (important)"),
+           len(data["errata"]["us_of_rhsa_imp"]), "", ""),
+          (_("# of 'Important' Bug Errata (keyword)"),
+           len(data["errata"]["rhba_by_kwds"]), "", "")]
+
+    if score is None:
+        cvss_ds = []
+    else:
+        cvss_ds = [(_("# of 'Important' Security Errata (CVSS Score >= "
+                      "%.1f)" % score),
+                    len(data["errata"]["rhsa_by_cvss_score"]), "", ""),
+                   (_("# of 'Important' Bug Errata (CVSS Score >= "
+                      "%.1f)" % score),
+                    len(data["errata"]["rhba_by_cvss_score"]), "", ""),
+                   (_("# of RPMs need to be updated by Bug Errata "
+                      "(CVSS Score >= %.1f)" % score),
+                    len(data["errata"]["us_of_rhba_by_cvss_score"]), "", "")]
+
+    others_ds = [(_("# of Security Errata (all)"),
+                  len(data["errata"]["rhsa"]), "", ""),
+                 (_("# of Bug Errata"), len(data["errata"]["rhba"]), "", ""),
+                 # TODO: Needed ?
+                 # (_("# of Enhancement Errata"),
+                 #  len(data["errata"]["rhea"]), "-", ""),
+                 (_("# of Installed RPMs"), len(data["installed"]), "", ""),
+                 (_("# of Update RPMs"), len(data["updates"]), "", "")]
+
+    dataset = tablib.Dataset()
+    dataset.title = _("Summary")
+    dataset.headers = (_("item"), _("value"), _("rating"), _("comments"))
+    for d in ds + cvss_ds + others_ds:
+        dataset.append(d)
+
+    return dataset
+
+
+def dump_datasets(workdir, rpms, errata, updates, score=None,
+                  keywords=ERRATA_KEYWORDS):
+    """
+    :param workdir: Working dir to dump the result
+    :param rpms: A list of installed RPMs
+    :param errata: A list of applicable errata
+    :param updates: A list of update RPMs
+    :param score: CVSS base metrics score
+    :param keywords: Keyword list to filter 'important' RHBAs
+    """
+    data = dict(errata=analize_errata(errata, updates, score, keywords),
+                rpms=rpms, installed=rpms, updates=updates,
+                rpmnames_need_updates=U.uniq(u["name"] for u in updates))
+    U.json_dump(data, os.path.join(workdir, "summary.json"))
+
+    rpmkeys = ("name", "version", "release", "epoch", "arch", "summary",
+               "vendor", "buildhost")
+
+    summary_ds = [make_summary_dataset(workdir, data, score)]
+    base_ds = [_make_dataset(updates,
+                             ("name", "version", "release", "epoch", "arch"),
+                             _("Update RPMs")),
+               _make_dataset(errata,
+                             ("advisory", "type", "severity", "synopsis",
+                              "description", "issue_date", "update_date",
+                              "url", "cves_s", "bzs_s"),
+                             _("Errata Details")),
+               _make_dataset(errata,
+                             ("advisory", "severity", "package_names", "url"),
+                             _("Errata")),
+               _make_dataset(rpms, rpmkeys, _("Installed RPMs"))]
+
+    rhsa_keys = ("advisory", "severity", "synopsis", "url")
+    urpmkeys = ("name", "version", "release", "epoch", "arch")
+
+    main_ds = [_make_dataset(data["errata"]["rhsa_cri"], rhsa_keys,
+                             _("Critical RHSAs")),
+               _make_dataset(data["errata"]["rhsa_imp"], rhsa_keys,
+                             _("Important RHSAs")),
+               _make_dataset(data["errata"]["rhba_by_kwds"],
+                             ("advisory", "synopsis", "keywords", "url"),
+                             _("Important RHBAs (keyword)"))]
+
+    if score is not None:
+        cvss_ds = [_make_dataset(data["errata"]["rhsa_by_cvss_score"],
+                                 ("advisory", "severity", "synopsis",
+                                  "cves_s", "cvsses_s", "url"),
+                                 _("Important RHSAs (CVSS Score >= "
+                                   "%.1f)" % score)),
+                   _make_dataset(data["errata"]["rhba_by_cvss_score"],
+                                 rhsa_keys,
+                                 _("Important RHBAs (CVSS Score >= "
+                                   "%.1f)" % score))]
+        main_ds.extend(cvss_ds)
+
+    others_ds = [_make_dataset(data["errata"]["us_of_rhsa_cri"], urpmkeys,
+                               _("Update RPMs by RHSAs (Critical)")),
+                 _make_dataset(data["errata"]["us_of_rhsa_imp"], urpmkeys,
+                               _("Updates by RHSAs (Important)")),
+                 _make_dataset(data["errata"]["us_of_rhba_by_kwds"], urpmkeys,
+                               _("Updates by RHBAs (Keyword)"))]
+
+    book = tablib.Databook(summary_ds + main_ds + others_ds + base_ds)
+
+    with open(dataset_file_path(workdir), 'wb') as out:
+        out.write(book.xls)
+
+
 def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
                 backends=BACKENDS):
     LOG.info("Try backend: %s", backend)
@@ -471,7 +613,7 @@ def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
 
 
 def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
-         keywords=RHBA_KEYWORDS, refdir=None, backends=BACKENDS, **kwargs):
+         keywords=ERRATA_KEYWORDS, refdir=None, backends=BACKENDS, **kwargs):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param workdir: Working dir to save results
@@ -520,23 +662,31 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND,
     LOG.info("%d Update RPMs found for installed rpms", len(us))
     U.json_dump(dict(data=us, ), updates_file_path(base.workdir))
 
+    es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
+    us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
+
+    LOG.info("Dump dataset file from RPMs and Errata data...")
+    dump_datasets(workdir, ips, es, us)
+
     if refdir:
         LOG.info("Computing delta errata and updates for data in %s", refdir)
         (es, us) = compute_delta(refdir, es, us)
 
+        deltadir = os.path.join(workdir, "delta")
+        if not os.path.exists(deltadir):
+            LOG.info("Creating delta working dir: %s", deltadir)
+            os.makedirs(deltadir)
+
         LOG.info("%d Delta Errata found for installed rpms", len(es))
-        U.json_dump(dict(data=es, ), errata_list_path(base.workdir,
-                                                      "errata_delta.json"))
+        U.json_dump(dict(data=es, ), errata_list_path(deltadir))
 
         LOG.info("%d Delta Update RPMs found for installed rpms", len(us))
-        U.json_dump(dict(data=us, ), updates_file_path(base.workdir,
-                                                       "updates_delta.json"))
+        U.json_dump(dict(data=us, ), updates_file_path(deltadir))
 
-    es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
-    us = sorted(us, key=operator.itemgetter("name", "epoch", "version",
-                                            "release"))
+        es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
+        us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
 
-    LOG.info("Dump dataset file from RPMs and Errata data...")
-    dump_datasets(workdir, ips, es, us)
+        LOG.info("Dump dataset file from RPMs and Errata data...")
+        dump_datasets(workdir, ips, es, us)
 
 # vim:sw=4:ts=4:et:
