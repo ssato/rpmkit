@@ -20,6 +20,9 @@ import rpmkit.rpmutils
 import rpmkit.utils as U
 import rpmkit.swapi
 
+# It looks avaialble in EPEL for RHELs:
+#   https://apps.fedoraproject.org/packages/python-bunch
+import bunch
 import datetime
 import itertools
 import logging
@@ -616,12 +619,55 @@ def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
     return backends.get(backend, fallback)
 
 
-def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND, score=-1,
-         keywords=ERRATA_KEYWORDS, refdir=None, backends=BACKENDS, **kwargs):
+def prepare(root, workdir=None, repos=[], did=None,
+            backend=DEFAULT_BACKEND, backends=BACKENDS):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param workdir: Working dir to save results
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
+    :param did: Identity of the data (ex. hostname) or empty str
+    :param backend: Backend module to use to get updates and errata
+    :param backends: Backend list
+
+    :return: A bunch.Bunch object of (Base, workdir, installed_rpms_list)
+    """
+    if not rpmkit.updateinfo.utils.check_rpmdb_root(root, True):
+        raise RuntimeError("Not a root of RPM DB: %s [%s]" % root, did)
+
+    if workdir is None:
+        LOG.info("Set workdir to root [%s]: %s", did, root)
+        workdir = root
+    else:
+        if not os.path.exists(workdir):
+            LOG.info("Creating working dir [%s]: %s", did, workdir)
+            os.makedirs(workdir)
+
+    host = bunch.bunchify(dict(id=did, root=root, workdir=workdir,
+                               repos=repos))
+
+    base = get_backend(backend)(host.root, host.repos, workdir=host.workdir)
+    LOG.info("Initialized backend [%s]: backend=%s", host.id, base.name)
+    host.base = base
+
+    LOG.info("Dump Installed RPMs list loaded from: %s [%s]",
+             host.root, host.id)
+    host.installed = sorted(host.base.list_installed(),
+                            key=operator.itemgetter("name", "epoch", "version",
+                                                    "release"))
+    LOG.info("%d Installed RPMs found [%s]", len(host.installed), host.id)
+    U.json_dump(dict(data=host.installed, ), rpm_list_path(host.workdir))
+
+    return host
+
+
+def main(root, workdir=None, repos=[], did=None, score=-1,
+         keywords=ERRATA_KEYWORDS, refdir=None, backend=DEFAULT_BACKEND,
+         backends=BACKENDS):
+    """
+    :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
+    :param workdir: Working dir to save results
+    :param repos: List of yum repos to get updateinfo data (errata and updtes)
+    :param did: Identity of the data (ex. hostname) or empty str
     :param backend: Backend module to use to get updates and errata
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
@@ -629,44 +675,35 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND, score=-1,
         compute delta (updates since that data)
     :param backends: Backend list
     """
-    if not rpmkit.updateinfo.utils.check_rpmdb_root(root, True):
-        raise RuntimeError("Not a root of RPM DB: %s" % root)
+    host = prepare(root, workdir, repos, did, backend, backends)
 
-    if workdir is None:
-        LOG.info("Set workdir to root: %s", root)
-        workdir = root
-    else:
-        if not os.path.exists(workdir):
-            LOG.info("Creating working dir: %s", workdir)
-            os.makedirs(workdir)
+    timestamp = datetime.datetime.now().strftime("%F %T")
+    metadata = bunch.bunchify(dict(id=host.id, root=host.root,
+                                   workdir=host.workdir, repos=host.repos,
+                                   backend=host.base.name, score=score,
+                                   keywords=keywords,
+                                   installed=len(host.installed),
+                                   generated=timestamp))
+    LOG.info("Dump metadata [%s]: root=%s", metadata.id, metadata.root)
+    U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
 
-    base = get_backend(backend)(root, repos, workdir=workdir)
-    LOG.info("Dump metadata at first: root=%s, repos=%s, backend=%s",
-             root, ','.join(repos), base.name)
-
-    U.json_dump(dict(root=root, repos=repos, backend=base.name,
-                     keywords=keywords, refdir=refdir,
-                     generated=datetime.datetime.now().strftime("%F %T")),
-                os.path.join(workdir, "metadata.json"))
-
-    LOG.info("Dump Installed RPMs list loaded from: %s", base.root)
-    ips = sorted(base.list_installed(),
-                 key=operator.itemgetter("name", "epoch", "version",
-                                         "release"))
-    LOG.info("%d Installed RPMs found", len(ips))
-    U.json_dump(dict(data=ips, ), rpm_list_path(base.workdir))
+    base = host.base
+    workdir = host.workdir
 
     LOG.info("Dump Errata list...")
     es = [add_cvss_for_errata(e, mk_cve_vs_cvss_map()) for e
           in base.list_errata()]
-    LOG.info("%d Errata found for installed rpms", len(es))
-    U.json_dump(dict(data=es, ), errata_list_path(base.workdir))
+    LOG.info("%d Errata found for installed rpms [%s]", len(es), host.id)
+    U.json_dump(dict(data=es, ), errata_list_path(workdir))
+    host.errata = es
 
     LOG.info("Dump Update RPMs list...")
     us = base.list_updates()
-    LOG.info("%d Update RPMs found for installed rpms", len(us))
-    U.json_dump(dict(data=us, ), updates_file_path(base.workdir))
+    LOG.info("%d Update RPMs found for installed rpms [%s]", len(us), host.id)
+    U.json_dump(dict(data=us, ), updates_file_path(workdir))
+    host.updates = us
 
+    ips = host.installed
     es = U.uniq(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
     us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
 
@@ -679,13 +716,15 @@ def main(root, workdir=None, repos=[], backend=DEFAULT_BACKEND, score=-1,
 
         deltadir = os.path.join(workdir, "delta")
         if not os.path.exists(deltadir):
-            LOG.info("Creating delta working dir: %s", deltadir)
+            LOG.info("Creating delta working dir [%s]: %s", host.id, deltadir)
             os.makedirs(deltadir)
 
-        LOG.info("%d Delta Errata found for installed rpms", len(es))
+        LOG.info("%d Delta Errata found for installed rpms [%s]", len(es),
+                 host.id)
         U.json_dump(dict(data=es, ), errata_list_path(deltadir))
 
-        LOG.info("%d Delta Update RPMs found for installed rpms", len(us))
+        LOG.info("%d Delta Update RPMs found for installed rpms [%s]",
+                 len(us), host.id)
         U.json_dump(dict(data=us, ), updates_file_path(deltadir))
 
         es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
