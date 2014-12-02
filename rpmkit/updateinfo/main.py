@@ -656,6 +656,7 @@ def prepare(root, workdir=None, repos=[], did=None,
                                                     "release"))
     LOG.info("%d Installed RPMs found [%s]", len(host.installed), host.id)
     U.json_dump(dict(data=host.installed, ), rpm_list_path(host.workdir))
+    host.avaialble = True
 
     return host
 
