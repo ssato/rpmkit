@@ -429,7 +429,8 @@ def higher_score_cve_errata_g(errata, score=DEFAULT_CVSS_SCORE):
     :param score: CVSS base metrics score
     """
     for e in errata:
-        cves = e.get("cves", [])
+        # NOTE: Skip older CVEs do not have CVSS base metrics and score.
+        cves = [c for c in e.get("cves", []) if "score" in c]
         if cves and any(cve_socre_ge(cve, score) for cve in cves):
             cvsses_s = ", ".join("{cve} ({score}, {metrics})".format(**c)
                                  for c in cves)
