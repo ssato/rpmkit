@@ -45,6 +45,10 @@ DEFAULT_BACKEND = BACKENDS["yumbase"]
 ERRATA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault"]
 DEFAULT_CVSS_SCORE = 4.0
 
+rpmkit.updateinfo.yumwrapper.LOG.setLevel(logging.WARN)
+rpmkit.updateinfo.yumbase.LOG.setLevel(logging.WARN)
+rpmkit.updateinfo.dnfbase.LOG.setLevel(logging.WARN)
+
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
     """
