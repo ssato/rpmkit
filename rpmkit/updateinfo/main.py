@@ -661,7 +661,7 @@ def prepare(root, workdir=None, repos=[], did=None,
 
     # pylint: disable=maybe-no-member
     base = get_backend(backend)(host.root, host.repos, workdir=host.workdir)
-    LOG.debug(_("Initialized backend [%s]: backend=%s"), host.id, base.name)
+    LOG.debug(_("Initialized backend [%s]: %s"), host.id, base.name)
     host.base = base
 
     LOG.debug(_("Dump Installed RPMs list loaded from: %s [%s]"),
