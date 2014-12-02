@@ -18,9 +18,9 @@ import os.path
 
 _TODAY = datetime.datetime.now().strftime("%F")
 _DEFAULTS = dict(path=None, workdir="/tmp/rk-updateinfo-{}".format(_TODAY),
-                 repos=[], multi=False, id=None, backend=RUM.DEFAULT_BACKEND,
+                 repos=[], multiproc=False, id=None,
                  score=RUM.DEFAULT_CVSS_SCORE, keywords=RUM.ERRATA_KEYWORDS,
-                 refdir=None, verbose=False)
+                 refdir=None, backend=RUM.DEFAULT_BACKEND, verbose=False)
 _USAGE = """\
 %prog [Options...] ROOT
 
@@ -40,8 +40,9 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
                       "to specify multiple yum repos. Note: Any other repos "
                       "are disabled if this option was set.")
     p.add_option("-I", "--id", help="Data ID [None]")
-    p.add_option("-M", "--multi", action="store_true",
-                 help="Set if you want to analyze RPM DBs of Multiple hosts")
+    p.add_option("-M", "--multiproc", action="store_true",
+                 help="Specify this option if you want to analyze data "
+                      "in parallel")
     p.add_option("-B", "--backend", choices=backends.keys(),
                  help="Specify backend to get updates and errata. Choices: "
                       "%s [%%default]" % ', '.join(backends.keys()))
@@ -66,16 +67,16 @@ def main():
 
     RUM.LOG.setLevel(logging.DEBUG if options.verbose else logging.INFO)
 
-    if options.multi:
-        hosts_datadir = args[0] if args else raw_input("Hosts data dir > ")
-        RUMS.main(hosts_datadir, options.workdir, options.repos, options.score,
-                  options.keywords, options.refdir)
-    else:
-        root = args[0] if args else raw_input("Root of RPM DB files > ")
-        assert os.path.exists(root), "Not found RPM DB Root: %s" % root
+    root = args[0] if args else raw_input("Host[s] data dir (root) > ")
+    assert os.path.exists(root), "Not found RPM DB Root: %s" % root
 
+    if os.path.exists(os.path.join(root, "var/lib/rpm")):
         RUM.main(root, options.workdir, options.repos, options.id,
                  options.score, options.keywords, options.refdir)
+    else:
+        # multihosts mode:
+        RUMS.main(root, options.workdir, options.repos, options.score,
+                  options.keywords, options.refdir, options.multiproc)
 
 
 if __name__ == '__main__':
