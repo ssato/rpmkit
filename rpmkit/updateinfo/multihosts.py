@@ -73,7 +73,7 @@ def prepare(hosts_datadir, workdir=None, repos=[],
         workdir = hosts_datadir
     else:
         if not os.path.exists(workdir):
-            LOG.info(_("Creating working dir: %s"), workdir)
+            LOG.debug(_("Creating working dir: %s"), workdir)
             os.makedirs(workdir)
 
     for h, root in hosts_rpmroot_g(hosts_datadir):

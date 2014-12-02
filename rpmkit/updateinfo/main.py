@@ -400,7 +400,7 @@ def compute_delta(refdir, errata, updates):
 
     ref_es_data = U.json_load(ref_es_file)
     ref_us_data = U.json_load(ref_us_file)
-    LOG.info(_("Loaded reference errata and updates file"))
+    LOG.debug(_("Loaded reference errata and updates file"))
 
     nevra_keys = ("name", "epoch", "version", "release", "arch")
     ref_eadvs = U.uniq(e["advisory"] for e in ref_es_data["data"])
@@ -648,7 +648,7 @@ def prepare(root, workdir=None, repos=[], did=None,
         workdir = root
     else:
         if not os.path.exists(workdir):
-            LOG.info(_("Creating working dir [%s]: %s"), did, workdir)
+            LOG.debug(_("Creating working dir [%s]: %s"), did, workdir)
             os.makedirs(workdir)
 
     host = bunch.bunchify(dict(id=did, root=root, workdir=workdir,
@@ -700,14 +700,14 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
     # pylint: enable=maybe-no-member
     U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
 
-    LOG.info(_("Dump Errata list..."))
+    LOG.debug(_("Dump Errata list..."))
     es = [add_cvss_for_errata(e, mk_cve_vs_cvss_map()) for e
           in base.list_errata()]
     LOG.info(_("%d Errata found for installed rpms [%s]"), len(es), host.id)
     U.json_dump(dict(data=es, ), errata_list_path(workdir))
     host.errata = es
 
-    LOG.info(_("Dump Update RPMs list..."))
+    LOG.debug(_("Dump Update RPMs list..."))
     us = base.list_updates()
     LOG.info(_("%d Update RPMs found for installed rpms [%s]"),
              len(us), host.id)
@@ -722,14 +722,14 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
     dump_datasets(workdir, ips, es, us, score, keywords)
 
     if refdir:
-        LOG.info(_("Computing delta errata and updates for data in %s"),
-                 refdir)
+        LOG.debug(_("Computing delta errata and updates for data in %s"),
+                  refdir)
         (es, us) = compute_delta(refdir, es, us)
 
         deltadir = os.path.join(workdir, "delta")
         if not os.path.exists(deltadir):
-            LOG.info(_("Creating delta working dir [%s]: %s"),
-                     host.id, deltadir)
+            LOG.debug(_("Creating delta working dir [%s]: %s"),
+                      host.id, deltadir)
             os.makedirs(deltadir)
 
         LOG.info(_("%d Delta Errata found for installed rpms [%s]"),
