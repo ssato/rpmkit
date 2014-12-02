@@ -113,8 +113,8 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     all_hosts = list(prepare(hosts_datadir, workdir, repos, backend, backends))
     hosts = filter(operator.itemgetter("available"), all_hosts)
 
-    LOG.info(_("Hosts: %d (%d lack[s] valid RPM DBs)"), len(hosts),
-             len(all_hosts) - len(hosts))
+    LOG.info(_("Analyze %d hosts (Skipped %d hosts lack valid RPM DBs)"),
+             len(hosts), len(all_hosts) - len(hosts))
 
     ilen = lambda h: len(h.installed)
     hps = lambda h: [p2nevra(p) for p in h.installed]

@@ -111,7 +111,7 @@ def get_cve_details(cve, cve_cvss_map={}):
         dcve["nvd_url"] = dcve["url"]
         dcve["url"] = cve["url"]
     else:
-        LOG.warn("Could not get CVSS metrics of %s", cveid)
+        LOG.warn(_("Could not get CVSS metrics of %s"), cveid)
         dcve = dict(cve=cveid, )
 
     cve.update(**dcve)
@@ -169,7 +169,7 @@ def _fmt_bzs(bzs):
     try:
         bzs = [_fmt(bz) % bz for bz in bzs]
     except KeyError:
-        LOG.warn("BZ Key error: " + str(bzs))
+        LOG.warn(_("BZ Key error: %s"), str(bzs))
         pass
 
     return bzs
@@ -293,13 +293,14 @@ def cve_socre_ge(cve, score=DEFAULT_CVSS_SCORE, default=False):
     :return: True if given CVE's socre is greater or equal to given score.
     """
     if "score" not in cve:
-        LOG.warn("CVE %(cve)s does not have CVSS base metrics and score", cve)
+        LOG.warn(_("CVE %(cve)s does not have CVSS base metrics and score"),
+                 cve)
         return default
 
     try:
         return float(cve["score"]) >= float(score)
     except Exception:
-        LOG.warn("Failed to compare CVE's score: %s, score=%.1f",
+        LOG.warn(_("Failed to compare CVE's score: %s, score=%.1f"),
                  str(cve), score)
 
     return default
@@ -399,7 +400,7 @@ def compute_delta(refdir, errata, updates):
 
     ref_es_data = U.json_load(ref_es_file)
     ref_us_data = U.json_load(ref_us_file)
-    LOG.info("Loaded reference errata and updates file")
+    LOG.info(_("Loaded reference errata and updates file"))
 
     nevra_keys = ("name", "epoch", "version", "release", "arch")
     ref_eadvs = U.uniq(e["advisory"] for e in ref_es_data["data"])
@@ -643,32 +644,32 @@ def prepare(root, workdir=None, repos=[], did=None,
     root = os.path.abspath(root)  # Ensure it's absolute path.
 
     if workdir is None:
-        LOG.info("Set workdir to root [%s]: %s", did, root)
+        LOG.info(_("Set workdir to root [%s]: %s"), did, root)
         workdir = root
     else:
         if not os.path.exists(workdir):
-            LOG.info("Creating working dir [%s]: %s", did, workdir)
+            LOG.info(_("Creating working dir [%s]: %s"), did, workdir)
             os.makedirs(workdir)
 
     host = bunch.bunchify(dict(id=did, root=root, workdir=workdir,
                                repos=repos, available=False))
 
     if not rpmkit.updateinfo.utils.check_rpmdb_root(root):
-        LOG.warn("RPM DB not available and analysis won't be done [%s]: %s",
+        LOG.warn(_("RPM DB not available and analysis won't be done [%s]: %s"),
                  did, root)
         return host
 
     # pylint: disable=maybe-no-member
     base = get_backend(backend)(host.root, host.repos, workdir=host.workdir)
-    LOG.debug("Initialized backend [%s]: backend=%s", host.id, base.name)
+    LOG.debug(_("Initialized backend [%s]: backend=%s"), host.id, base.name)
     host.base = base
 
-    LOG.debug("Dump Installed RPMs list loaded from: %s [%s]",
+    LOG.debug(_("Dump Installed RPMs list loaded from: %s [%s]"),
               host.root, host.id)
     host.installed = sorted(host.base.list_installed(),
                             key=operator.itemgetter("name", "epoch", "version",
                                                     "release"))
-    LOG.info("%d Installed RPMs found [%s]", len(host.installed), host.id)
+    LOG.info(_("%d Installed RPMs found [%s]"), len(host.installed), host.id)
     U.json_dump(dict(data=host.installed, ), rpm_list_path(host.workdir))
     host.available = True
     # pylint: enable=maybe-no-member
@@ -695,20 +696,21 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
                                    installed=len(host.installed),
                                    generated=timestamp))
     # pylint: disable=maybe-no-member
-    LOG.info("Dump metadata [%s]: root=%s", metadata.id, metadata.root)
+    LOG.info(_("Dump metadata [%s]: root=%s"), metadata.id, metadata.root)
     # pylint: enable=maybe-no-member
     U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
 
-    LOG.info("Dump Errata list...")
+    LOG.info(_("Dump Errata list..."))
     es = [add_cvss_for_errata(e, mk_cve_vs_cvss_map()) for e
           in base.list_errata()]
-    LOG.info("%d Errata found for installed rpms [%s]", len(es), host.id)
+    LOG.info(_("%d Errata found for installed rpms [%s]"), len(es), host.id)
     U.json_dump(dict(data=es, ), errata_list_path(workdir))
     host.errata = es
 
-    LOG.info("Dump Update RPMs list...")
+    LOG.info(_("Dump Update RPMs list..."))
     us = base.list_updates()
-    LOG.info("%d Update RPMs found for installed rpms [%s]", len(us), host.id)
+    LOG.info(_("%d Update RPMs found for installed rpms [%s]"),
+             len(us), host.id)
     U.json_dump(dict(data=us, ), updates_file_path(workdir))
     host.updates = us
 
@@ -716,30 +718,32 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
     es = U.uniq(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
     us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
 
-    LOG.info("Dump dataset file from RPMs and Errata data...")
+    LOG.info(_("Dump dataset file from RPMs and Errata data..."))
     dump_datasets(workdir, ips, es, us, score, keywords)
 
     if refdir:
-        LOG.info("Computing delta errata and updates for data in %s", refdir)
+        LOG.info(_("Computing delta errata and updates for data in %s"),
+                 refdir)
         (es, us) = compute_delta(refdir, es, us)
 
         deltadir = os.path.join(workdir, "delta")
         if not os.path.exists(deltadir):
-            LOG.info("Creating delta working dir [%s]: %s", host.id, deltadir)
+            LOG.info(_("Creating delta working dir [%s]: %s"),
+                     host.id, deltadir)
             os.makedirs(deltadir)
 
-        LOG.info("%d Delta Errata found for installed rpms [%s]", len(es),
-                 host.id)
+        LOG.info(_("%d Delta Errata found for installed rpms [%s]"),
+                 len(es), host.id)
         U.json_dump(dict(data=es, ), errata_list_path(deltadir))
 
-        LOG.info("%d Delta Update RPMs found for installed rpms [%s]",
+        LOG.info(_("%d Delta Update RPMs found for installed rpms [%s]"),
                  len(us), host.id)
         U.json_dump(dict(data=us, ), updates_file_path(deltadir))
 
         es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
         us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
 
-        LOG.info("Dump dataset file from RPMs and Errata data...")
+        LOG.info(_("Dump dataset file from RPMs and Errata data..."))
         dump_datasets(workdir, ips, es, us, score, keywords)
 
 
