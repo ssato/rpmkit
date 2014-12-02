@@ -631,6 +631,8 @@ def prepare(root, workdir=None, repos=[], did=None,
 
     :return: A bunch.Bunch object of (Base, workdir, installed_rpms_list)
     """
+    root = os.path.abspath(root)  # Ensure it's absolute path.
+
     if workdir is None:
         LOG.info("Set workdir to root [%s]: %s", did, root)
         workdir = root
