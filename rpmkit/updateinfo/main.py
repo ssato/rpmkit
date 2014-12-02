@@ -20,7 +20,7 @@ import rpmkit.rpmutils
 import rpmkit.utils as U
 import rpmkit.swapi
 
-# It looks avaialble in EPEL for RHELs:
+# It looks available in EPEL for RHELs:
 #   https://apps.fedoraproject.org/packages/python-bunch
 import bunch
 import datetime
@@ -631,9 +631,6 @@ def prepare(root, workdir=None, repos=[], did=None,
 
     :return: A bunch.Bunch object of (Base, workdir, installed_rpms_list)
     """
-    if not rpmkit.updateinfo.utils.check_rpmdb_root(root, True):
-        raise RuntimeError("Not a root of RPM DB: %s [%s]" % root, did)
-
     if workdir is None:
         LOG.info("Set workdir to root [%s]: %s", did, root)
         workdir = root
@@ -643,7 +640,12 @@ def prepare(root, workdir=None, repos=[], did=None,
             os.makedirs(workdir)
 
     host = bunch.bunchify(dict(id=did, root=root, workdir=workdir,
-                               repos=repos))
+                               repos=repos, available=False))
+
+    if not rpmkit.updateinfo.utils.check_rpmdb_root(root):
+        LOG.warn("RPM DB not available and analysis won't be done [%s]: %s",
+                 did, root)
+        return host
 
     base = get_backend(backend)(host.root, host.repos, workdir=host.workdir)
     LOG.info("Initialized backend [%s]: backend=%s", host.id, base.name)
@@ -656,7 +658,7 @@ def prepare(root, workdir=None, repos=[], did=None,
                                                     "release"))
     LOG.info("%d Installed RPMs found [%s]", len(host.installed), host.id)
     U.json_dump(dict(data=host.installed, ), rpm_list_path(host.workdir))
-    host.avaialble = True
+    host.available = True
 
     return host
 
@@ -742,6 +744,7 @@ def main(root, workdir=None, repos=[], did=None, score=-1,
     :param backends: Backend list
     """
     host = prepare(root, workdir, repos, did, backend, backends)
-    analyze(host, score, keywords, refdir)
+    if host.available:
+        analyze(host, score, keywords, refdir)
 
 # vim:sw=4:ts=4:et:
