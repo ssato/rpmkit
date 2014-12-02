@@ -117,7 +117,7 @@ def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
         os.chdir(curdir)
 
 
-def do_analyze(args):
+def analyze(args):
     RUM.analyze(*args)
 
 
@@ -156,10 +156,10 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
 
         if multiproc:
             pool = multiprocessing.Pool(multiprocessing.cpu_count())
-            pool.map(do_analyze, data_g)
+            pool.map(analyze, data_g)
         else:
             for args in data_g:
-                do_analyze(args)
+                analyze(args)
 
         for h, hsrest in hset:
             if hsrest:
