@@ -17,7 +17,7 @@ import os.path
 
 _TODAY = datetime.datetime.now().strftime("%F")
 _DEFAULTS = dict(path=None, workdir="/tmp/rk-updateinfo-{}".format(_TODAY),
-                 repos=[], backend=RUM.DEFAULT_BACKEND,
+                 repos=[], id=None, backend=RUM.DEFAULT_BACKEND,
                  score=RUM.DEFAULT_CVSS_SCORE, keywords=RUM.ERRATA_KEYWORDS,
                  refdir=None, verbose=False)
 _USAGE = """\
@@ -36,6 +36,7 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
                       "'rhel-x86_64-server-6'. It can be given multiple times "
                       "to specify multiple yum repos. Note: Any other repos "
                       "are disabled if this option was set.")
+    p.add_option("-I", "--id", help="Data ID [None]")
     p.add_option("-B", "--backend", choices=backends.keys(),
                  help="Specify backend to get updates and errata. Choices: "
                       "%s [%%default]" % ', '.join(backends.keys()))
@@ -62,8 +63,8 @@ def main():
     assert os.path.exists(root), "Not found RPM DB Root: %s" % root
 
     RUM.LOG.setLevel(logging.DEBUG if options.verbose else logging.INFO)
-    RUM.main(root, options.workdir, repos=options.repos, score=options.score,
-             keywords=options.keywords, refdir=options.refdir)
+    RUM.main(root, options.workdir, options.repos, options.id, options.score,
+             options.keywords, options.refdir)
 
 
 if __name__ == '__main__':
