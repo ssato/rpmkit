@@ -9,6 +9,7 @@
 # License: GPLv3+
 #
 import rpmkit.updateinfo.main as RUM
+import rpmkit.updateinfo.multihosts as RUMS
 import datetime
 import logging
 import optparse
@@ -17,13 +18,15 @@ import os.path
 
 _TODAY = datetime.datetime.now().strftime("%F")
 _DEFAULTS = dict(path=None, workdir="/tmp/rk-updateinfo-{}".format(_TODAY),
-                 repos=[], id=None, backend=RUM.DEFAULT_BACKEND,
+                 repos=[], multi=False, id=None, backend=RUM.DEFAULT_BACKEND,
                  score=RUM.DEFAULT_CVSS_SCORE, keywords=RUM.ERRATA_KEYWORDS,
                  refdir=None, verbose=False)
 _USAGE = """\
-%prog [Options...] RPMDB_ROOT
+%prog [Options...] ROOT
 
-    where RPMDB_ROOT = RPM DB root having var/lib/rpm from the target host"""
+    where ROOT = RPM DB root having var/lib/rpm from the target host or
+                 top dir to hold RPM DB roots of some hosts
+                 [multihosts mode]"""
 
 
 def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
@@ -37,6 +40,8 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
                       "to specify multiple yum repos. Note: Any other repos "
                       "are disabled if this option was set.")
     p.add_option("-I", "--id", help="Data ID [None]")
+    p.add_option("-M", "--multi", action="store_true",
+                 help="Set if you want to analyze RPM DBs of Multiple hosts")
     p.add_option("-B", "--backend", choices=backends.keys(),
                  help="Specify backend to get updates and errata. Choices: "
                       "%s [%%default]" % ', '.join(backends.keys()))
@@ -59,12 +64,18 @@ def main():
     p = option_parser()
     (options, args) = p.parse_args()
 
-    root = args[0] if args else raw_input("Root of RPM DB files > ")
-    assert os.path.exists(root), "Not found RPM DB Root: %s" % root
-
     RUM.LOG.setLevel(logging.DEBUG if options.verbose else logging.INFO)
-    RUM.main(root, options.workdir, options.repos, options.id, options.score,
-             options.keywords, options.refdir)
+
+    if options.multi:
+        hosts_datadir = args[0] if args else raw_input("Hosts data dir > ")
+        RUMS.main(hosts_datadir, options.workdir, options.repos, options.score,
+                  options.keywords, options.refdir)
+    else:
+        root = args[0] if args else raw_input("Root of RPM DB files > ")
+        assert os.path.exists(root), "Not found RPM DB Root: %s" % root
+
+        RUM.main(root, options.workdir, options.repos, options.id,
+                 options.score, options.keywords, options.refdir)
 
 
 if __name__ == '__main__':
