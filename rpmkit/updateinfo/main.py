@@ -292,6 +292,10 @@ def cve_socre_ge(cve, score=DEFAULT_CVSS_SCORE, default=False):
 
     :return: True if given CVE's socre is greater or equal to given score.
     """
+    if "score" not in cve:
+        LOG.warn("CVE %(cve)s does not have CVSS base metrics and score", cve)
+        return default
+
     try:
         return float(cve["score"]) >= float(score)
     except Exception:
