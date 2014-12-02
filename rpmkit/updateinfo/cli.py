@@ -42,7 +42,7 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
     p.add_option("-I", "--id", help="Data ID [None]")
     p.add_option("-M", "--multiproc", action="store_true",
                  help="Specify this option if you want to analyze data "
-                      "in parallel")
+                      "in parallel (disabled currently)")
     p.add_option("-B", "--backend", choices=backends.keys(),
                  help="Specify backend to get updates and errata. Choices: "
                       "%s [%%default]" % ', '.join(backends.keys()))
@@ -74,9 +74,13 @@ def main():
         RUM.main(root, options.workdir, options.repos, options.id,
                  options.score, options.keywords, options.refdir)
     else:
-        # multihosts mode:
+        # multihosts mode.
+        #
+        # TODO: multiproc mode is disabled and options.multiproc is not passed
+        # to RUMS.main until the issue of yum that its thread locks conflict w/
+        # multiprocessing module is fixed.
         RUMS.main(root, options.workdir, options.repos, options.score,
-                  options.keywords, options.refdir, options.multiproc)
+                  options.keywords, options.refdir, False)
 
 
 if __name__ == '__main__':
