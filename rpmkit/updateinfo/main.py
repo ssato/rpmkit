@@ -647,6 +647,7 @@ def prepare(root, workdir=None, repos=[], did=None,
                  did, root)
         return host
 
+    # pylint: disable=maybe-no-member
     base = get_backend(backend)(host.root, host.repos, workdir=host.workdir)
     LOG.info("Initialized backend [%s]: backend=%s", host.id, base.name)
     host.base = base
@@ -659,6 +660,7 @@ def prepare(root, workdir=None, repos=[], did=None,
     LOG.info("%d Installed RPMs found [%s]", len(host.installed), host.id)
     U.json_dump(dict(data=host.installed, ), rpm_list_path(host.workdir))
     host.available = True
+    # pylint: enable=maybe-no-member
 
     return host
 
@@ -681,7 +683,9 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
                                    keywords=keywords,
                                    installed=len(host.installed),
                                    generated=timestamp))
+    # pylint: disable=maybe-no-member
     LOG.info("Dump metadata [%s]: root=%s", metadata.id, metadata.root)
+    # pylint: enable=maybe-no-member
     U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
 
     LOG.info("Dump Errata list...")
