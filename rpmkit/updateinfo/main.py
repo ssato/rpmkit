@@ -659,11 +659,11 @@ def prepare(root, workdir=None, repos=[], did=None,
 
     # pylint: disable=maybe-no-member
     base = get_backend(backend)(host.root, host.repos, workdir=host.workdir)
-    LOG.info("Initialized backend [%s]: backend=%s", host.id, base.name)
+    LOG.debug("Initialized backend [%s]: backend=%s", host.id, base.name)
     host.base = base
 
-    LOG.info("Dump Installed RPMs list loaded from: %s [%s]",
-             host.root, host.id)
+    LOG.debug("Dump Installed RPMs list loaded from: %s [%s]",
+              host.root, host.id)
     host.installed = sorted(host.base.list_installed(),
                             key=operator.itemgetter("name", "epoch", "version",
                                                     "release"))
