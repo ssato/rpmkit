@@ -660,22 +660,16 @@ def prepare(root, workdir=None, repos=[], did=None,
     return host
 
 
-def main(root, workdir=None, repos=[], did=None, score=-1,
-         keywords=ERRATA_KEYWORDS, refdir=None, backend=DEFAULT_BACKEND,
-         backends=BACKENDS):
+def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
     """
-    :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
-    :param workdir: Working dir to save results
-    :param repos: List of yum repos to get updateinfo data (errata and updtes)
-    :param did: Identity of the data (ex. hostname) or empty str
-    :param backend: Backend module to use to get updates and errata
+    :param host: host object function :function:`prepare` returns
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
-    :param backends: Backend list
     """
-    host = prepare(root, workdir, repos, did, backend, backends)
+    base = host.base
+    workdir = host.workdir
 
     timestamp = datetime.datetime.now().strftime("%F %T")
     metadata = bunch.bunchify(dict(id=host.id, root=host.root,
@@ -686,9 +680,6 @@ def main(root, workdir=None, repos=[], did=None, score=-1,
                                    generated=timestamp))
     LOG.info("Dump metadata [%s]: root=%s", metadata.id, metadata.root)
     U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
-
-    base = host.base
-    workdir = host.workdir
 
     LOG.info("Dump Errata list...")
     es = [add_cvss_for_errata(e, mk_cve_vs_cvss_map()) for e
@@ -732,5 +723,24 @@ def main(root, workdir=None, repos=[], did=None, score=-1,
 
         LOG.info("Dump dataset file from RPMs and Errata data...")
         dump_datasets(workdir, ips, es, us, score, keywords)
+
+
+def main(root, workdir=None, repos=[], did=None, score=-1,
+         keywords=ERRATA_KEYWORDS, refdir=None,
+         backend=DEFAULT_BACKEND, backends=BACKENDS):
+    """
+    :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
+    :param workdir: Working dir to save results
+    :param repos: List of yum repos to get updateinfo data (errata and updtes)
+    :param did: Identity of the data (ex. hostname) or empty str
+    :param score: CVSS base metrics score
+    :param keywords: Keyword list to filter 'important' RHBAs
+    :param refdir: A dir holding reference data previously generated to
+        compute delta (updates since that data)
+    :param backend: Backend module to use to get updates and errata
+    :param backends: Backend list
+    """
+    host = prepare(root, workdir, repos, did, backend, backends)
+    analyze(host, score, keywords, refdir)
 
 # vim:sw=4:ts=4:et:
