@@ -18,6 +18,7 @@ import bunch
 import glob
 import itertools
 import logging
+import multiprocessing
 import operator
 import os
 import os.path
@@ -116,8 +117,12 @@ def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
         os.chdir(curdir)
 
 
+def do_analyze(args):
+    RUM.analyze(*args)
+
+
 def main(hosts_datadir, workdir=None, repos=[], score=-1,
-         keywords=RUM.ERRATA_KEYWORDS, refdir=None,
+         keywords=RUM.ERRATA_KEYWORDS, refdir=None, multiproc=False,
          backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
     """
     :param hosts_datadir: Dir in which rpm db roots of hosts exist
@@ -127,6 +132,8 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     :param keywords: Keyword list to filter 'important' RHBAs
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
+    :param multiproc: Utilize multiprocessing module to compute results
+        in parallel as much as possible if True
     :param backend: Backend module to use to get updates and errata
     :param backends: Backend list
     """
@@ -144,10 +151,17 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     his = [[list(g2) for _k2, g2 in gby(g, hps)] for _k, g in gby(hosts, ilen)]
 
     for hss in his:
-        for hs in hss:
-            (h, hsrest) = (hs[0], hs[1:])
-            RUM.analyze(h, score, keywords, refdir)
+        hset = [(hs[0], hs[1:]) for hs in hss]
+        data_g = ((h, score, keywords, refdir) for h, _hrest in hset)
 
+        if multiproc:
+            pool = multiprocessing.Pool(multiprocessing.cpu_count())
+            pool.map(do_analyze, data_g)
+        else:
+            for args in data_g:
+                do_analyze(args)
+
+        for h, hsrest in hset:
             if hsrest:
                 LOG.info(_("Skip to analyze %s as its installed RPMs are "
                            "exactly same as %s's"),
