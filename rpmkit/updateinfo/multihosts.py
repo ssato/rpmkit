@@ -126,7 +126,7 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
 
     for hss in his:
         for hs in hss:
-            h, hsrest = (hs[0], hs[1:])
+            (h, hsrest) = (hs[0], hs[1:])
 
             RUM.analyze(h, score, keywords, refdir)
 
