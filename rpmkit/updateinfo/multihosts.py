@@ -96,6 +96,25 @@ def p2nevra(p):
                                "arch")(p)
 
 
+def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
+    """
+    :param href: Reference host object
+    :param hsrest: A list of hosts having same installed rpms as `href`
+    :param curdir: Current dir to go back
+
+    TODO: Ugly code around symlinks ...
+    """
+    for h in hsrest:
+        os.chdir(h.workdir)
+        href_workdir = os.path.join('..', href.id)
+        for src in glob.glob(os.path.join(href_workdir, '*')):
+            dst = os.path.join(href_workdir, os.path.basename(src))
+            if not os.path.exists(dst):
+                LOG.debug("Symlink from %s to %s", src, dst)
+                os.symlink(src, dst)
+        os.chdir(curdir)
+
+
 def main(hosts_datadir, workdir=None, repos=[], score=-1,
          keywords=RUM.ERRATA_KEYWORDS, refdir=None,
          backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
@@ -118,28 +137,22 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
 
     ilen = lambda h: len(h.installed)
     hps = lambda h: [p2nevra(p) for p in h.installed]
-    grpby = lambda xs, kf: itertools.groupby(sorted(xs, key=kf), kf)
+    gby = lambda xs, kf: itertools.groupby(sorted(xs, key=kf), kf)
 
-    # Group hosts by installed rpms to degenerate.
-    his = [[list(g2) for _k2, g2 in grpby(g, hps)] for _k, g
-           in grpby(hosts, ilen)]
+    # Group hosts by installed rpms to degenerate. his :: [[[h]]]
+    his = [[list(g2) for _k2, g2 in gby(g, hps)] for _k, g in gby(hosts, ilen)]
 
     for hss in his:
         for hs in hss:
             (h, hsrest) = (hs[0], hs[1:])
+            LOG.info("h=%s, hsrest=%s", h.id, ','.join(x.id for x in hsrest))
 
             RUM.analyze(h, score, keywords, refdir)
 
-            # TODO: Ugly code around symlink...
-            curdir = os.curdir
-            for hr in hsrest:
+            if hsrest:
                 LOG.info(_("Skip to analyze %s as its installed RPMs are "
-                           "exactly same as %s's"), hr, h)
-                os.chdir(hr.workdir)
-                for src in glob.glob(os.path.join(h.workdir, '*')):
-                    dst = os.path.join('..', h.workdir, os.path.basename(src))
-                    if not os.path.exists(dst):
-                        os.symlink(src, dst)
-                os.chdir(curdir)
+                           "exactly same as %s's"),
+                         ','.join(x.id for x in hsrest), h)
+                mk_symlinks_to_results_of_ref_host(h, hsrest, os.curdir)
 
 # vim:sw=4:ts=4:et:
