@@ -192,11 +192,12 @@ def _make_cell_data(x, key, default="N/A"):
         return ", ".join(v) if isinstance(v, (list, tuple)) else v
 
 
-def _make_dataset(list_data, title=None, headers=[]):
+def _make_dataset(list_data, title=None, headers=[], lheaders=[]):
     """
     :param list_data: List of data
     :param title: Dataset title to be used as worksheet's name
     :param headers: Dataset headers to be used as column headers, etc.
+    :param lheaders: Localized version of `headers`
     """
     dataset = tablib.Dataset()
 
@@ -206,7 +207,10 @@ def _make_dataset(list_data, title=None, headers=[]):
         dataset.title = title
 
     if headers:
-        dataset.headers = [h.replace('_s', '') for h in headers]
+        if lheaders:
+            dataset.headers = [h.replace('_s', '') for h in lheaders]
+        else:
+            dataset.headers = [h.replace('_s', '') for h in headers]
 
         for x in list_data:
             dataset.append([_make_cell_data(x, h) for h in headers])
@@ -578,42 +582,58 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
     rpmkeys = ("name", "version", "release", "epoch", "arch", "summary",
                "vendor", "buildhost")
 
+    # FIXME: How to keep DRY principle?
+    rpmkeys = ["name", "version", "release", "epoch", "arch"]
+    lrpmkeys = (_("name"), _("version"), _("release"), _("epoch"), _("arch"))
+
     summary_ds = [make_summary_dataset(workdir, data, score)]
-    base_ds = [_make_dataset(updates, _("Update RPMs"),
-                             ("name", "version", "release", "epoch", "arch")),
+    base_ds = [_make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
                _make_dataset(errata, _("Errata Details"),
                              ("advisory", "type", "severity", "synopsis",
                               "description", "issue_date", "update_date",
-                              "url", "cves_s", "bzs_s", "update_names")),
-               _make_dataset(rpms, _("Installed RPMs"), rpmkeys)]
+                              "url", "cves_s", "bzs_s", "update_names"),
+                             (_("advisory"), _("type"), _("severity"),
+                              _("synopsis"), _("description"), _("issue_date"),
+                              _("update_date"), _("url"), _("cves_s"),
+                              _("bzs_s"), _("update_names"))),
+               _make_dataset(rpms, _("Installed RPMs"), rpmkeys, lrpmkeys)]
 
     ekeys = ("advisory", "synopsis", "url", "update_names")
-    urpmkeys = ("name", "version", "release", "epoch", "arch")
+    lekeys = (_("advisory"), _("synopsis"), _("url"), _("update_names"))
 
     main_ds = [_make_dataset(data["errata"]["rhsa_cri"], _("RHSAs (Critical)"),
-                             ekeys),
+                             ekeys, lekeys),
                _make_dataset(data["errata"]["us_of_rhsa_cri"],
-                             _("Update RPMs by RHSAs (Critical)"), urpmkeys),
+                             _("Update RPMs by RHSAs (Critical)"), rpmkeys,
+                             lrpmkeys),
                _make_dataset(data["errata"]["rhsa_imp"],
-                             _("RHSAs (Important)"), ekeys),
+                             _("RHSAs (Important)"), ekeys, lekeys),
                _make_dataset(data["errata"]["us_of_rhsa_imp"],
-                             _("Updates by RHSAs (Important)"), urpmkeys),
+                             _("Updates by RHSAs (Important)"), rpmkeys,
+                             lrpmkeys),
                _make_dataset(data["errata"]["rhba_by_kwds"],
                              _("RHBAs (keyword)"),
                              ("advisory", "synopsis", "keywords", "url",
-                              "update_names")),
+                              "update_names"),
+                             (_("advisory"), _("synopsis"), _("keywords"),
+                             _("url"), _("update_names"))),
                _make_dataset(data["errata"]["us_of_rhba_by_kwds"],
-                             _("Updates by RHBAs (Keyword)"), urpmkeys)]
+                             _("Updates by RHBAs (Keyword)"), rpmkeys,
+                             lrpmkeys)]
 
     if score >= 0:
         cvss_ds = [_make_dataset(data["errata"]["rhsa_by_cvss_score"],
                                  _("RHSAs (CVSS score >= %.1f)") % score,
                                  ("advisory", "severity", "synopsis",
-                                  "cves_s", "cvsses_s", "url")),
+                                  "cves_s", "cvsses_s", "url"),
+                                 (_("advisory"), _("severity"), _("synopsis"),
+                                 _("cves_s"), _("cvsses_s"), _("url"))),
                    _make_dataset(data["errata"]["rhba_by_cvss_score"],
                                  _("RHBAs (CVSS score >= %.1f)") % score,
                                  ("advisory", "synopsis", "cves_s",
-                                  "cvsses_s", "url"))]
+                                  "cvsses_s", "url"),
+                                 (_("advisory"), _("synopsis"), _("cves_s"),
+                                  _("cvsses_s"), _("url")))]
         main_ds.extend(cvss_ds)
 
     book = tablib.Databook(summary_ds + main_ds + base_ds)
