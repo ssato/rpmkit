@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-12-03 15:51+JST\n"
+"POT-Creation-Date: 2014-12-03 19:00+JST\n"
 "PO-Revision-Date: 2014-12-03 15:55+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
@@ -325,9 +325,9 @@ msgstr "更新 RPM 一覧を出力..."
 msgid "%d Update RPMs found for installed rpms [%s]"
 msgstr "%d 個の更新 RPM を発見 [%s]"
 
-#: aux/..//rpmkit/updateinfo/main.py:739 aux/..//rpmkit/updateinfo/main.py:764
-msgid "Dump dataset file from RPMs and Errata data..."
-msgstr "RPM とエラータデータからデータセットファイルを出力..."
+#: aux/..//rpmkit/updateinfo/main.py:739
+msgid "Dump analysis results of RPMs and errata data..."
+msgstr "RPM とエラータデータの解析結果を出力..."
 
 #: aux/..//rpmkit/updateinfo/main.py:743
 msgid "Computing delta errata and updates for data in %s"
@@ -344,6 +344,10 @@ msgstr "%d 個の差分のエラータを発見 [%s]"
 #: aux/..//rpmkit/updateinfo/main.py:757
 msgid "%d Delta Update RPMs found for installed rpms [%s]"
 msgstr "%d 個の差分の更新 RPM を発見 [%s]"
+
+#: aux/..//rpmkit/updateinfo/main.py:764
+msgid "Dump dataset file from RPMs and Errata data..."
+msgstr "RPM とエラータデータからデータセットファイルを出力..."
 
 #: aux/..//rpmkit/updateinfo/multihosts.py:50
 msgid "Failed to find RPM DBs under %s"

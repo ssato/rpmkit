@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-12-03 15:51+JST\n"
+"POT-Creation-Date: 2014-12-03 19:00+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -336,8 +336,7 @@ msgid "%d Update RPMs found for installed rpms [%s]"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:739
-#: ./aux/..//rpmkit/updateinfo/main.py:764
-msgid "Dump dataset file from RPMs and Errata data..."
+msgid "Dump analysis results of RPMs and errata data..."
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:743
@@ -354,6 +353,10 @@ msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:757
 msgid "%d Delta Update RPMs found for installed rpms [%s]"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:764
+msgid "Dump dataset file from RPMs and Errata data..."
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/multihosts.py:50
