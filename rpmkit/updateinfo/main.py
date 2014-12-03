@@ -511,6 +511,18 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
                 rhea=rhea)
 
 
+def padding_row(row, mcols):
+    """
+    :param rows: A list of row data :: [[]]
+
+    >>> padding_row(['a', 1], 3)
+    ['a', 1, '']
+    >>> padding_row([], 2)
+    ['', '']
+    """
+    return row + [''] * (mcols - len(row))
+
+
 def padding_rows(rows, mcols=None):
     """
     :param rows: A list of row data :: [[]]
@@ -525,7 +537,7 @@ def padding_rows(rows, mcols=None):
     if mcols is None:
         mcols = max(len(r) for r in rows)
 
-    return [r + [''] * (mcols - len(r)) for r in rows]
+    return [padding_row(r, mcols) for r in rows]
 
 
 def make_overview_dataset(workdir, data, score=-1, keywords=ERRATA_KEYWORDS):
@@ -572,9 +584,19 @@ def make_overview_dataset(workdir, data, score=-1, keywords=ERRATA_KEYWORDS):
              [_("# of Installed RPMs"), len(data["installed"])]]
 
     headers = (_("Item"), _("Value"), _("Notes"))
-    dataset = tablib.Dataset(*padding_rows(rows, len(headers)),
-                             headers=headers)
+    dataset = tablib.Dataset(headers=headers)
     dataset.title = _("Overview of analysis results")
+
+    mcols = len(headers)
+    for row in rows:
+        try:
+            if row and len(row) == 1:  # Special case: separator
+                dataset.append_separator(row[0])
+            else:
+                dataset.append(padding_row(row, mcols))
+        except:
+            LOG.error("row=" + str(row))
+            raise
 
     return dataset
 
