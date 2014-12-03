@@ -761,7 +761,7 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
         es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
         us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
 
-        LOG.info(_("Dump dataset file from RPMs and Errata data..."))
+        LOG.info(_("Dump analysis results of delta RPMs and errata data..."))
         dump_results(workdir, ips, es, us, score, keywords)
 
 
