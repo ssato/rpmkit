@@ -511,55 +511,70 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
                 rhea=rhea)
 
 
-def make_summary_dataset(workdir, data, score=-1):
+def padding_rows(rows, mcols=None):
+    """
+    :param rows: A list of row data :: [[]]
+
+    >>> padding_rows([['a', 1],  # doctest: +NORMALIZE_WHITESPACE
+    ...                 ['b', 2, 'a comment'],
+    ...                 []])
+    [['a', 1, ''], ['b', 2, 'a comment'], ['', '', '']]
+    >>> padding_rows([[]], 3)
+    [['', '', '']]
+    """
+    if mcols is None:
+        mcols = max(len(r) for r in rows)
+
+    return [r + [''] * (mcols - len(r)) for r in rows]
+
+
+def make_overview_dataset(workdir, data, score=-1, keywords=ERRATA_KEYWORDS):
     """
     :param workdir: Working dir to dump the result
     :param data: RPMs, Update RPMs and various errata data summarized
     :param score: CVSS base metrics score limit
+
+    :return: An instance of tablib.Dataset becomes a worksheet represents the
+        overview of analysys reuslts
     """
-    ds = [(_("# of Security Errata (critical)"),
-           len(data["errata"]["rhsa_cri"]), "", ""),
-          (_("# of Security Errata (important)"),
-           len(data["errata"]["rhsa_imp"]), "", ""),
-          (_("# of RPMs need to be updated by Security Errata (critical)"),
-           len(data["errata"]["us_of_rhsa_cri"]), "", ""),
-          (_("# of RPMs need to be updated by Security Errata (important)"),
-           len(data["errata"]["us_of_rhsa_imp"]), "", ""),
-          (_("# of Bug Errata (keyword)"),
-           len(data["errata"]["rhba_by_kwds"]), "", ""),
-          (_("# of RPMs need to be updated by Bug Errata (keyword)"),
-           len(data["errata"]["us_of_rhba_by_kwds"]), "", "")]
+    rows = [[_("Critical or Important RHSAs (Security Errata)")],
+            [_("# of Critical RHSAs"), len(data["errata"]["rhsa_cri"])],
+            [_("# of Important RHSAs"), len(data["errata"]["rhsa_imp"])],
+            [_("Update RPMs by Critical or Important RHSAs at minimum")],
+            [_("# of Update RPMs by Critical RHSAs at minimum"),
+             len(data["errata"]["us_of_rhsa_cri"])],
+            [_("# of Update RPMs by Important RHSAs at minimum"),
+             len(data["errata"]["us_of_rhsa_imp"])],
+            [],
+            [_("RHBAs (Bug Errata) by keywords: %s") % ", ".join(keywords)],
+            [_("# of RHBAs by keywords"), len(data["errata"]["rhba_by_kwds"])],
+            [_("# of Update RPMs by RHBAs by keywords at minimum"),
+             len(data["errata"]["us_of_rhba_by_kwds"])]]
 
-    if score < 0:
-        cvss_ds = []
-    else:
-        cvss_ds = [(_("# of Security Errata (CVSS Score >= "
-                      "%.1f)") % score,
-                    len(data["errata"]["rhsa_by_cvss_score"]), "", ""),
-                   (_("# of Bug Errata (CVSS Score >= "
-                      "%.1f)") % score,
-                    len(data["errata"]["rhba_by_cvss_score"]), "", ""),
-                   (_("# of RPMs need to be updated by Security Errata "
-                      "(CVSS Score >= %.1f)") % score,
-                    len(data["errata"]["us_of_rhsa_by_cvss_score"]), "", ""),
-                   (_("# of RPMs need to be updated by Bug Errata "
-                      "(CVSS Score >= %.1f)") % score,
-                    len(data["errata"]["us_of_rhba_by_cvss_score"]), "", "")]
+    if score > 0:
+        rows += [[],
+                 [_("RHSAs and RHBAs by CVSS score")],
+                 [_("# of RHSAs of CVSS Score >= %.1f") % score,
+                  len(data["errata"]["rhsa_by_cvss_score"])],
+                 [_("# of Update RPMs by the above RHSAs at minimum"),
+                  len(data["errata"]["us_of_rhsa_by_cvss_score"])],
+                 [_("# of RHBAs of CVSS Score >= %.1f") % score,
+                  len(data["errata"]["rhba_by_cvss_score"])],
+                 [_("# of Update RPMs by the above RHBAs at minimum"),
+                  len(data["errata"]["us_of_rhba_by_cvss_score"])]]
 
-    others_ds = [(_("# of Security Errata (all)"),
-                  len(data["errata"]["rhsa"]), "", ""),
-                 (_("# of Bug Errata"), len(data["errata"]["rhba"]), "", ""),
-                 # TODO: Needed ?
-                 # (_("# of Enhancement Errata"),
-                 #  len(data["errata"]["rhea"]), "-", ""),
-                 (_("# of Installed RPMs"), len(data["installed"]), "", ""),
-                 (_("# of Update RPMs"), len(data["updates"]), "", "")]
+    rows += [[],
+             [_("# of RHSAs"), len(data["errata"]["rhsa"])],
+             [_("# of RHBAs"), len(data["errata"]["rhba"])],
+             [_("# of RHEAs (Enhancement Errata)"),
+              len(data["errata"]["rhea"])],
+             [_("# of Update RPMs"), len(data["updates"])],
+             [_("# of Installed RPMs"), len(data["installed"])]]
 
-    dataset = tablib.Dataset()
-    dataset.title = _("Summary")
-    dataset.headers = (_("item"), _("value"), _("rating"), _("comments"))
-    for d in ds + cvss_ds + others_ds:
-        dataset.append(d)
+    headers = (_("Item"), _("Value"), _("Notes"))
+    dataset = tablib.Dataset(*padding_rows(rows, len(headers)),
+                             headers=headers)
+    dataset.title = _("Overview of analysis results")
 
     return dataset
 
@@ -579,14 +594,14 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
                 rpmnames_need_updates=U.uniq(u["name"] for u in updates))
     U.json_dump(data, os.path.join(workdir, "summary.json"))
 
-    rpmkeys = ("name", "version", "release", "epoch", "arch", "summary",
-               "vendor", "buildhost")
+    rpmdkeys = ("name", "version", "release", "epoch", "arch", "summary",
+                "vendor", "buildhost")
 
     # FIXME: How to keep DRY principle?
     rpmkeys = ["name", "version", "release", "epoch", "arch"]
     lrpmkeys = (_("name"), _("version"), _("release"), _("epoch"), _("arch"))
 
-    summary_ds = [make_summary_dataset(workdir, data, score)]
+    overview_ds = [make_overview_dataset(workdir, data, score, keywords)]
     base_ds = [_make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
                _make_dataset(errata, _("Errata Details"),
                              ("advisory", "type", "severity", "synopsis",
@@ -596,7 +611,7 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
                               _("synopsis"), _("description"), _("issue_date"),
                               _("update_date"), _("url"), _("cves_s"),
                               _("bzs_s"), _("update_names"))),
-               _make_dataset(rpms, _("Installed RPMs"), rpmkeys, lrpmkeys)]
+               _make_dataset(rpms, _("Installed RPMs"), rpmdkeys)]
 
     ekeys = ("advisory", "synopsis", "url", "update_names")
     lekeys = (_("advisory"), _("synopsis"), _("url"), _("update_names"))
@@ -636,7 +651,7 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
                                   _("cvsses_s"), _("url")))]
         main_ds.extend(cvss_ds)
 
-    book = tablib.Databook(summary_ds + main_ds + base_ds)
+    book = tablib.Databook(overview_ds + main_ds + base_ds)
 
     with open(dataset_file_path(workdir), 'wb') as out:
         out.write(book.xls)
