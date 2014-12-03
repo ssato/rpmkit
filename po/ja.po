@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-12-02 16:17+JST\n"
-"PO-Revision-Date: 2014-12-02 16:17+0900\n"
+"POT-Creation-Date: 2014-12-03 15:51+JST\n"
+"PO-Revision-Date: 2014-12-03 15:55+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
 "Language: ja\n"
@@ -16,22 +16,22 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 #: aux/..//rpmkit/extras/updateinfo.py:605
-#: aux/..//rpmkit/updateinfo/main.py:516
+#: aux/..//rpmkit/updateinfo/main.py:520
 msgid "# of Security Errata (critical)"
 msgstr "セキュリティエラータ (Critical) の数"
 
 #: aux/..//rpmkit/extras/updateinfo.py:606
-#: aux/..//rpmkit/updateinfo/main.py:518
+#: aux/..//rpmkit/updateinfo/main.py:522
 msgid "# of Security Errata (important)"
 msgstr "セキュリティエラータ (Important) の数"
 
 #: aux/..//rpmkit/extras/updateinfo.py:607
-#: aux/..//rpmkit/updateinfo/main.py:545
+#: aux/..//rpmkit/updateinfo/main.py:549
 msgid "# of Security Errata (all)"
 msgstr "すべてのセキュリティエラータの数"
 
 #: aux/..//rpmkit/extras/updateinfo.py:608
-#: aux/..//rpmkit/updateinfo/main.py:547
+#: aux/..//rpmkit/updateinfo/main.py:551
 msgid "# of Bug Errata"
 msgstr "バグ修正エラータの数"
 
@@ -40,7 +40,7 @@ msgid "# of Enhancement Errata"
 msgstr "機能拡張エラータの数"
 
 #: aux/..//rpmkit/extras/updateinfo.py:610
-#: aux/..//rpmkit/updateinfo/main.py:551
+#: aux/..//rpmkit/updateinfo/main.py:555
 msgid "# of Installed RPMs"
 msgstr "インストールされている RPM パッケージの数"
 
@@ -53,27 +53,27 @@ msgid "The rate of RPMs (names) need any updates / RPMs (names) [%]"
 msgstr "更新が必要な RPM パッケージ (名) の割合 [%]"
 
 #: aux/..//rpmkit/extras/updateinfo.py:617
-#: aux/..//rpmkit/updateinfo/main.py:555
+#: aux/..//rpmkit/updateinfo/main.py:559
 msgid "Summary"
 msgstr "概要"
 
 #: aux/..//rpmkit/extras/updateinfo.py:618
-#: aux/..//rpmkit/updateinfo/main.py:556
+#: aux/..//rpmkit/updateinfo/main.py:560
 msgid "comments"
 msgstr "コメント"
 
 #: aux/..//rpmkit/extras/updateinfo.py:618
-#: aux/..//rpmkit/updateinfo/main.py:556
+#: aux/..//rpmkit/updateinfo/main.py:560
 msgid "item"
 msgstr "項目"
 
 #: aux/..//rpmkit/extras/updateinfo.py:618
-#: aux/..//rpmkit/updateinfo/main.py:556
+#: aux/..//rpmkit/updateinfo/main.py:560
 msgid "rating"
 msgstr "評価"
 
 #: aux/..//rpmkit/extras/updateinfo.py:618
-#: aux/..//rpmkit/updateinfo/main.py:556
+#: aux/..//rpmkit/updateinfo/main.py:560
 msgid "value"
 msgstr "値"
 
@@ -83,7 +83,7 @@ msgid "Sec. Errata CVSS >= %.1f"
 msgstr "RHSA (CVSS >= %.1f)"
 
 #: aux/..//rpmkit/extras/updateinfo.py:736
-#: aux/..//rpmkit/updateinfo/main.py:590
+#: aux/..//rpmkit/updateinfo/main.py:599
 msgid "Installed RPMs"
 msgstr "インストール RPM"
 
@@ -92,12 +92,12 @@ msgid "Errata"
 msgstr "エラータ"
 
 #: aux/..//rpmkit/extras/updateinfo.py:739
-#: aux/..//rpmkit/updateinfo/main.py:584
+#: aux/..//rpmkit/updateinfo/main.py:590
 msgid "Update RPMs"
 msgstr "更新 RPM"
 
 #: aux/..//rpmkit/extras/updateinfo.py:745
-#: aux/..//rpmkit/updateinfo/main.py:589
+#: aux/..//rpmkit/updateinfo/main.py:591
 msgid "Errata Details"
 msgstr "エラータ詳細"
 
@@ -121,166 +121,246 @@ msgstr "%s の CVSS メトリックを取得できませんでした"
 msgid "BZ Key error: %s"
 msgstr "Bugzilla キーエラー: %s"
 
-#: aux/..//rpmkit/updateinfo/main.py:296
+#: aux/..//rpmkit/updateinfo/main.py:300
 msgid "CVE %(cve)s does not have CVSS base metrics and score"
 msgstr "%(cve)s は CVSS ベースメトリックとスコアを持っていません"
 
-#: aux/..//rpmkit/updateinfo/main.py:303
+#: aux/..//rpmkit/updateinfo/main.py:307
 msgid "Failed to compare CVE's score: %s, score=%.1f"
 msgstr "CVE スコア比較に失敗: %s, score=%.1f"
 
-#: aux/..//rpmkit/updateinfo/main.py:403
+#: aux/..//rpmkit/updateinfo/main.py:407
 msgid "Loaded reference errata and updates file"
 msgstr "参照用のエラータと更新 RPM ファイルを読み込み"
 
-#: aux/..//rpmkit/updateinfo/main.py:520
+#: aux/..//rpmkit/updateinfo/main.py:524
 msgid "# of RPMs need to be updated by Security Errata (critical)"
 msgstr "セキュリティエラータ (Critical) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:522
+#: aux/..//rpmkit/updateinfo/main.py:526
 msgid "# of RPMs need to be updated by Security Errata (important)"
 msgstr "セキュリティエラータ (Important) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:524
+#: aux/..//rpmkit/updateinfo/main.py:528
 msgid "# of Bug Errata (keyword)"
 msgstr "バグエラータ (キーワード) の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:526
+#: aux/..//rpmkit/updateinfo/main.py:530
 msgid "# of RPMs need to be updated by Bug Errata (keyword)"
 msgstr "バグエラータ (キーワード) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:532
+#: aux/..//rpmkit/updateinfo/main.py:536
 msgid "# of Security Errata (CVSS Score >= %.1f)"
 msgstr "セキュリティエラータ (CVSS スコア >= %.1f) の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:535
+#: aux/..//rpmkit/updateinfo/main.py:539
 msgid "# of Bug Errata (CVSS Score >= %.1f)"
 msgstr "バグエラータ (CVSS スコア >= %.1f) の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:538
+#: aux/..//rpmkit/updateinfo/main.py:542
 msgid "# of RPMs need to be updated by Security Errata (CVSS Score >= %.1f)"
 msgstr "セキュリティエラータ (CVSS スコア >= %.1f) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:541
+#: aux/..//rpmkit/updateinfo/main.py:545
 msgid "# of RPMs need to be updated by Bug Errata (CVSS Score >= %.1f)"
 msgstr "バグエラータ (CVSS スコア >= %.1f) による更新 RPM の数"
 
-#: aux/..//rpmkit/updateinfo/main.py:552
+#: aux/..//rpmkit/updateinfo/main.py:556
 msgid "# of Update RPMs"
 msgstr "更新 RPM の数"
 
+#: aux/..//rpmkit/updateinfo/main.py:587
+msgid "arch"
+msgstr "arch"
+
+#: aux/..//rpmkit/updateinfo/main.py:587
+msgid "epoch"
+msgstr "epoch"
+
+#: aux/..//rpmkit/updateinfo/main.py:587
+msgid "name"
+msgstr "名前"
+
+#: aux/..//rpmkit/updateinfo/main.py:587
+msgid "release"
+msgstr "リリース"
+
+#: aux/..//rpmkit/updateinfo/main.py:587
+msgid "version"
+msgstr "バージョン"
+
+#: aux/..//rpmkit/updateinfo/main.py:595
+msgid "type"
+msgstr "種別"
+
+#: aux/..//rpmkit/updateinfo/main.py:595 aux/..//rpmkit/updateinfo/main.py:602
+#: aux/..//rpmkit/updateinfo/main.py:618 aux/..//rpmkit/updateinfo/main.py:629
+#: aux/..//rpmkit/updateinfo/main.py:635
+msgid "advisory"
+msgstr "アドバイザリ"
+
+#: aux/..//rpmkit/updateinfo/main.py:595 aux/..//rpmkit/updateinfo/main.py:629
+msgid "severity"
+msgstr "影響度"
+
 #: aux/..//rpmkit/updateinfo/main.py:596
+msgid "description"
+msgstr "説明"
+
+#: aux/..//rpmkit/updateinfo/main.py:596
+msgid "issue_date"
+msgstr "発行日"
+
+#: aux/..//rpmkit/updateinfo/main.py:596 aux/..//rpmkit/updateinfo/main.py:602
+#: aux/..//rpmkit/updateinfo/main.py:618 aux/..//rpmkit/updateinfo/main.py:629
+#: aux/..//rpmkit/updateinfo/main.py:635
+msgid "synopsis"
+msgstr "概要"
+
+#: aux/..//rpmkit/updateinfo/main.py:597
+msgid "update_date"
+msgstr "更新日"
+
+#: aux/..//rpmkit/updateinfo/main.py:597 aux/..//rpmkit/updateinfo/main.py:602
+#: aux/..//rpmkit/updateinfo/main.py:619 aux/..//rpmkit/updateinfo/main.py:630
+#: aux/..//rpmkit/updateinfo/main.py:636
+msgid "url"
+msgstr "URL"
+
+#: aux/..//rpmkit/updateinfo/main.py:597 aux/..//rpmkit/updateinfo/main.py:630
+#: aux/..//rpmkit/updateinfo/main.py:635
+msgid "cves_s"
+msgstr "CVE リスト"
+
+#: aux/..//rpmkit/updateinfo/main.py:598
+msgid "bzs_s"
+msgstr "RHBZ リスト"
+
+#: aux/..//rpmkit/updateinfo/main.py:598 aux/..//rpmkit/updateinfo/main.py:602
+#: aux/..//rpmkit/updateinfo/main.py:619
+msgid "update_names"
+msgstr "更新 RPM 名"
+
+#: aux/..//rpmkit/updateinfo/main.py:604
 msgid "RHSAs (Critical)"
 msgstr "RHSA (Critical)"
 
-#: aux/..//rpmkit/updateinfo/main.py:598
+#: aux/..//rpmkit/updateinfo/main.py:607
 msgid "Update RPMs by RHSAs (Critical)"
 msgstr "RHSA (Critical) による更新 RPM"
 
-#: aux/..//rpmkit/updateinfo/main.py:600
+#: aux/..//rpmkit/updateinfo/main.py:610
 msgid "RHSAs (Important)"
 msgstr "RHSA (Important)"
 
-#: aux/..//rpmkit/updateinfo/main.py:602
+#: aux/..//rpmkit/updateinfo/main.py:612
 msgid "Updates by RHSAs (Important)"
 msgstr "RHSA (Important) による更新 RPM"
 
-#: aux/..//rpmkit/updateinfo/main.py:606
+#: aux/..//rpmkit/updateinfo/main.py:615
 msgid "RHBAs (keyword)"
 msgstr "RHBA (キーワード)"
 
-#: aux/..//rpmkit/updateinfo/main.py:608
+#: aux/..//rpmkit/updateinfo/main.py:618
+msgid "keywords"
+msgstr "キーワード"
+
+#: aux/..//rpmkit/updateinfo/main.py:621
 msgid "Updates by RHBAs (Keyword)"
 msgstr "RHBA (キーワード) による更新 RPM"
 
-#: aux/..//rpmkit/updateinfo/main.py:614
+#: aux/..//rpmkit/updateinfo/main.py:626
 msgid "RHSAs (CVSS score >= %.1f)"
 msgstr "RHSA (CVSS スコア >= %.1f)"
 
-#: aux/..//rpmkit/updateinfo/main.py:618
+#: aux/..//rpmkit/updateinfo/main.py:630 aux/..//rpmkit/updateinfo/main.py:636
+msgid "cvsses_s"
+msgstr "CVSS リスト"
+
+#: aux/..//rpmkit/updateinfo/main.py:632
 msgid "RHBAs (CVSS score >= %.1f)"
 msgstr "RHBA (CVSS スコア >= %.1f)"
 
-#: aux/..//rpmkit/updateinfo/main.py:647
+#: aux/..//rpmkit/updateinfo/main.py:665
 msgid "Set workdir to root [%s]: %s"
 msgstr "作業用ディレクトリを root に設定 [%s]: %s"
 
-#: aux/..//rpmkit/updateinfo/main.py:651
+#: aux/..//rpmkit/updateinfo/main.py:669
 msgid "Creating working dir [%s]: %s"
 msgstr "作業用ディレクトリを作成中 [%s]: %s"
 
-#: aux/..//rpmkit/updateinfo/main.py:658
+#: aux/..//rpmkit/updateinfo/main.py:676
 msgid "RPM DB not available and analysis won't be done [%s]: %s"
 msgstr "RPM DB が利用できないので解析せず [%s]: %s"
 
-#: aux/..//rpmkit/updateinfo/main.py:664
+#: aux/..//rpmkit/updateinfo/main.py:682
 msgid "Initialized backend [%s]: %s"
 msgstr "バックエンドを初期化 [%s]: %s"
 
-#: aux/..//rpmkit/updateinfo/main.py:667
+#: aux/..//rpmkit/updateinfo/main.py:685
 msgid "Dump Installed RPMs list loaded from: %s [%s]"
 msgstr "インストール RPM 一覧を出力: %s [%s]"
 
-#: aux/..//rpmkit/updateinfo/main.py:672
+#: aux/..//rpmkit/updateinfo/main.py:690
 msgid "%d Installed RPMs found [%s]"
 msgstr "%d 個のインストール RPM を発見 [%s]"
 
-#: aux/..//rpmkit/updateinfo/main.py:699
+#: aux/..//rpmkit/updateinfo/main.py:717
 msgid "Dump metadata [%s]: root=%s"
 msgstr "メタデータを出力 [%s]: root=%s"
 
-#: aux/..//rpmkit/updateinfo/main.py:703
+#: aux/..//rpmkit/updateinfo/main.py:721
 msgid "Dump Errata list..."
 msgstr "エラータ一覧を出力..."
 
-#: aux/..//rpmkit/updateinfo/main.py:706
+#: aux/..//rpmkit/updateinfo/main.py:724
 msgid "%d Errata found for installed rpms [%s]"
 msgstr "%d 個のエラータを発見 [%s]"
 
-#: aux/..//rpmkit/updateinfo/main.py:710
+#: aux/..//rpmkit/updateinfo/main.py:728
 msgid "Dump Update RPMs list..."
 msgstr "更新 RPM 一覧を出力..."
 
-#: aux/..//rpmkit/updateinfo/main.py:712
+#: aux/..//rpmkit/updateinfo/main.py:730
 msgid "%d Update RPMs found for installed rpms [%s]"
 msgstr "%d 個の更新 RPM を発見 [%s]"
 
-#: aux/..//rpmkit/updateinfo/main.py:721 aux/..//rpmkit/updateinfo/main.py:746
+#: aux/..//rpmkit/updateinfo/main.py:739 aux/..//rpmkit/updateinfo/main.py:764
 msgid "Dump dataset file from RPMs and Errata data..."
 msgstr "RPM とエラータデータからデータセットファイルを出力..."
 
-#: aux/..//rpmkit/updateinfo/main.py:725
+#: aux/..//rpmkit/updateinfo/main.py:743
 msgid "Computing delta errata and updates for data in %s"
 msgstr "%s 内のデータに対するエラータと更新 RPM の差分を計算中..."
 
-#: aux/..//rpmkit/updateinfo/main.py:731
+#: aux/..//rpmkit/updateinfo/main.py:749
 msgid "Creating delta working dir [%s]: %s"
 msgstr "差分データのための作業用ディレクトリを作成中 [%s]: %s"
 
-#: aux/..//rpmkit/updateinfo/main.py:735
+#: aux/..//rpmkit/updateinfo/main.py:753
 msgid "%d Delta Errata found for installed rpms [%s]"
 msgstr "%d 個の差分のエラータを発見 [%s]"
 
-#: aux/..//rpmkit/updateinfo/main.py:739
+#: aux/..//rpmkit/updateinfo/main.py:757
 msgid "%d Delta Update RPMs found for installed rpms [%s]"
 msgstr "%d 個の差分の更新 RPM を発見 [%s]"
 
-#: aux/..//rpmkit/updateinfo/multihosts.py:49
+#: aux/..//rpmkit/updateinfo/multihosts.py:50
 msgid "Failed to find RPM DBs under %s"
 msgstr "%s 下に RPM DB がみつかりませんでした"
 
-#: aux/..//rpmkit/updateinfo/multihosts.py:72
+#: aux/..//rpmkit/updateinfo/multihosts.py:73
 msgid "Set workdir to hosts_datadir: %s"
 msgstr "作業用ディレクトリを hosts_datadir に設定: %s"
 
-#: aux/..//rpmkit/updateinfo/multihosts.py:76
+#: aux/..//rpmkit/updateinfo/multihosts.py:77
 msgid "Creating working dir: %s"
 msgstr "作業用ディレクトリを作成中: %s"
 
-#: aux/..//rpmkit/updateinfo/multihosts.py:116
+#: aux/..//rpmkit/updateinfo/multihosts.py:143
 msgid "Analyze %d hosts (Skipped %d hosts lack valid RPM DBs)"
 msgstr "%d 個のホストを解析 (%d 個のホストが適切な RPM DB を持たず)"
 
-#: aux/..//rpmkit/updateinfo/multihosts.py:136
+#: aux/..//rpmkit/updateinfo/multihosts.py:166
 msgid "Skip to analyze %s as its installed RPMs are exactly same as %s's"
 msgstr "%s は解析せず (%s と同じインストール RPM 構成)"
