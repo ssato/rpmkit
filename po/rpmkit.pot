@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-12-03 21:16+JST\n"
+"POT-Creation-Date: 2014-12-03 21:48+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -74,7 +74,7 @@ msgid "Sec. Errata CVSS >= %.1f"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:736
-#: ./aux/..//rpmkit/updateinfo/main.py:614
+#: ./aux/..//rpmkit/updateinfo/main.py:652
 msgid "Installed RPMs"
 msgstr ""
 
@@ -83,12 +83,12 @@ msgid "Errata"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:739
-#: ./aux/..//rpmkit/updateinfo/main.py:605
+#: ./aux/..//rpmkit/updateinfo/main.py:643
 msgid "Update RPMs"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:745
-#: ./aux/..//rpmkit/updateinfo/main.py:606
+#: ./aux/..//rpmkit/updateinfo/main.py:644
 msgid "Errata Details"
 msgstr ""
 
@@ -212,126 +212,138 @@ msgstr ""
 msgid "Overview of analysis results"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:602
+#: ./aux/..//rpmkit/updateinfo/main.py:599
 msgid "arch"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:602
+#: ./aux/..//rpmkit/updateinfo/main.py:599
 msgid "epoch"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:602
+#: ./aux/..//rpmkit/updateinfo/main.py:599
 msgid "name"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:602
+#: ./aux/..//rpmkit/updateinfo/main.py:599
 msgid "release"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:602
+#: ./aux/..//rpmkit/updateinfo/main.py:599
 msgid "version"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:610
-msgid "type"
+#: ./aux/..//rpmkit/updateinfo/main.py:602
+msgid "buildhost"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:610
-#: ./aux/..//rpmkit/updateinfo/main.py:617
+#: ./aux/..//rpmkit/updateinfo/main.py:602
+msgid "summary"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:602
+msgid "vendor"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:605
+#: ./aux/..//rpmkit/updateinfo/main.py:622
 #: ./aux/..//rpmkit/updateinfo/main.py:633
-#: ./aux/..//rpmkit/updateinfo/main.py:644
-#: ./aux/..//rpmkit/updateinfo/main.py:650
+#: ./aux/..//rpmkit/updateinfo/main.py:639
+#: ./aux/..//rpmkit/updateinfo/main.py:648
 msgid "advisory"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:610
-#: ./aux/..//rpmkit/updateinfo/main.py:644
-msgid "severity"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:611
-msgid "description"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:611
-msgid "issue_date"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:611
-#: ./aux/..//rpmkit/updateinfo/main.py:617
+#: ./aux/..//rpmkit/updateinfo/main.py:605
+#: ./aux/..//rpmkit/updateinfo/main.py:622
 #: ./aux/..//rpmkit/updateinfo/main.py:633
-#: ./aux/..//rpmkit/updateinfo/main.py:644
-#: ./aux/..//rpmkit/updateinfo/main.py:650
+#: ./aux/..//rpmkit/updateinfo/main.py:639
+#: ./aux/..//rpmkit/updateinfo/main.py:649
 msgid "synopsis"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:612
-msgid "update_date"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:612
-#: ./aux/..//rpmkit/updateinfo/main.py:617
+#: ./aux/..//rpmkit/updateinfo/main.py:605
+#: ./aux/..//rpmkit/updateinfo/main.py:623
 #: ./aux/..//rpmkit/updateinfo/main.py:634
-#: ./aux/..//rpmkit/updateinfo/main.py:645
-#: ./aux/..//rpmkit/updateinfo/main.py:651
+#: ./aux/..//rpmkit/updateinfo/main.py:640
+#: ./aux/..//rpmkit/updateinfo/main.py:650
 msgid "url"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:612
-#: ./aux/..//rpmkit/updateinfo/main.py:645
+#: ./aux/..//rpmkit/updateinfo/main.py:605
+#: ./aux/..//rpmkit/updateinfo/main.py:623
+#: ./aux/..//rpmkit/updateinfo/main.py:651
+msgid "update_names"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:608
+msgid "RHSAs (Critical)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:611
+msgid "Update RPMs by RHSAs (Critical)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:614
+msgid "RHSAs (Important)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:616
+msgid "Updates by RHSAs (Important)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:619
+msgid "RHBAs (keyword)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:622
+msgid "keywords"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:625
+msgid "Updates by RHBAs (Keyword)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:630
+msgid "RHSAs (CVSS score >= %.1f)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:633
+#: ./aux/..//rpmkit/updateinfo/main.py:648
+msgid "severity"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:634
+#: ./aux/..//rpmkit/updateinfo/main.py:639
 #: ./aux/..//rpmkit/updateinfo/main.py:650
 msgid "cves_s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:613
-msgid "bzs_s"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:613
-#: ./aux/..//rpmkit/updateinfo/main.py:617
 #: ./aux/..//rpmkit/updateinfo/main.py:634
-msgid "update_names"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:619
-msgid "RHSAs (Critical)"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:622
-msgid "Update RPMs by RHSAs (Critical)"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:625
-msgid "RHSAs (Important)"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:627
-msgid "Updates by RHSAs (Important)"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:630
-msgid "RHBAs (keyword)"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:633
-msgid "keywords"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:636
-msgid "Updates by RHBAs (Keyword)"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:641
-msgid "RHSAs (CVSS score >= %.1f)"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:645
-#: ./aux/..//rpmkit/updateinfo/main.py:651
+#: ./aux/..//rpmkit/updateinfo/main.py:640
 msgid "cvsses_s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:647
+#: ./aux/..//rpmkit/updateinfo/main.py:636
 msgid "RHBAs (CVSS score >= %.1f)"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:648
+msgid "type"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:649
+msgid "description"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:649
+msgid "issue_date"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:650
+msgid "update_date"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/main.py:651
+msgid "bzs_s"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:680
