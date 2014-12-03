@@ -377,6 +377,10 @@ def p2na(pkg):
     return (pkg["name"], pkg["arch"])
 
 
+def sgroupby(iterable, keyfunc):
+    return itertools.groupby(sorted(iterable, keyfunc), keyfunc)
+
+
 def list_updates_from_errata(errata):
     """
     :param errata: A list of errata dict
@@ -384,7 +388,7 @@ def list_updates_from_errata(errata):
     us = sorted(U.uconcat(e.get("updates", []) for e in errata),
                 key=itemgetter("name"))
     return [sorted(g, cmp=rpmkit.rpmutils.pcmp, reverse=True)[0] for k, g
-            in itertools.groupby(us, itemgetter("name"))]
+            in sgroupby(us, itemgetter("name"))]
 
 
 def compute_delta(refdir, errata, updates):
