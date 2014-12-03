@@ -192,11 +192,11 @@ def _make_cell_data(x, key, default="N/A"):
         return ", ".join(v) if isinstance(v, (list, tuple)) else v
 
 
-def _make_dataset(list_data, headers=None, title=None):
+def _make_dataset(list_data, title=None, headers=[]):
     """
     :param list_data: List of data
-    :param headers: Dataset headers to be used as column headers
     :param title: Dataset title to be used as worksheet's name
+    :param headers: Dataset headers to be used as column headers, etc.
     """
     dataset = tablib.Dataset()
 
@@ -579,43 +579,41 @@ def dump_datasets(workdir, rpms, errata, updates, score=-1,
                "vendor", "buildhost")
 
     summary_ds = [make_summary_dataset(workdir, data, score)]
-    base_ds = [_make_dataset(updates,
-                             ("name", "version", "release", "epoch", "arch"),
-                             _("Update RPMs")),
-               _make_dataset(errata,
+    base_ds = [_make_dataset(updates, _("Update RPMs"),
+                             ("name", "version", "release", "epoch", "arch")),
+               _make_dataset(errata, _("Errata Details"),
                              ("advisory", "type", "severity", "synopsis",
                               "description", "issue_date", "update_date",
-                              "url", "cves_s", "bzs_s", "update_names"),
-                             _("Errata Details")),
-               _make_dataset(rpms, rpmkeys, _("Installed RPMs"))]
+                              "url", "cves_s", "bzs_s", "update_names")),
+               _make_dataset(rpms, _("Installed RPMs"), rpmkeys)]
 
     ekeys = ("advisory", "synopsis", "url", "update_names")
     urpmkeys = ("name", "version", "release", "epoch", "arch")
 
-    main_ds = [_make_dataset(data["errata"]["rhsa_cri"], ekeys,
-                             _("RHSAs (Critical)")),
-               _make_dataset(data["errata"]["us_of_rhsa_cri"], urpmkeys,
-                             _("Update RPMs by RHSAs (Critical)")),
-               _make_dataset(data["errata"]["rhsa_imp"], ekeys,
-                             _("RHSAs (Important)")),
-               _make_dataset(data["errata"]["us_of_rhsa_imp"], urpmkeys,
-                             _("Updates by RHSAs (Important)")),
+    main_ds = [_make_dataset(data["errata"]["rhsa_cri"], _("RHSAs (Critical)"),
+                             ekeys),
+               _make_dataset(data["errata"]["us_of_rhsa_cri"],
+                             _("Update RPMs by RHSAs (Critical)"), urpmkeys),
+               _make_dataset(data["errata"]["rhsa_imp"],
+                             _("RHSAs (Important)"), ekeys),
+               _make_dataset(data["errata"]["us_of_rhsa_imp"],
+                             _("Updates by RHSAs (Important)"), urpmkeys),
                _make_dataset(data["errata"]["rhba_by_kwds"],
+                             _("RHBAs (keyword)"),
                              ("advisory", "synopsis", "keywords", "url",
-                              "update_names"),
-                             _("RHBAs (keyword)")),
-               _make_dataset(data["errata"]["us_of_rhba_by_kwds"], urpmkeys,
-                             _("Updates by RHBAs (Keyword)"))]
+                              "update_names")),
+               _make_dataset(data["errata"]["us_of_rhba_by_kwds"],
+                             _("Updates by RHBAs (Keyword)"), urpmkeys)]
 
     if score >= 0:
         cvss_ds = [_make_dataset(data["errata"]["rhsa_by_cvss_score"],
+                                 _("RHSAs (CVSS score >= %.1f)") % score,
                                  ("advisory", "severity", "synopsis",
-                                  "cves_s", "cvsses_s", "url"),
-                                 _("RHSAs (CVSS score >= %.1f)") % score),
+                                  "cves_s", "cvsses_s", "url")),
                    _make_dataset(data["errata"]["rhba_by_cvss_score"],
+                                 _("RHBAs (CVSS score >= %.1f)") % score,
                                  ("advisory", "synopsis", "cves_s",
-                                  "cvsses_s", "url"),
-                                 _("RHBAs (CVSS score >= %.1f)") % score)]
+                                  "cvsses_s", "url"))]
         main_ds.extend(cvss_ds)
 
     book = tablib.Databook(summary_ds + main_ds + base_ds)
