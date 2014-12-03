@@ -564,8 +564,8 @@ def make_summary_dataset(workdir, data, score=-1):
     return dataset
 
 
-def dump_datasets(workdir, rpms, errata, updates, score=-1,
-                  keywords=ERRATA_KEYWORDS):
+def dump_results(workdir, rpms, errata, updates, score=-1,
+                 keywords=ERRATA_KEYWORDS):
     """
     :param workdir: Working dir to dump the result
     :param rpms: A list of installed RPMs
@@ -736,8 +736,8 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
     es = U.uniq(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
     us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
 
-    LOG.info(_("Dump dataset file from RPMs and Errata data..."))
-    dump_datasets(workdir, ips, es, us, score, keywords)
+    LOG.info(_("Dump analysis results of RPMs and errata data..."))
+    dump_results(workdir, ips, es, us, score, keywords)
 
     if refdir:
         LOG.debug(_("Computing delta errata and updates for data in %s"),
@@ -762,7 +762,7 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
         us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
 
         LOG.info(_("Dump dataset file from RPMs and Errata data..."))
-        dump_datasets(workdir, ips, es, us, score, keywords)
+        dump_results(workdir, ips, es, us, score, keywords)
 
 
 def main(root, workdir=None, repos=[], did=None, score=-1,
