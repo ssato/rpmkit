@@ -778,7 +778,7 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
                                    installed=len(host.installed),
                                    generated=timestamp))
     # pylint: disable=maybe-no-member
-    LOG.info(_("Dump metadata [%s]: root=%s"), metadata.id, metadata.root)
+    LOG.debug(_("Dump metadata [%s]: root=%s"), metadata.id, metadata.root)
     # pylint: enable=maybe-no-member
     U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
 
