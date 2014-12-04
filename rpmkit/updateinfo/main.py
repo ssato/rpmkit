@@ -800,7 +800,8 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
     es = U.uniq(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
     us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
 
-    LOG.info(_("Dump analysis results of RPMs and errata data..."))
+    LOG.info(_("Dump analysis results of RPMs and errata data in %s..."),
+             workdir)
     dump_results(workdir, ips, es, us, score, keywords)
 
     if refdir:
