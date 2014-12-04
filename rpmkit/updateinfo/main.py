@@ -73,14 +73,6 @@ def updates_file_path(workdir, filename=_UPDATES_LIST_FILE):
     return os.path.join(workdir, filename)
 
 
-def dataset_file_path(workdir):
-    """
-    :param workdir: Working dir to dump the result
-    :param filename: Output file basename
-    """
-    return os.path.join(workdir, "errata_summary.xls")
-
-
 def mk_cve_vs_cvss_map():
     """
     Make up CVE vs. CVSS map w/ using swapi's virtual APIs.
@@ -377,8 +369,16 @@ def p2na(pkg):
     return (pkg["name"], pkg["arch"])
 
 
-def sgroupby(iterable, keyfunc):
-    return itertools.groupby(sorted(iterable, keyfunc), keyfunc)
+def sgroupby(xs, kf, kf2=None):
+    """
+    :param xs: Iterable object, e.g. a list, a tuple, etc.
+    :param kf: Key function to sort `xs` and group it
+    :param kf2: Key function to sort each group in result
+
+    :return: A generator to yield items in `xs` grouped by `kf`
+    """
+    return (list(g) if kf2 is None else sorted(g, key=kf2) for _k, g
+            in itertools.groupby(sorted(xs, key=kf), kf))
 
 
 def list_updates_from_errata(errata):
@@ -387,8 +387,17 @@ def list_updates_from_errata(errata):
     """
     us = sorted(U.uconcat(e.get("updates", []) for e in errata),
                 key=itemgetter("name"))
-    return [sorted(g, cmp=rpmkit.rpmutils.pcmp, reverse=True)[0] for k, g
-            in sgroupby(us, itemgetter("name"))]
+    return [sorted(g, cmp=rpmkit.rpmutils.pcmp, reverse=True)[0]
+            for g in sgroupby(us, itemgetter("name"))]
+
+
+def list_latest_errata_groupby_updates(es):
+    """
+    :param es: A list of errata dict
+    :return: A list of items in `es` grouped by update names
+    """
+    ung = lambda e: sorted(set(u["name"] for u in e.get("updates", [])))
+    return [es[-1] for es in sgroupby(es, ung, itemgetter("issue_date"))]
 
 
 def compute_delta(refdir, errata, updates):
@@ -480,6 +489,8 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     rhsa = [e for e in errata if e.get("severity", None) is not None]
     rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
     rhsa_imp = [e for e in rhsa if e.get("severity") == "Important"]
+    rhsa_cri_latests = list_latest_errata_groupby_updates(rhsa_cri)
+    rhsa_imp_latests = list_latest_errata_groupby_updates(rhsa_imp)
 
     # TODO: degenerate errata by listing only latest update rpms:
     us_of_rhsa_cri = list_updates_from_errata(rhsa_cri)
@@ -505,8 +516,11 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     rhea = [e for e in errata if e["advisory"].startswith("RHEA")]
 
     return dict(rhsa=rhsa, rhsa_cri=rhsa_cri, rhsa_imp=rhsa_imp,
+                rhsa_cri_latests=rhsa_cri_latests,
+                rhsa_imp_latests=rhsa_imp_latests,
                 rhsa_by_cvss_score=rhsa_by_score,
-                us_of_rhsa_cri=us_of_rhsa_cri, us_of_rhsa_imp=us_of_rhsa_imp,
+                us_of_rhsa_cri=us_of_rhsa_cri,
+                us_of_rhsa_imp=us_of_rhsa_imp,
                 rhba=rhba, rhba_by_kwds=rhba_by_kwds,
                 rhba_by_cvss_score=rhba_by_score,
                 us_of_rhba_by_kwds=us_of_rhba_by_kwds,
@@ -555,7 +569,11 @@ def make_overview_dataset(workdir, data, score=-1, keywords=ERRATA_KEYWORDS):
     """
     rows = [[_("Critical or Important RHSAs (Security Errata)")],
             [_("# of Critical RHSAs"), len(data["errata"]["rhsa_cri"])],
+            [_("# of Critical RHSAs (latests only)"),
+             len(data["errata"]["rhsa_cri_latests"])],
             [_("# of Important RHSAs"), len(data["errata"]["rhsa_imp"])],
+            [_("# of Important RHSAs (latests only)"),
+             len(data["errata"]["rhsa_imp_latests"])],
             [_("Update RPMs by Critical or Important RHSAs at minimum")],
             [_("# of Update RPMs by Critical RHSAs at minimum"),
              len(data["errata"]["us_of_rhsa_cri"])],
@@ -605,6 +623,12 @@ def make_overview_dataset(workdir, data, score=-1, keywords=ERRATA_KEYWORDS):
     return dataset
 
 
+def dump_xls(dataset, filepath):
+    book = tablib.Databook(dataset)
+    with open(filepath, 'wb') as out:
+        out.write(book.xls)
+
+
 def dump_results(workdir, rpms, errata, updates, score=-1,
                  keywords=ERRATA_KEYWORDS):
     """
@@ -629,17 +653,20 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
 
     sekeys = ("advisory", "severity", "synopsis", "url", "update_names")
     lsekeys = (_("advisory"), _("severity"), _("synopsis"), _("url"),
-              _("update_names"))
+               _("update_names"))
 
     ds = [make_overview_dataset(workdir, data, score, keywords),
+          make_dataset((data["errata"]["rhsa_cri_latests"] +
+                        data["errata"]["rhsa_imp_latests"]),
+                       _("Cri-Important RHSAs (latests)"),
+                       sekeys, lsekeys),
           make_dataset(data["errata"]["rhsa_cri"] + data["errata"]["rhsa_imp"],
                        _("Critical or Important RHSAs"), sekeys, lsekeys),
           make_dataset(data["errata"]["us_of_rhsa_cri"],
                        _("Update RPMs by RHSAs (Critical)"), rpmkeys,
                        lrpmkeys),
           make_dataset(data["errata"]["us_of_rhsa_imp"],
-                       _("Updates by RHSAs (Important)"), rpmkeys,
-                       lrpmkeys),
+                       _("Updates by RHSAs (Important)"), rpmkeys, lrpmkeys),
           make_dataset(data["errata"]["rhba_by_kwds"],
                        _("RHBAs (keyword)"),
                        ("advisory", "keywords", "synopsis", "url",
@@ -665,21 +692,19 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
                                  _("cvsses_s"), _("url")))]
         ds.extend(cvss_ds)
 
-    base_ds = [make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
-               make_dataset(errata, _("Errata Details"),
-                            ("advisory", "type", "severity", "synopsis",
-                             "description", "issue_date", "update_date",
-                             "url", "cves_s", "bzs_s", "update_names"),
-                            (_("advisory"), _("type"), _("severity"),
-                             _("synopsis"), _("description"), _("issue_date"),
-                             _("update_date"), _("url"), _("cves_s"),
-                             _("bzs_s"), _("update_names"))),
-               make_dataset(rpms, _("Installed RPMs"), rpmdkeys, lrpmdkeys)]
+    dds = [make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
+           make_dataset(errata, _("Errata Details"),
+                        ("advisory", "type", "severity", "synopsis",
+                         "description", "issue_date", "update_date", "url",
+                         "cves_s", "bzs_s", "update_names"),
+                        (_("advisory"), _("type"), _("severity"),
+                        _("synopsis"), _("description"), _("issue_date"),
+                        _("update_date"), _("url"), _("cves_s"), _("bzs_s"),
+                        _("update_names"))),
+           make_dataset(rpms, _("Installed RPMs"), rpmdkeys, lrpmdkeys)]
 
-    book = tablib.Databook(ds + base_ds)
-
-    with open(dataset_file_path(workdir), 'wb') as out:
-        out.write(book.xls)
+    dump_xls(ds, os.path.join(workdir, "errata_summary.xls"))
+    dump_xls(dds, os.path.join(workdir, "errata_details.xls"))
 
 
 def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
