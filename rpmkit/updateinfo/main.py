@@ -691,8 +691,7 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
                                  _("cvsses_s"), _("url")))]
         ds.extend(cvss_ds)
 
-    dds = [make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
-           make_dataset(errata, _("Errata Details"),
+    dds = [make_dataset(errata, _("Errata Details"),
                         ("advisory", "type", "severity", "synopsis",
                          "description", "issue_date", "update_date", "url",
                          "cves_s", "bzs_s", "update_names"),
@@ -700,6 +699,7 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
                         _("synopsis"), _("description"), _("issue_date"),
                         _("update_date"), _("url"), _("cves_s"), _("bzs_s"),
                         _("update_names"))),
+           make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
            make_dataset(rpms, _("Installed RPMs"), rpmdkeys, lrpmdkeys)]
 
     dump_xls(ds, os.path.join(workdir, "errata_summary.xls"))
