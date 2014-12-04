@@ -627,17 +627,16 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
     rpmdkeys = rpmkeys + ["summary", "vendor", "buildhost"]
     lrpmdkeys = lrpmkeys + [_("summary"), _("vendor"), _("buildhost")]
 
-    ekeys = ("advisory", "synopsis", "url", "update_names")
-    lekeys = (_("advisory"), _("synopsis"), _("url"), _("update_names"))
+    sekeys = ("advisory", "severity", "synopsis", "url", "update_names")
+    lsekeys = (_("advisory"), _("severity"), _("synopsis"), _("url"),
+              _("update_names"))
 
     ds = [make_overview_dataset(workdir, data, score, keywords),
-          make_dataset(data["errata"]["rhsa_cri"], _("RHSAs (Critical)"),
-                       ekeys, lekeys),
+          make_dataset(data["errata"]["rhsa_cri"] + data["errata"]["rhsa_imp"],
+                       _("Critical or Important RHSAs"), sekeys, lsekeys),
           make_dataset(data["errata"]["us_of_rhsa_cri"],
                        _("Update RPMs by RHSAs (Critical)"), rpmkeys,
                        lrpmkeys),
-          make_dataset(data["errata"]["rhsa_imp"],
-                       _("RHSAs (Important)"), ekeys, lekeys),
           make_dataset(data["errata"]["us_of_rhsa_imp"],
                        _("Updates by RHSAs (Important)"), rpmkeys,
                        lrpmkeys),
