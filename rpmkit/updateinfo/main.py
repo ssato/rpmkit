@@ -503,8 +503,10 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
 
     rhba = [e for e in errata if is_rhba(e)]
 
-    kf = lambda e: len(e.get("keywords", []))
-    rhba_by_kwds = sorted(errata_matches_keywords_g(rhba, keywords), key=kf)
+    kf = lambda e: (len(e.get("keywords", [])), e["issue_date"],
+                    e["update_names"])
+    rhba_by_kwds = sorted(errata_matches_keywords_g(rhba, keywords),
+                          key=kf, reverse=True)
 
     if score < 0:
         rhsa_by_score = []
