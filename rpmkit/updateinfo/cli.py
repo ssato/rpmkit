@@ -35,7 +35,7 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
     p.set_defaults(**defaults)
 
     p.add_option("-w", "--workdir", help="Working dir [%default]")
-    p.add_option("", "--repo", dest="repos", action="append",
+    p.add_option("-r", "--repo", dest="repos", action="append",
                  help="Yum repo to fetch errata info, e.g. "
                       "'rhel-x86_64-server-6'. It can be given multiple times "
                       "to specify multiple yum repos. Note: Any other repos "
