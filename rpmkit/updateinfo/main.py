@@ -433,6 +433,9 @@ def errata_matches_keywords_g(errata, keywords=ERRATA_KEYWORDS):
     """
     :param errata: A list of errata
     :param keywords: Keyword list to filter 'important' RHBAs
+
+    :return: A generator to yield errata of which description contains any of
+        given keywords
     """
     for e in errata:
         mks = [k for k in keywords if k in e["description"]]
@@ -499,7 +502,9 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     is_rhba = lambda e: e["advisory"].startswith("RHBA")
 
     rhba = [e for e in errata if is_rhba(e)]
-    rhba_by_kwds = list(errata_matches_keywords_g(rhba, keywords))
+
+    kf = lambda e: len(e.get("keywords", []))
+    rhba_by_kwds = sorted(errata_matches_keywords_g(rhba, keywords), key=kf)
 
     if score < 0:
         rhsa_by_score = []
