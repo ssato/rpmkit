@@ -20,7 +20,8 @@ _TODAY = datetime.datetime.now().strftime("%F")
 _DEFAULTS = dict(path=None, workdir="/tmp/rk-updateinfo-{}".format(_TODAY),
                  repos=[], multiproc=False, id=None,
                  score=RUM.DEFAULT_CVSS_SCORE, keywords=RUM.ERRATA_KEYWORDS,
-                 refdir=None, backend=RUM.DEFAULT_BACKEND, verbose=False)
+                 rpms=RUM.CORE_RPMS, refdir=None, backend=RUM.DEFAULT_BACKEND,
+                 verbose=False)
 _USAGE = """\
 %prog [Options...] ROOT
 
@@ -54,6 +55,8 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
                  help="Keyword to select more 'important' bug errata. "
                       "You can specify this multiple times. "
                       "[%s]" % ', '.join(defaults["keywords"]))
+    p.add_option('', "--rpm", dest="rpms", action="append",
+                 help="RPM names to filter errata relevant to given RPMs")
     p.add_option("-R", "--refdir",
                  help="Output 'delta' result compared to the data in this dir")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -72,7 +75,7 @@ def main():
 
     if os.path.exists(os.path.join(root, "var/lib/rpm")):
         RUM.main(root, options.workdir, options.repos, options.id,
-                 options.score, options.keywords, options.refdir)
+                 options.score, options.keywords, options.rpms, options.refdir)
     else:
         # multihosts mode.
         #
@@ -80,7 +83,7 @@ def main():
         # to RUMS.main until the issue of yum that its thread locks conflict w/
         # multiprocessing module is fixed.
         RUMS.main(root, options.workdir, options.repos, options.score,
-                  options.keywords, options.refdir, False)
+                  options.keywords, options.rpms, options.refdir, False)
 
 
 if __name__ == '__main__':

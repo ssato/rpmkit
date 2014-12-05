@@ -122,7 +122,7 @@ def analyze(args):
 
 
 def main(hosts_datadir, workdir=None, repos=[], score=-1,
-         keywords=RUM.ERRATA_KEYWORDS, refdir=None, multiproc=False,
+         keywords=RUM.ERRATA_KEYWORDS, rpms=[], refdir=None, multiproc=False,
          backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
     """
     :param hosts_datadir: Dir in which rpm db roots of hosts exist
@@ -132,6 +132,7 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     :param keywords: Keyword list to filter 'important' RHBAs
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
+    :param rpms: Core RPMs to filter errata by them
     :param multiproc: Utilize multiprocessing module to compute results
         in parallel as much as possible if True
     :param backend: Backend module to use to get updates and errata
@@ -152,7 +153,7 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
 
     for hss in his:
         hset = [(hs[0], hs[1:]) for hs in hss]
-        data_g = ((h, score, keywords, refdir) for h, _hrest in hset)
+        data_g = ((h, score, keywords, rpms, refdir) for h, _hrest in hset)
 
         if multiproc:
             pool = multiprocessing.Pool(multiprocessing.cpu_count())
