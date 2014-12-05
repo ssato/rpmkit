@@ -42,8 +42,10 @@ BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper.Base,
                 yumbase=rpmkit.updateinfo.yumbase.Base,
                 dnfbase=rpmkit.updateinfo.dnfbase.Base)
 DEFAULT_BACKEND = BACKENDS["yumbase"]
-ERRATA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault"]
+
 DEFAULT_CVSS_SCORE = 4.0
+ERRATA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault"]
+CORE_RPMS = ["kernel", "glibc", "bash", "openssl", "zlib"]
 
 rpmkit.updateinfo.yumwrapper.LOG.setLevel(logging.WARN)
 rpmkit.updateinfo.yumbase.LOG.setLevel(logging.WARN)
@@ -444,6 +446,21 @@ def errata_matches_keywords_g(errata, keywords=ERRATA_KEYWORDS):
             yield e
 
 
+def _ekeyfunc(e):
+    return (len(e["update_names"]), itemgetter("issue_date"))
+
+
+def errata_of_rpms(es, rpms=[], keyfunc=_ekeyfunc):
+    """
+    :param es: A list of errata
+    :param rpms: RPM names to select relevant errata
+
+    :return: A list of errata relevant to any of given RPMs
+    """
+    return sorted((e for e in es if any(n in e["update_names"] for n in rpms)),
+                  key=keyfunc, reverse=True)
+
+
 def higher_score_cve_errata_g(errata, score=DEFAULT_CVSS_SCORE):
     """
     :param errata: A list of errata
@@ -479,13 +496,15 @@ def errata_complement_g(errata, updates):
         yield e
 
 
-def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
+def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS,
+                   core_rpms=CORE_RPMS):
     """
     :param errata: A list of applicable errata sorted by severity
         if it's RHSA and advisory in ascending sequence
     :param updates: A list of update packages
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
+    :param core_rpms: Core RPMs to filter errata by them
     """
     errata = list(errata_complement_g(errata, updates))
 
@@ -500,13 +519,14 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
     us_of_rhsa_imp = list_updates_from_errata(rhsa_imp)
 
     is_rhba = lambda e: e["advisory"].startswith("RHBA")
-
     rhba = [e for e in errata if is_rhba(e)]
 
     kf = lambda e: (len(e.get("keywords", [])), e["issue_date"],
                     e["update_names"])
     rhba_by_kwds = sorted(errata_matches_keywords_g(rhba, keywords),
                           key=kf, reverse=True)
+    rhba_of_rpms_by_kwds = errata_of_rpms(rhba_by_kwds, core_rpms, kf)
+    rhba_of_rpms = errata_of_rpms(rhba, core_rpms)
 
     if score < 0:
         rhsa_by_score = []
@@ -529,6 +549,8 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS):
                 us_of_rhsa_cri=us_of_rhsa_cri,
                 us_of_rhsa_imp=us_of_rhsa_imp,
                 rhba=rhba, rhba_by_kwds=rhba_by_kwds,
+                rhba_of_core_rpms=rhba_of_rpms,
+                rhba_of_core_rpms_by_kwds=rhba_of_rpms_by_kwds,
                 rhba_by_cvss_score=rhba_by_score,
                 us_of_rhba_by_kwds=us_of_rhba_by_kwds,
                 us_of_rhsa_by_cvss_score=us_of_rhsa_by_score,
@@ -637,7 +659,7 @@ def dump_xls(dataset, filepath):
 
 
 def dump_results(workdir, rpms, errata, updates, score=-1,
-                 keywords=ERRATA_KEYWORDS):
+                 keywords=ERRATA_KEYWORDS, core_rpms=[]):
     """
     :param workdir: Working dir to dump the result
     :param rpms: A list of installed RPMs
@@ -645,8 +667,10 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
     :param updates: A list of update RPMs
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
+    :param core_rpms: Core RPMs to filter errata by them
     """
-    data = dict(errata=analyze_errata(errata, updates, score, keywords),
+    data = dict(errata=analyze_errata(errata, updates, score, keywords,
+                                      core_rpms),
                 rpms=rpms, installed=rpms, updates=updates,
                 rpmnames_need_updates=U.uniq(u["name"] for u in updates))
     U.json_dump(data, os.path.join(workdir, "summary.json"))
@@ -661,6 +685,9 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
     sekeys = ("advisory", "severity", "synopsis", "url", "update_names")
     lsekeys = (_("advisory"), _("severity"), _("synopsis"), _("url"),
                _("update_names"))
+    bekeys = ("advisory", "keywords", "synopsis", "url", "update_names")
+    lbekeys = (_("advisory"), _("keywords"), _("synopsis"), _("url"),
+               _("update_names"))
 
     ds = [make_overview_dataset(workdir, data, score, keywords),
           make_dataset((data["errata"]["rhsa_cri_latests"] +
@@ -673,15 +700,14 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
                        lrpmkeys),
           make_dataset(data["errata"]["us_of_rhsa_imp"],
                        _("Updates by RHSAs (Important)"), rpmkeys, lrpmkeys),
-          make_dataset(data["errata"]["rhba_by_kwds"],
-                       _("RHBAs (keyword)"),
-                       ("advisory", "keywords", "synopsis", "url",
-                        "update_names"),
-                       (_("advisory"), _("keywords"), _("synopsis"),
-                        _("url"), _("update_names"))),
+          make_dataset(data["errata"]["rhba_by_kwds"], _("RHBAs (keyword)"),
+                       bekeys, lbekeys),
           make_dataset(data["errata"]["us_of_rhba_by_kwds"],
-                       _("Updates by RHBAs (Keyword)"), rpmkeys,
-                       lrpmkeys)]
+                       _("Updates by RHBAs (Keyword)"), rpmkeys, lrpmkeys),
+          make_dataset(data["errata"]["rhba_of_core_rpms_by_kwds"],
+                       _("RHBAs (core rpms, keywords)"), bekeys, lbekeys),
+          make_dataset(data["errata"]["rhba_of_core_rpms"],
+                       _("RHBAs (core rpms)"), bekeys, lbekeys)]
 
     if score >= 0:
         cvss_ds = [make_dataset(data["errata"]["rhsa_by_cvss_score"],
@@ -766,11 +792,13 @@ def prepare(root, workdir=None, repos=[], did=None,
     return host
 
 
-def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
+def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, core_rpms=[],
+            refdir=None):
     """
     :param host: host object function :function:`prepare` returns
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
+    :param core_rpms: Core RPMs to filter errata by them
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
     """
@@ -809,7 +837,7 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
 
     LOG.info(_("Dump analysis results of RPMs and errata data in %s..."),
              workdir)
-    dump_results(workdir, ips, es, us, score, keywords)
+    dump_results(workdir, ips, es, us, score, keywords, core_rpms)
 
     if refdir:
         LOG.debug(_("Computing delta errata and updates for data in %s"),
@@ -834,11 +862,11 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, refdir=None):
         us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
 
         LOG.info(_("Dump analysis results of delta RPMs and errata data..."))
-        dump_results(workdir, ips, es, us, score, keywords)
+        dump_results(workdir, ips, es, us, score, keywords, core_rpms)
 
 
 def main(root, workdir=None, repos=[], did=None, score=-1,
-         keywords=ERRATA_KEYWORDS, refdir=None,
+         keywords=ERRATA_KEYWORDS, rpms=CORE_RPMS, refdir=None,
          backend=DEFAULT_BACKEND, backends=BACKENDS):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
@@ -847,6 +875,7 @@ def main(root, workdir=None, repos=[], did=None, score=-1,
     :param did: Identity of the data (ex. hostname) or empty str
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
+    :param rpms: Core RPMs to filter errata by them
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
     :param backend: Backend module to use to get updates and errata
@@ -854,6 +883,6 @@ def main(root, workdir=None, repos=[], did=None, score=-1,
     """
     host = prepare(root, workdir, repos, did, backend, backends)
     if host.available:
-        analyze(host, score, keywords, refdir)
+        analyze(host, score, keywords, rpms, refdir)
 
 # vim:sw=4:ts=4:et:
