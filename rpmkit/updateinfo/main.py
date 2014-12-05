@@ -235,50 +235,6 @@ def errata_date(date_s):
         return (int("20" + y), int(m), int(d))
 
 
-def _is_newer_errata(errata, since=None):
-    """
-    NOTE: issue_date format: month/day/year, e.g. 12/16/10
-
-    :errata: A dict {advisory:, issue_date:, } represents an errata
-    :since: Limit date (yyyy, mm, dd) :: (int, int, int)
-
-    >>> e = dict(advisory="RHBA-2010:0993", issue_date="12/16/10")
-    >>> _is_newer_errata(e, None)
-    True
-    >>> _is_newer_errata(e, (2010, 11, 1))
-    True
-    >>> _is_newer_errata(e, (2010, 11, 1))
-    True
-    >>> _is_newer_errata(e, (2010, 12, 16))
-    False
-    >>> _is_newer_errata(e, (2010, 12, 31))
-    False
-    """
-    if since is None:
-        return True  # Unknown
-
-    (y, m, d) = since
-
-    # Set to dummy and old enough date if failed to get issue_date.
-    issue_date = errata.get("issue_date", "1900-01-01")
-    (e_y, e_m, e_d) = errata_date(issue_date)
-
-    if e_y < y:
-        return False
-    elif e_y > y:
-        return True
-    else:
-        if e_m < m:
-            return False
-        elif e_m > m:
-            return True
-        else:
-            if e_m < m or (e_m == m and e_d <= d):
-                return False
-
-    return True
-
-
 def cve_socre_ge(cve, score=DEFAULT_CVSS_SCORE, default=False):
     """
     :param cve: A dict contains CVE and CVSS info.
@@ -305,66 +261,6 @@ def cve_socre_ge(cve, score=DEFAULT_CVSS_SCORE, default=False):
                  str(cve), score)
 
     return default
-
-
-def has_higher_score_cve(errata, score=DEFAULT_CVSS_SCORE):
-    """
-    :param errata: A dict represents errata info
-    :param score: Limit value of CVSS base metrics score or None
-    """
-    if errata.get("cves", False):
-        return any(cve_socre_ge(cve, score) for cve in errata["cves"])
-
-    return False
-
-
-@rpmkit.memoize.memoize
-def errata_list_unique_src_updates(errata):
-    """
-    :param errata: A dict represents errata info
-    """
-    return [sorted(g, key=itemgetter("name"))[0] for k, g in
-            itertools.groupby(sorted(errata.get("packages", []),
-                                     key=itemgetter("src")),
-                              itemgetter("src"))]
-
-
-@rpmkit.memoize.memoize
-def is_subset_or_older_errata(errata, errata_ref):
-    """
-    Return True if `errata` has relevant update packages which is a subset of
-    ones of `errata_ref` or has same relevant update packages older than ones
-    of `errata_ref`. That is, return True if `errata` is not needed to apply
-    because `errata_ref` subsumes `errata` and application of `errata_ref` is
-    enough.
-
-    :param errata: A dict represents errata info
-    :param errata_ref: A dict represents errata info to compare with
-
-    :return: True if update packages of `errata` is a sub set of ones of
-        `errata_ref` or `errata_ref` can become an alternative of `errata`.
-    """
-    us = sorted(errata_list_unique_src_updates(errata))
-    rs = sorted(errata_list_unique_src_updates(errata_ref))
-
-    if len(us) > len(rs):
-        return False  # `errata` has updates not in `errata_ref`.
-
-    uns = set(p["name"] for p in us)
-    rns = set(p["name"] for p in rs)
-
-    if uns <= rns:
-        return all(rpmkit.rpmutils.pcmp(u, r) < 0 for u, r
-                   in itertools.izip(us, rs))
-
-    return False
-
-
-def errata_group_and_sort_by_updates(errata):
-    """
-    :param errata: A list of errata dict
-    """
-    pass
 
 
 def p2na(pkg):
@@ -651,23 +547,6 @@ def padding_row(row, mcols):
     ['', '']
     """
     return row + [''] * (mcols - len(row))
-
-
-def padding_rows(rows, mcols=None):
-    """
-    :param rows: A list of row data :: [[]]
-
-    >>> padding_rows([['a', 1],  # doctest: +NORMALIZE_WHITESPACE
-    ...                 ['b', 2, 'a comment'],
-    ...                 []])
-    [['a', 1, ''], ['b', 2, 'a comment'], ['', '', '']]
-    >>> padding_rows([[]], 3)
-    [['', '', '']]
-    """
-    if mcols is None:
-        mcols = max(len(r) for r in rows)
-
-    return [padding_row(r, mcols) for r in rows]
 
 
 def make_overview_dataset(workdir, data, score=-1, keywords=ERRATA_KEYWORDS):
