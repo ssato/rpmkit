@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-12-04 19:25+JST\n"
+"POT-Creation-Date: 2014-12-04 19:32+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -83,12 +83,12 @@ msgid "Errata"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:739
-#: ./aux/..//rpmkit/updateinfo/main.py:694
+#: ./aux/..//rpmkit/updateinfo/main.py:702
 msgid "Update RPMs"
 msgstr ""
 
 #: ./aux/..//rpmkit/extras/updateinfo.py:745
-#: ./aux/..//rpmkit/updateinfo/main.py:695
+#: ./aux/..//rpmkit/updateinfo/main.py:694
 msgid "Errata Details"
 msgstr ""
 
@@ -256,7 +256,7 @@ msgstr ""
 #: ./aux/..//rpmkit/updateinfo/main.py:673
 #: ./aux/..//rpmkit/updateinfo/main.py:684
 #: ./aux/..//rpmkit/updateinfo/main.py:690
-#: ./aux/..//rpmkit/updateinfo/main.py:699
+#: ./aux/..//rpmkit/updateinfo/main.py:698
 msgid "advisory"
 msgstr ""
 
@@ -264,7 +264,7 @@ msgstr ""
 #: ./aux/..//rpmkit/updateinfo/main.py:673
 #: ./aux/..//rpmkit/updateinfo/main.py:684
 #: ./aux/..//rpmkit/updateinfo/main.py:690
-#: ./aux/..//rpmkit/updateinfo/main.py:700
+#: ./aux/..//rpmkit/updateinfo/main.py:699
 msgid "synopsis"
 msgstr ""
 
@@ -272,19 +272,19 @@ msgstr ""
 #: ./aux/..//rpmkit/updateinfo/main.py:674
 #: ./aux/..//rpmkit/updateinfo/main.py:685
 #: ./aux/..//rpmkit/updateinfo/main.py:691
-#: ./aux/..//rpmkit/updateinfo/main.py:701
+#: ./aux/..//rpmkit/updateinfo/main.py:700
 msgid "url"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:655
 #: ./aux/..//rpmkit/updateinfo/main.py:684
-#: ./aux/..//rpmkit/updateinfo/main.py:699
+#: ./aux/..//rpmkit/updateinfo/main.py:698
 msgid "severity"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:656
 #: ./aux/..//rpmkit/updateinfo/main.py:674
-#: ./aux/..//rpmkit/updateinfo/main.py:702
+#: ./aux/..//rpmkit/updateinfo/main.py:701
 msgid "update_names"
 msgstr ""
 
@@ -322,7 +322,7 @@ msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/main.py:685
 #: ./aux/..//rpmkit/updateinfo/main.py:690
-#: ./aux/..//rpmkit/updateinfo/main.py:701
+#: ./aux/..//rpmkit/updateinfo/main.py:700
 msgid "cves_s"
 msgstr ""
 
@@ -335,23 +335,23 @@ msgstr ""
 msgid "RHBAs (CVSS score >= %.1f)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:699
+#: ./aux/..//rpmkit/updateinfo/main.py:698
 msgid "type"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:700
+#: ./aux/..//rpmkit/updateinfo/main.py:699
 msgid "description"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:700
+#: ./aux/..//rpmkit/updateinfo/main.py:699
 msgid "issue_date"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:701
+#: ./aux/..//rpmkit/updateinfo/main.py:700
 msgid "bzs_s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:701
+#: ./aux/..//rpmkit/updateinfo/main.py:700
 msgid "update_date"
 msgstr ""
 

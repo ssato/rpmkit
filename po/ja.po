@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-12-04 19:25+JST\n"
+"POT-Creation-Date: 2014-12-04 19:32+JST\n"
 "PO-Revision-Date: 2014-12-04 19:25+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
@@ -83,12 +83,12 @@ msgid "Errata"
 msgstr "エラータ"
 
 #: aux/..//rpmkit/extras/updateinfo.py:739
-#: aux/..//rpmkit/updateinfo/main.py:694
+#: aux/..//rpmkit/updateinfo/main.py:702
 msgid "Update RPMs"
 msgstr "更新 RPM"
 
 #: aux/..//rpmkit/extras/updateinfo.py:745
-#: aux/..//rpmkit/updateinfo/main.py:695
+#: aux/..//rpmkit/updateinfo/main.py:694
 msgid "Errata Details"
 msgstr "エラータ詳細"
 
@@ -254,29 +254,29 @@ msgstr "ベンダー"
 
 #: aux/..//rpmkit/updateinfo/main.py:655 aux/..//rpmkit/updateinfo/main.py:673
 #: aux/..//rpmkit/updateinfo/main.py:684 aux/..//rpmkit/updateinfo/main.py:690
-#: aux/..//rpmkit/updateinfo/main.py:699
+#: aux/..//rpmkit/updateinfo/main.py:698
 msgid "advisory"
 msgstr "アドバイザリ"
 
 #: aux/..//rpmkit/updateinfo/main.py:655 aux/..//rpmkit/updateinfo/main.py:673
 #: aux/..//rpmkit/updateinfo/main.py:684 aux/..//rpmkit/updateinfo/main.py:690
-#: aux/..//rpmkit/updateinfo/main.py:700
+#: aux/..//rpmkit/updateinfo/main.py:699
 msgid "synopsis"
 msgstr "概要"
 
 #: aux/..//rpmkit/updateinfo/main.py:655 aux/..//rpmkit/updateinfo/main.py:674
 #: aux/..//rpmkit/updateinfo/main.py:685 aux/..//rpmkit/updateinfo/main.py:691
-#: aux/..//rpmkit/updateinfo/main.py:701
+#: aux/..//rpmkit/updateinfo/main.py:700
 msgid "url"
 msgstr "URL"
 
 #: aux/..//rpmkit/updateinfo/main.py:655 aux/..//rpmkit/updateinfo/main.py:684
-#: aux/..//rpmkit/updateinfo/main.py:699
+#: aux/..//rpmkit/updateinfo/main.py:698
 msgid "severity"
 msgstr "影響度"
 
 #: aux/..//rpmkit/updateinfo/main.py:656 aux/..//rpmkit/updateinfo/main.py:674
-#: aux/..//rpmkit/updateinfo/main.py:702
+#: aux/..//rpmkit/updateinfo/main.py:701
 msgid "update_names"
 msgstr "更新 RPM 名"
 
@@ -313,7 +313,7 @@ msgid "RHSAs (CVSS score >= %.1f)"
 msgstr "RHSA (CVSS スコア >= %.1f)"
 
 #: aux/..//rpmkit/updateinfo/main.py:685 aux/..//rpmkit/updateinfo/main.py:690
-#: aux/..//rpmkit/updateinfo/main.py:701
+#: aux/..//rpmkit/updateinfo/main.py:700
 msgid "cves_s"
 msgstr "CVE リスト"
 
@@ -325,23 +325,23 @@ msgstr "CVSS リスト"
 msgid "RHBAs (CVSS score >= %.1f)"
 msgstr "RHBA (CVSS スコア >= %.1f)"
 
-#: aux/..//rpmkit/updateinfo/main.py:699
+#: aux/..//rpmkit/updateinfo/main.py:698
 msgid "type"
 msgstr "種別"
 
-#: aux/..//rpmkit/updateinfo/main.py:700
+#: aux/..//rpmkit/updateinfo/main.py:699
 msgid "description"
 msgstr "説明"
 
-#: aux/..//rpmkit/updateinfo/main.py:700
+#: aux/..//rpmkit/updateinfo/main.py:699
 msgid "issue_date"
 msgstr "発行日"
 
-#: aux/..//rpmkit/updateinfo/main.py:701
+#: aux/..//rpmkit/updateinfo/main.py:700
 msgid "bzs_s"
 msgstr "RHBZ リスト"
 
-#: aux/..//rpmkit/updateinfo/main.py:701
+#: aux/..//rpmkit/updateinfo/main.py:700
 msgid "update_date"
 msgstr "更新日"
 
