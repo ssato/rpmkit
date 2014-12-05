@@ -122,17 +122,19 @@ def analyze(args):
 
 
 def main(hosts_datadir, workdir=None, repos=[], score=-1,
-         keywords=RUM.ERRATA_KEYWORDS, rpms=[], refdir=None, multiproc=False,
-         backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
+         keywords=RUM.ERRATA_KEYWORDS, rpms=[], period=(), refdir=None,
+         multiproc=False, backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
     """
     :param hosts_datadir: Dir in which rpm db roots of hosts exist
     :param workdir: Working dir to save results
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
+    :param rpms: Core RPMs to filter errata by them
+    :param period: Period of errata in format of YYYY[-MM[-DD]],
+        ex. ("2014-10-01", "2014-11-01")
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
-    :param rpms: Core RPMs to filter errata by them
     :param multiproc: Utilize multiprocessing module to compute results
         in parallel as much as possible if True
     :param backend: Backend module to use to get updates and errata
@@ -153,7 +155,8 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
 
     for hss in his:
         hset = [(hs[0], hs[1:]) for hs in hss]
-        data_g = ((h, score, keywords, rpms, refdir) for h, _hrest in hset)
+        data_g = ((h, score, keywords, rpms, period, refdir) for h, _hrest
+                  in hset)
 
         if multiproc:
             pool = multiprocessing.Pool(multiprocessing.cpu_count())

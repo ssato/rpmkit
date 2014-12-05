@@ -23,12 +23,14 @@ import rpmkit.swapi
 # It looks available in EPEL for RHELs:
 #   https://apps.fedoraproject.org/packages/python-bunch
 import bunch
+import calendar
 import datetime
 import itertools
 import logging
 import operator
 import os
 import os.path
+import re
 import tablib
 
 
@@ -215,16 +217,22 @@ def make_dataset(list_data, title=None, headers=[], lheaders=[]):
     return dataset
 
 
-def _date_from_errata_issue_data(date_s):
+def errata_date(date_s):
     """
     NOTE: Errata issue_date and update_date format: month/day/year,
         e.g. 12/16/10.
 
-    >>> _date_from_errata_issue_data("12/16/10")
+    >>> errata_date("12/16/10")
     (2010, 12, 16)
+    >>> errata_date("2014-10-14 00:00:00")
+    (2014, 10, 14)
     """
-    (m, d, y) = date_s.split('/')
-    return (int("20" + y), int(m), int(d))
+    if '-' in date_s:
+        (y, m, d) = date_s.split()[0].split('-')
+        return (int(y), int(m), int(d))
+    else:
+        (m, d, y) = date_s.split('/')
+        return (int("20" + y), int(m), int(d))
 
 
 def _is_newer_errata(errata, since=None):
@@ -232,33 +240,28 @@ def _is_newer_errata(errata, since=None):
     NOTE: issue_date format: month/day/year, e.g. 12/16/10
 
     :errata: A dict {advisory:, issue_date:, } represents an errata
-    :since: Limit date in the formats, YY/MM/DD or YY-MM-DD
+    :since: Limit date (yyyy, mm, dd) :: (int, int, int)
 
     >>> e = dict(advisory="RHBA-2010:0993", issue_date="12/16/10")
     >>> _is_newer_errata(e, None)
     True
-    >>> _is_newer_errata(e, "2010-11-01")
+    >>> _is_newer_errata(e, (2010, 11, 1))
     True
-    >>> _is_newer_errata(e, "2010/11/01")
+    >>> _is_newer_errata(e, (2010, 11, 1))
     True
-    >>> _is_newer_errata(e, "2010-12-16")
+    >>> _is_newer_errata(e, (2010, 12, 16))
     False
-    >>> _is_newer_errata(e, "2010-12-31")
+    >>> _is_newer_errata(e, (2010, 12, 31))
     False
     """
     if since is None:
         return True  # Unknown
 
-    (y, m, d) = since.split('-' if '-' in since else '/')
-    (y, m, d) = (int(y), int(m), int(d))
-    # LOG.debug("Try to check the errata is newer than "
-    #              "y=%d, m=%d, d=%d" % (y, m, d))
+    (y, m, d) = since
 
     # Set to dummy and old enough date if failed to get issue_date.
     issue_date = errata.get("issue_date", "1900-01-01")
-    (e_y, e_m, e_d) = _date_from_errata_issue_data(issue_date)
-    # LOG.debug("Issue date of the errata: y=%d, m=%d, d=%d" % (e_y, e_m,
-    #                                                              e_d))
+    (e_y, e_m, e_d) = errata_date(issue_date)
 
     if e_y < y:
         return False
@@ -496,8 +499,86 @@ def errata_complement_g(errata, updates):
         yield e
 
 
+_DATE_REG = re.compile(r"^(\d{4})(?:.(\d{2})(?:.(\d{2}))?)?$")
+
+
+def round_ymd(year, mon, day, roundout=False):
+    """
+    :param roundout: Round out given date to next year, month, day if this
+        parameter is True
+
+    >>> round_ymd(2014, None, None, True)
+    (2015, 1, 1)
+    >>> round_ymd(2014, 11, None, True)
+    (2014, 12, 1)
+    >>> round_ymd(2014, 12, 24, True)
+    (2014, 12, 25)
+    >>> round_ymd(2014, 12, 31, True)
+    (2015, 1, 1)
+    >>> round_ymd(2014, None, None)
+    (2014, 1, 1)
+    >>> round_ymd(2014, 11, None)
+    (2014, 11, 1)
+    >>> round_ymd(2014, 12, 24)
+    (2014, 12, 24)
+    """
+    if mon is None:
+        return (year + 1 if roundout else year, 1, 1)
+
+    elif day is None:
+        if roundout:
+            return (year + 1, 1, 1) if mon == 12 else (year, mon + 1, 1)
+        else:
+            return (year, mon, 1)
+    else:
+        if roundout:
+            last_day = calendar.monthrange(year, mon)[1]
+            if day == last_day:
+                return (year + 1, 1, 1) if mon == 12 else (year, mon + 1, 1)
+            else:
+                return (year, mon, day + 1)
+        else:
+            return (year, mon, day)
+
+
+def ymd_to_date(ymd, roundout=False, datereg=_DATE_REG):
+    """
+    :param ymd: Date string in YYYY[-MM[-DD]]
+    :param roundout: Round out to next year, month if True and day was not
+        given; ex. '2014' -> (2015, 1, 1), '2014-11' -> (2014, 12, 1)
+        '2014-12-24' -> (2014, 12, 25), '2014-12-31' -> (2015, 1, 1) if True
+        and '2014' -> (2014, 1, 1), '2014-11' -> (2014, 11, 1) if False.
+    :param datereg: Date string regex
+
+    :return: A tuple of (year, month, day) :: (int, int, int)
+
+    >>> ymd_to_date('2014-12-24')
+    (2014, 12, 24)
+    >>> ymd_to_date('2014-12')
+    (2014, 12, 1)
+    >>> ymd_to_date('2014')
+    (2014, 1, 1)
+    >>> ymd_to_date('2014-12-24', True)
+    (2014, 12, 25)
+    >>> ymd_to_date('2014-12-31', True)
+    (2015, 1, 1)
+    >>> ymd_to_date('2014-12', True)
+    (2015, 1, 1)
+    >>> ymd_to_date('2014', True)
+    (2015, 1, 1)
+    """
+    m = datereg.match(ymd)
+    if not m:
+        LOG.error("Invalid input for normalize_date(): %s", ymd)
+
+    d = m.groups()
+    int_ = lambda x: x if x is None else int(x)
+
+    return round_ymd(int(d[0]), int_(d[1]), int_(d[2]), roundout)
+
+
 def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS,
-                   core_rpms=CORE_RPMS):
+                   core_rpms=CORE_RPMS, period=()):
     """
     :param errata: A list of applicable errata sorted by severity
         if it's RHSA and advisory in ascending sequence
@@ -505,6 +586,8 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS,
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
     :param core_rpms: Core RPMs to filter errata by them
+    :param period: Period of errata in format of YYYY[-MM[-DD]],
+        ex. ("2014-10-01", "2014-11-01")
     """
     errata = list(errata_complement_g(errata, updates))
 
@@ -659,7 +742,7 @@ def dump_xls(dataset, filepath):
 
 
 def dump_results(workdir, rpms, errata, updates, score=-1,
-                 keywords=ERRATA_KEYWORDS, core_rpms=[]):
+                 keywords=ERRATA_KEYWORDS, core_rpms=[], details=True):
     """
     :param workdir: Working dir to dump the result
     :param rpms: A list of installed RPMs
@@ -668,6 +751,7 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
     :param core_rpms: Core RPMs to filter errata by them
+    :param details: Dump details also if True
     """
     data = dict(errata=analyze_errata(errata, updates, score, keywords,
                                       core_rpms),
@@ -724,19 +808,21 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
                                  _("cvsses_s"), _("url")))]
         ds.extend(cvss_ds)
 
-    dds = [make_dataset(errata, _("Errata Details"),
-                        ("advisory", "type", "severity", "synopsis",
-                         "description", "issue_date", "update_date", "url",
-                         "cves_s", "bzs_s", "update_names"),
-                        (_("advisory"), _("type"), _("severity"),
-                        _("synopsis"), _("description"), _("issue_date"),
-                        _("update_date"), _("url"), _("cves_s"), _("bzs_s"),
-                        _("update_names"))),
-           make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
-           make_dataset(rpms, _("Installed RPMs"), rpmdkeys, lrpmdkeys)]
-
     dump_xls(ds, os.path.join(workdir, "errata_summary.xls"))
-    dump_xls(dds, os.path.join(workdir, "errata_details.xls"))
+
+    if details:
+        dds = [make_dataset(errata, _("Errata Details"),
+                            ("advisory", "type", "severity", "synopsis",
+                             "description", "issue_date", "update_date", "url",
+                             "cves_s", "bzs_s", "update_names"),
+                            (_("advisory"), _("type"), _("severity"),
+                            _("synopsis"), _("description"), _("issue_date"),
+                            _("update_date"), _("url"), _("cves_s"),
+                            _("bzs_s"), _("update_names"))),
+               make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
+               make_dataset(rpms, _("Installed RPMs"), rpmdkeys, lrpmdkeys)]
+
+        dump_xls(dds, os.path.join(workdir, "errata_details.xls"))
 
 
 def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
@@ -792,13 +878,51 @@ def prepare(root, workdir=None, repos=[], did=None,
     return host
 
 
+_TODAY = datetime.datetime.now().strftime("%Y-%m-%d")
+
+
+def _d2i(d):
+    """
+    >>> _d2i((2014, 10, 1))
+    20141001
+    """
+    return d[0] * 10000 + d[1] * 100 + d[2]
+
+
+def period_to_dates(start_date, end_date=_TODAY):
+    """
+    :param period: Period of errata in format of YYYY[-MM[-DD]],
+        ex. ("2014-10-01", "2014-11-01")
+
+    >>> today = _d2i(ymd_to_date(_TODAY, True))
+    >>> (20141001, today) == period_to_dates("2014-10-01")
+    True
+    >>> period_to_dates("2014-10-01", "2014-12-31")
+    (20141001, 20150101)
+    """
+    return (_d2i(ymd_to_date(start_date)), _d2i(ymd_to_date(end_date, True)))
+
+
+def errata_in_period(errata, start_date, end_date):
+    """
+    :param errata: A dict represents errata
+    :param start_date, end_date: Start and end date of period,
+        (year :: int, month :: int, day :: int)
+    """
+    d = _d2i(errata_date(errata["issue_date"]))
+
+    return start_date <= d and d < end_date
+
+
 def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, core_rpms=[],
-            refdir=None):
+            period=(), refdir=None):
     """
     :param host: host object function :function:`prepare` returns
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
     :param core_rpms: Core RPMs to filter errata by them
+    :param period: Period of errata in format of YYYY[-MM[-DD]],
+        ex. ("2014-10-01", "2014-11-01")
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
     """
@@ -839,6 +963,20 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, core_rpms=[],
              workdir)
     dump_results(workdir, ips, es, us, score, keywords, core_rpms)
 
+    if period:
+        (start_date, end_date) = period_to_dates(*period)
+        period_s = "%s_%s" % (start_date, end_date)
+
+        LOG.info(_("Analyze errata in period: %s ~ %s"), start_date, end_date)
+        pes = [e for e in es if errata_in_period(e, start_date, end_date)]
+
+        pdir = os.path.join(workdir, period_s)
+        if not os.path.exists(pdir):
+            LOG.debug(_("Creating period working dir [%s]: %s"), host.id, pdir)
+            os.makedirs(pdir)
+
+        dump_results(pdir, ips, pes, us, score, keywords, core_rpms, False)
+
     if refdir:
         LOG.debug(_("Computing delta errata and updates for data in %s"),
                   refdir)
@@ -866,8 +1004,8 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, core_rpms=[],
 
 
 def main(root, workdir=None, repos=[], did=None, score=-1,
-         keywords=ERRATA_KEYWORDS, rpms=CORE_RPMS, refdir=None,
-         backend=DEFAULT_BACKEND, backends=BACKENDS):
+         keywords=ERRATA_KEYWORDS, rpms=CORE_RPMS, period=(),
+         refdir=None, backend=DEFAULT_BACKEND, backends=BACKENDS):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param workdir: Working dir to save results
@@ -876,6 +1014,8 @@ def main(root, workdir=None, repos=[], did=None, score=-1,
     :param score: CVSS base metrics score
     :param keywords: Keyword list to filter 'important' RHBAs
     :param rpms: Core RPMs to filter errata by them
+    :param period: Period of errata in format of YYYY[-MM[-DD]],
+        ex. ("2014-10-01", "2014-11-01")
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
     :param backend: Backend module to use to get updates and errata
@@ -883,6 +1023,6 @@ def main(root, workdir=None, repos=[], did=None, score=-1,
     """
     host = prepare(root, workdir, repos, did, backend, backends)
     if host.available:
-        analyze(host, score, keywords, rpms, refdir)
+        analyze(host, score, keywords, rpms, period, refdir)
 
 # vim:sw=4:ts=4:et:
