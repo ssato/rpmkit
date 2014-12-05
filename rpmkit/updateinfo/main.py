@@ -397,7 +397,7 @@ def list_latest_errata_groupby_updates(es):
     :return: A list of items in `es` grouped by update names
     """
     ung = lambda e: sorted(set(u["name"] for u in e.get("updates", [])))
-    return [es[-1] for es in sgroupby(es, ung, itemgetter("issue_date"))]
+    return [xs[-1] for xs in sgroupby(es, ung, itemgetter("issue_date"))]
 
 
 def compute_delta(refdir, errata, updates):
