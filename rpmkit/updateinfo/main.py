@@ -87,7 +87,6 @@ def mk_cve_vs_cvss_map():
                 rpmkit.swapi.call("swapi.cve.getAll") if c)
 
 
-@rpmkit.memoize.memoize
 def get_cve_details(cve, cve_cvss_map={}):
     """
     :param cve: A dict represents CVE :: {id:, url:, ...}
@@ -101,32 +100,20 @@ def get_cve_details(cve, cve_cvss_map={}):
         cve.update(**dcve)
         return cve
 
-    dcve = rpmkit.swapi.call("swapi.cve.getCvss", [cveid])
-    if dcve:
-        dcve = dcve[0]  # :: dict
-        dcve["nvd_url"] = dcve["url"]
-        dcve["url"] = cve["url"]
-    else:
-        LOG.warn(_("Could not get CVSS metrics of %s"), cveid)
+    try:
+        dcve = rpmkit.swapi.call("swapi.cve.getCvss", [cveid])
+        if dcve:
+            dcve = dcve[0]  # :: dict
+            dcve["nvd_url"] = dcve["url"]
+            dcve["url"] = cve["url"]
+            cve.update(**dcve)
+
+    except Exception as e:
+        LOG.warn(_("Could not fetch CVSS metrics of %s, err=%s"),
+                 cveid, str(e))
         dcve = dict(cve=cveid, )
 
-    cve.update(**dcve)
     return cve
-
-
-def add_cvss_for_errata(errata, cve_cvss_map={}):
-    """
-    Complement CVSS data for CVE relevant to errata
-
-    :param errata: Basic errata info, {advisory, type, severity, ...}
-    :param cve_cvss_map: A dict :: {cve: cve_and_cvss_data}
-    """
-    cves = errata.get("cves", [])
-    if not cves:
-        return errata
-
-    errata["cves"] = [get_cve_details(cve, cve_cvss_map) for cve in cves]
-    return errata
 
 
 def _fmt_cve(cve):
@@ -378,19 +365,23 @@ def higher_score_cve_errata_g(errata, score=DEFAULT_CVSS_SCORE):
             yield e
 
 
-def errata_complement_g(errata, updates):
+def errata_complement_g(errata, updates, score):
     """
     TODO: What should be complemented?
 
     :param errata: A list of errata
     :param updates: A list of update packages
+    :param score: CVSS score
     """
     unas = set(p2na(u) for u in updates)
     for e in errata:
-        e["updates"] = U.uniq(p for p in e.get("packages", [])
-                              if p2na(p) in unas)
+        e["updates"] = U.uniq(p for p in e.get("packages", []) if p2na(p)
+                              in unas)
         e["update_names"] = U.uniq(u["name"] for u in e["updates"])
         e["bzs_s"] = ", ".join("rhbz#%s" % bz["id"] for bz in e.get("bzs", []))
+
+        if score > 0:
+            e["cves"] = [get_cve_details(cve) for cve in e.get("cves", [])]
 
         yield e
 
@@ -485,20 +476,16 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS,
     :param period: Period of errata in format of YYYY[-MM[-DD]],
         ex. ("2014-10-01", "2014-11-01")
     """
-    errata = list(errata_complement_g(errata, updates))
-
     rhsa = [e for e in errata if e.get("severity", None) is not None]
     rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
     rhsa_imp = [e for e in rhsa if e.get("severity") == "Important"]
     rhsa_cri_latests = list_latest_errata_groupby_updates(rhsa_cri)
     rhsa_imp_latests = list_latest_errata_groupby_updates(rhsa_imp)
 
-    # TODO: degenerate errata by listing only latest update rpms:
     us_of_rhsa_cri = list_updates_from_errata(rhsa_cri)
     us_of_rhsa_imp = list_updates_from_errata(rhsa_imp)
 
-    is_rhba = lambda e: e["advisory"].startswith("RHBA")
-    rhba = [e for e in errata if is_rhba(e)]
+    rhba = [e for e in errata if e["advisory"][2] == 'B']
 
     kf = lambda e: (len(e.get("keywords", [])), e["issue_date"],
                     e["update_names"])
@@ -507,15 +494,16 @@ def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS,
     rhba_of_rpms_by_kwds = errata_of_rpms(rhba_by_kwds, core_rpms, kf)
     rhba_of_rpms = errata_of_rpms(rhba, core_rpms)
 
-    if score < 0:
-        rhsa_by_score = []
-        rhba_by_score = []
-        us_of_rhba_by_score = []
-    else:
+    if score > 0:
         rhsa_by_score = list(higher_score_cve_errata_g(rhsa, score))
         rhba_by_score = list(higher_score_cve_errata_g(rhba, score))
         us_of_rhsa_by_score = list_updates_from_errata(rhsa_by_score)
         us_of_rhba_by_score = list_updates_from_errata(rhba_by_score)
+    else:
+        rhsa_by_score = []
+        rhba_by_score = []
+        us_of_rhsa_by_score = []
+        us_of_rhba_by_score = []
 
     us_of_rhba_by_kwds = list_updates_from_errata(rhba_by_kwds)
 
@@ -820,25 +808,29 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, core_rpms=[],
     # pylint: enable=maybe-no-member
     U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
 
-    LOG.debug(_("Dump Errata list..."))
-    es = [add_cvss_for_errata(e, mk_cve_vs_cvss_map()) for e
-          in base.list_errata()]
+    es = base.list_errata()
     LOG.info(_("%d Errata found for installed rpms [%s]"), len(es), host.id)
-    U.json_dump(dict(data=es, ), errata_list_path(workdir))
-    host.errata = es
 
-    LOG.debug(_("Dump Update RPMs list..."))
     us = base.list_updates()
-    LOG.info(_("%d Update RPMs found for installed rpms [%s]"),
-             len(us), host.id)
-    U.json_dump(dict(data=us, ), updates_file_path(workdir))
+    LOG.info(_("%d Update RPMs found for installed rpms [%s]"), len(us),
+             host.id)
+
+    us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
+    es = U.uniq(errata_complement_g(es, us, score),
+                cmp=rpmkit.updateinfo.utils.cmp_errata)
+
+    host.errata = es
     host.updates = us
 
-    ips = host.installed
-    es = U.uniq(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
-    us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
+    LOG.debug(_("Dump Errata list..."))
+    U.json_dump(dict(data=es, ), errata_list_path(workdir))
 
-    LOG.info(_("Dump analysis results of RPMs and errata data in %s..."),
+    LOG.debug(_("Dump Update RPMs list..."))
+    U.json_dump(dict(data=us, ), updates_file_path(workdir))
+
+    ips = host.installed
+
+    LOG.info(_("Analyze and dump results of RPMs and errata data in %s..."),
              workdir)
     dump_results(workdir, ips, es, us, score, keywords, core_rpms)
 

@@ -19,7 +19,7 @@ import os.path
 _TODAY = datetime.datetime.now().strftime("%F")
 _DEFAULTS = dict(path=None, workdir="/tmp/rk-updateinfo-{}".format(_TODAY),
                  repos=[], multiproc=False, id=None,
-                 score=RUM.DEFAULT_CVSS_SCORE, keywords=RUM.ERRATA_KEYWORDS,
+                 score=0, keywords=RUM.ERRATA_KEYWORDS,
                  rpms=RUM.CORE_RPMS, period='', refdir=None,
                  backend=RUM.DEFAULT_BACKEND, verbose=False)
 _USAGE = """\
