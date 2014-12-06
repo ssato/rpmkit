@@ -177,6 +177,9 @@ class Base(rpmkit.updateinfo.base.Base):
         else:
             self.base.conf.cachedir = cachedir
 
+    def set_cacheonly(self):
+        self.base.conf.cache = 1
+
     def _toggle_repos(self, repos, action):
         """
         Toggle enabled/disabled status of repos.
