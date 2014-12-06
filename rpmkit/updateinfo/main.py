@@ -24,6 +24,7 @@ import rpmkit.swapi
 #   https://apps.fedoraproject.org/packages/python-bunch
 import bunch
 import calendar
+import collections
 import datetime
 import itertools
 import logging
@@ -255,6 +256,48 @@ def p2na(pkg):
     :param pkg: A dict represents package info including N, E, V, R, A
     """
     return (pkg["name"], pkg["arch"])
+
+
+_ERRATA_CHARS = dict(E=1, B=2, S=3)
+_RHSA_SEVERITIES = collections.defaultdict(int,
+                                           dict(Low=2, Moderate=4,
+                                                Important=6, Critical=8))
+_E2I_REG = re.compile(r"^RH(?P<echar>(E|B|S))A-(?P<year>\d{4}):"
+                      "(?P<seq>\d{4})(?:-(?P<rev>\d+))?$")
+
+
+def errata_to_int(errata, echars=_ERRATA_CHARS, severities=_RHSA_SEVERITIES,
+                  reg=_E2I_REG):
+    """
+    Generate int representation of an errata to used as comparison key.
+
+    - RHSA > RHBA > RHEA (type)
+    - RHSA: Critical > Important > Moderate > Low (severity)
+    - RHBA-2013:0212 > RHBA-2012:1422 (year)
+    - RHBA-2013:0212 > RHBA-2013:0210 (sequential id)
+    - RHBA-2013:0212-1 > RHBA-2013:0212 (revision)
+
+    :param errata: A dict represents an errata
+    :param echars: A map of a char represents errata type and an int value
+    :param severities: A map of RHSA's severity and an int value
+    :param reg: A regexp object to match w/ errata's advisory ID
+
+    >>> errata_to_int(dict(advisory="RHBA-2012:1422-1", ))
+    202012142201
+    >>> errata_to_int(dict(advisory="RHSA-2014:0422", severity="Moderate"))
+    342014042200
+    """
+    m = reg.match(errata["advisory"])
+    if not m:
+        LOG.warn("Not an errata advisory ? : %(advisory)s", errata)
+        return 0
+
+    d = m.groupdict()
+    rev = 0 if d["rev"] is None else int(d["rev"])
+
+    return int("%d%d%s%s%02d" % (echars[d["echar"]],
+                                 severities[errata.get("severity", 0)],
+                                 d["year"], d["seq"], rev))
 
 
 def sgroupby(xs, kf, kf2=None):
