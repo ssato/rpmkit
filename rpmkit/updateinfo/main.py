@@ -534,7 +534,8 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
     rhba_by_kwds = sorted(errata_matches_keywords_g(rhba, keywords),
                           key=kf, reverse=True)
     rhba_of_rpms_by_kwds = errata_of_rpms(rhba_by_kwds, core_rpms, kf)
-    rhba_of_rpms = errata_of_rpms(rhba, core_rpms)
+    rhba_of_rpms = errata_of_rpms(rhba, core_rpms,
+                                  itemgetter("update_names"))
 
     if score > 0:
         rhsa_by_score = list(higher_score_cve_errata_g(rhsa, score))
@@ -686,8 +687,15 @@ def dump_results(workdir, rpms, errata, updates, score=0,
           make_dataset((data["errata"]["rhsa_cri_latests"] +
                         data["errata"]["rhsa_imp_latests"]),
                        _("Cri-Important RHSAs (latests)"), sekeys, lsekeys),
-          make_dataset(data["errata"]["rhsa_cri"] + data["errata"]["rhsa_imp"],
+          make_dataset(sorted(data["errata"]["rhsa_cri"],
+                              key=itemgetter("update_names")) +
+                       sorted(data["errata"]["rhsa_imp"],
+                              key=itemgetter("update_names")),
                        _("Critical or Important RHSAs"), sekeys, lsekeys),
+          make_dataset(data["errata"]["rhba_of_core_rpms_by_kwds"],
+                       _("RHBAs (core rpms, keywords)"), bekeys, lbekeys),
+          make_dataset(data["errata"]["rhba_of_core_rpms"],
+                       _("RHBAs (core rpms)"), bekeys, lbekeys),
           make_dataset(data["errata"]["us_of_rhsa_cri"],
                        _("Update RPMs by RHSAs (Critical)"), rpmkeys,
                        lrpmkeys),
@@ -696,11 +704,7 @@ def dump_results(workdir, rpms, errata, updates, score=0,
           make_dataset(data["errata"]["rhba_by_kwds"], _("RHBAs (keyword)"),
                        bekeys, lbekeys),
           make_dataset(data["errata"]["us_of_rhba_by_kwds"],
-                       _("Updates by RHBAs (Keyword)"), rpmkeys, lrpmkeys),
-          make_dataset(data["errata"]["rhba_of_core_rpms_by_kwds"],
-                       _("RHBAs (core rpms, keywords)"), bekeys, lbekeys),
-          make_dataset(data["errata"]["rhba_of_core_rpms"],
-                       _("RHBAs (core rpms)"), bekeys, lbekeys)]
+                       _("Updates by RHBAs (Keyword)"), rpmkeys, lrpmkeys)]
 
     if score > 0:
         cvss_ds = [make_dataset(data["errata"]["rhsa_by_cvss_score"],
