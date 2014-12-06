@@ -351,12 +351,11 @@ def compute_delta(refdir, errata, updates):
     LOG.debug(_("Loaded reference errata and updates file"))
 
     nevra_keys = ("name", "epoch", "version", "release", "arch")
-    ref_eadvs = U.uniq(e["advisory"] for e in ref_es_data["data"])
-    ref_nevras = U.uniq([p[k] for k in nevra_keys] for p in
-                        ref_us_data["data"])
+    ref_eadvs = set(e["advisory"] for e in ref_es_data["data"])
+    ref_nevras = set((p[k] for k in nevra_keys) for p in ref_us_data["data"])
 
     return ([e for e in errata if e["advisory"] in ref_eadvs],
-            [u for u in updates if [u[k] for k in nevra_keys]
+            [u for u in updates if (u[k] for k in nevra_keys)
              in ref_nevras])
 
 
@@ -418,9 +417,10 @@ def errata_complement_g(errata, updates, score=0):
     """
     unas = set(p2na(u) for u in updates)
     for e in errata:
+        e["id"] = errata_to_int(e)  # Sorting key
         e["updates"] = U.uniq(p for p in e.get("packages", []) if p2na(p)
                               in unas)
-        e["update_names"] = U.uniq(u["name"] for u in e["updates"])
+        e["update_names"] = list(set(u["name"] for u in e["updates"]))
 
         if score > 0:
             e["cves"] = [fetch_cve_details(cve) for cve in e.get("cves", [])]
@@ -858,8 +858,8 @@ def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
              host.id)
 
     us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
-    es = U.uniq(errata_complement_g(es, us, score),
-                cmp=rpmkit.updateinfo.utils.cmp_errata)
+    es = U.uniq(errata_complement_g(es, us, score), key=itemgetter("id"),
+                reverse=True)
 
     host.errata = es
     host.updates = us
@@ -908,9 +908,6 @@ def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
         LOG.info(_("%d Delta Update RPMs found for installed rpms [%s]"),
                  len(us), host.id)
         U.json_dump(dict(data=us, ), updates_file_path(deltadir))
-
-        es = sorted(es, cmp=rpmkit.updateinfo.utils.cmp_errata)
-        us = sorted(us, key=itemgetter("name", "epoch", "version", "release"))
 
         LOG.info(_("Dump analysis results of delta RPMs and errata data..."))
         dump_results(workdir, ips, es, us, score, keywords, core_rpms)
