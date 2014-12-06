@@ -87,7 +87,7 @@ def mk_cve_vs_cvss_map():
                 rpmkit.swapi.call("swapi.cve.getAll") if c)
 
 
-def get_cve_details(cve, cve_cvss_map={}):
+def fetch_cve_details(cve, cve_cvss_map={}):
     """
     :param cve: A dict represents CVE :: {id:, url:, ...}
     :param cve_cvss_map: A dict :: {cve: cve_and_cvss_data}
@@ -381,7 +381,7 @@ def errata_complement_g(errata, updates, score):
         e["bzs_s"] = ", ".join("rhbz#%s" % bz["id"] for bz in e.get("bzs", []))
 
         if score > 0:
-            e["cves"] = [get_cve_details(cve) for cve in e.get("cves", [])]
+            e["cves"] = [fetch_cve_details(cve) for cve in e.get("cves", [])]
 
         yield e
 
