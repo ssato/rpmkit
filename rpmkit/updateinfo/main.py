@@ -138,16 +138,16 @@ def _fmt_cvess(cves):
     return cves
 
 
-def _fmt_bzs(bzs):
+def _fmt_bzs(bzs, summary=False):
     """
     :param cves: List of CVE dict {cve, score, url, metrics} or str "cve".
     :return: List of CVE strings
     """
     def _fmt(bz):
-        if "summary" in bz:
+        if summary and "summary" in bz:
             return "bz#%(id)s: %(summary)s (%(url)s"
         else:
-            return "bz#%(id)s (%(url)s"
+            return "bz#%(id)s (%(url)s)"
 
     try:
         bzs = [_fmt(bz) % bz for bz in bzs]
@@ -378,7 +378,6 @@ def errata_complement_g(errata, updates, score):
         e["updates"] = U.uniq(p for p in e.get("packages", []) if p2na(p)
                               in unas)
         e["update_names"] = U.uniq(u["name"] for u in e["updates"])
-        e["bzs_s"] = ", ".join("rhbz#%s" % bz["id"] for bz in e.get("bzs", []))
 
         if score > 0:
             e["cves"] = [fetch_cve_details(cve) for cve in e.get("cves", [])]
@@ -664,14 +663,14 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
         cvss_ds = [make_dataset(data["errata"]["rhsa_by_cvss_score"],
                                 _("RHSAs (CVSS score >= %.1f)") % score,
                                 ("advisory", "severity", "synopsis",
-                                 "cves_s", "cvsses_s", "url"),
+                                 "cves", "cvsses_s", "url"),
                                 (_("advisory"), _("severity"), _("synopsis"),
-                                 _("cves_s"), _("cvsses_s"), _("url"))),
+                                 _("cves"), _("cvsses_s"), _("url"))),
                    make_dataset(data["errata"]["rhba_by_cvss_score"],
                                 _("RHBAs (CVSS score >= %.1f)") % score,
-                                ("advisory", "synopsis", "cves_s",
+                                ("advisory", "synopsis", "cves",
                                  "cvsses_s", "url"),
-                                (_("advisory"), _("synopsis"), _("cves_s"),
+                                (_("advisory"), _("synopsis"), _("cves"),
                                  _("cvsses_s"), _("url")))]
         ds.extend(cvss_ds)
 
@@ -681,11 +680,11 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
         dds = [make_dataset(errata, _("Errata Details"),
                             ("advisory", "type", "severity", "synopsis",
                              "description", "issue_date", "update_date", "url",
-                             "cves_s", "bzs_s", "update_names"),
+                             "cves", "bzs", "update_names"),
                             (_("advisory"), _("type"), _("severity"),
                             _("synopsis"), _("description"), _("issue_date"),
-                            _("update_date"), _("url"), _("cves_s"),
-                            _("bzs_s"), _("update_names"))),
+                            _("update_date"), _("url"), _("cves"),
+                            _("bzs"), _("update_names"))),
                make_dataset(updates, _("Update RPMs"), rpmkeys, lrpmkeys),
                make_dataset(rpms, _("Installed RPMs"), rpmdkeys, lrpmdkeys)]
 
