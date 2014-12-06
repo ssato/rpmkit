@@ -365,7 +365,7 @@ def higher_score_cve_errata_g(errata, score=DEFAULT_CVSS_SCORE):
             yield e
 
 
-def errata_complement_g(errata, updates, score):
+def errata_complement_g(errata, updates, score=0):
     """
     TODO: What should be complemented?
 
@@ -463,7 +463,7 @@ def ymd_to_date(ymd, roundout=False, datereg=_DATE_REG):
     return round_ymd(int(d[0]), int_(d[1]), int_(d[2]), roundout)
 
 
-def analyze_errata(errata, updates, score=-1, keywords=ERRATA_KEYWORDS,
+def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
                    core_rpms=CORE_RPMS, period=()):
     """
     :param errata: A list of applicable errata sorted by severity
@@ -536,7 +536,7 @@ def padding_row(row, mcols):
     return row + [''] * (mcols - len(row))
 
 
-def make_overview_dataset(workdir, data, score=-1, keywords=ERRATA_KEYWORDS):
+def make_overview_dataset(workdir, data, score=0, keywords=ERRATA_KEYWORDS):
     """
     :param workdir: Working dir to dump the result
     :param data: RPMs, Update RPMs and various errata data summarized
@@ -607,7 +607,7 @@ def dump_xls(dataset, filepath):
         out.write(book.xls)
 
 
-def dump_results(workdir, rpms, errata, updates, score=-1,
+def dump_results(workdir, rpms, errata, updates, score=0,
                  keywords=ERRATA_KEYWORDS, core_rpms=[], details=True):
     """
     :param workdir: Working dir to dump the result
@@ -659,7 +659,7 @@ def dump_results(workdir, rpms, errata, updates, score=-1,
           make_dataset(data["errata"]["rhba_of_core_rpms"],
                        _("RHBAs (core rpms)"), bekeys, lbekeys)]
 
-    if score >= 0:
+    if score > 0:
         cvss_ds = [make_dataset(data["errata"]["rhsa_by_cvss_score"],
                                 _("RHSAs (CVSS score >= %.1f)") % score,
                                 ("advisory", "severity", "synopsis",
@@ -780,7 +780,7 @@ def errata_in_period(errata, start_date, end_date):
     return start_date <= d and d < end_date
 
 
-def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, core_rpms=[],
+def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
             period=(), refdir=None):
     """
     :param host: host object function :function:`prepare` returns
@@ -873,7 +873,7 @@ def analyze(host, score=-1, keywords=ERRATA_KEYWORDS, core_rpms=[],
         dump_results(workdir, ips, es, us, score, keywords, core_rpms)
 
 
-def main(root, workdir=None, repos=[], did=None, score=-1,
+def main(root, workdir=None, repos=[], did=None, score=0,
          keywords=ERRATA_KEYWORDS, rpms=CORE_RPMS, period=(),
          refdir=None, backend=DEFAULT_BACKEND, backends=BACKENDS):
     """
