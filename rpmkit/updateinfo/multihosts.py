@@ -155,14 +155,14 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
 
     for hss in his:
         hset = [(hs[0], hs[1:]) for hs in hss]
-        data_g = ((h, score, keywords, rpms, period, refdir) for h, _hrest
-                  in hset)
+        hsdata = [(h, score, keywords, rpms, period, refdir) for h, _hrest
+                  in hset]
 
         if multiproc:
             pool = multiprocessing.Pool(multiprocessing.cpu_count())
-            pool.map(analyze, data_g)
+            pool.map(analyze, hsdata)
         else:
-            for args in data_g:
+            for args in hsdata:
                 analyze(args)
 
         for h, hsrest in hset:
