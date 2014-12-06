@@ -134,7 +134,8 @@ class Base(rpmkit.updateinfo.base.Base):
     name = "rpmkit.updateinfo.yumbase"
 
     def __init__(self, root='/', repos=[], disabled_repos=['*'],
-                 load_available_repos=True, **kwargs):
+                 load_available_repos=True, cachedir=None,
+                 **kwargs):
         """
         Create an initialized yum.YumBase instance.
         Created instance has no enabled repos by default.
@@ -145,7 +146,6 @@ class Base(rpmkit.updateinfo.base.Base):
         :param load_available_repos: It will populates the package sack from
             the repositories if True
 
-        >>> import os.path
         >>> if os.path.exists("/etc/redhat-release"):
         ...     base = Base()
         ...     assert isinstance(base.base, yum.YumBase)
@@ -160,13 +160,22 @@ class Base(rpmkit.updateinfo.base.Base):
         except AttributeError:
             self.base.preconf.root = self.root
 
-        self.base.conf.cachedir = os.path.join(self.root, "var/cache")
+        self.set_cachedir(cachedir)
         self.base.logger = self.base.verbose_logger = LOG
         self._activate_repos()
 
         self.packages = dict()
         self.load_available_repos = load_available_repos
         self.populated = False
+
+    def cachedir(self):
+        return self.base.conf.cachedir
+
+    def set_cachedir(self, cachedir=None):
+        if cachedir is None:
+            self.base.conf.cachedir = os.path.join(self.root, "var/cache")
+        else:
+            self.base.conf.cachedir = cachedir
 
     def _toggle_repos(self, repos, action):
         """
