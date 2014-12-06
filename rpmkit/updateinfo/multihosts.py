@@ -141,7 +141,7 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     :param backends: Backend list
     """
     all_hosts = list(prepare(hosts_datadir, workdir, repos, backend, backends))
-    hosts = filter(operator.itemgetter("available"), all_hosts)
+    hosts = [h for h in all_hosts if h.available]
 
     LOG.info(_("Analyze %d hosts (Skipped %d hosts lack valid RPM DBs)"),
              len(hosts), len(all_hosts) - len(hosts))
