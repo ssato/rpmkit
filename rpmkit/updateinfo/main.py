@@ -354,9 +354,9 @@ def compute_delta(refdir, errata, updates):
     ref_eadvs = set(e["advisory"] for e in ref_es_data["data"])
     ref_nevras = set((p[k] for k in nevra_keys) for p in ref_us_data["data"])
 
-    return ([e for e in errata if e["advisory"] in ref_eadvs],
-            [u for u in updates if (u[k] for k in nevra_keys)
-             in ref_nevras])
+    return ([e for e in errata if e["advisory"] not in ref_eadvs],
+            [u for u in updates
+             if (u[k] for k in nevra_keys) not in ref_nevras])
 
 
 def errata_matches_keywords_g(errata, keywords=ERRATA_KEYWORDS):
