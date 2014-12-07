@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-12-07 14:42+JST\n"
+"POT-Creation-Date: 2014-12-07 16:23+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -363,67 +363,71 @@ msgstr ""
 msgid "bzs"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:762
-msgid "%s: Set workdir to root %s"
+#: ./pkg/..//rpmkit/updateinfo/main.py:763
+msgid "%s: Use guessed repos %s"
 msgstr ""
 
 #: ./pkg/..//rpmkit/updateinfo/main.py:766
+msgid "%s: Set workdir to root %s"
+msgstr ""
+
+#: ./pkg/..//rpmkit/updateinfo/main.py:770
 msgid "%s: Creating working dir %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:774
+#: ./pkg/..//rpmkit/updateinfo/main.py:778
 msgid "%s: RPM DB not available and don't analyze %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:779
+#: ./pkg/..//rpmkit/updateinfo/main.py:783
 msgid "%s: Initialized backend %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:782
+#: ./pkg/..//rpmkit/updateinfo/main.py:786
 msgid "%s: Dump Installed RPMs list loaded from %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:786
+#: ./pkg/..//rpmkit/updateinfo/main.py:790
 msgid "%s: Found %d Installed RPMs"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:853
+#: ./pkg/..//rpmkit/updateinfo/main.py:857
 msgid "%s: Dump metadata for %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:861
+#: ./pkg/..//rpmkit/updateinfo/main.py:865
 msgid "%s: Found %d Errata, %d Update RPMs"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:864
+#: ./pkg/..//rpmkit/updateinfo/main.py:868
 msgid "%s: Dump Errata and Update RPMs list..."
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:872
+#: ./pkg/..//rpmkit/updateinfo/main.py:876
 msgid "%s: Analyze and dump results of errata data in %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:880
+#: ./pkg/..//rpmkit/updateinfo/main.py:884
 msgid "%s: Analyze errata in period: %s ~ %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:886
+#: ./pkg/..//rpmkit/updateinfo/main.py:890
 msgid "%s: Creating period working dir %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:892
+#: ./pkg/..//rpmkit/updateinfo/main.py:896
 msgid "%s [delta]: Analyze delta errata data by refering %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:895
+#: ./pkg/..//rpmkit/updateinfo/main.py:899
 msgid "%s [delta]: Found %d Errata, %d Update RPMs"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:900
+#: ./pkg/..//rpmkit/updateinfo/main.py:904
 msgid "%s: Creating delta working dir %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:907
+#: ./pkg/..//rpmkit/updateinfo/main.py:911
 msgid "%s: Analyze and dump results of delta errata in %s"
 msgstr ""
 
