@@ -28,7 +28,6 @@ import collections
 import datetime
 import itertools
 import logging
-import operator
 import os
 import os.path
 import re
