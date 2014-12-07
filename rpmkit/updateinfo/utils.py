@@ -8,6 +8,8 @@
 # PARTICULAR PURPOSE. You should have received a copy of GPLv3 along with this
 # software; if not, see http://www.gnu.org/licenses/gpl.html
 #
+import rpmkit.rpmutils
+
 import codecs
 import datetime
 import logging
@@ -202,5 +204,46 @@ def cmp_errata(lhs, rhs):
         return cmp(lhs_adv, rhs_adv)
     else:
         return cmp(errata_type_to_int(lhs_adv), errata_type_to_int(rhs_adv))
+
+
+def guess_rhel_repos(root, with_extras=False):
+    """
+    Guess RHEL yum repo IDs.
+
+    :param root: RPM DB root dir may be in relative path
+    :param with_extras: Include extra yum repos if True
+    :return: A list of yum repos
+    """
+    rhelver = rpmkit.rpmutils.guess_rhel_version_simple(root)
+    assert rhelver in (5, 6, 7), "Not supported RHEL version: %d" % rhelver
+
+    if rhelver == 5:
+        # Yum repos for RHEL 5, requires RHN Classic registration:
+        repos = ["rhel-x86_64-server-5", ]
+        if with_extras:
+            repo += ["rhel-x86_64-server-cluster-5",
+                     "rhel-x86_64-server-cluster-storage-5",
+                     "rhel-x86_64-server-productivity-5",
+                     "rhel-x86_64-server-supplementary-5"]
+    elif rhelver == 6:
+        # Yum repos for RHEL 6, requires RHN Classic registration:
+        repos = ["rhel-x86_64-server-6",
+                 "rhel-x86_64-server-optional-6"]
+        if with_extras:
+            repo += ["rhel-x86_64-server-ha-6",
+                     "rhel-x86_64-server-rs-6",
+                     "rhel-x86_64-server-sfs-6",
+                     "rhel-x86_64-server-supplementary-6"]
+    else:
+        # RHN yum repos:
+        repos = ["rhel-7-server-rpms",
+                 "rhel-7-server-optional-rpms"]
+        if with_extras:
+            repo += ["rhel-7-server-rh-common-rpms",
+                     "rhel-7-server-extras-rpms",
+                     "rhel-ha-for-rhel-7-server-rpms",
+                     "rhel-rs-for-rhel-7-server-rpms",
+                     "rhel-7-server-supplementary-rpms"]
+    return repos
 
 # vim:sw=4:ts=4:et:
