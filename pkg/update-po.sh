@@ -3,8 +3,8 @@ set -ex
 
 pkgname="rpmkit"
 
-auxdir=${0%/*}
-topdir=${auxdir}/../
+curdir=${0%/*}
+topdir=${curdir}/../
 podir=${topdir}/po
 localedir=${topdir}/${pkgname}/locale
 

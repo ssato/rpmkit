@@ -23,7 +23,7 @@ before_script:
 install:
   - if [[ $TRAVIS_PYTHON_VERSION < '2.6' ]]; then pip install --use-mirrors simplejson PyYAML pep8 pylint flake8 BeautifulSoup coveralls; else pip install --use-mirrors PyYAML pep8 pylint flake8 BeautifulSoup coveralls; fi
 script:
-  - "./aux/runtest.sh"
+  - "./pkg/runtest.sh"
 notifications:
   email:
     #on_success: always # default: change

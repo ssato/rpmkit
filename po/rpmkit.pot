@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-12-07 14:15+JST\n"
+"POT-Creation-Date: 2014-12-07 14:42+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,439 +15,439 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:605
+#: ./pkg/..//rpmkit/extras/updateinfo.py:605
 msgid "# of Security Errata (critical)"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:606
+#: ./pkg/..//rpmkit/extras/updateinfo.py:606
 msgid "# of Security Errata (important)"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:607
+#: ./pkg/..//rpmkit/extras/updateinfo.py:607
 msgid "# of Security Errata (all)"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:608
+#: ./pkg/..//rpmkit/extras/updateinfo.py:608
 msgid "# of Bug Errata"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:609
+#: ./pkg/..//rpmkit/extras/updateinfo.py:609
 msgid "# of Enhancement Errata"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:610
-#: ./aux/..//rpmkit/updateinfo/main.py:628
+#: ./pkg/..//rpmkit/extras/updateinfo.py:610
+#: ./pkg/..//rpmkit/updateinfo/main.py:628
 msgid "# of Installed RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:611
+#: ./pkg/..//rpmkit/extras/updateinfo.py:611
 msgid "# of RPMs (names) need to be updated"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:613
+#: ./pkg/..//rpmkit/extras/updateinfo.py:613
 msgid "The rate of RPMs (names) need any updates / RPMs (names) [%]"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:617
+#: ./pkg/..//rpmkit/extras/updateinfo.py:617
 msgid "Summary"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:618
+#: ./pkg/..//rpmkit/extras/updateinfo.py:618
 msgid "comments"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:618
+#: ./pkg/..//rpmkit/extras/updateinfo.py:618
 msgid "item"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:618
+#: ./pkg/..//rpmkit/extras/updateinfo.py:618
 msgid "rating"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:618
+#: ./pkg/..//rpmkit/extras/updateinfo.py:618
 msgid "value"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:716
-#: ./aux/..//rpmkit/extras/updateinfo.py:749
+#: ./pkg/..//rpmkit/extras/updateinfo.py:716
+#: ./pkg/..//rpmkit/extras/updateinfo.py:749
 msgid "Sec. Errata CVSS >= %.1f"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:736
-#: ./aux/..//rpmkit/updateinfo/main.py:736
+#: ./pkg/..//rpmkit/extras/updateinfo.py:736
+#: ./pkg/..//rpmkit/updateinfo/main.py:736
 msgid "Installed RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:738
+#: ./pkg/..//rpmkit/extras/updateinfo.py:738
 msgid "Errata"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:739
-#: ./aux/..//rpmkit/updateinfo/main.py:735
+#: ./pkg/..//rpmkit/extras/updateinfo.py:739
+#: ./pkg/..//rpmkit/updateinfo/main.py:735
 msgid "Update RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:745
-#: ./aux/..//rpmkit/updateinfo/main.py:727
+#: ./pkg/..//rpmkit/extras/updateinfo.py:745
+#: ./pkg/..//rpmkit/updateinfo/main.py:727
 msgid "Errata Details"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:759
+#: ./pkg/..//rpmkit/extras/updateinfo.py:759
 msgid "Errata Details (%s ~)"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:768
+#: ./pkg/..//rpmkit/extras/updateinfo.py:768
 msgid "Errata (%s ~)"
 msgstr ""
 
-#: ./aux/..//rpmkit/extras/updateinfo.py:805
+#: ./pkg/..//rpmkit/extras/updateinfo.py:805
 msgid "Root of RPM DB > "
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:113
+#: ./pkg/..//rpmkit/updateinfo/main.py:114
 msgid "Could not fetch CVSS metrics of %s, err=%s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:156
+#: ./pkg/..//rpmkit/updateinfo/main.py:157
 msgid "BZ Key error: %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:241
+#: ./pkg/..//rpmkit/updateinfo/main.py:242
 msgid "CVE %(cve)s does not have CVSS base metrics and score"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:248
+#: ./pkg/..//rpmkit/updateinfo/main.py:249
 msgid "Failed to compare CVE's score: %s, score=%.1f"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:351
+#: ./pkg/..//rpmkit/updateinfo/main.py:352
 msgid "Loaded reference errata and updates file"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:592
+#: ./pkg/..//rpmkit/updateinfo/main.py:592
 msgid "Critical or Important RHSAs (Security Errata)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:593
+#: ./pkg/..//rpmkit/updateinfo/main.py:593
 msgid "# of Critical RHSAs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:594
+#: ./pkg/..//rpmkit/updateinfo/main.py:594
 msgid "# of Critical RHSAs (latests only)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:596
+#: ./pkg/..//rpmkit/updateinfo/main.py:596
 msgid "# of Important RHSAs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:597
+#: ./pkg/..//rpmkit/updateinfo/main.py:597
 msgid "# of Important RHSAs (latests only)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:599
+#: ./pkg/..//rpmkit/updateinfo/main.py:599
 msgid "Update RPMs by Critical or Important RHSAs at minimum"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:600
+#: ./pkg/..//rpmkit/updateinfo/main.py:600
 msgid "# of Update RPMs by Critical RHSAs at minimum"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:602
+#: ./pkg/..//rpmkit/updateinfo/main.py:602
 msgid "# of Update RPMs by Important RHSAs at minimum"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:605
+#: ./pkg/..//rpmkit/updateinfo/main.py:605
 msgid "RHBAs (Bug Errata) by keywords: %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:606
+#: ./pkg/..//rpmkit/updateinfo/main.py:606
 msgid "# of RHBAs by keywords"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:607
+#: ./pkg/..//rpmkit/updateinfo/main.py:607
 msgid "# of Update RPMs by RHBAs by keywords at minimum"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:612
+#: ./pkg/..//rpmkit/updateinfo/main.py:612
 msgid "RHSAs and RHBAs by CVSS score"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:613
+#: ./pkg/..//rpmkit/updateinfo/main.py:613
 msgid "# of RHSAs of CVSS Score >= %.1f"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:615
+#: ./pkg/..//rpmkit/updateinfo/main.py:615
 msgid "# of Update RPMs by the above RHSAs at minimum"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:617
+#: ./pkg/..//rpmkit/updateinfo/main.py:617
 msgid "# of RHBAs of CVSS Score >= %.1f"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:619
+#: ./pkg/..//rpmkit/updateinfo/main.py:619
 msgid "# of Update RPMs by the above RHBAs at minimum"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:623
+#: ./pkg/..//rpmkit/updateinfo/main.py:623
 msgid "# of RHSAs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:624
+#: ./pkg/..//rpmkit/updateinfo/main.py:624
 msgid "# of RHBAs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:625
+#: ./pkg/..//rpmkit/updateinfo/main.py:625
 msgid "# of RHEAs (Enhancement Errata)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:627
+#: ./pkg/..//rpmkit/updateinfo/main.py:627
 msgid "# of Update RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:630
+#: ./pkg/..//rpmkit/updateinfo/main.py:630
 msgid "Item"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:630
+#: ./pkg/..//rpmkit/updateinfo/main.py:630
 msgid "Notes"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:630
+#: ./pkg/..//rpmkit/updateinfo/main.py:630
 msgid "Value"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:632
+#: ./pkg/..//rpmkit/updateinfo/main.py:632
 msgid "Overview of analysis results"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:674
+#: ./pkg/..//rpmkit/updateinfo/main.py:674
 msgid "arch"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:674
+#: ./pkg/..//rpmkit/updateinfo/main.py:674
 msgid "epoch"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:674
+#: ./pkg/..//rpmkit/updateinfo/main.py:674
 msgid "name"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:674
+#: ./pkg/..//rpmkit/updateinfo/main.py:674
 msgid "release"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:674
+#: ./pkg/..//rpmkit/updateinfo/main.py:674
 msgid "version"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:677
+#: ./pkg/..//rpmkit/updateinfo/main.py:677
 msgid "buildhost"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:677
+#: ./pkg/..//rpmkit/updateinfo/main.py:677
 msgid "summary"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:677
+#: ./pkg/..//rpmkit/updateinfo/main.py:677
 msgid "vendor"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:680
-#: ./aux/..//rpmkit/updateinfo/main.py:683
-#: ./aux/..//rpmkit/updateinfo/main.py:714
-#: ./aux/..//rpmkit/updateinfo/main.py:720
-#: ./aux/..//rpmkit/updateinfo/main.py:731
+#: ./pkg/..//rpmkit/updateinfo/main.py:680
+#: ./pkg/..//rpmkit/updateinfo/main.py:683
+#: ./pkg/..//rpmkit/updateinfo/main.py:714
+#: ./pkg/..//rpmkit/updateinfo/main.py:720
+#: ./pkg/..//rpmkit/updateinfo/main.py:731
 msgid "advisory"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:680
-#: ./aux/..//rpmkit/updateinfo/main.py:683
-#: ./aux/..//rpmkit/updateinfo/main.py:714
-#: ./aux/..//rpmkit/updateinfo/main.py:720
-#: ./aux/..//rpmkit/updateinfo/main.py:732
+#: ./pkg/..//rpmkit/updateinfo/main.py:680
+#: ./pkg/..//rpmkit/updateinfo/main.py:683
+#: ./pkg/..//rpmkit/updateinfo/main.py:714
+#: ./pkg/..//rpmkit/updateinfo/main.py:720
+#: ./pkg/..//rpmkit/updateinfo/main.py:732
 msgid "synopsis"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:680
-#: ./aux/..//rpmkit/updateinfo/main.py:683
-#: ./aux/..//rpmkit/updateinfo/main.py:715
-#: ./aux/..//rpmkit/updateinfo/main.py:721
-#: ./aux/..//rpmkit/updateinfo/main.py:733
+#: ./pkg/..//rpmkit/updateinfo/main.py:680
+#: ./pkg/..//rpmkit/updateinfo/main.py:683
+#: ./pkg/..//rpmkit/updateinfo/main.py:715
+#: ./pkg/..//rpmkit/updateinfo/main.py:721
+#: ./pkg/..//rpmkit/updateinfo/main.py:733
 msgid "url"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:680
-#: ./aux/..//rpmkit/updateinfo/main.py:714
-#: ./aux/..//rpmkit/updateinfo/main.py:731
+#: ./pkg/..//rpmkit/updateinfo/main.py:680
+#: ./pkg/..//rpmkit/updateinfo/main.py:714
+#: ./pkg/..//rpmkit/updateinfo/main.py:731
 msgid "severity"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:681
-#: ./aux/..//rpmkit/updateinfo/main.py:684
-#: ./aux/..//rpmkit/updateinfo/main.py:734
+#: ./pkg/..//rpmkit/updateinfo/main.py:681
+#: ./pkg/..//rpmkit/updateinfo/main.py:684
+#: ./pkg/..//rpmkit/updateinfo/main.py:734
 msgid "update_names"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:683
+#: ./pkg/..//rpmkit/updateinfo/main.py:683
 msgid "keywords"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:689
+#: ./pkg/..//rpmkit/updateinfo/main.py:689
 msgid "Cri-Important RHSAs (latests)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:694
+#: ./pkg/..//rpmkit/updateinfo/main.py:694
 msgid "Critical or Important RHSAs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:696
+#: ./pkg/..//rpmkit/updateinfo/main.py:696
 msgid "RHBAs (core rpms, keywords)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:698
+#: ./pkg/..//rpmkit/updateinfo/main.py:698
 msgid "RHBAs (core rpms)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:700
+#: ./pkg/..//rpmkit/updateinfo/main.py:700
 msgid "Update RPMs by RHSAs (Critical)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:703
+#: ./pkg/..//rpmkit/updateinfo/main.py:703
 msgid "Updates by RHSAs (Important)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:704
+#: ./pkg/..//rpmkit/updateinfo/main.py:704
 msgid "RHBAs (keyword)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:707
+#: ./pkg/..//rpmkit/updateinfo/main.py:707
 msgid "Updates by RHBAs (Keyword)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:711
+#: ./pkg/..//rpmkit/updateinfo/main.py:711
 msgid "RHSAs (CVSS score >= %.1f)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:715
-#: ./aux/..//rpmkit/updateinfo/main.py:720
-#: ./aux/..//rpmkit/updateinfo/main.py:733
+#: ./pkg/..//rpmkit/updateinfo/main.py:715
+#: ./pkg/..//rpmkit/updateinfo/main.py:720
+#: ./pkg/..//rpmkit/updateinfo/main.py:733
 msgid "cves"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:715
-#: ./aux/..//rpmkit/updateinfo/main.py:721
+#: ./pkg/..//rpmkit/updateinfo/main.py:715
+#: ./pkg/..//rpmkit/updateinfo/main.py:721
 msgid "cvsses_s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:717
+#: ./pkg/..//rpmkit/updateinfo/main.py:717
 msgid "RHBAs (CVSS score >= %.1f)"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:731
+#: ./pkg/..//rpmkit/updateinfo/main.py:731
 msgid "type"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:732
+#: ./pkg/..//rpmkit/updateinfo/main.py:732
 msgid "description"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:732
+#: ./pkg/..//rpmkit/updateinfo/main.py:732
 msgid "issue_date"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:733
+#: ./pkg/..//rpmkit/updateinfo/main.py:733
 msgid "update_date"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:734
+#: ./pkg/..//rpmkit/updateinfo/main.py:734
 msgid "bzs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:761
+#: ./pkg/..//rpmkit/updateinfo/main.py:762
 msgid "%s: Set workdir to root %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:765
+#: ./pkg/..//rpmkit/updateinfo/main.py:766
 msgid "%s: Creating working dir %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:773
+#: ./pkg/..//rpmkit/updateinfo/main.py:774
 msgid "%s: RPM DB not available and don't analyze %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:778
+#: ./pkg/..//rpmkit/updateinfo/main.py:779
 msgid "%s: Initialized backend %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:781
+#: ./pkg/..//rpmkit/updateinfo/main.py:782
 msgid "%s: Dump Installed RPMs list loaded from %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:786
+#: ./pkg/..//rpmkit/updateinfo/main.py:786
 msgid "%s: Found %d Installed RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:853
+#: ./pkg/..//rpmkit/updateinfo/main.py:853
 msgid "%s: Dump metadata for %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:862
+#: ./pkg/..//rpmkit/updateinfo/main.py:861
 msgid "%s: Found %d Errata, %d Update RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:865
+#: ./pkg/..//rpmkit/updateinfo/main.py:864
 msgid "%s: Dump Errata and Update RPMs list..."
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:873
+#: ./pkg/..//rpmkit/updateinfo/main.py:872
 msgid "%s: Analyze and dump results of errata data in %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:881
+#: ./pkg/..//rpmkit/updateinfo/main.py:880
 msgid "%s: Analyze errata in period: %s ~ %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:887
+#: ./pkg/..//rpmkit/updateinfo/main.py:886
 msgid "%s: Creating period working dir %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:893
+#: ./pkg/..//rpmkit/updateinfo/main.py:892
 msgid "%s [delta]: Analyze delta errata data by refering %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:896
+#: ./pkg/..//rpmkit/updateinfo/main.py:895
 msgid "%s [delta]: Found %d Errata, %d Update RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:901
+#: ./pkg/..//rpmkit/updateinfo/main.py:900
 msgid "%s: Creating delta working dir %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:908
+#: ./pkg/..//rpmkit/updateinfo/main.py:907
 msgid "%s: Analyze and dump results of delta errata in %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/multihosts.py:50
+#: ./pkg/..//rpmkit/updateinfo/multihosts.py:50
 msgid "Failed to find RPM DBs under %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/multihosts.py:73
+#: ./pkg/..//rpmkit/updateinfo/multihosts.py:73
 msgid "Set workdir to hosts_datadir: %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/multihosts.py:77
+#: ./pkg/..//rpmkit/updateinfo/multihosts.py:77
 msgid "Creating working dir: %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/multihosts.py:111
+#: ./pkg/..//rpmkit/updateinfo/multihosts.py:111
 msgid "%s: Make symlinks to results in %s/"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/multihosts.py:146
+#: ./pkg/..//rpmkit/updateinfo/multihosts.py:146
 msgid "Analyze %d/%d hosts"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/multihosts.py:169
+#: ./pkg/..//rpmkit/updateinfo/multihosts.py:170
 msgid "Skip to analyze %s as its installed RPMs are exactly same as %s's"
 msgstr ""
 

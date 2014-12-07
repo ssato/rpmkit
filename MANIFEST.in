@@ -3,7 +3,7 @@ include README.rst
 include rpmkit.spec.in
 include rpmkit.spec.el5.in
 include setup.py
-include aux/*
+include pkg/*
 include tools/*
 include examples/*
 include po/*.po
