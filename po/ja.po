@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-12-07 01:54+JST\n"
-"PO-Revision-Date: 2014-12-07 01:54+0900\n"
+"POT-Creation-Date: 2014-12-07 13:34+JST\n"
+"PO-Revision-Date: 2014-12-07 13:34+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
 "Language: ja\n"
@@ -441,13 +441,20 @@ msgstr "作業用ディレクトリを hosts_datadir に設定: %s"
 msgid "Creating working dir: %s"
 msgstr "作業用ディレクトリを作成中: %s"
 
-#: aux/..//rpmkit/updateinfo/multihosts.py:146
-msgid "Analyze %d hosts (Skipped %d hosts lack valid RPM DBs)"
-msgstr "%d 個のホストを解析 (%d 個のホストが適切な RPM DB を持たず)"
+#: aux/..//rpmkit/updateinfo/multihosts.py:111
+msgid "Make symlinks to results in refdir=%s/"
+msgstr "参照ディレクトリ %s 内の解析結果データへのシンボリックリンクを作成"
 
-#: aux/..//rpmkit/updateinfo/multihosts.py:170
+#: aux/..//rpmkit/updateinfo/multihosts.py:146
+msgid "Analyze %d/%d hosts"
+msgstr "%d/%d ホストを解析"
+
+#: aux/..//rpmkit/updateinfo/multihosts.py:169
 msgid "Skip to analyze %s as its installed RPMs are exactly same as %s's"
 msgstr "%s は解析せず (%s と同じインストール RPM 構成)"
+
+#~ msgid "Analyze %d hosts (Skipped %d hosts lack valid RPM DBs)"
+#~ msgstr "%d 個のホストを解析 (%d 個のホストが適切な RPM DB を持たず)"
 
 #~ msgid "RHSAs (Critical)"
 #~ msgstr "RHSA (Critical)"

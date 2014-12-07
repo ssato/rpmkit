@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-12-07 01:54+JST\n"
+"POT-Creation-Date: 2014-12-07 13:34+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -451,11 +451,15 @@ msgstr ""
 msgid "Creating working dir: %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/multihosts.py:146
-msgid "Analyze %d hosts (Skipped %d hosts lack valid RPM DBs)"
+#: ./aux/..//rpmkit/updateinfo/multihosts.py:111
+msgid "Make symlinks to results in refdir=%s/"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/multihosts.py:170
+#: ./aux/..//rpmkit/updateinfo/multihosts.py:146
+msgid "Analyze %d/%d hosts"
+msgstr ""
+
+#: ./aux/..//rpmkit/updateinfo/multihosts.py:169
 msgid "Skip to analyze %s as its installed RPMs are exactly same as %s's"
 msgstr ""
 
