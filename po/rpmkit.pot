@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-12-07 14:01+JST\n"
+"POT-Creation-Date: 2014-12-07 14:15+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -395,40 +395,36 @@ msgstr ""
 msgid "%s: Found %d Errata, %d Update RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:868
-msgid "Dump Errata list..."
+#: ./aux/..//rpmkit/updateinfo/main.py:865
+msgid "%s: Dump Errata and Update RPMs list..."
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:871
-msgid "Dump Update RPMs list..."
+#: ./aux/..//rpmkit/updateinfo/main.py:873
+msgid "%s: Analyze and dump results of errata data in %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:876
-msgid "Analyze and dump results of RPMs and errata data in %s..."
+#: ./aux/..//rpmkit/updateinfo/main.py:881
+msgid "%s: Analyze errata in period: %s ~ %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:884
-msgid "Analyze errata in period: %s ~ %s"
-msgstr ""
-
-#: ./aux/..//rpmkit/updateinfo/main.py:889
+#: ./aux/..//rpmkit/updateinfo/main.py:887
 msgid "%s: Creating period working dir %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:895
-msgid "Computing delta errata and updates for data in %s"
+#: ./aux/..//rpmkit/updateinfo/main.py:893
+msgid "%s [delta]: Analyze delta errata data by refering %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:898
+#: ./aux/..//rpmkit/updateinfo/main.py:896
 msgid "%s [delta]: Found %d Errata, %d Update RPMs"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:903
+#: ./aux/..//rpmkit/updateinfo/main.py:901
 msgid "%s: Creating delta working dir %s"
 msgstr ""
 
-#: ./aux/..//rpmkit/updateinfo/main.py:910
-msgid "Analyze and dump results of delta errata data in %s..."
+#: ./aux/..//rpmkit/updateinfo/main.py:908
+msgid "%s: Analyze and dump results of delta errata in %s"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/multihosts.py:50
@@ -444,7 +440,7 @@ msgid "Creating working dir: %s"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/multihosts.py:111
-msgid "Make symlinks to results in refdir=%s/"
+msgid "%s: Make symlinks to results in %s/"
 msgstr ""
 
 #: ./aux/..//rpmkit/updateinfo/multihosts.py:146

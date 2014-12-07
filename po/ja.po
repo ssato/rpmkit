@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-12-07 14:01+JST\n"
-"PO-Revision-Date: 2014-12-07 14:01+0900\n"
+"POT-Creation-Date: 2014-12-07 14:15+JST\n"
+"PO-Revision-Date: 2014-12-07 14:11+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
 "Language: ja\n"
@@ -385,41 +385,37 @@ msgstr "%s: %s についてメタデータを出力"
 msgid "%s: Found %d Errata, %d Update RPMs"
 msgstr "%s: %d 個のエラータと %d 個の更新 RPM を発見"
 
-#: aux/..//rpmkit/updateinfo/main.py:868
-msgid "Dump Errata list..."
-msgstr "エラータ一覧を出力..."
+#: aux/..//rpmkit/updateinfo/main.py:865
+msgid "%s: Dump Errata and Update RPMs list..."
+msgstr "%s: エラータと更新 RPM 一覧を出力"
 
-#: aux/..//rpmkit/updateinfo/main.py:871
-msgid "Dump Update RPMs list..."
-msgstr "更新 RPM 一覧を出力..."
+#: aux/..//rpmkit/updateinfo/main.py:873
+msgid "%s: Analyze and dump results of errata data in %s"
+msgstr "%s: エラータデータの解析結果を %s に出力"
 
-#: aux/..//rpmkit/updateinfo/main.py:876
-msgid "Analyze and dump results of RPMs and errata data in %s..."
-msgstr "RPM とエラータデータの解析結果を %s に出力..."
+#: aux/..//rpmkit/updateinfo/main.py:881
+msgid "%s: Analyze errata in period: %s ~ %s"
+msgstr "%s: 指定期間のエラータを解析: %s ~ %s"
 
-#: aux/..//rpmkit/updateinfo/main.py:884
-msgid "Analyze errata in period: %s ~ %s"
-msgstr "指定期間のエラータを解析: %s ~ %s"
-
-#: aux/..//rpmkit/updateinfo/main.py:889
+#: aux/..//rpmkit/updateinfo/main.py:887
 msgid "%s: Creating period working dir %s"
 msgstr "%s: 指定期間データの作業用ディレクトリ %s を作成"
 
-#: aux/..//rpmkit/updateinfo/main.py:895
-msgid "Computing delta errata and updates for data in %s"
-msgstr "%s 内のデータに対するエラータと更新 RPM の差分を計算中..."
+#: aux/..//rpmkit/updateinfo/main.py:893
+msgid "%s [delta]: Analyze delta errata data by refering %s"
+msgstr "%s [差分]: %s を参照して差分エラータを解析中"
 
-#: aux/..//rpmkit/updateinfo/main.py:898
+#: aux/..//rpmkit/updateinfo/main.py:896
 msgid "%s [delta]: Found %d Errata, %d Update RPMs"
 msgstr "%s [差分]: %d 個のエラータと %d 個の更新 RPM を発見"
 
-#: aux/..//rpmkit/updateinfo/main.py:903
+#: aux/..//rpmkit/updateinfo/main.py:901
 msgid "%s: Creating delta working dir %s"
 msgstr "%s: 差分データのための作業用ディレクトリ %s を作成"
 
-#: aux/..//rpmkit/updateinfo/main.py:910
-msgid "Analyze and dump results of delta errata data in %s..."
-msgstr "差分エラータデータの解析結果を %s に出力..."
+#: aux/..//rpmkit/updateinfo/main.py:908
+msgid "%s: Analyze and dump results of delta errata in %s"
+msgstr "%s: 差分エラータデータの解析結果を %s に出力"
 
 #: aux/..//rpmkit/updateinfo/multihosts.py:50
 msgid "Failed to find RPM DBs under %s"
@@ -434,8 +430,8 @@ msgid "Creating working dir: %s"
 msgstr "作業用ディレクトリを作成中: %s"
 
 #: aux/..//rpmkit/updateinfo/multihosts.py:111
-msgid "Make symlinks to results in refdir=%s/"
-msgstr "参照ディレクトリ %s 内の解析結果データへのシンボリックリンクを作成"
+msgid "%s: Make symlinks to results in %s/"
+msgstr "%s: %s 内の解析結果データへのシンボリックリンクを作成"
 
 #: aux/..//rpmkit/updateinfo/multihosts.py:146
 msgid "Analyze %d/%d hosts"
@@ -444,6 +440,15 @@ msgstr "%d/%d ホストを解析"
 #: aux/..//rpmkit/updateinfo/multihosts.py:169
 msgid "Skip to analyze %s as its installed RPMs are exactly same as %s's"
 msgstr "%s は解析せず (%s と同じインストール RPM 構成)"
+
+#~ msgid "Dump Errata list..."
+#~ msgstr "エラータ一覧を出力..."
+
+#~ msgid "Analyze and dump results of RPMs and errata data in %s..."
+#~ msgstr "RPM とエラータデータの解析結果を %s に出力..."
+
+#~ msgid "Computing delta errata and updates for data in %s"
+#~ msgstr "%s 内のデータに対するエラータと更新 RPM の差分を計算中..."
 
 #~ msgid "Creating working dir [%s]: %s"
 #~ msgstr "作業用ディレクトリを作成中 [%s]: %s"
