@@ -38,8 +38,10 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
     p.add_option("-r", "--repo", dest="repos", action="append",
                  help="Yum repo to fetch errata info, e.g. "
                       "'rhel-x86_64-server-6'. It can be given multiple times "
-                      "to specify multiple yum repos. Note: Any other repos "
-                      "are disabled if this option was set.")
+                      "to specify multiple yum repos. If any repos are not "
+                      "given by this option, repos are guess from data in "
+                      "RPM DBs automatically, and please not that any other "
+                      "repos are disabled if this option was set.")
     p.add_option("-I", "--id", help="Data ID [None]")
     p.add_option("-M", "--multiproc", action="store_true",
                  help="Specify this option if you want to analyze data "
