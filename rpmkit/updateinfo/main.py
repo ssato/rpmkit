@@ -758,6 +758,10 @@ def prepare(root, workdir=None, repos=[], did=None,
     """
     root = os.path.abspath(root)  # Ensure it's absolute path.
 
+    if not repos:
+        repos = rpmkit.updateinfo.utils.guess_rhel_repos(root)
+        LOG.info(_("%s: Use guessed repos %s"), did, ', '.join(repos))
+
     if workdir is None:
         LOG.info(_("%s: Set workdir to root %s"), did, root)
         workdir = root
