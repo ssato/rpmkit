@@ -758,32 +758,32 @@ def prepare(root, workdir=None, repos=[], did=None,
     root = os.path.abspath(root)  # Ensure it's absolute path.
 
     if workdir is None:
-        LOG.info(_("Set workdir to root [%s]: %s"), did, root)
+        LOG.info(_("%s: Set workdir to root %s"), did, root)
         workdir = root
     else:
         if not os.path.exists(workdir):
-            LOG.debug(_("Creating working dir [%s]: %s"), did, workdir)
+            LOG.debug(_("%s: Creating working dir %s"), did, workdir)
             os.makedirs(workdir)
 
     host = bunch.bunchify(dict(id=did, root=root, workdir=workdir,
                                repos=repos, available=False))
 
+    # pylint: disable=maybe-no-member
     if not rpmkit.updateinfo.utils.check_rpmdb_root(root):
-        LOG.warn(_("RPM DB not available and analysis won't be done [%s]: %s"),
-                 did, root)
+        LOG.warn(_("%s: RPM DB not available and don't analyze %s"),
+                 host.id, root)
         return host
 
-    # pylint: disable=maybe-no-member
     base = get_backend(backend)(host.root, host.repos, workdir=host.workdir)
-    LOG.debug(_("Initialized backend [%s]: %s"), host.id, base.name)
+    LOG.debug(_("%s: Initialized backend %s"), host.id, base.name)
     host.base = base
 
-    LOG.debug(_("Dump Installed RPMs list loaded from: %s [%s]"),
-              host.root, host.id)
+    LOG.debug(_("%s: Dump Installed RPMs list loaded from %s"),
+              host.id, host.root)
     host.installed = sorted(host.base.list_installed(),
                             key=operator.itemgetter("name", "epoch", "version",
                                                     "release"))
-    LOG.info(_("%d Installed RPMs found [%s]"), len(host.installed), host.id)
+    LOG.info(_("%s: Found %d Installed RPMs"), host.id, len(host.installed))
     U.json_dump(dict(data=host.installed, ), rpm_list_path(host.workdir))
     host.available = True
     # pylint: enable=maybe-no-member
@@ -850,70 +850,63 @@ def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
                                    installed=len(host.installed),
                                    generated=timestamp))
     # pylint: disable=maybe-no-member
-    LOG.debug(_("Dump metadata [%s]: root=%s"), metadata.id, metadata.root)
+    LOG.debug(_("%s: Dump metadata for %s"), host.id, host.root)
     # pylint: enable=maybe-no-member
     U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
 
+    us = U.uniq(base.list_updates(),
+                key=itemgetter("name", "epoch", "version", "release"))
     es = base.list_errata()
-    LOG.info(_("%d Errata found for installed rpms [%s]"), len(es), host.id)
-
-    us = base.list_updates()
-    LOG.info(_("%d Update RPMs found for installed rpms [%s]"), len(us),
-             host.id)
-
-    us = U.uniq(us, key=itemgetter("name", "epoch", "version", "release"))
     es = U.uniq(errata_complement_g(es, us, score), key=itemgetter("id"),
                 reverse=True)
+    LOG.info(_("%s: Found %d Errata, %d Update RPMs"), host.id, len(es),
+             len(us))
+
+    LOG.debug(_("%s: Dump Errata and Update RPMs list..."), host.id)
+    U.json_dump(dict(data=es, ), errata_list_path(workdir))
+    U.json_dump(dict(data=us, ), updates_file_path(workdir))
 
     host.errata = es
     host.updates = us
-
-    LOG.debug(_("Dump Errata list..."))
-    U.json_dump(dict(data=es, ), errata_list_path(workdir))
-
-    LOG.debug(_("Dump Update RPMs list..."))
-    U.json_dump(dict(data=us, ), updates_file_path(workdir))
-
     ips = host.installed
 
-    LOG.info(_("Analyze and dump results of RPMs and errata data in %s..."),
-             workdir)
+    LOG.info(_("%s: Analyze and dump results of errata data in %s"),
+             host.id, workdir)
     dump_results(workdir, ips, es, us, score, keywords, core_rpms)
 
     if period:
         (start_date, end_date) = period_to_dates(*period)
         period_s = "%s_%s" % (start_date, end_date)
 
-        LOG.info(_("Analyze errata in period: %s ~ %s"), start_date, end_date)
+        LOG.info(_("%s: Analyze errata in period: %s ~ %s"),
+                 host.id, start_date, end_date)
         pes = [e for e in es if errata_in_period(e, start_date, end_date)]
 
         pdir = os.path.join(workdir, period_s)
         if not os.path.exists(pdir):
-            LOG.debug(_("Creating period working dir [%s]: %s"), host.id, pdir)
+            LOG.debug(_("%s: Creating period working dir %s"), host.id, pdir)
             os.makedirs(pdir)
 
         dump_results(pdir, ips, pes, us, score, keywords, core_rpms, False)
 
     if refdir:
-        LOG.debug(_("Computing delta errata and updates for data in %s"),
-                  refdir)
+        LOG.debug(_("%s [delta]: Analyze delta errata data by refering %s"),
+                  host.id, refdir)
         (es, us) = compute_delta(refdir, es, us)
+        LOG.info(_("%s [delta]: Found %d Errata, %d Update RPMs"), host.id,
+                 len(es), len(us))
 
         deltadir = os.path.join(workdir, "delta")
         if not os.path.exists(deltadir):
-            LOG.debug(_("Creating delta working dir [%s]: %s"),
+            LOG.debug(_("%s: Creating delta working dir %s"),
                       host.id, deltadir)
             os.makedirs(deltadir)
 
-        LOG.info(_("%d Delta Errata found for installed rpms [%s]"),
-                 len(es), host.id)
         U.json_dump(dict(data=es, ), errata_list_path(deltadir))
-
-        LOG.info(_("%d Delta Update RPMs found for installed rpms [%s]"),
-                 len(us), host.id)
         U.json_dump(dict(data=us, ), updates_file_path(deltadir))
 
-        LOG.info(_("Dump analysis results of delta RPMs and errata data..."))
+        LOG.info(_("%s: Analyze and dump results of delta errata in %s"),
+                 host.id, deltadir)
         dump_results(workdir, ips, es, us, score, keywords, core_rpms)
 
 

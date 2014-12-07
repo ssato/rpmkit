@@ -108,7 +108,7 @@ def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
     for h in hsrest:
         os.chdir(h.workdir)
         href_workdir = os.path.join('..', href.id)  # TODO: Keep consistency.
-        LOG.info(_("Make symlinks to results in refdir=%s/"), href_workdir)
+        LOG.info(_("%s: Make symlinks to results in %s/"), h.id, href_workdir)
         for src in glob.glob(os.path.join(href_workdir, '*.*')):
             dst = os.path.basename(src)
             if not os.path.exists(dst):
