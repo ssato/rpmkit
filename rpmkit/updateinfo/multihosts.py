@@ -149,7 +149,8 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     hps = lambda h: [p2nevra(p) for p in h.installed]
     gby = lambda xs, kf: itertools.groupby(sorted(xs, key=kf), kf)
 
-    # Group hosts by installed rpms to degenerate. his :: [[[h]]]
+    # Group hosts by installed rpms to degenerate these hosts and avoid to
+    # analyze for same installed RPMs more than once. his :: [[[h]]]
     his = [[list(g2) for _k2, g2 in gby(g, hps)] for _k, g in gby(hosts, ilen)]
 
     for hss in his:
