@@ -46,6 +46,8 @@ BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper.Base,
                 dnfbase=rpmkit.updateinfo.dnfbase.Base)
 DEFAULT_BACKEND = BACKENDS["yumbase"]
 
+NEVRA_KEYS = ["name", "epoch", "version", "release", "arch"]
+
 DEFAULT_CVSS_SCORE = 4.0
 ERRATA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault"]
 CORE_RPMS = ["kernel", "glibc", "bash", "openssl", "zlib"]
@@ -331,7 +333,7 @@ def list_latest_errata_groupby_updates(es):
     return [xs[-1] for xs in sgroupby(es, ung, itemgetter("issue_date"))]
 
 
-def compute_delta(refdir, errata, updates):
+def compute_delta(refdir, errata, updates, nevra_keys=NEVRA_KEYS):
     """
     :param refdir: Dir has reference data files: packages.json, errata.json
         and updates.json
@@ -350,7 +352,6 @@ def compute_delta(refdir, errata, updates):
     ref_us_data = U.json_load(ref_us_file)
     LOG.debug(_("Loaded reference errata and updates file"))
 
-    nevra_keys = ("name", "epoch", "version", "release", "arch")
     ref_eadvs = set(e["advisory"] for e in ref_es_data["data"])
     ref_nevras = set((p[k] for k in nevra_keys) for p in ref_us_data["data"])
 
@@ -652,7 +653,8 @@ def dump_xls(dataset, filepath):
 
 
 def dump_results(workdir, rpms, errata, updates, score=0,
-                 keywords=ERRATA_KEYWORDS, core_rpms=[], details=True):
+                 keywords=ERRATA_KEYWORDS, core_rpms=[], details=True,
+                 rpmkeys=NEVRA_KEYS):
     """
     :param workdir: Working dir to dump the result
     :param rpms: A list of installed RPMs
@@ -670,8 +672,7 @@ def dump_results(workdir, rpms, errata, updates, score=0,
     U.json_dump(data, os.path.join(workdir, "summary.json"))
 
     # FIXME: How to keep DRY principle?
-    rpmkeys = ["name", "version", "release", "epoch", "arch"]
-    lrpmkeys = [_("name"), _("version"), _("release"), _("epoch"), _("arch")]
+    lrpmkeys = [_("name"), _("epoch"), _("version"), _("release"), _("arch")]
 
     rpmdkeys = rpmkeys + ["summary", "vendor", "buildhost"]
     lrpmdkeys = lrpmkeys + [_("summary"), _("vendor"), _("buildhost")]
@@ -744,7 +745,8 @@ def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
 
 
 def prepare(root, workdir=None, repos=[], did=None,
-            backend=DEFAULT_BACKEND, backends=BACKENDS):
+            backend=DEFAULT_BACKEND, backends=BACKENDS,
+            nevra_keys=NEVRA_KEYS):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param workdir: Working dir to save results
@@ -781,8 +783,7 @@ def prepare(root, workdir=None, repos=[], did=None,
     LOG.debug(_("%s: Dump Installed RPMs list loaded from %s"),
               host.id, host.root)
     host.installed = sorted(host.base.list_installed(),
-                            key=operator.itemgetter("name", "epoch", "version",
-                                                    "release"))
+                            key=itemgetter(*nevra_keys))
     LOG.info(_("%s: Found %d Installed RPMs"), host.id, len(host.installed))
     U.json_dump(dict(data=host.installed, ), rpm_list_path(host.workdir))
     host.available = True
@@ -828,7 +829,7 @@ def errata_in_period(errata, start_date, end_date):
 
 
 def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
-            period=(), refdir=None):
+            period=(), refdir=None, nevra_keys=NEVRA_KEYS):
     """
     :param host: host object function :function:`prepare` returns
     :param score: CVSS base metrics score
@@ -854,8 +855,7 @@ def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
     # pylint: enable=maybe-no-member
     U.json_dump(metadata.toDict(), os.path.join(workdir, "metadata.json"))
 
-    us = U.uniq(base.list_updates(),
-                key=itemgetter("name", "epoch", "version", "release"))
+    us = U.uniq(base.list_updates(), key=itemgetter(*nevra_keys))
     es = base.list_errata()
     es = U.uniq(errata_complement_g(es, us, score), key=itemgetter("id"),
                 reverse=True)
