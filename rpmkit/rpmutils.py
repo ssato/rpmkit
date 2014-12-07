@@ -146,7 +146,7 @@ def rpm_transactionset(root='/', readonly=True):
 
     :return: An instance of rpm.TransactionSet
     """
-    if root.startswith('/'):
+    if not root.startswith('/'):
         root = os.path.abspath(root)
 
     ts = rpm.TransactionSet(root)
@@ -227,6 +227,41 @@ def guess_rhel_version(root, maybe_rhel_4=False):
         osver = 5
     elif irpmver >= 470:  # 471, 472, 480, etc.
         osver = 6
+    elif irpmver >= 411:  # 471, 472, 480, etc.
+        osver = 7
+    else:
+        osver = 0
+
+    return osver
+
+
+def guess_rhel_version_simple(root):
+    """
+    Guess RHEL major version from RPM database. It's similar to the above
+    :function:`guess_rhel_version` but does not process RHEL 3 cases.
+
+    - RHEL 4 => rpm.RPMTAG_RPMVERSION = '4.3.3'
+    - RHEL 5 => rpm.RPMTAG_RPMVERSION = '4.4.2' or '4.4.2.3'
+    - RHEL 6 => rpm.RPMTAG_RPMVERSION >= '4.7.0-rc1'
+    - RHEL 7 => rpm.RPMTAG_RPMVERSION >= '4.11.1'
+
+    :param root: RPM DB root dir
+    :param maybe_rhel_4:
+    """
+    ts = rpm_transactionset(root, True)
+    rpmver = [h for h in ts.dbMatch()][0][rpm.RPMTAG_RPMVERSION]
+    del ts
+
+    irpmver = int(''.join(rpmver.split('.')[:3])[:3])
+
+    if irpmver in (433, 432, 431):
+        osver = 4
+    elif irpmver == 442:
+        osver = 5
+    elif irpmver >= 470 and irpmver < 411:
+        osver = 6
+    elif irpmver >= 411:
+        osver = 7
     else:
         osver = 0
 
