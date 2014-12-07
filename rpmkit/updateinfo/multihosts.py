@@ -108,7 +108,7 @@ def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
     for h in hsrest:
         os.chdir(h.workdir)
         href_workdir = os.path.join('..', href.id)  # TODO: Keep consistency.
-        LOG.info("Make symlinks to results in refdir=%s/", href_workdir)
+        LOG.info(_("Make symlinks to results in refdir=%s/"), href_workdir)
         for src in glob.glob(os.path.join(href_workdir, '*.*')):
             dst = os.path.basename(src)
             if not os.path.exists(dst):
@@ -143,8 +143,7 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     all_hosts = list(prepare(hosts_datadir, workdir, repos, backend, backends))
     hosts = [h for h in all_hosts if h.available]
 
-    LOG.info(_("Analyze %d hosts (Skipped %d hosts lack valid RPM DBs)"),
-             len(hosts), len(all_hosts) - len(hosts))
+    LOG.info(_("Analyze %d/%d hosts"), len(hosts), len(all_hosts))
 
     ilen = lambda h: len(h.installed)
     hps = lambda h: [p2nevra(p) for p in h.installed]
