@@ -134,8 +134,7 @@ class Base(rpmkit.updateinfo.base.Base):
     name = "rpmkit.updateinfo.yumbase"
 
     def __init__(self, root='/', repos=[], disabled_repos=['*'],
-                 load_available_repos=True, cachedir=None,
-                 **kwargs):
+                 load_available_repos=True, **kwargs):
         """
         Create an initialized yum.YumBase instance.
         Created instance has no enabled repos by default.
@@ -160,7 +159,7 @@ class Base(rpmkit.updateinfo.base.Base):
         except AttributeError:
             self.base.preconf.root = self.root
 
-        self.set_cachedir(cachedir)
+        self.set_cachedir(self.cachedir)
         self.base.logger = self.base.verbose_logger = LOG
         self._activate_repos()
 
@@ -171,11 +170,8 @@ class Base(rpmkit.updateinfo.base.Base):
     def cachedir(self):
         return self.base.conf.cachedir
 
-    def set_cachedir(self, cachedir=None):
-        if cachedir is None:
-            self.base.conf.cachedir = os.path.join(self.root, "var/cache")
-        else:
-            self.base.conf.cachedir = cachedir
+    def set_cachedir(self, cachedir):
+        self.base.conf.cachedir = cachedir
 
     def set_cacheonly(self):
         self.base.conf.cache = 1
