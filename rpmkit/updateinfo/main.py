@@ -580,11 +580,13 @@ def padding_row(row, mcols):
     return row + [''] * (mcols - len(row))
 
 
-def make_overview_dataset(workdir, data, score=0, keywords=ERRATA_KEYWORDS):
+def make_overview_dataset(workdir, data, score=0, keywords=ERRATA_KEYWORDS,
+                          core_rpms=[]):
     """
     :param workdir: Working dir to dump the result
     :param data: RPMs, Update RPMs and various errata data summarized
     :param score: CVSS base metrics score limit
+    :param core_rpms: Core RPMs to filter errata by them
 
     :return: An instance of tablib.Dataset becomes a worksheet represents the
         overview of analysys reuslts
@@ -606,6 +608,12 @@ def make_overview_dataset(workdir, data, score=0, keywords=ERRATA_KEYWORDS):
             [_("# of RHBAs by keywords"), len(data["errata"]["rhba_by_kwds"])],
             [_("# of Update RPMs by RHBAs by keywords at minimum"),
              len(data["errata"]["us_of_rhba_by_kwds"])]]
+
+    if core_rpms:
+        rows += [[],
+                 [_("RHBAs of core rpms: %s") % ", ".join(core_rpms)],
+                 [_("# of RHBAs of core rpms"),
+                  len(data["errata"]["rhba_of_core_rpms"])]]
 
     if score > 0:
         rows += [[],
@@ -683,7 +691,7 @@ def dump_results(workdir, rpms, errata, updates, score=0,
     lbekeys = (_("advisory"), _("keywords"), _("synopsis"), _("url"),
                _("update_names"))
 
-    ds = [make_overview_dataset(workdir, data, score, keywords),
+    ds = [make_overview_dataset(workdir, data, score, keywords, core_rpms),
           make_dataset((data["errata"]["rhsa_cri_latests"] +
                         data["errata"]["rhsa_imp_latests"]),
                        _("Cri-Important RHSAs (latests)"), sekeys, lsekeys),
