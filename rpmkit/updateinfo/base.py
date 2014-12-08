@@ -18,7 +18,7 @@ class Base(object):
     name = 'rpmkit.updateinfo.base'
 
     def __init__(self, root='/', repos=[], disabled_repos=['*'],
-                 workdir=None, **kwargs):
+                 workdir=None, cachedir=None, **kwargs):
         """
         :param root: RPM DB root dir
         :param repos: A list of repos to enable
@@ -32,6 +32,11 @@ class Base(object):
         self.repos = repos
         self.disabled_repos = disabled_repos
         self._packages = collections.defaultdict(list)
+
+        if cachedir is None:
+            self.cachedir = os.path.join(self.root, "var/cache")
+        else:
+            self.cachedir = cachedir
 
     def is_rpmdb_available(self, readonly=False):
         return rpmkit.updateinfo.utils.check_rpmdb_root(self.root, readonly)
