@@ -48,7 +48,8 @@ DEFAULT_BACKEND = BACKENDS["yumbase"]
 NEVRA_KEYS = ["name", "epoch", "version", "release", "arch"]
 
 DEFAULT_CVSS_SCORE = 4.0
-ERRATA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault"]
+ERRATA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault",
+                   "data corruption"]
 CORE_RPMS = ["kernel", "glibc", "bash", "openssl", "zlib"]
 
 rpmkit.updateinfo.yumwrapper.LOG.setLevel(logging.WARN)
