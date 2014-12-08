@@ -55,7 +55,7 @@ def touch(filepath):
     open(filepath, 'w').write()
 
 
-def prepare(hosts_datadir, workdir=None, repos=[],
+def prepare(hosts_datadir, workdir=None, repos=[], cachedir=None,
             backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
     """
     Scan and collect hosts' basic data (installed rpms list, etc.).
@@ -63,6 +63,7 @@ def prepare(hosts_datadir, workdir=None, repos=[],
     :param hosts_datadir: Dir in which rpm db roots of hosts exist
     :param workdir: Working dir to save results
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
+    :param cachedir: A dir to save metadata cache of yum repos
     :param backend: Backend module to use to get updates and errata
     :param backends: Backend list
 
@@ -86,7 +87,8 @@ def prepare(hosts_datadir, workdir=None, repos=[],
             touch(os.path.join(hworkdir, "RPMDB_NOT_AVAILABLE"))
             yield bunch.bunchify(dict(id=h, workdir=hworkdir, available=False))
         else:
-            yield RUM.prepare(root, hworkdir, repos, h, backend, backends)
+            yield RUM.prepare(root, hworkdir, repos, h, cachedir, backend,
+                              backends)
 
 
 def p2nevra(p):
@@ -122,8 +124,9 @@ def analyze(args):
 
 
 def main(hosts_datadir, workdir=None, repos=[], score=-1,
-         keywords=RUM.ERRATA_KEYWORDS, rpms=[], period=(), refdir=None,
-         multiproc=False, backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
+         keywords=RUM.ERRATA_KEYWORDS, rpms=[], period=(), cachedir=None,
+         refdir=None, multiproc=False,
+         backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
     """
     :param hosts_datadir: Dir in which rpm db roots of hosts exist
     :param workdir: Working dir to save results
@@ -133,6 +136,7 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     :param rpms: Core RPMs to filter errata by them
     :param period: Period of errata in format of YYYY[-MM[-DD]],
         ex. ("2014-10-01", "2014-11-01")
+    :param cachedir: A dir to save metadata cache of yum repos
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
     :param multiproc: Utilize multiprocessing module to compute results
@@ -140,7 +144,8 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     :param backend: Backend module to use to get updates and errata
     :param backends: Backend list
     """
-    all_hosts = list(prepare(hosts_datadir, workdir, repos, backend, backends))
+    all_hosts = list(prepare(hosts_datadir, workdir, repos, cachedir, backend,
+                             backends))
     hosts = [h for h in all_hosts if h.available]
 
     LOG.info(_("Analyze %d/%d hosts"), len(hosts), len(all_hosts))

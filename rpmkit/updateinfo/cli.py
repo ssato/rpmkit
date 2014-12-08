@@ -20,7 +20,7 @@ _TODAY = datetime.datetime.now().strftime("%F")
 _DEFAULTS = dict(path=None, workdir="/tmp/rk-updateinfo-{}".format(_TODAY),
                  repos=[], multiproc=False, id=None,
                  score=0, keywords=RUM.ERRATA_KEYWORDS,
-                 rpms=RUM.CORE_RPMS, period='', refdir=None,
+                 rpms=RUM.CORE_RPMS, period='', cachedir=None, refdir=None,
                  backend=RUM.DEFAULT_BACKEND, verbose=False)
 _USAGE = """\
 %prog [Options...] ROOT
@@ -65,6 +65,8 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
                       "YYYY[-MM[-DD]][,YYYY[-MM[-DD]]], "
                       "ex. '2014-10-01,2014-12-31', '2014-01-01'. "
                       "If end date is omitted, Today will be used instead")
+    p.add_option("-C", "--cachedir",
+                 help="Specify yum repo metadata cachedir [root/var/cache]")
     p.add_option("-R", "--refdir",
                  help="Output 'delta' result compared to the data in this dir")
     p.add_option("-v", "--verbose", action="store_true", help="Verbose mode")
@@ -86,7 +88,7 @@ def main():
     if os.path.exists(os.path.join(root, "var/lib/rpm")):
         RUM.main(root, options.workdir, options.repos, options.id,
                  options.score, options.keywords, options.rpms, period,
-                 options.refdir)
+                 options.cachedir, options.refdir)
     else:
         # multihosts mode.
         #
@@ -94,8 +96,8 @@ def main():
         # to RUMS.main until the issue of yum that its thread locks conflict w/
         # multiprocessing module is fixed.
         RUMS.main(root, options.workdir, options.repos, options.score,
-                  options.keywords, options.rpms, period, options.refdir,
-                  False)
+                  options.keywords, options.rpms, period, options.cachedir,
+                  options.refdir, False)
 
 
 if __name__ == '__main__':

@@ -754,7 +754,7 @@ def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
     return backends.get(backend, fallback)
 
 
-def prepare(root, workdir=None, repos=[], did=None,
+def prepare(root, workdir=None, repos=[], did=None, cachedir=None,
             backend=DEFAULT_BACKEND, backends=BACKENDS,
             nevra_keys=NEVRA_KEYS):
     """
@@ -762,6 +762,7 @@ def prepare(root, workdir=None, repos=[], did=None,
     :param workdir: Working dir to save results
     :param repos: List of yum repos to get updateinfo data (errata and updtes)
     :param did: Identity of the data (ex. hostname) or empty str
+    :param cachedir: A dir to save metadata cache of yum repos
     :param backend: Backend module to use to get updates and errata
     :param backends: Backend list
 
@@ -782,7 +783,8 @@ def prepare(root, workdir=None, repos=[], did=None,
             os.makedirs(workdir)
 
     host = bunch.bunchify(dict(id=did, root=root, workdir=workdir,
-                               repos=repos, available=False))
+                               repos=repos, available=False,
+                               cachedir=cachedir))
 
     # pylint: disable=maybe-no-member
     if not rpmkit.updateinfo.utils.check_rpmdb_root(root):
@@ -790,7 +792,8 @@ def prepare(root, workdir=None, repos=[], did=None,
                  host.id, root)
         return host
 
-    base = get_backend(backend)(host.root, host.repos, workdir=host.workdir)
+    base = get_backend(backend)(host.root, host.repos, workdir=host.workdir,
+                                cachedir=cachedir)
     LOG.debug(_("%s: Initialized backend %s"), host.id, base.name)
     host.base = base
 
@@ -926,7 +929,8 @@ def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
 
 def main(root, workdir=None, repos=[], did=None, score=0,
          keywords=ERRATA_KEYWORDS, rpms=CORE_RPMS, period=(),
-         refdir=None, backend=DEFAULT_BACKEND, backends=BACKENDS):
+         cachedir=None, refdir=None,
+         backend=DEFAULT_BACKEND, backends=BACKENDS):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
     :param workdir: Working dir to save results
@@ -937,12 +941,13 @@ def main(root, workdir=None, repos=[], did=None, score=0,
     :param rpms: Core RPMs to filter errata by them
     :param period: Period of errata in format of YYYY[-MM[-DD]],
         ex. ("2014-10-01", "2014-11-01")
+    :param cachedir: A dir to save metadata cache of yum repos
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
     :param backend: Backend module to use to get updates and errata
     :param backends: Backend list
     """
-    host = prepare(root, workdir, repos, did, backend, backends)
+    host = prepare(root, workdir, repos, did, cachedir, backend, backends)
     if host.available:
         analyze(host, score, keywords, rpms, period, refdir)
 
