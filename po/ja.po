@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-12-08 15:43+JST\n"
-"PO-Revision-Date: 2014-12-08 15:43+0900\n"
+"POT-Creation-Date: 2014-12-08 15:54+JST\n"
+"PO-Revision-Date: 2014-12-08 15:54+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
 "Language: ja\n"
@@ -36,7 +36,7 @@ msgid "# of Enhancement Errata"
 msgstr "機能拡張エラータの数"
 
 #: pkg/..//rpmkit/extras/updateinfo.py:610
-#: pkg/..//rpmkit/updateinfo/main.py:637
+#: pkg/..//rpmkit/updateinfo/main.py:639
 msgid "# of Installed RPMs"
 msgstr "インストールされている RPM パッケージの数"
 
@@ -74,7 +74,7 @@ msgid "Sec. Errata CVSS >= %.1f"
 msgstr "RHSA (CVSS >= %.1f)"
 
 #: pkg/..//rpmkit/extras/updateinfo.py:736
-#: pkg/..//rpmkit/updateinfo/main.py:745
+#: pkg/..//rpmkit/updateinfo/main.py:747
 msgid "Installed RPMs"
 msgstr "インストール RPM"
 
@@ -83,12 +83,12 @@ msgid "Errata"
 msgstr "エラータ"
 
 #: pkg/..//rpmkit/extras/updateinfo.py:739
-#: pkg/..//rpmkit/updateinfo/main.py:744
+#: pkg/..//rpmkit/updateinfo/main.py:746
 msgid "Update RPMs"
 msgstr "更新 RPM"
 
 #: pkg/..//rpmkit/extras/updateinfo.py:745
-#: pkg/..//rpmkit/updateinfo/main.py:736
+#: pkg/..//rpmkit/updateinfo/main.py:738
 msgid "Errata Details"
 msgstr "エラータ詳細"
 
@@ -124,308 +124,308 @@ msgstr "CVE スコア比較に失敗: %s, score=%.1f"
 msgid "Loaded reference errata and updates file"
 msgstr "参照用のエラータと更新 RPM ファイルを読み込み"
 
-#: pkg/..//rpmkit/updateinfo/main.py:595
+#: pkg/..//rpmkit/updateinfo/main.py:597
 msgid "Critical or Important RHSAs (Security Errata)"
 msgstr "Critical または Important RHSA (セキュリティエラータ)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:596
+#: pkg/..//rpmkit/updateinfo/main.py:598
 msgid "# of Critical RHSAs"
 msgstr "Critical RHSA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:597
+#: pkg/..//rpmkit/updateinfo/main.py:599
 msgid "# of Critical RHSAs (latests only)"
 msgstr "最新の Critical RHSA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:599
+#: pkg/..//rpmkit/updateinfo/main.py:601
 msgid "# of Important RHSAs"
 msgstr "Important RHSA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:600
+#: pkg/..//rpmkit/updateinfo/main.py:602
 msgid "# of Important RHSAs (latests only)"
 msgstr "最新の Important RHSA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:602
+#: pkg/..//rpmkit/updateinfo/main.py:604
 msgid "Update RPMs by Critical or Important RHSAs at minimum"
-msgstr "Critical または Important RHSA にともなう更新 RPM (最小で)"
-
-#: pkg/..//rpmkit/updateinfo/main.py:603
-msgid "# of Update RPMs by Critical RHSAs at minimum"
-msgstr "Critical RHSA にともなう更新 RPM の数 (最小で)"
+msgstr "Critical または Important RHSA にともなう更新 RPM (最小)"
 
 #: pkg/..//rpmkit/updateinfo/main.py:605
-msgid "# of Update RPMs by Important RHSAs at minimum"
-msgstr "Important RHSA にともなう更新 RPM の数 (最小で)"
+msgid "# of Update RPMs by Critical RHSAs at minimum"
+msgstr "Critical RHSA にともなう更新 RPM の数 (最小)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:608
+#: pkg/..//rpmkit/updateinfo/main.py:607
+msgid "# of Update RPMs by Important RHSAs at minimum"
+msgstr "Important RHSA にともなう更新 RPM の数 (最小)"
+
+#: pkg/..//rpmkit/updateinfo/main.py:610
 msgid "RHBAs (Bug Errata) by keywords: %s"
 msgstr "キーワードによる RHBA (バグエラータ), キーワード: %s"
 
-#: pkg/..//rpmkit/updateinfo/main.py:609
+#: pkg/..//rpmkit/updateinfo/main.py:611
 msgid "# of RHBAs by keywords"
 msgstr "キーワードによる RHBA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:610
+#: pkg/..//rpmkit/updateinfo/main.py:612
 msgid "# of Update RPMs by RHBAs by keywords at minimum"
-msgstr "キーワードによる RHBA にともなう更新 RPM の数 (最小で)"
+msgstr "キーワードによる RHBA にともなう更新 RPM の数 (最小)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:615
+#: pkg/..//rpmkit/updateinfo/main.py:617
 msgid "RHBAs of core rpms: %s"
 msgstr "コア RPM の RHBA: コア RPM = %s"
 
-#: pkg/..//rpmkit/updateinfo/main.py:616
-msgid "# of RHBAs of core rpms"
-msgstr "コア RPM の RHBA の数"
+#: pkg/..//rpmkit/updateinfo/main.py:618
+msgid "# of RHBAs of core rpms (latests only)"
+msgstr "コア RPM の RHBA の数 (最新)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:621
+#: pkg/..//rpmkit/updateinfo/main.py:623
 msgid "RHSAs and RHBAs by CVSS score"
 msgstr "CVSS スコアによる RHSA と RHBA"
 
-#: pkg/..//rpmkit/updateinfo/main.py:622
+#: pkg/..//rpmkit/updateinfo/main.py:624
 msgid "# of RHSAs of CVSS Score >= %.1f"
 msgstr "CVSS スコア >= %.1f の RHSA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:624
-msgid "# of Update RPMs by the above RHSAs at minimum"
-msgstr "上記 RHSA による更新 RPM の数 (最小で)"
-
 #: pkg/..//rpmkit/updateinfo/main.py:626
+msgid "# of Update RPMs by the above RHSAs at minimum"
+msgstr "上記 RHSA による更新 RPM の数 (最小)"
+
+#: pkg/..//rpmkit/updateinfo/main.py:628
 msgid "# of RHBAs of CVSS Score >= %.1f"
 msgstr "CVSS スコア >= %.1f の RHBA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:628
+#: pkg/..//rpmkit/updateinfo/main.py:630
 msgid "# of Update RPMs by the above RHBAs at minimum"
-msgstr "上記 RHBA による更新 RPM の数 (最小で)"
+msgstr "上記 RHBA による更新 RPM の数 (最小)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:632
+#: pkg/..//rpmkit/updateinfo/main.py:634
 msgid "# of RHSAs"
 msgstr "RHSA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:633
+#: pkg/..//rpmkit/updateinfo/main.py:635
 msgid "# of RHBAs"
 msgstr "RHBA の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:634
+#: pkg/..//rpmkit/updateinfo/main.py:636
 msgid "# of RHEAs (Enhancement Errata)"
 msgstr "RHEA (機能拡張エラータ) の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:636
+#: pkg/..//rpmkit/updateinfo/main.py:638
 msgid "# of Update RPMs"
 msgstr "更新 RPM の数"
 
-#: pkg/..//rpmkit/updateinfo/main.py:639
+#: pkg/..//rpmkit/updateinfo/main.py:641
 msgid "Item"
 msgstr "項目"
 
-#: pkg/..//rpmkit/updateinfo/main.py:639
+#: pkg/..//rpmkit/updateinfo/main.py:641
 msgid "Notes"
 msgstr "メモ"
 
-#: pkg/..//rpmkit/updateinfo/main.py:639
+#: pkg/..//rpmkit/updateinfo/main.py:641
 msgid "Value"
 msgstr "値"
 
-#: pkg/..//rpmkit/updateinfo/main.py:641
+#: pkg/..//rpmkit/updateinfo/main.py:643
 msgid "Overview of analysis results"
 msgstr "解析結果の概要"
 
-#: pkg/..//rpmkit/updateinfo/main.py:683
+#: pkg/..//rpmkit/updateinfo/main.py:685
 msgid "arch"
 msgstr "arch"
 
-#: pkg/..//rpmkit/updateinfo/main.py:683
+#: pkg/..//rpmkit/updateinfo/main.py:685
 msgid "epoch"
 msgstr "epoch"
 
-#: pkg/..//rpmkit/updateinfo/main.py:683
+#: pkg/..//rpmkit/updateinfo/main.py:685
 msgid "name"
 msgstr "名前"
 
-#: pkg/..//rpmkit/updateinfo/main.py:683
+#: pkg/..//rpmkit/updateinfo/main.py:685
 msgid "release"
 msgstr "リリース"
 
-#: pkg/..//rpmkit/updateinfo/main.py:683
+#: pkg/..//rpmkit/updateinfo/main.py:685
 msgid "version"
 msgstr "バージョン"
 
-#: pkg/..//rpmkit/updateinfo/main.py:686
+#: pkg/..//rpmkit/updateinfo/main.py:688
 msgid "buildhost"
 msgstr "ビルドホスト"
 
-#: pkg/..//rpmkit/updateinfo/main.py:686
+#: pkg/..//rpmkit/updateinfo/main.py:688
 msgid "summary"
 msgstr "概要"
 
-#: pkg/..//rpmkit/updateinfo/main.py:686
+#: pkg/..//rpmkit/updateinfo/main.py:688
 msgid "vendor"
 msgstr "ベンダー"
 
-#: pkg/..//rpmkit/updateinfo/main.py:689 pkg/..//rpmkit/updateinfo/main.py:692
-#: pkg/..//rpmkit/updateinfo/main.py:723 pkg/..//rpmkit/updateinfo/main.py:729
-#: pkg/..//rpmkit/updateinfo/main.py:740
+#: pkg/..//rpmkit/updateinfo/main.py:691 pkg/..//rpmkit/updateinfo/main.py:694
+#: pkg/..//rpmkit/updateinfo/main.py:725 pkg/..//rpmkit/updateinfo/main.py:731
+#: pkg/..//rpmkit/updateinfo/main.py:742
 msgid "advisory"
 msgstr "アドバイザリ"
 
-#: pkg/..//rpmkit/updateinfo/main.py:689 pkg/..//rpmkit/updateinfo/main.py:692
-#: pkg/..//rpmkit/updateinfo/main.py:723 pkg/..//rpmkit/updateinfo/main.py:729
-#: pkg/..//rpmkit/updateinfo/main.py:741
+#: pkg/..//rpmkit/updateinfo/main.py:691 pkg/..//rpmkit/updateinfo/main.py:694
+#: pkg/..//rpmkit/updateinfo/main.py:725 pkg/..//rpmkit/updateinfo/main.py:731
+#: pkg/..//rpmkit/updateinfo/main.py:743
 msgid "synopsis"
 msgstr "概要"
 
-#: pkg/..//rpmkit/updateinfo/main.py:689 pkg/..//rpmkit/updateinfo/main.py:692
-#: pkg/..//rpmkit/updateinfo/main.py:724 pkg/..//rpmkit/updateinfo/main.py:730
-#: pkg/..//rpmkit/updateinfo/main.py:742
+#: pkg/..//rpmkit/updateinfo/main.py:691 pkg/..//rpmkit/updateinfo/main.py:694
+#: pkg/..//rpmkit/updateinfo/main.py:726 pkg/..//rpmkit/updateinfo/main.py:732
+#: pkg/..//rpmkit/updateinfo/main.py:744
 msgid "url"
 msgstr "URL"
 
-#: pkg/..//rpmkit/updateinfo/main.py:689 pkg/..//rpmkit/updateinfo/main.py:723
-#: pkg/..//rpmkit/updateinfo/main.py:740
+#: pkg/..//rpmkit/updateinfo/main.py:691 pkg/..//rpmkit/updateinfo/main.py:725
+#: pkg/..//rpmkit/updateinfo/main.py:742
 msgid "severity"
 msgstr "影響度"
 
-#: pkg/..//rpmkit/updateinfo/main.py:690 pkg/..//rpmkit/updateinfo/main.py:693
-#: pkg/..//rpmkit/updateinfo/main.py:743
+#: pkg/..//rpmkit/updateinfo/main.py:692 pkg/..//rpmkit/updateinfo/main.py:695
+#: pkg/..//rpmkit/updateinfo/main.py:745
 msgid "update_names"
 msgstr "更新 RPM 名"
 
-#: pkg/..//rpmkit/updateinfo/main.py:692
+#: pkg/..//rpmkit/updateinfo/main.py:694
 msgid "keywords"
 msgstr "キーワード"
 
-#: pkg/..//rpmkit/updateinfo/main.py:698
+#: pkg/..//rpmkit/updateinfo/main.py:700
 msgid "Cri-Important RHSAs (latests)"
 msgstr "Cri. または Imp. RHSA (最新)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:703
+#: pkg/..//rpmkit/updateinfo/main.py:705
 msgid "Critical or Important RHSAs"
 msgstr "Critical または Important RHSA"
 
-#: pkg/..//rpmkit/updateinfo/main.py:705
+#: pkg/..//rpmkit/updateinfo/main.py:707
 msgid "RHBAs (core rpms, keywords)"
 msgstr "RHBA (コア RPM, キーワード)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:706
+#: pkg/..//rpmkit/updateinfo/main.py:708
 msgid "RHBAs (keyword)"
 msgstr "RHBA (キーワード)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:709
-msgid "RHBAs (core rpms)"
-msgstr "RHBA (コア RPM)"
-
 #: pkg/..//rpmkit/updateinfo/main.py:711
+msgid "RHBAs (core rpms, latests)"
+msgstr "RHBA (コア RPM, 最新)"
+
+#: pkg/..//rpmkit/updateinfo/main.py:713
 msgid "Update RPMs by RHSAs (Critical)"
 msgstr "RHSA (Critical) による更新 RPM"
 
-#: pkg/..//rpmkit/updateinfo/main.py:714
+#: pkg/..//rpmkit/updateinfo/main.py:716
 msgid "Updates by RHSAs (Important)"
 msgstr "RHSA (Important) による更新 RPM"
 
-#: pkg/..//rpmkit/updateinfo/main.py:716
+#: pkg/..//rpmkit/updateinfo/main.py:718
 msgid "Updates by RHBAs (Keyword)"
 msgstr "RHBA (キーワード) による更新 RPM"
 
-#: pkg/..//rpmkit/updateinfo/main.py:720
+#: pkg/..//rpmkit/updateinfo/main.py:722
 msgid "RHSAs (CVSS score >= %.1f)"
 msgstr "RHSA (CVSS スコア >= %.1f)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:724 pkg/..//rpmkit/updateinfo/main.py:729
-#: pkg/..//rpmkit/updateinfo/main.py:742
+#: pkg/..//rpmkit/updateinfo/main.py:726 pkg/..//rpmkit/updateinfo/main.py:731
+#: pkg/..//rpmkit/updateinfo/main.py:744
 msgid "cves"
 msgstr "CVE リスト"
 
-#: pkg/..//rpmkit/updateinfo/main.py:724 pkg/..//rpmkit/updateinfo/main.py:730
+#: pkg/..//rpmkit/updateinfo/main.py:726 pkg/..//rpmkit/updateinfo/main.py:732
 msgid "cvsses_s"
 msgstr "CVSS リスト"
 
-#: pkg/..//rpmkit/updateinfo/main.py:726
+#: pkg/..//rpmkit/updateinfo/main.py:728
 msgid "RHBAs (CVSS score >= %.1f)"
 msgstr "RHBA (CVSS スコア >= %.1f)"
 
-#: pkg/..//rpmkit/updateinfo/main.py:740
+#: pkg/..//rpmkit/updateinfo/main.py:742
 msgid "type"
 msgstr "種別"
 
-#: pkg/..//rpmkit/updateinfo/main.py:741
+#: pkg/..//rpmkit/updateinfo/main.py:743
 msgid "description"
 msgstr "説明"
 
-#: pkg/..//rpmkit/updateinfo/main.py:741
+#: pkg/..//rpmkit/updateinfo/main.py:743
 msgid "issue_date"
 msgstr "発行日"
 
-#: pkg/..//rpmkit/updateinfo/main.py:742
+#: pkg/..//rpmkit/updateinfo/main.py:744
 msgid "update_date"
 msgstr "更新日"
 
-#: pkg/..//rpmkit/updateinfo/main.py:743
+#: pkg/..//rpmkit/updateinfo/main.py:745
 msgid "bzs"
 msgstr "RHBZ リスト"
 
-#: pkg/..//rpmkit/updateinfo/main.py:772
+#: pkg/..//rpmkit/updateinfo/main.py:774
 msgid "%s: Use guessed repos %s"
 msgstr "%s: 推測したリポジトリ %s を利用"
 
-#: pkg/..//rpmkit/updateinfo/main.py:775
+#: pkg/..//rpmkit/updateinfo/main.py:777
 msgid "%s: Set workdir to root %s"
 msgstr "%s: 作業用ディレクトリを root %s に設定"
 
-#: pkg/..//rpmkit/updateinfo/main.py:779
+#: pkg/..//rpmkit/updateinfo/main.py:781
 msgid "%s: Creating working dir %s"
 msgstr "%s: 作業用ディレクトリ %s を作成"
 
-#: pkg/..//rpmkit/updateinfo/main.py:787
+#: pkg/..//rpmkit/updateinfo/main.py:789
 msgid "%s: RPM DB not available and don't analyze %s"
 msgstr "%s: RPM DB が利用できないので %s については解析せず"
 
-#: pkg/..//rpmkit/updateinfo/main.py:792
+#: pkg/..//rpmkit/updateinfo/main.py:794
 msgid "%s: Initialized backend %s"
 msgstr "%s: バックエンド %s を初期化"
 
-#: pkg/..//rpmkit/updateinfo/main.py:795
+#: pkg/..//rpmkit/updateinfo/main.py:797
 msgid "%s: Dump Installed RPMs list loaded from %s"
 msgstr "%s: %s から読み込んだインストール RPM 一覧を出力"
 
-#: pkg/..//rpmkit/updateinfo/main.py:799
+#: pkg/..//rpmkit/updateinfo/main.py:801
 msgid "%s: Found %d Installed RPMs"
 msgstr "%s: %d 個のインストール RPM を発見"
 
-#: pkg/..//rpmkit/updateinfo/main.py:866
+#: pkg/..//rpmkit/updateinfo/main.py:868
 msgid "%s: Dump metadata for %s"
 msgstr "%s: %s についてメタデータを出力"
 
-#: pkg/..//rpmkit/updateinfo/main.py:874
+#: pkg/..//rpmkit/updateinfo/main.py:876
 msgid "%s: Found %d Errata, %d Update RPMs"
 msgstr "%s: %d 個のエラータと %d 個の更新 RPM を発見"
 
-#: pkg/..//rpmkit/updateinfo/main.py:877
+#: pkg/..//rpmkit/updateinfo/main.py:879
 msgid "%s: Dump Errata and Update RPMs list..."
 msgstr "%s: エラータと更新 RPM 一覧を出力"
 
-#: pkg/..//rpmkit/updateinfo/main.py:885
+#: pkg/..//rpmkit/updateinfo/main.py:887
 msgid "%s: Analyze and dump results of errata data in %s"
 msgstr "%s: エラータデータの解析結果を %s に出力"
 
-#: pkg/..//rpmkit/updateinfo/main.py:893
+#: pkg/..//rpmkit/updateinfo/main.py:895
 msgid "%s: Analyze errata in period: %s ~ %s"
 msgstr "%s: 指定期間のエラータを解析: %s ~ %s"
 
-#: pkg/..//rpmkit/updateinfo/main.py:899
+#: pkg/..//rpmkit/updateinfo/main.py:901
 msgid "%s: Creating period working dir %s"
 msgstr "%s: 指定期間データの作業用ディレクトリ %s を作成"
 
-#: pkg/..//rpmkit/updateinfo/main.py:905
+#: pkg/..//rpmkit/updateinfo/main.py:907
 msgid "%s [delta]: Analyze delta errata data by refering %s"
 msgstr "%s [差分]: %s を参照して差分エラータを解析中"
 
-#: pkg/..//rpmkit/updateinfo/main.py:908
+#: pkg/..//rpmkit/updateinfo/main.py:910
 msgid "%s [delta]: Found %d Errata, %d Update RPMs"
 msgstr "%s [差分]: %d 個のエラータと %d 個の更新 RPM を発見"
 
-#: pkg/..//rpmkit/updateinfo/main.py:913
+#: pkg/..//rpmkit/updateinfo/main.py:915
 msgid "%s: Creating delta working dir %s"
 msgstr "%s: 差分データのための作業用ディレクトリ %s を作成"
 
-#: pkg/..//rpmkit/updateinfo/main.py:920
+#: pkg/..//rpmkit/updateinfo/main.py:922
 msgid "%s: Analyze and dump results of delta errata in %s"
 msgstr "%s: 差分エラータデータの解析結果を %s に出力"
 
@@ -452,6 +452,9 @@ msgstr "%d/%d ホストを解析"
 #: pkg/..//rpmkit/updateinfo/multihosts.py:170
 msgid "Skip to analyze %s as its installed RPMs are exactly same as %s's"
 msgstr "%s は解析せず (%s と同じインストール RPM 構成)"
+
+#~ msgid "RHBAs (core rpms)"
+#~ msgstr "RHBA (コア RPM)"
 
 #~ msgid "Dump Errata list..."
 #~ msgstr "エラータ一覧を出力..."
