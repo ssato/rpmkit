@@ -537,6 +537,7 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
     rhba_of_rpms_by_kwds = errata_of_rpms(rhba_by_kwds, core_rpms, kf)
     rhba_of_rpms = errata_of_rpms(rhba, core_rpms,
                                   itemgetter("update_names"))
+    latest_rhba_of_rpms = list_latest_errata_groupby_updates(rhba_of_rpms)
 
     if score > 0:
         rhsa_by_score = list(higher_score_cve_errata_g(rhsa, score))
@@ -561,6 +562,7 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
                 us_of_rhsa_imp=us_of_rhsa_imp,
                 rhba=rhba, rhba_by_kwds=rhba_by_kwds,
                 rhba_of_core_rpms=rhba_of_rpms,
+                rhba_of_core_rpms_latests=latest_rhba_of_rpms,
                 rhba_of_core_rpms_by_kwds=rhba_of_rpms_by_kwds,
                 rhba_by_cvss_score=rhba_by_score,
                 us_of_rhba_by_kwds=us_of_rhba_by_kwds,
@@ -613,8 +615,8 @@ def make_overview_dataset(workdir, data, score=0, keywords=ERRATA_KEYWORDS,
     if core_rpms:
         rows += [[],
                  [_("RHBAs of core rpms: %s") % ", ".join(core_rpms)],
-                 [_("# of RHBAs of core rpms"),
-                  len(data["errata"]["rhba_of_core_rpms"])]]
+                 [_("# of RHBAs of core rpms (latests only)"),
+                  len(data["errata"]["rhba_of_core_rpms_latests"])]]
 
     if score > 0:
         rows += [[],
@@ -705,8 +707,8 @@ def dump_results(workdir, rpms, errata, updates, score=0,
                        _("RHBAs (core rpms, keywords)"), bekeys, lbekeys),
           make_dataset(data["errata"]["rhba_by_kwds"], _("RHBAs (keyword)"),
                        bekeys, lbekeys),
-          make_dataset(data["errata"]["rhba_of_core_rpms"],
-                       _("RHBAs (core rpms)"), bekeys, lbekeys),
+          make_dataset(data["errata"]["rhba_of_core_rpms_latests"],
+                       _("RHBAs (core rpms, latests)"), bekeys, lbekeys),
           make_dataset(data["errata"]["us_of_rhsa_cri"],
                        _("Update RPMs by RHSAs (Critical)"), rpmkeys,
                        lrpmkeys),
