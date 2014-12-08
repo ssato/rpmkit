@@ -43,9 +43,10 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
                       "RPM DBs automatically, and please not that any other "
                       "repos are disabled if this option was set.")
     p.add_option("-I", "--id", help="Data ID [None]")
-    p.add_option("-M", "--multiproc", action="store_true",
-                 help="Specify this option if you want to analyze data "
-                      "in parallel (disabled currently)")
+    # TODO: Disabled until issue of yum vs. multiprocessing module is fixed.
+    # p.add_option("-M", "--multiproc", action="store_true",
+    #             help="Specify this option if you want to analyze data "
+    #                  "in parallel (disabled currently)")
     p.add_option("-B", "--backend", choices=backends.keys(),
                  help="Specify backend to get updates and errata. Choices: "
                       "%s [%%default]" % ', '.join(backends.keys()))
