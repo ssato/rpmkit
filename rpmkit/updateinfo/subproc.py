@@ -10,8 +10,6 @@
 #
 import Queue
 import logging
-import os.path
-import os
 import signal
 import subprocess
 import threading

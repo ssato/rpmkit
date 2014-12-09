@@ -139,7 +139,7 @@ def hawkey_adv_to_errata(hadv):
     :param hadv: A _hawkey.Advisory object
     """
     assert hadv.id, "Not _hawkey.Advisory ?: {}".format(hadv)
-        
+
     errata = dict(advisory=hadv.id, synopsis=hadv.title,
                   description=hadv.description,
                   update_date=hadv.update.strftime("%Y-%m-%d"),
@@ -152,7 +152,7 @@ def hawkey_adv_to_errata(hadv):
                      in hadv.references if r.type == hawkey.REFERENCE_BUGZILLA]
 
     errata["cves"] = [dict(id=r.id, cve=r.id, url=r.url) for r
-                     in hadv.references if r.type == hawkey.REFERENCE_CVE]
+                      in hadv.references if r.type == hawkey.REFERENCE_CVE]
 
     errata["packages"] = [dict(name=p.name, arch=p.arch, evr=p.evr) for p
                           in hadv.packages]
