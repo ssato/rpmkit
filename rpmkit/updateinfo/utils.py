@@ -221,29 +221,29 @@ def guess_rhel_repos(root, with_extras=False):
         # Yum repos for RHEL 5, requires RHN Classic registration:
         repos = ["rhel-x86_64-server-5", ]
         if with_extras:
-            repo += ["rhel-x86_64-server-cluster-5",
-                     "rhel-x86_64-server-cluster-storage-5",
-                     "rhel-x86_64-server-productivity-5",
-                     "rhel-x86_64-server-supplementary-5"]
+            repos += ["rhel-x86_64-server-cluster-5",
+                      "rhel-x86_64-server-cluster-storage-5",
+                      "rhel-x86_64-server-productivity-5",
+                      "rhel-x86_64-server-supplementary-5"]
     elif rhelver == 6:
         # Yum repos for RHEL 6, requires RHN Classic registration:
         repos = ["rhel-x86_64-server-6",
                  "rhel-x86_64-server-optional-6"]
         if with_extras:
-            repo += ["rhel-x86_64-server-ha-6",
-                     "rhel-x86_64-server-rs-6",
-                     "rhel-x86_64-server-sfs-6",
-                     "rhel-x86_64-server-supplementary-6"]
+            repos += ["rhel-x86_64-server-ha-6",
+                      "rhel-x86_64-server-rs-6",
+                      "rhel-x86_64-server-sfs-6",
+                      "rhel-x86_64-server-supplementary-6"]
     else:
         # RHN yum repos:
         repos = ["rhel-7-server-rpms",
                  "rhel-7-server-optional-rpms"]
         if with_extras:
-            repo += ["rhel-7-server-rh-common-rpms",
-                     "rhel-7-server-extras-rpms",
-                     "rhel-ha-for-rhel-7-server-rpms",
-                     "rhel-rs-for-rhel-7-server-rpms",
-                     "rhel-7-server-supplementary-rpms"]
+            repos += ["rhel-7-server-rh-common-rpms",
+                      "rhel-7-server-extras-rpms",
+                      "rhel-ha-for-rhel-7-server-rpms",
+                      "rhel-rs-for-rhel-7-server-rpms",
+                      "rhel-7-server-supplementary-rpms"]
     return repos
 
 # vim:sw=4:ts=4:et:
