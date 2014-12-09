@@ -214,7 +214,7 @@ def guess_rhel_version(root, maybe_rhel_4=False):
                     break
 
     rpmver = ps[0].rpmversion
-    irpmver = int(''.join(rpmver.split('.')[:3])[:3])
+    irpmver = int(''.join(rpmver.split('.')[:4])[:4])
 
     # Handle special cases at first:
     if is_rhel_4:
@@ -225,14 +225,22 @@ def guess_rhel_version(root, maybe_rhel_4=False):
         osver = 4
     elif irpmver == 442:
         osver = 5
-    elif irpmver >= 470 and irpmver < 411:  # 471, 472, 480, etc.
+    elif irpmver >= 470:  # 471, 472, 480, etc.
         osver = 6
-    elif irpmver >= 411:  # 471, 472, 480, etc.
+    elif irpmver >= 4110:  # 4111, etc.
         osver = 7
     else:
         osver = 0
 
     return osver
+
+
+def _get_rpmver(root):
+    ts = rpm_transactionset(root, True)
+    rpmver = [h for h in ts.dbMatch()][0][rpm.RPMTAG_RPMVERSION]
+    del ts
+
+    return rpmver
 
 
 def guess_rhel_version_simple(root):
@@ -248,19 +256,16 @@ def guess_rhel_version_simple(root):
     :param root: RPM DB root dir
     :param maybe_rhel_4:
     """
-    ts = rpm_transactionset(root, True)
-    rpmver = [h for h in ts.dbMatch()][0][rpm.RPMTAG_RPMVERSION]
-    del ts
-
-    irpmver = int(''.join(rpmver.split('.')[:3])[:3])
+    rpmver = _get_rpmver(root)
+    irpmver = int(''.join(rpmver.split('.')[:4])[:4])
 
     if irpmver in (433, 432, 431):
         osver = 4
     elif irpmver == 442:
         osver = 5
-    elif irpmver >= 470 and irpmver < 411:
+    elif irpmver >= 470:
         osver = 6
-    elif irpmver >= 411:
+    elif irpmver >= 4110:
         osver = 7
     else:
         osver = 0
