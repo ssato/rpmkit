@@ -225,7 +225,7 @@ def guess_rhel_version(root, maybe_rhel_4=False):
         osver = 4
     elif irpmver == 442:
         osver = 5
-    elif irpmver >= 470:  # 471, 472, 480, etc.
+    elif irpmver >= 470 and irpmver < 411:  # 471, 472, 480, etc.
         osver = 6
     elif irpmver >= 411:  # 471, 472, 480, etc.
         osver = 7
