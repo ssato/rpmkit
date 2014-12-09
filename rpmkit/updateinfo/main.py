@@ -893,13 +893,11 @@ def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
 
     if period:
         (start_date, end_date) = period_to_dates(*period)
-        period_s = "%s_%s" % (start_date, end_date)
-
         LOG.info(_("%s: Analyze errata in period: %s ~ %s"),
                  host.id, start_date, end_date)
         pes = [e for e in es if errata_in_period(e, start_date, end_date)]
 
-        pdir = os.path.join(workdir, period_s)
+        pdir = os.path.join(workdir, "%s_%s" % (start_date, end_date))
         if not os.path.exists(pdir):
             LOG.debug(_("%s: Creating period working dir %s"), host.id, pdir)
             os.makedirs(pdir)
