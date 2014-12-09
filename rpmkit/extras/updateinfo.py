@@ -26,7 +26,6 @@ from operator import itemgetter
 
 import rpmkit.updateinfo.yumwrapper as RUY
 import rpmkit.updateinfo.utils as RUU
-import rpmkit.memoize as M
 import rpmkit.rpmutils as RU
 import rpmkit.utils as U
 import rpmkit.swapi
@@ -697,7 +696,7 @@ def cve_socre_gt(cve, score=4.0, default=False):
         return float(cve["score"]) >= score
     except Exception:
         LOG.warn("Failed to compare CVE's score: %s, score=%.1f" %
-                     (str(cve), score))
+                 (str(cve), score))
 
     return default
 
