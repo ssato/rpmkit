@@ -159,7 +159,7 @@ class Base(rpmkit.updateinfo.base.Base):
         except AttributeError:
             self.base.preconf.root = self.root
 
-        self.set_cachedir(self.cachedir)
+        self.set_cachedir(self._cachedir)
         self.base.logger = self.base.verbose_logger = LOG
         self._activate_repos()
 

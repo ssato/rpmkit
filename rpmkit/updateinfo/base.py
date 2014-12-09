@@ -34,9 +34,9 @@ class Base(object):
         self._packages = collections.defaultdict(list)
 
         if cachedir is None:
-            self.cachedir = os.path.join(self.root, "var/cache")
+            self._cachedir = os.path.join(self.root, "var/cache")
         else:
-            self.cachedir = cachedir
+            self._cachedir = cachedir
 
     def is_rpmdb_available(self, readonly=False):
         return rpmkit.updateinfo.utils.check_rpmdb_root(self.root, readonly)
