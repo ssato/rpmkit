@@ -126,8 +126,16 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
-* Fri Oct  3 2014 Satoru SATOH <ssato@redhat.com> - 0.2.12.999-1
-- swapi: make it outputs valid JSON outputs to enable post processing w/ jq
+* Wed Dec 10 2014 Satoru SATOH <ssato@redhat.com> - 0.2.13-1
+- [swapi] make it outputs in valid JSON format to allow post processing w/ jq
+- Introduce RHEL_5_BUILD build mode to build this for RHEL 5
+- rk-list_errata_for_releases: Add to list errata for RHEL minor releases
+- rk-updateinfo{,-legacy}: Replace rk-updateinfo w/ new rpmkit.updateinfo based
+  ones along with a few different backends (yumbase, yumwrapper and dnfbase)
+  and renamed its old version based on swapi needs RHN or RH Satellite access,
+  to rk-updateinfo-legacy
+- Clean up and remove some deprecated modules
+- Some other code cleanups and bug fixes
 
 * Mon May 26 2014 Satoru SATOH <ssato@redhat.com> - 0.2.11.999-1
 - Remove runtime dependency to gevent and implement some alternative routines
@@ -321,7 +329,7 @@ rm -rf $RPM_BUILD_ROOT
 - swapi: make it allow setting cache expiration dates per API
 
 * Wed Aug 24 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110824.1-1
-- make %{_sysconfdir}/myrepo.d owned by this package: suggested by yamato@redhat.com
+- make _sysconfdir/myrepo.d owned by this package: suggested by yamato@redhat.com
 
 * Thu Aug  4 2011 Satoru SATOH <ssato@redhat.com> - 0.2.0.20110804.1-1
 - myrepo: followed updates in packagemaker
