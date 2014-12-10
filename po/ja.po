@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: rpmkit 0.2.10.16\n"
-"POT-Creation-Date: 2014-12-09 12:04+JST\n"
+"POT-Creation-Date: 2014-12-10 10:32+JST\n"
 "PO-Revision-Date: 2014-12-08 15:54+0900\n"
 "Last-Translator: Satoru SATOH <ssato@redhat.com>\n"
 "Language-Team: Japanese <ssato@redhat.com>\n"
@@ -405,27 +405,27 @@ msgstr "%s: エラータと更新 RPM 一覧を出力"
 msgid "%s: Analyze and dump results of errata data in %s"
 msgstr "%s: エラータデータの解析結果を %s に出力"
 
-#: pkg/..//rpmkit/updateinfo/main.py:898
+#: pkg/..//rpmkit/updateinfo/main.py:896
 msgid "%s: Analyze errata in period: %s ~ %s"
 msgstr "%s: 指定期間のエラータを解析: %s ~ %s"
 
-#: pkg/..//rpmkit/updateinfo/main.py:904
+#: pkg/..//rpmkit/updateinfo/main.py:902
 msgid "%s: Creating period working dir %s"
 msgstr "%s: 指定期間データの作業用ディレクトリ %s を作成"
 
-#: pkg/..//rpmkit/updateinfo/main.py:910
+#: pkg/..//rpmkit/updateinfo/main.py:908
 msgid "%s [delta]: Analyze delta errata data by refering %s"
 msgstr "%s [差分]: %s を参照して差分エラータを解析中"
 
-#: pkg/..//rpmkit/updateinfo/main.py:913
+#: pkg/..//rpmkit/updateinfo/main.py:911
 msgid "%s [delta]: Found %d Errata, %d Update RPMs"
 msgstr "%s [差分]: %d 個のエラータと %d 個の更新 RPM を発見"
 
-#: pkg/..//rpmkit/updateinfo/main.py:918
+#: pkg/..//rpmkit/updateinfo/main.py:916
 msgid "%s: Creating delta working dir %s"
 msgstr "%s: 差分データのための作業用ディレクトリ %s を作成"
 
-#: pkg/..//rpmkit/updateinfo/main.py:925
+#: pkg/..//rpmkit/updateinfo/main.py:923
 msgid "%s: Analyze and dump results of delta errata in %s"
 msgstr "%s: 差分エラータデータの解析結果を %s に出力"
 

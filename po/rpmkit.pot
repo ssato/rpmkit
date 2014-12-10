@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2014-12-09 12:04+JST\n"
+"POT-Creation-Date: 2014-12-10 10:32+JST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -415,27 +415,27 @@ msgstr ""
 msgid "%s: Analyze and dump results of errata data in %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:898
+#: ./pkg/..//rpmkit/updateinfo/main.py:896
 msgid "%s: Analyze errata in period: %s ~ %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:904
+#: ./pkg/..//rpmkit/updateinfo/main.py:902
 msgid "%s: Creating period working dir %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:910
+#: ./pkg/..//rpmkit/updateinfo/main.py:908
 msgid "%s [delta]: Analyze delta errata data by refering %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:913
+#: ./pkg/..//rpmkit/updateinfo/main.py:911
 msgid "%s [delta]: Found %d Errata, %d Update RPMs"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:918
+#: ./pkg/..//rpmkit/updateinfo/main.py:916
 msgid "%s: Creating delta working dir %s"
 msgstr ""
 
-#: ./pkg/..//rpmkit/updateinfo/main.py:925
+#: ./pkg/..//rpmkit/updateinfo/main.py:923
 msgid "%s: Analyze and dump results of delta errata in %s"
 msgstr ""
 
