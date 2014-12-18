@@ -8,7 +8,9 @@ topdir=${curdir}/../
 podir=${topdir}/po
 localedir=${topdir}/${pkgname}/locale
 
-pygettext.py -d ${pkgname} -p ${podir} $(find ${topdir}/${pkgname} -name '*.py' | grep -v test)
+# TODO: switch from pygettext to xgettext
+${curdir}/pygettext.py -d ${pkgname} -p ${podir} $(find ${topdir}/${pkgname} -name '*.py' | grep -v test)
+#xgettext --from-code=utf-8 -L python -d ${pkgname} -p ${podir} $(find ${topdir}/${pkgname} -name '*.py' | grep -v test)
 
 for po in ${podir}/*.po; do
     t=${po##*/}
