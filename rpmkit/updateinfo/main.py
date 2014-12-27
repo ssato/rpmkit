@@ -429,6 +429,21 @@ def errata_complement_g(errata, updates, score=0):
         yield e
 
 
+def list_num_of_es_for_updates(es):
+    """
+    List number of specific type of errata for each package names.
+
+    :param es: List of reference errata of specific type (and severity)
+    :return: [(package_name :: str, num_of_relevant_errata :: Int)]
+    """
+    unes = U.uconcat([(u["name"], e) for u in e["updates"]] for e in es)
+    uess = [(k, [ue[1]["advisory"] for ue in g]) for k, g in
+            itertools.groupby(unes, itemgetter(0))]
+
+    return sorted(((un, len(es)) for un, es in uess), key=itemgetter(1),
+                  reverse=True)
+
+
 _DATE_REG = re.compile(r"^(\d{4})(?:.(\d{2})(?:.(\d{2}))?)?$")
 
 
@@ -554,21 +569,47 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
 
     rhea = [e for e in errata if e["advisory"].startswith("RHEA")]
 
-    return dict(rhsa=rhsa, rhsa_cri=rhsa_cri, rhsa_imp=rhsa_imp,
-                rhsa_cri_latests=rhsa_cri_latests,
-                rhsa_imp_latests=rhsa_imp_latests,
-                rhsa_by_cvss_score=rhsa_by_score,
-                us_of_rhsa_cri=us_of_rhsa_cri,
-                us_of_rhsa_imp=us_of_rhsa_imp,
-                rhba=rhba, rhba_by_kwds=rhba_by_kwds,
-                rhba_of_core_rpms=rhba_of_rpms,
-                rhba_of_core_rpms_latests=latest_rhba_of_rpms,
-                rhba_of_core_rpms_by_kwds=rhba_of_rpms_by_kwds,
-                rhba_by_cvss_score=rhba_by_score,
-                us_of_rhba_by_kwds=us_of_rhba_by_kwds,
-                us_of_rhsa_by_cvss_score=us_of_rhsa_by_score,
-                us_of_rhba_by_cvss_score=us_of_rhba_by_score,
-                rhea=rhea)
+    rhsa_rate_by_sev = [("Critical", len(rhsa_cri)),
+                        ("Important", len(rhsa_imp)),
+                        ("Moderate",
+                         len([e for e in rhsa
+                              if e.get("severity") == "Moderate"])),
+                        ("Low",
+                         len([e for e in rhsa
+                              if e.get("severity") == "Low"]))]
+
+    n_rhsa_by_pns = list_num_of_es_for_updates(rhsa)
+    n_cri_rhsa_by_pns = list_num_of_es_for_updates(rhsa_cri)
+    n_imp_rhsa_by_pns = list_num_of_es_for_updates(rhsa_imp)
+
+    n_rhba_by_pns = list_num_of_es_for_updates(rhba)
+
+    return dict(rhsa=dict(list=rhsa,
+                          list_critical=rhsa_cri,
+                          list_important=rhsa_imp,
+                          list_latest_critical=rhsa_cri_latests,
+                          list_latest_important=rhsa_imp_latests,
+                          list_higher_cvss_score=rhsa_by_score,
+                          list_critical_updates=us_of_rhsa_cri,
+                          list_important_updates=us_of_rhsa_imp,
+                          list_higher_cvss_updates=us_of_rhsa_by_score,
+                          rate_by_sev=rhsa_rate_by_sev,
+                          list_n_by_pnames=n_rhsa_by_pns,
+                          list_n_cri_by_pnames=n_cri_rhsa_by_pns,
+                          list_n_imp_by_pnames=n_imp_rhsa_by_pns),
+                rhba=dict(list=rhba,
+                          list_by_kwds=rhba_by_kwds,
+                          list_of_core_rpms=rhba_of_rpms,
+                          list_latests_of_core_rpms=latest_rhba_of_rpms,
+                          list_by_kwds_of_core_rpms=rhba_of_rpms_by_kwds,
+                          list_higher_cvss_score=rhba_by_score,
+                          list_updates_by_kwds=us_of_rhba_by_kwds,
+                          list_higher_cvss_updates=us_of_rhba_by_score,
+                          list_n_by_pnames=n_rhba_by_pns),
+                rhea=rhea,
+                rate_by_type=[("Security", len(rhsa)),
+                              ("Bug", len(rhba)),
+                              ("Enhancement", len(rhea))])
 
 
 def padding_row(row, mcols):
@@ -595,40 +636,43 @@ def make_overview_dataset(workdir, data, score=0, keywords=ERRATA_KEYWORDS,
         overview of analysys reuslts
     """
     rows = [[_("Critical or Important RHSAs (Security Errata)")],
-            [_("# of Critical RHSAs"), len(data["errata"]["rhsa_cri"])],
+            [_("# of Critical RHSAs"),
+             len(data["errata"]["rhsa"]["list_critical"])],
             [_("# of Critical RHSAs (latests only)"),
-             len(data["errata"]["rhsa_cri_latests"])],
-            [_("# of Important RHSAs"), len(data["errata"]["rhsa_imp"])],
+             len(data["errata"]["rhsa"]["list_latest_critical"])],
+            [_("# of Important RHSAs"),
+             len(data["errata"]["rhsa"]["list_important"])],
             [_("# of Important RHSAs (latests only)"),
-             len(data["errata"]["rhsa_imp_latests"])],
+             len(data["errata"]["rhsa"]["list_latest_important"])],
             [_("Update RPMs by Critical or Important RHSAs at minimum")],
             [_("# of Update RPMs by Critical RHSAs at minimum"),
-             len(data["errata"]["us_of_rhsa_cri"])],
+             len(data["errata"]["rhsa"]["list_critical_updates"])],
             [_("# of Update RPMs by Important RHSAs at minimum"),
-             len(data["errata"]["us_of_rhsa_imp"])],
+             len(data["errata"]["rhsa"]["list_important_updates"])],
             [],
             [_("RHBAs (Bug Errata) by keywords: %s") % ", ".join(keywords)],
-            [_("# of RHBAs by keywords"), len(data["errata"]["rhba_by_kwds"])],
+            [_("# of RHBAs by keywords"),
+             len(data["errata"]["rhba"]["list_by_kwds"])],
             [_("# of Update RPMs by RHBAs by keywords at minimum"),
-             len(data["errata"]["us_of_rhba_by_kwds"])]]
+             len(data["errata"]["rhba"]["list_updates_by_kwds"])]]
 
     if core_rpms:
         rows += [[],
                  [_("RHBAs of core rpms: %s") % ", ".join(core_rpms)],
                  [_("# of RHBAs of core rpms (latests only)"),
-                  len(data["errata"]["rhba_of_core_rpms_latests"])]]
+                  len(data["errata"]["rhba"]["list_latests_of_core_rpms"])]]
 
     if score > 0:
         rows += [[],
                  [_("RHSAs and RHBAs by CVSS score")],
                  [_("# of RHSAs of CVSS Score >= %.1f") % score,
-                  len(data["errata"]["rhsa_by_cvss_score"])],
+                  len(data["errata"]["rhsa"]["list_higher_cvss_score"])],
                  [_("# of Update RPMs by the above RHSAs at minimum"),
-                  len(data["errata"]["us_of_rhsa_by_cvss_score"])],
+                  len(data["errata"]["rhsa"]["list_higher_cvss_updates"])],
                  [_("# of RHBAs of CVSS Score >= %.1f") % score,
-                  len(data["errata"]["rhba_by_cvss_score"])],
+                  len(data["errata"]["rhba"]["list_higher_cvss_score"])],
                  [_("# of Update RPMs by the above RHBAs at minimum"),
-                  len(data["errata"]["us_of_rhba_by_cvss_score"])]]
+                  len(data["errata"]["rhba"]["list_higher_cvss_updates"])]]
 
     rows += [[],
              [_("# of RHSAs"), len(data["errata"]["rhsa"])],
@@ -695,41 +739,41 @@ def dump_results(workdir, rpms, errata, updates, score=0,
                _("update_names"))
 
     ds = [make_overview_dataset(workdir, data, score, keywords, core_rpms),
-          make_dataset((data["errata"]["rhsa_cri_latests"] +
-                        data["errata"]["rhsa_imp_latests"]),
+          make_dataset((data["errata"]["rhsa"]["list_latest_critical"] +
+                        data["errata"]["rhsa"]["list_latest_important"]),
                        _("Cri-Important RHSAs (latests)"), sekeys, lsekeys),
-          make_dataset(sorted(data["errata"]["rhsa_cri"],
+          make_dataset(sorted(data["errata"]["rhsa"]["list_critical"],
                               key=itemgetter("update_names")) +
-                       sorted(data["errata"]["rhsa_imp"],
+                       sorted(data["errata"]["rhsa"]["list_important"],
                               key=itemgetter("update_names")),
                        _("Critical or Important RHSAs"), sekeys, lsekeys),
-          make_dataset(data["errata"]["rhba_of_core_rpms_by_kwds"],
+          make_dataset(data["errata"]["rhba"]["list_by_kwds_of_core_rpms"],
                        _("RHBAs (core rpms, keywords)"), bekeys, lbekeys),
-          make_dataset(data["errata"]["rhba_by_kwds"], _("RHBAs (keyword)"),
-                       bekeys, lbekeys),
-          make_dataset(data["errata"]["rhba_of_core_rpms_latests"],
+          make_dataset(data["errata"]["rhba"]["list_by_kwds"],
+                       _("RHBAs (keyword)"), bekeys, lbekeys),
+          make_dataset(data["errata"]["rhba"]["list_latests_of_core_rpms"],
                        _("RHBAs (core rpms, latests)"), bekeys, lbekeys),
-          make_dataset(data["errata"]["us_of_rhsa_cri"],
+          make_dataset(data["errata"]["rhsa"]["list_critical_updates"],
                        _("Update RPMs by RHSAs (Critical)"), rpmkeys,
                        lrpmkeys),
-          make_dataset(data["errata"]["us_of_rhsa_imp"],
+          make_dataset(data["errata"]["rhsa"]["list_important_updates"],
                        _("Updates by RHSAs (Important)"), rpmkeys, lrpmkeys),
-          make_dataset(data["errata"]["us_of_rhba_by_kwds"],
+          make_dataset(data["errata"]["rhba"]["list_updates_by_kwds"],
                        _("Updates by RHBAs (Keyword)"), rpmkeys, lrpmkeys)]
 
     if score > 0:
-        cvss_ds = [make_dataset(data["errata"]["rhsa_by_cvss_score"],
-                                _("RHSAs (CVSS score >= %.1f)") % score,
-                                ("advisory", "severity", "synopsis",
-                                 "cves", "cvsses_s", "url"),
-                                (_("advisory"), _("severity"), _("synopsis"),
-                                 _("cves"), _("cvsses_s"), _("url"))),
-                   make_dataset(data["errata"]["rhba_by_cvss_score"],
-                                _("RHBAs (CVSS score >= %.1f)") % score,
-                                ("advisory", "synopsis", "cves",
-                                 "cvsses_s", "url"),
-                                (_("advisory"), _("synopsis"), _("cves"),
-                                 _("cvsses_s"), _("url")))]
+        cvss_ds = [
+            make_dataset(data["errata"]["rhsa"]["list_higher_cvss_score"],
+                         _("RHSAs (CVSS score >= %.1f)") % score,
+                         ("advisory", "severity", "synopsis",
+                         "cves", "cvsses_s", "url"),
+                         (_("advisory"), _("severity"), _("synopsis"),
+                         _("cves"), _("cvsses_s"), _("url"))),
+            make_dataset(data["errata"]["rhsa"]["list_higher_cvss_score"],
+                         _("RHBAs (CVSS score >= %.1f)") % score,
+                         ("advisory", "synopsis", "cves", "cvsses_s", "url"),
+                         (_("advisory"), _("synopsis"), _("cves"),
+                         _("cvsses_s"), _("url")))]
         ds.extend(cvss_ds)
 
     dump_xls(ds, os.path.join(workdir, "errata_summary.xls"))
