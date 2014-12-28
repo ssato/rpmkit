@@ -10,7 +10,6 @@ import rpmkit.utils as RU
 import collections
 import itertools
 import logging
-import os.path
 import yum
 
 
@@ -145,6 +144,7 @@ class Base(rpmkit.updateinfo.base.Base):
         :param load_available_repos: It will populates the package sack from
             the repositories if True
 
+        >>> import os.path
         >>> if os.path.exists("/etc/redhat-release"):
         ...     base = Base()
         ...     assert isinstance(base.base, yum.YumBase)
