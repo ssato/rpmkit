@@ -535,13 +535,13 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
         ex. ("2014-10-01", "2014-11-01")
     """
     rhsa = [e for e in errata if e.get("severity", None) is not None]
-    rhsa_cri = [e for e in rhsa if e.get("severity") == "Critical"]
-    rhsa_imp = [e for e in rhsa if e.get("severity") == "Important"]
-    rhsa_cri_latests = list_latest_errata_groupby_updates(rhsa_cri)
-    rhsa_imp_latests = list_latest_errata_groupby_updates(rhsa_imp)
+    cri_rhsa = [e for e in rhsa if e.get("severity") == "Critical"]
+    imp_rhsa = [e for e in rhsa if e.get("severity") == "Important"]
+    latest_cri_rhsa = list_latest_errata_groupby_updates(cri_rhsa)
+    latest_imp_rhsa = list_latest_errata_groupby_updates(imp_rhsa)
 
-    us_of_rhsa_cri = list_updates_from_errata(rhsa_cri)
-    us_of_rhsa_imp = list_updates_from_errata(rhsa_imp)
+    us_of_cri_rhsa = list_updates_from_errata(cri_rhsa)
+    us_of_imp_rhsa = list_updates_from_errata(imp_rhsa)
 
     rhba = [e for e in errata if e["advisory"][2] == 'B']
 
@@ -569,8 +569,8 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
 
     rhea = [e for e in errata if e["advisory"].startswith("RHEA")]
 
-    rhsa_rate_by_sev = [("Critical", len(rhsa_cri)),
-                        ("Important", len(rhsa_imp)),
+    rhsa_rate_by_sev = [("Critical", len(cri_rhsa)),
+                        ("Important", len(imp_rhsa)),
                         ("Moderate",
                          len([e for e in rhsa
                               if e.get("severity") == "Moderate"])),
@@ -579,19 +579,19 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
                               if e.get("severity") == "Low"]))]
 
     n_rhsa_by_pns = list_num_of_es_for_updates(rhsa)
-    n_cri_rhsa_by_pns = list_num_of_es_for_updates(rhsa_cri)
-    n_imp_rhsa_by_pns = list_num_of_es_for_updates(rhsa_imp)
+    n_cri_rhsa_by_pns = list_num_of_es_for_updates(cri_rhsa)
+    n_imp_rhsa_by_pns = list_num_of_es_for_updates(imp_rhsa)
 
     n_rhba_by_pns = list_num_of_es_for_updates(rhba)
 
     return dict(rhsa=dict(list=rhsa,
-                          list_critical=rhsa_cri,
-                          list_important=rhsa_imp,
-                          list_latest_critical=rhsa_cri_latests,
-                          list_latest_important=rhsa_imp_latests,
+                          list_critical=cri_rhsa,
+                          list_important=imp_rhsa,
+                          list_latest_critical=latest_cri_rhsa,
+                          list_latest_important=latest_imp_rhsa,
                           list_higher_cvss_score=rhsa_by_score,
-                          list_critical_updates=us_of_rhsa_cri,
-                          list_important_updates=us_of_rhsa_imp,
+                          list_critical_updates=us_of_cri_rhsa,
+                          list_important_updates=us_of_imp_rhsa,
                           list_higher_cvss_updates=us_of_rhsa_by_score,
                           rate_by_sev=rhsa_rate_by_sev,
                           list_n_by_pnames=n_rhsa_by_pns,
