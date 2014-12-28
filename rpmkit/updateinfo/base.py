@@ -83,10 +83,51 @@ def may_be_rebuilt(vendor, buildhost):
     return not (bhsuffix and buildhost.endswith(bhsuffix))
 
 
+_VENDOR_RH = "Red Hat, Inc."
+_VENDOR_MAPS = {_VENDOR_RH: ".redhat.com",
+                "Symantec Corporation": ".veritas.com",
+                "ZABBIX-JP": ".zabbix.jp",
+                "Fedora Project": ".fedoraproject.org",
+                }
+VENDOR_RPM = 0
+VENDOR_REBUILT_RPM = 1
+OTHER_VENDOR_RPM = 2
+
+
+def check_vendor_rpm(vendor, buildhost, vendor_ref=_VENDOR_RH,
+                     vmaps=_VENDOR_MAPS):
+    """
+    :param vendor: Vendor provides the RPM
+    :param buildhost: Host to build the RPM
+    :param vendor_ref: Referencial vendor
+    :param vmaps: Vendor vs. buildhost mappings
+
+    >>> OTHER_VENDOR_RPM == check_vendor_rpm(None, "a.example.com")
+    True
+    >>> p1 = ("Red Hat, Inc.", "hs20.build.redhat.com")
+    >>> VENDOR_RPM == check_vendor_rpm(*p1)
+    True
+    >>> p2 = ("Red Hat, Inc.", "localhost.localdomain")
+    >>> VENDOR_REBUILT_RPM == check_vendor_rpm(*p2)
+    True
+
+    TODO: How to process 'gpg-pubkey' packages ?
+    """
+    if vendor != vendor_ref:
+        return OTHER_VENDOR_RPM
+
+    bh_esfx = vmaps.get(vendor, '')
+
+    if buildhost and buildhost.endswith(bh_esfx):
+        return VENDOR_RPM
+    else:
+        return VENDOR_REBUILT_RPM
+
+
 class Package(dict):
 
     def __init__(self, name, version, release, arch, epoch=0, summary=None,
-                 vendor=None, buildhost=None, originally_from=None):
+                 vendor=None, buildhost=None, **kwargs):
         """
         :param name: Package name
         """
@@ -98,12 +139,12 @@ class Package(dict):
         self["summary"] = summary
         self["vendor"] = vendor
         self["buildhost"] = buildhost
-        self["originally_from"] = originally_from
 
-        if vendor and buildhost:
-            self["may_be_rebuilt"] = may_be_rebuilt(vendor, buildhost)
-        else:
-            self["may_be_rebuilt"] = False
+        vc = check_vendor_rpm(vendor, buildhost)
+        self["rebuilt"] = VENDOR_REBUILT_RPM == vc
+
+        for k, v in kwargs.items():
+            self[k] = v
 
     def __str__(self):
         return "({name}, {version}, {release}, {epoch}, {arch})" % self
