@@ -100,7 +100,7 @@ def _notice_to_errata(notice):
     return errata
 
 
-def _to_pkg(pkg, extras=[]):
+def _to_pkg(pkg, extras=[], extra_names=[]):
     """
     Convert Package object, instance of yum.rpmsack.RPMInstalledPackage,
     yum.sqlitesack..YumAvailablePackageSqlite, etc., to
@@ -109,24 +109,17 @@ def _to_pkg(pkg, extras=[]):
     :param pkg: Package object which Base.list_installed(), etc. returns
     :param extras: A list of dicts represent extra packages which is installed
         but not available from yum repos available.
+    :param extras: A list of names of extra packages
 
     NOTE: Take care of rpm db session.
     """
-    if extras:
-        if pkg.name in (e["name"] for e in extras):
-            originally_from = pkg.vendor
-        else:
-            originally_from = "Unknown"
-    else:
-        originally_from = "TBD"
-
     if isinstance(pkg, collections.Mapping):
         return pkg
 
     return rpmkit.updateinfo.base.Package(pkg.name, pkg.version, pkg.release,
                                           pkg.arch, pkg.epoch, pkg.summary,
-                                          pkg.vendor, pkg.buildhost,
-                                          originally_from=originally_from)
+                                          pkg.vendor, pkg.buildhost, extras,
+                                          extra_names)
 
 
 class Base(rpmkit.updateinfo.base.Base):
@@ -255,9 +248,10 @@ class Base(rpmkit.updateinfo.base.Base):
         see also: yum.updateinfo.exclude_updates
         """
         extras = self.list_packages("extras")
+        extra_names = [e["name"] for e in extras]
 
         ygh = self.base.doPackageLists("installed")
-        ips = [_to_pkg(p, extras) for p in ygh.installed]
+        ips = [_to_pkg(p, extras, extra_names) for p in ygh.installed]
         self.packages["installed"] = ips
 
         return ips
