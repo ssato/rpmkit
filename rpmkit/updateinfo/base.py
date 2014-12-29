@@ -5,6 +5,7 @@
 """Base class.
 """
 import rpmkit.updateinfo.utils
+import rpmkit.memoize
 
 import collections
 import logging
@@ -84,50 +85,42 @@ def may_be_rebuilt(vendor, buildhost):
 
 
 _VENDOR_RH = "Red Hat, Inc."
-_VENDOR_MAPS = {_VENDOR_RH: ".redhat.com",
-                "Symantec Corporation": ".veritas.com",
-                "ZABBIX-JP": ".zabbix.jp",
-                "Fedora Project": ".fedoraproject.org",
+_VENDOR_MAPS = {_VENDOR_RH: ("redhat", ".redhat.com"),
+                "Symantec Corporation": ("symantec", ".veritas.com"),
+                "ZABBIX-JP": ("zabbixjp", ".zabbix.jp"),
+                "Fedora Project": ("fedora", ".fedoraproject.org"),
                 }
-VENDOR_RPM = 0
-VENDOR_REBUILT_RPM = 1
-OTHER_VENDOR_RPM = 2
 
 
-def check_vendor_rpm(vendor, buildhost, vendor_ref=_VENDOR_RH,
-                     vmaps=_VENDOR_MAPS):
+def inspect_origin(name, vendor, buildhost, extras=[], extra_names=[],
+                   vmaps=_VENDOR_MAPS, exp_vendor=_VENDOR_RH):
     """
-    :param vendor: Vendor provides the RPM
-    :param buildhost: Host to build the RPM
-    :param vendor_ref: Referencial vendor
-    :param vmaps: Vendor vs. buildhost mappings
+    Inspect package info and detect its origin, etc.
 
-    >>> OTHER_VENDOR_RPM == check_vendor_rpm(None, "a.example.com")
-    True
-    >>> p1 = ("Red Hat, Inc.", "hs20.build.redhat.com")
-    >>> VENDOR_RPM == check_vendor_rpm(*p1)
-    True
-    >>> p2 = ("Red Hat, Inc.", "localhost.localdomain")
-    >>> VENDOR_REBUILT_RPM == check_vendor_rpm(*p2)
-    True
-
-    TODO: How to process 'gpg-pubkey' packages ?
+    :param name: Package name
+    :param vendor: Package vendor
+    :param buildhost: Package buildhost
+    :param extras: Extra packages not available from yum repos
+    :param extra_names: Extra package names
     """
-    if vendor != vendor_ref:
-        return OTHER_VENDOR_RPM
+    origin = vmaps.get(vendor, ("Unknown", ))[0]
 
-    bh_esfx = vmaps.get(vendor, '')
+    if name not in extra_names:  # May be rebuilt or replaced.
+        if vendor != exp_vendor:
+            return dict(origin=origin, rebuilt=False, replaced=True)
 
-    if buildhost and buildhost.endswith(bh_esfx):
-        return VENDOR_RPM
-    else:
-        return VENDOR_REBUILT_RPM
+        bh_esfx = vmaps.get(vendor, (None, ''))[1]
+        if bh_esfx and not buildhost.endswith(bh_esfx):
+            return dict(origin=origin, rebuilt=True, replaced=False)
+
+    return dict(origin=origin, rebuilt=False, replaced=False)
 
 
 class Package(dict):
 
     def __init__(self, name, version, release, arch, epoch=0, summary=None,
-                 vendor=None, buildhost=None, **kwargs):
+                 vendor=None, buildhost=None, extras=[], extra_names=[],
+                 **kwargs):
         """
         :param name: Package name
         """
@@ -140,8 +133,8 @@ class Package(dict):
         self["vendor"] = vendor
         self["buildhost"] = buildhost
 
-        vc = check_vendor_rpm(vendor, buildhost)
-        self["rebuilt"] = VENDOR_REBUILT_RPM == vc
+        d = inspect_origin(name, vendor, buildhost, extras, extra_names)
+        self.update(**d)
 
         for k, v in kwargs.items():
             self[k] = v
