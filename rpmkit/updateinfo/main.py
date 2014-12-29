@@ -679,8 +679,15 @@ def make_overview_dataset(workdir, data, score=0, keywords=ERRATA_KEYWORDS,
              [_("# of RHBAs"), len(data["errata"]["rhba"])],
              [_("# of RHEAs (Enhancement Errata)"),
               len(data["errata"]["rhea"])],
-             [_("# of Update RPMs"), len(data["updates"])],
-             [_("# of Installed RPMs"), len(data["installed"])]]
+             [_("# of Update RPMs"), len(data["updates"]["list"])],
+             [_("# of Installed RPMs"), len(data["installed"]["list"])],
+             [],
+             [_("Origin of Installed RPMs")],
+             [_("# of Rebuilt RPMs"), len(data["installed"]["list_rebuilt"])],
+             [_("# of Replaced RPMs"),
+              len(data["installed"]["list_replaced"])],
+             [_("# of RPMs from other vendors (non Red Hat)"),
+              len(data["installed"]["list_from_others"])]]
 
     headers = (_("Item"), _("Value"), _("Notes"))
     dataset = tablib.Dataset(headers=headers)
@@ -719,10 +726,24 @@ def dump_results(workdir, rpms, errata, updates, score=0,
     :param core_rpms: Core RPMs to filter errata by them
     :param details: Dump details also if True
     """
+    rpms_rebuilt = [p for p in rpms if p.get("rebuilt", False)]
+    rpms_replaced = [p for p in rpms if p.get("replaced", False)]
+    rpms_from_others = [p for p in rpms if p.get("origin", '') != "redhat"]
+
+    nps = len(rpms)
+    nus = len(updates)
+
     data = dict(errata=analyze_errata(errata, updates, score, keywords,
                                       core_rpms),
-                rpms=rpms, installed=rpms, updates=updates,
-                rpmnames_need_updates=U.uniq(u["name"] for u in updates))
+                installed=dict(list=rpms,
+                               list_rebuilt=rpms_rebuilt,
+                               list_replaced=rpms_replaced,
+                               list_from_others=rpms_from_others),
+                updates=dict(list=updates,
+                             rate=[(_("packages need updates"), nus),
+                                   (_("packages not need updates"),
+                                    nps - nus)]))
+
     U.json_dump(data, os.path.join(workdir, "summary.json"))
 
     # FIXME: How to keep DRY principle?
@@ -845,7 +866,11 @@ def prepare(root, workdir=None, repos=[], did=None, cachedir=None,
               host.id, host.root)
     host.installed = sorted(host.base.list_installed(),
                             key=itemgetter(*nevra_keys))
-    LOG.info(_("%s: Found %d Installed RPMs"), host.id, len(host.installed))
+    LOG.info(_("%s: Found %d (rebuilt=%d, replaced=%d) Installed RPMs"),
+             host.id, len(host.installed),
+             len([p for p in host.installed if p.get("rebuilt", False)]),
+             len([p for p in host.installed if p.get("replaced", False)]))
+
     U.json_dump(dict(data=host.installed, ), rpm_list_path(host.workdir))
     host.available = True
     # pylint: enable=maybe-no-member
