@@ -715,7 +715,7 @@ def dump_xls(dataset, filepath):
 
 def dump_results(workdir, rpms, errata, updates, score=0,
                  keywords=ERRATA_KEYWORDS, core_rpms=[], details=True,
-                 rpmkeys=NEVRA_KEYS):
+                 rpmkeys=NEVRA_KEYS, vendor="redhat"):
     """
     :param workdir: Working dir to dump the result
     :param rpms: A list of installed RPMs
@@ -728,7 +728,10 @@ def dump_results(workdir, rpms, errata, updates, score=0,
     """
     rpms_rebuilt = [p for p in rpms if p.get("rebuilt", False)]
     rpms_replaced = [p for p in rpms if p.get("replaced", False)]
-    rpms_from_others = [p for p in rpms if p.get("origin", '') != "redhat"]
+    rpms_from_others = [p for p in rpms if p.get("origin", '') != vendor]
+    rpms_by_vendor = [p for p in rpms if p.get("origin", '') == vendor and
+                      not p.get("rebuilt", False) and
+                      not p.get("replaced", False)]
 
     nps = len(rpms)
     nus = len(updates)
@@ -738,7 +741,8 @@ def dump_results(workdir, rpms, errata, updates, score=0,
                 installed=dict(list=rpms,
                                list_rebuilt=rpms_rebuilt,
                                list_replaced=rpms_replaced,
-                               list_from_others=rpms_from_others),
+                               list_from_others=rpms_from_others,
+                               list_by_vendor=rpms_by_vendor),
                 updates=dict(list=updates,
                              rate=[(_("packages need updates"), nus),
                                    (_("packages not need updates"),
@@ -796,6 +800,12 @@ def dump_results(workdir, rpms, errata, updates, score=0,
                          (_("advisory"), _("synopsis"), _("cves"),
                          _("cvsses_s"), _("url")))]
         ds.extend(cvss_ds)
+
+    for k in ("list_rebuilt", "list_replaced", "list_from_others"):
+        if data["installed"][k]:
+            ds.append(make_dataset(data["installed"][k],
+                                   "RPMs %s" % k.replace("list_", ''),
+                                   rpmdkeys, lrpmdkeys))
 
     dump_xls(ds, os.path.join(workdir, "errata_summary.xls"))
 
