@@ -11,6 +11,7 @@ from rpmkit.globals import _
 
 import rpmkit.updateinfo.main as RUM
 import rpmkit.updateinfo.utils
+import rpmkit.utils as U
 
 # It looks available in EPEL for RHELs:
 #   https://apps.fedoraproject.org/packages/python-bunch
@@ -22,6 +23,7 @@ import multiprocessing
 import operator
 import os
 import os.path
+import shutil
 
 
 LOG = logging.getLogger("rpmkit.updateinfo")
@@ -99,6 +101,15 @@ def p2nevra(p):
                                "arch")(p)
 
 
+def add_host_to_metadata(workdir, host):
+    metadatafile = os.path.join(workdir, "metadata.json")
+
+    shutil.copy2(metadatafile, metadatafile + ".save")
+    metadata = U.json_load(metadatafile)
+    metadata["hosts"].append(host)
+    U.json_dump(metadata, metadatafile)
+
+
 def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
     """
     :param href: Reference host object
@@ -116,6 +127,8 @@ def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
             if not os.path.exists(dst):
                 LOG.debug("Make a symlink to %s", src)
                 os.symlink(src, dst)
+
+        add_host_to_metadata(href_workdir, h.id)
         os.chdir(curdir)
 
 
