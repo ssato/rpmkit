@@ -522,6 +522,25 @@ def ymd_to_date(ymd, roundout=False, datereg=_DATE_REG):
     return round_ymd(int(d[0]), int_(d[1]), int_(d[2]), roundout)
 
 
+def mk_update_name_vs_advs_map(errata):
+    """
+    Make a list of a dict {name: [adv]} where name is name of update
+    package relevant to an errata and [adv] is a list of its advisories.
+
+    :param errata: A list of applicable errata sorted by severity
+        if it's RHSA and advisory in ascending sequence
+    """
+    def un_adv_pairs(errata):
+        for e in errata:
+            for un in e.get("update_names", []):
+                yield (un, e["advisory"])
+
+    un_advs_list = sorted(un_adv_pairs(errata), key=itemgetter(0))
+    return sorted(((k, [t[1] for t in g]) for k, g in
+                   itertools.groupby(un_advs_list, key=itemgetter(0))),
+                  key=lambda t: len(t[1]), reverse=True)
+
+
 def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
                    core_rpms=CORE_RPMS, period=()):
     """
@@ -596,7 +615,8 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
                           rate_by_sev=rhsa_rate_by_sev,
                           list_n_by_pnames=n_rhsa_by_pns,
                           list_n_cri_by_pnames=n_cri_rhsa_by_pns,
-                          list_n_imp_by_pnames=n_imp_rhsa_by_pns),
+                          list_n_imp_by_pnames=n_imp_rhsa_by_pns,
+                          list_by_packages=mk_update_name_vs_advs_map(rhsa)),
                 rhba=dict(list=rhba,
                           list_by_kwds=rhba_by_kwds,
                           list_of_core_rpms=rhba_of_rpms,
@@ -605,8 +625,10 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
                           list_higher_cvss_score=rhba_by_score,
                           list_updates_by_kwds=us_of_rhba_by_kwds,
                           list_higher_cvss_updates=us_of_rhba_by_score,
-                          list_n_by_pnames=n_rhba_by_pns),
-                rhea=rhea,
+                          list_n_by_pnames=n_rhba_by_pns,
+                          list_by_packages=mk_update_name_vs_advs_map(rhba)),
+                rhea=dict(list=rhea,
+                          list_by_packages=mk_update_name_vs_advs_map(rhea)),
                 rate_by_type=[("Security", len(rhsa)),
                               ("Bug", len(rhba)),
                               ("Enhancement", len(rhea))])
@@ -675,10 +697,10 @@ def make_overview_dataset(workdir, data, score=0, keywords=ERRATA_KEYWORDS,
                   len(data["errata"]["rhba"]["list_higher_cvss_updates"])]]
 
     rows += [[],
-             [_("# of RHSAs"), len(data["errata"]["rhsa"])],
-             [_("# of RHBAs"), len(data["errata"]["rhba"])],
+             [_("# of RHSAs"), len(data["errata"]["rhsa"]["list"])],
+             [_("# of RHBAs"), len(data["errata"]["rhba"]["list"])],
              [_("# of RHEAs (Enhancement Errata)"),
-              len(data["errata"]["rhea"])],
+              len(data["errata"]["rhea"]["list"])],
              [_("# of Update RPMs"), len(data["updates"]["list"])],
              [_("# of Installed RPMs"), len(data["installed"]["list"])],
              [],
