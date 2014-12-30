@@ -823,11 +823,18 @@ def dump_results(workdir, rpms, errata, updates, score=0,
                          _("cvsses_s"), _("url")))]
         ds.extend(cvss_ds)
 
-    for k in ("list_rebuilt", "list_replaced", "list_from_others"):
-        if data["installed"][k]:
-            ds.append(make_dataset(data["installed"][k],
-                                   "RPMs %s" % k.replace("list_", ''),
-                                   rpmdkeys, lrpmdkeys))
+    if data["installed"]["list_rebuilt"]:
+        ds.append(make_dataset(data["installed"]["list_rebuilt"],
+                               _("Rebuilt RPMs"), rpmdkeys, lrpmdkeys))
+
+    if data["installed"]["list_replaced"]:
+        ds.append(make_dataset(data["installed"]["list_replaced"],
+                               _("Replaced RPMs"), rpmdkeys, lrpmdkeys))
+
+    if data["installed"]["list_from_others"]:
+        ds.append(make_dataset(data["installed"]["list_from_others"],
+                               _("RPMs from other vendors"), rpmdkeys,
+                               lrpmdkeys))
 
     dump_xls(ds, os.path.join(workdir, "errata_summary.xls"))
 
