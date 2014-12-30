@@ -945,6 +945,7 @@ def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
                                    backend=host.base.name, score=score,
                                    keywords=keywords,
                                    installed=len(host.installed),
+                                   hosts=[host.id, ],
                                    generated=timestamp))
     # pylint: disable=maybe-no-member
     LOG.debug(_("%s: Dump metadata for %s"), host.id, host.root)
