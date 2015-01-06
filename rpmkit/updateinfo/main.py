@@ -553,7 +553,7 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
     :param period: Period of errata in format of YYYY[-MM[-DD]],
         ex. ("2014-10-01", "2014-11-01")
     """
-    rhsa = [e for e in errata if e.get("severity", None) is not None]
+    rhsa = [e for e in errata if e["advisory"][2] == 'S']
     cri_rhsa = [e for e in rhsa if e.get("severity") == "Critical"]
     imp_rhsa = [e for e in rhsa if e.get("severity") == "Important"]
     latest_cri_rhsa = list_latest_errata_groupby_updates(cri_rhsa)
@@ -586,7 +586,7 @@ def analyze_errata(errata, updates, score=0, keywords=ERRATA_KEYWORDS,
 
     us_of_rhba_by_kwds = list_updates_from_errata(rhba_by_kwds)
 
-    rhea = [e for e in errata if e["advisory"].startswith("RHEA")]
+    rhea = [e for e in errata if e["advisory"][2] == 'E']
 
     rhsa_rate_by_sev = [("Critical", len(cri_rhsa)),
                         ("Important", len(imp_rhsa)),
