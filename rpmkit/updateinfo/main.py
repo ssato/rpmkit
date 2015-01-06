@@ -423,6 +423,10 @@ def errata_complement_g(errata, updates, score=0):
                               in unas)
         e["update_names"] = list(set(u["name"] for u in e["updates"]))
 
+        # TODO: Dirty hack to strip extra white spaces at the top and the end
+        # of synopsis of some errata.
+        e["synopsis"] = e["synopsis"].strip()
+
         if score > 0:
             e["cves"] = [fetch_cve_details(cve) for cve in e.get("cves", [])]
 
