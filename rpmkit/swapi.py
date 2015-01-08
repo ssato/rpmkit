@@ -771,6 +771,15 @@ def get_cvss_for_cve(cve):
     See the HTML source of CVE www page for its format, e.g.
     https://www.redhat.com/security/data/cve/CVE-2010-1585.html.
     """
+    m = re.match(r"CVE-(?P<year>\d{4})-(?P<id>\d{4})", cve)
+    if m:
+        year = int(m.groupdict()["year"])
+        if year < 2009:  # No CVSS
+            return None
+    else:
+        LOG.warn("Invalid CVE: %s", cve)
+        return None
+
     def has_cvss_link(tag):
         return tag.get("href", "").startswith("http://nvd.nist.gov/cvss.cfm")
 
@@ -1746,8 +1755,9 @@ def _call(api, args=[], options=[]):
     try:
         (res, _opts) = main(options + ["-A", ",".join(args)] + [api])
     except:
-        raise RuntimeError("rpmkit.swapi._call: api=%s, args=%s, options=%s",
-                           api, str(args), str(options))
+        LOG.warn("rpmkit.swapi._call: api=%s, args=%s, options=%s",
+                 api, str(args), str(options))
+        return [None, ]
 
     return res
 
