@@ -1743,7 +1743,11 @@ def _call(api, args=[], options=[]):
     :return: [Reult]
     """
     args = list(str(a) for a in args) if is_iterable(args) else [args]
-    (res, _opts) = main(options + ["-A", ",".join(args)] + [api])
+    try:
+        (res, _opts) = main(options + ["-A", ",".join(args)] + [api])
+    except:
+        raise RuntimeError("rpmkit.swapi._call: api=%s, args=%s, options=%s",
+                           api, str(args), str(options))
 
     return res
 
