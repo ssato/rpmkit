@@ -138,7 +138,7 @@ def analyze(args):
 
 def main(hosts_datadir, workdir=None, repos=[], score=-1,
          keywords=RUM.ERRATA_KEYWORDS, rpms=[], period=(), cachedir=None,
-         refdir=None, multiproc=False,
+         refdir=None, verbosity=0, multiproc=False,
          backend=RUM.DEFAULT_BACKEND, backends=RUM.BACKENDS):
     """
     :param hosts_datadir: Dir in which rpm db roots of hosts exist
@@ -152,11 +152,14 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
     :param cachedir: A dir to save metadata cache of yum repos
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
+    :param verbosity: Verbosity level: 0 (default), 1 (verbose), 2 (debug)
     :param multiproc: Utilize multiprocessing module to compute results
         in parallel as much as possible if True
     :param backend: Backend module to use to get updates and errata
     :param backends: Backend list
     """
+    RUM.set_loglevel(verbosity)
+
     all_hosts = list(prepare(hosts_datadir, workdir, repos, cachedir, backend,
                              backends))
     hosts = [h for h in all_hosts if h.available]

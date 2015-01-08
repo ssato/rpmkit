@@ -52,9 +52,26 @@ ERRATA_KEYWORDS = ["crash", "panic", "hang", "SEGV", "segmentation fault",
                    "data corruption"]
 CORE_RPMS = ["kernel", "glibc", "bash", "openssl", "zlib"]
 
-rpmkit.updateinfo.yumwrapper.LOG.setLevel(logging.WARN)
-rpmkit.updateinfo.yumbase.LOG.setLevel(logging.WARN)
-rpmkit.updateinfo.dnfbase.LOG.setLevel(logging.WARN)
+
+def set_loglevel(verbosity=0, backend=False):
+    """
+    :param verbosity: Verbosity level = 0 | 1 | 2
+    :param backend: Set backend's log level also if True
+    """
+    if verbosity in (0, 1, 2):
+        llvl = [logging.WARN, logging.INFO, logging.DEBUG][verbosity]
+    else:
+        LOG.warn("Wrong verbosity: %d", verbosity)
+        llvl = logging.WARN
+
+    LOG.setLevel(llvl)
+
+    if not backend:
+        llvl = logging.WARN
+
+    rpmkit.updateinfo.yumwrapper.LOG.setLevel(llvl)
+    rpmkit.updateinfo.yumbase.LOG.setLevel(llvl)
+    rpmkit.updateinfo.dnfbase.LOG.setLevel(llvl)
 
 
 def rpm_list_path(workdir, filename=_RPM_LIST_FILE):
@@ -1040,7 +1057,7 @@ def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
 
 def main(root, workdir=None, repos=[], did=None, score=0,
          keywords=ERRATA_KEYWORDS, rpms=CORE_RPMS, period=(),
-         cachedir=None, refdir=None,
+         cachedir=None, refdir=None, verbosity=0,
          backend=DEFAULT_BACKEND, backends=BACKENDS):
     """
     :param root: Root dir of RPM db, ex. / (/var/lib/rpm)
@@ -1055,9 +1072,12 @@ def main(root, workdir=None, repos=[], did=None, score=0,
     :param cachedir: A dir to save metadata cache of yum repos
     :param refdir: A dir holding reference data previously generated to
         compute delta (updates since that data)
+    :param verbosity: Verbosity level: 0 (default), 1 (verbose), 2 (debug)
     :param backend: Backend module to use to get updates and errata
     :param backends: Backend list
     """
+    set_loglevel(verbosity)
+
     host = prepare(root, workdir, repos, did, cachedir, backend, backends)
     if host.available:
         analyze(host, score, keywords, rpms, period, refdir)
