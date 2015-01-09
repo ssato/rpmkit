@@ -206,13 +206,15 @@ def mk_errata_map(offline):
 
         for c in e["cves"]:
             cve = cves_map.get(c, False)
-
             if not cve:
                 LOG.warn(
                     "The CVE %s not found in master data " % c +
                     "downloaded from access.redhat.com"
                 )
-                cve_w_cvss = swapicall("swapi.cve.getCvss", offline, [c])[0]
+                continue
+
+                # TODO: Get CVE/CVSS w/ swapi's vapi.
+                cve_w_cvss = swapicall("swapi.cve.getCvss", offline, c)[0]
                 if cve_w_cvss:
                     errata_cves_map[e["advisory"]].append(cve_w_cvss)
 
@@ -342,7 +344,7 @@ def get_errata_details(errata, workdir, offline=False, bzkeys=_BZ_KEYS,
                 for cve in cves:
                     dcve = swapicall("swapi.cve.getCvss", offline, cve)
 
-                    if dcve:
+                    if dcve and dcve[0]:
                         dcve = dcve[0]
                     else:
                         LOG.warn("Couldn't get CVSS metrics of " + cve)
