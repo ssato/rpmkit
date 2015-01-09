@@ -126,6 +126,13 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
+* Fri Jan  9 2015 Satoru SATOH <ssato@redhat.com> - 0.2.14-1
+- [swapi] return [] even if an error occurred during API calls
+- [extras.updateinfo] refactoring and fixes around CVE/CVSS code
+- [updateinfo] do some more analysis in errata
+- [updateinfo] do i18n and l10n (ja)
+- Some other code cleanups and bug fixes
+
 * Wed Dec 10 2014 Satoru SATOH <ssato@redhat.com> - 0.2.13-1
 - [swapi] make it outputs in valid JSON format to allow post processing w/ jq
 - Introduce RHEL_5_BUILD build mode to build this for RHEL 5

@@ -76,14 +76,6 @@ class Base(object):
         raise NotImplementedError("list_errata_impl")
 
 
-def may_be_rebuilt(vendor, buildhost):
-    vbmap = dict([("Red Hat, Inc.", "redhat.com"),
-                  ("Fedora Project", "fedoraproject.org")])
-    bhsuffix = vbmap.get(vendor, False)
-
-    return not (bhsuffix and buildhost.endswith(bhsuffix))
-
-
 _VENDOR_RH = "Red Hat, Inc."
 _VENDOR_MAPS = {_VENDOR_RH: ("redhat", ".redhat.com"),
                 "Symantec Corporation": ("symantec", ".veritas.com"),
@@ -92,8 +84,26 @@ _VENDOR_MAPS = {_VENDOR_RH: ("redhat", ".redhat.com"),
                 }
 
 
+def may_be_rebuilt(vendor, buildhost, vbmap=_VENDOR_MAPS):
+    """
+    >>> may_be_rebuilt("Red Hat, Inc.", "abc.builder.redhat.com")
+    False
+    >>> may_be_rebuilt("Red Hat, Inc.", "localhost.localdomain")
+    True
+    >>> may_be_rebuilt("Example, Inc.", "abc.builder.redhat.com")
+    False
+    >>> may_be_rebuilt("Example, Inc.", "localhost.localdomain")
+    False
+    """
+    bhsuffix = vbmap.get(vendor, (None, False))[1]
+    if bhsuffix:
+        return not buildhost.endswith(bhsuffix)
+
+    return False
+
+
 def inspect_origin(name, vendor, buildhost, extras=[], extra_names=[],
-                   vmaps=_VENDOR_MAPS, exp_vendor=_VENDOR_RH):
+                   vbmap=_VENDOR_MAPS, exp_vendor=_VENDOR_RH):
     """
     Inspect package info and detect its origin, etc.
 
@@ -101,17 +111,14 @@ def inspect_origin(name, vendor, buildhost, extras=[], extra_names=[],
     :param vendor: Package vendor
     :param buildhost: Package buildhost
     :param extras: Extra packages not available from yum repos
-    :param extra_names: Extra package names
+    :param extra_names: Extra (non-vendor-origin) package names
     """
-    origin = vmaps.get(vendor, ("Unknown", ))[0]
+    origin = vbmap.get(vendor, ("unknown", ))[0]
 
     if name not in extra_names:  # May be rebuilt or replaced.
-        if vendor != exp_vendor:
-            return dict(origin=origin, rebuilt=False, replaced=True)
-
-        bh_esfx = vmaps.get(vendor, (None, ''))[1]
-        if bh_esfx and not buildhost.endswith(bh_esfx):
-            return dict(origin=origin, rebuilt=True, replaced=False)
+        rebuilt = may_be_rebuilt(vendor, buildhost, vbmap)
+        replaced = vendor != exp_vendor
+        return dict(origin=origin, rebuilt=rebuilt, replaced=replaced)
 
     return dict(origin=origin, rebuilt=False, replaced=False)
 
