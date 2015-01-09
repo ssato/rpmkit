@@ -14,7 +14,6 @@ import dnf
 import hawkey
 import logging
 import operator
-import os.path
 
 try:
     # NOTE: Required dnf >= 0.6.0
@@ -180,6 +179,7 @@ class Base(rpmkit.updateinfo.base.Base):
 
         see also: :function:`dnf.automatic.main.main`
 
+        >>> import os.path
         >>> if os.path.exists("/etc/redhat-release"):
         ...     base = Base(cli=False)
         ...     assert isinstance(base.base, dnf.Base)
@@ -256,6 +256,7 @@ class Base(rpmkit.updateinfo.base.Base):
 
     def list_installed_impl(self, **kwargs):
         """
+        >>> import os.path
         >>> if os.path.exists("/etc/redhat-release"):
         ...     base = Base(cacheonly=True)
         ...     ipkgs = base.list_installed_impl()
@@ -274,6 +275,7 @@ class Base(rpmkit.updateinfo.base.Base):
         """
         :param obsoletes: Include obsoletes in updates list if True
 
+        >>> import os.path
         >>> if os.path.exists("/etc/redhat-release"):
         ...     base = Base(repos=['*'], disabled_repos=[], cacheonly=True)
         ...     xs = base.list_updates_impl()

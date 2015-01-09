@@ -11,7 +11,6 @@
 import rpmkit.updateinfo.main as RUM
 import rpmkit.updateinfo.multihosts as RUMS
 import datetime
-import logging
 import optparse
 import os.path
 
@@ -73,7 +72,6 @@ def option_parser(defaults=_DEFAULTS, usage=_USAGE, backends=RUM.BACKENDS):
                  help="Verbose mode")
     p.add_option("-D", "--debug", action="store_const", dest="verbosity",
                  const=2, help="Debug mode (same as -vv)")
-
 
     return p
 
