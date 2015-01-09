@@ -10,7 +10,7 @@ curdir = os.getcwd()
 sys.path.append(curdir)
 
 PACKAGE = "rpmkit"
-VERSION = "0.2.13"
+VERSION = "0.2.14"
 SNAPSHOT_BUILD_MODE = False
 RHEL_5_BUILD = False
 
