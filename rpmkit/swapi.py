@@ -1753,13 +1753,9 @@ def _call(api, args=[], options=[]):
     """
     args = list(str(a) for a in args) if is_iterable(args) else [args]
     try:
-        (res, _opts) = main(options + ["-A", ",".join(args)] + [api])
+        return main(options + ["-A", ",".join(args)] + [api])[0]
     except:
-        LOG.warn("rpmkit.swapi._call: api=%s, args=%s, options=%s",
-                 api, str(args), str(options))
-        return [None, ]
-
-    return res
+        return []
 
 
 call = memoize(_call)
