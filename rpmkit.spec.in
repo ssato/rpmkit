@@ -131,6 +131,7 @@ rm -rf $RPM_BUILD_ROOT
 - [extras.updateinfo] refactoring and fixes around CVE/CVSS code
 - [updateinfo] do some more analysis in errata
 - [updateinfo] do i18n and l10n (ja)
+- [updateinfo] enhance inspection of rebuilt and replaced rpms
 - Some other code cleanups and bug fixes
 
 * Wed Dec 10 2014 Satoru SATOH <ssato@redhat.com> - 0.2.13-1
