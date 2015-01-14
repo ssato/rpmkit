@@ -13,26 +13,36 @@ About
 This is a collection of some rpm related tools distributed under
 GPL3+/GPLv2+/MIT.
 
-* buildsrpm: Build source rpm from given rpm spec file
-* identrpm: Identify given rpm and print package metadata
-* rpm2json: Dump rpm metadata in JSON format
+- buildsrpm: Build source rpm from given rpm spec file and sources
+- identrpm: Identify given rpm and print package metadata by accessing
+  RHN/Satellite. It requires swapi.
+- rk-depgraph: Make an image of RPM dependency graph w/ using graphviz.
+- rk-fake_yum: Fake yum
+- rk-list_errata_for_releases: List errata for each RHEL release. It
+  requires swapi.
+- rk-make_rpmdb: Make a RPM (metadata-only) DB from the rpm list.
+- rk-rpmset-optimizer: Make an optimized RPM set to install from given
+  profile data.
+- rk-updateinfo and rk-updateinfo-legacy: RPM Updateinfo (errata) analyzer.
+  rk-updateinfo-legacy requires swapi.
+- rpm2json: Inspect RPM and dump metadata in JSON format.
+- rpmdb_migrate.sh: RPM DB migration tool.
+- rpmfy: A simple script to make a RPM from files.
+- swapi: SpaceWalk API accessing tool like spacewalk-api, spacecmd's raw
+  command.
+- yum-surrogate: Surrogate yum execution in another hosts.
+- yum_makelistcache: Make yum cache periodically to do some analysys.
 
-  * rpms2csv: Dump metadata of given rpms in CSV format w/ rpm2json's help
+Some of them, especially tools of which filename starts with the prefix 'rk-'
+are very experimental and may not work in your environment.
 
-* rpms2sqldb: Create SQLite database of given rpms metadata
+Add to this, the following tools require access to RHN hosted or RH
+Satellite to work:
 
-  * list-requires-by-package-name.sh: List requirements for given rpm name[s],
-    gotten from the sqlite database built by rpms2sqldb.
-
-  * list-srpmnames-by-file.sh: List srpmnames List source rpm names for given
-    files, gotten from the sqlite database built by rpms2sqldb.
-
-* rk-repodata: Generate/query (rpm) repodata cache
-
-  * minifyrpmlist: Minify given rpm list with using repodata cache
-
-* swapi: Call RHN API to query RHN/Satellite from command line
-* yum-surrogate: surrogate yum execution on hosts accessible to RHN/Satellite
+- identrpm
+- rk-list_errata_for_releases
+- rk-updateinfo-legacy
+- swapi
 
 buildsrpm
 -----------
