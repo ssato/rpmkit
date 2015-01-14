@@ -1,7 +1,0 @@
-#! /usr/bin/python -tt
-#
-import rpmkit.updateinfo.cli
-
-rpmkit.updateinfo.cli.main()
-
-# vim:sw=4:ts=4:et:
