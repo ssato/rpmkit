@@ -84,6 +84,11 @@ def get_distro_release_date(distro, version, release=0):
     """
     db = init_osinfo()
     osi = db.get_os(get_osid(distro, version, release))
+
+    if osi is None:
+        raise RuntimeError("Not found: distro={}, version={}, "
+                           "release={}".format(distro, version, release))
+
     return osi.get_param_value("release-date")
 
 
