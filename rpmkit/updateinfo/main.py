@@ -26,6 +26,7 @@ import bunch
 import calendar
 import collections
 import datetime
+import functools
 import itertools
 import logging
 import os
@@ -33,6 +34,19 @@ import os.path
 import re
 import tablib
 
+if os.environ.get("RPMKIT_MEMORY_DEBUG", False):
+    try:
+        from memory_profiler import profile
+    except ImportError:
+        def profile(fn):
+            def wrapper(*args, **kwargs):
+                return fn(*args, **kwargs)
+            return functools.wraps(fn)(wrapper)
+else:
+    def profile(fn):
+        def wrapper(*args, **kwargs):
+            return fn(*args, **kwargs)
+        return functools.wraps(fn)(wrapper)
 
 LOG = logging.getLogger("rpmkit.updateinfo")
 
@@ -879,6 +893,7 @@ def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
     return backends.get(backend, fallback)
 
 
+@profile
 def prepare(root, workdir=None, repos=[], did=None, cachedir=None,
             backend=DEFAULT_BACKEND, backends=BACKENDS,
             nevra_keys=NEVRA_KEYS):
@@ -974,6 +989,7 @@ def errata_in_period(errata, start_date, end_date):
     return start_date <= d and d < end_date
 
 
+@profile
 def analyze(host, score=0, keywords=ERRATA_KEYWORDS, core_rpms=[],
             period=(), refdir=None, nevra_keys=NEVRA_KEYS):
     """

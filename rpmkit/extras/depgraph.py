@@ -17,6 +17,7 @@
 #
 from logging import DEBUG, INFO
 from itertools import count
+# from memory_profiler import profile
 
 import rpmkit.memoize as RM
 import rpmkit.rpmutils as RU
@@ -42,6 +43,7 @@ _GV_ENGINE = "sfdp"   # or neato, twopi, ...
 _GV_ENGINES = ("dot", "neato", "twopi", "circo", "fdp", "sfdp")
 
 
+# @profile
 def _make_dependency_graph(root, reversed=True, rreqs=None,
                            edge_attrs=_E_ATTRS):
     """
