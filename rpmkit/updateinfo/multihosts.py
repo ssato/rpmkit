@@ -110,14 +110,15 @@ def add_host_to_metadata(workdir, host):
     U.json_dump(metadata, metadatafile)
 
 
-def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
+def mk_symlinks_to_results_of_ref_host(href, hsrest):
     """
     :param href: Reference host object
     :param hsrest: A list of hosts having same installed rpms as `href`
-    :param curdir: Current dir to go back
 
     TODO: Ugly code around symlinks ...
     """
+    orgdir = os.path.abspath(os.curdir)
+
     for h in hsrest:
         os.chdir(h.workdir)
         href_workdir = os.path.join('..', href.id)  # TODO: Keep consistency.
@@ -129,7 +130,7 @@ def mk_symlinks_to_results_of_ref_host(href, hsrest, curdir=os.curdir):
                 os.symlink(src, dst)
 
         add_host_to_metadata(href_workdir, h.id)
-        os.chdir(curdir)
+        os.chdir(orgdir)
 
 
 def analyze(args):
@@ -191,6 +192,6 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
                 LOG.info(_("Skip to analyze %s as its installed RPMs are "
                            "exactly same as %s's"),
                          ','.join(x.id for x in hsrest), h)
-                mk_symlinks_to_results_of_ref_host(h, hsrest, os.curdir)
+                mk_symlinks_to_results_of_ref_host(h, hsrest)
 
 # vim:sw=4:ts=4:et:
