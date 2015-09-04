@@ -279,8 +279,14 @@ class Base(rpmkit.updateinfo.base.Base):
         """
         self.prepare()
 
+        # yum (old one) is renamed to yum-deprecated since Fedora 22.
+        yumcmd = "yum-deprecated"
+        (_out, _err, rc) = _run([yumcmd])
+        if rc != 0:
+            yumcmd = "yum"
+
         # To avoid unneeded check.
-        cs = _is_root() and ["yum"] or ["fakeroot", "yum"]
+        cs = _is_root() and [yumcmd] or ["fakeroot", yumcmd]
 
         if self.root == '/':  # It will refer the system's RPM DB.
             # NOTE: Users except for root cannot make $root/var/log and write
