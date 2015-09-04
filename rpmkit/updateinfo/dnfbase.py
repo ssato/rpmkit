@@ -15,14 +15,6 @@ import hawkey
 import logging
 import operator
 
-try:
-    # NOTE: Required dnf >= 0.6.0
-    import dnf.cli.commands.updateinfo as DCCU
-except ImportError:
-    logging.warn("dnf >= 0.6.0 supports updateinfo is not available. "
-                 "FYI. dnf >= 0.6.0 for Fedora 20 is available from my copr "
-                 "repo: http://copr.fedoraproject.org/coprs/ssato/dnf/")
-    DCCU = None
 
 LOG = logging.getLogger("rpmkit.updateinfo.dnfbase")
 _REPO_ACTIONS = (_REPO_ENABLE, _REPO_DISABLE) = ("enable", "disable")
@@ -340,7 +332,7 @@ class Base(rpmkit.updateinfo.base.Base):
         :class:`dnf.cli.commands.updateinfo.UpdateInfoCommand`.
         """
         return self._apackage_advisory_installeds(self._hpackages["installed"],
-                                                  DCCU.hawkey.GT,
+                                                  hawkey.GT,
                                                   self._older_installed,
                                                   specs)
 
