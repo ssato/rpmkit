@@ -88,7 +88,8 @@ def main():
     if os.path.exists(os.path.join(root, "var/lib/rpm")):
         RUM.main(root, options.workdir, options.repos, options.id,
                  options.score, options.keywords, options.rpms, period,
-                 options.cachedir, options.refdir, options.verbosity)
+                 options.cachedir, options.refdir, options.verbosity,
+                 options.backend)
     else:
         # multihosts mode.
         #
@@ -97,7 +98,7 @@ def main():
         # multiprocessing module is fixed.
         RUMS.main(root, options.workdir, options.repos, options.score,
                   options.keywords, options.rpms, period, options.cachedir,
-                  options.refdir, options.verbosity)
+                  options.refdir, options.verbosity, options.backend)
 
 
 if __name__ == '__main__':
