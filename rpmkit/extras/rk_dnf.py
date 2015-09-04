@@ -3,6 +3,7 @@
 # Author: Satoru SATOH <ssato@redhat.com>
 # License: GPLv3+
 #
+# pylint: disable=no-member
 """Some utility routines utilize DNF/Hawkey.
 """
 from __future__ import print_function
