@@ -55,9 +55,9 @@ _ERRATA_LIST_FILE = "errata.json"
 _UPDATES_LIST_FILE = "updates.json"
 
 BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper.Base,
-                yumbase=rpmkit.updateinfo.yumbase.Base,
-                dnfbase=rpmkit.updateinfo.dnfbase.Base)
-DEFAULT_BACKEND = BACKENDS["yumbase"]
+                yum=rpmkit.updateinfo.yumbase.Base,
+                dnf=rpmkit.updateinfo.dnfbase.Base)
+DEFAULT_BACKEND = BACKENDS["yum"]
 
 NEVRA_KEYS = ["name", "epoch", "version", "release", "arch"]
 
@@ -890,6 +890,7 @@ def dump_results(workdir, rpms, errata, updates, score=0,
 
 def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
                 backends=BACKENDS):
+    LOG.info("Using the backend: %s", backend)
     return backends.get(backend, fallback)
 
 
