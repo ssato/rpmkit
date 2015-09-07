@@ -54,7 +54,7 @@ else
         fi
     done
     PYTHONPATH=$topdir nosetests ${nosetests_opts} --all-modules --exclude='rpmkit.extras.*'
-    test $check_with_flake8 = 1 && flake8 ${topdir}
+    test $check_with_flake8 = 1 && flake8 ${topdir}/rpmkit
 fi
 
 # vim:sw=4:ts=4:et:
