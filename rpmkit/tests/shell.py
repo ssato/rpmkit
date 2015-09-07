@@ -160,6 +160,9 @@ class Test_30_run(unittest.TestCase):
         self.assertEquals(SH.run("true", timeout=10), 0)
 
     def test_10_run__timeout(self):
+        if os.environ.get("RUN_IN_DOCKER", "no") == "yes":
+            return
+
         self.assertNotEquals(SH.run("sleep 10", timeout=2), 0)
 
     def test_20_run__w_permission_denied_error(self):

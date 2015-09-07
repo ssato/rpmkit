@@ -4,7 +4,12 @@
 # License: GPLv3+
 #
 from __future__ import print_function
-from gi.repository import Libosinfo as osinfo
+
+try:
+    from gi.repository import Libosinfo as osinfo
+except ImportError:
+    osinfo = None
+
 from logging import DEBUG, INFO
 
 import rpmkit.swapi
@@ -47,6 +52,9 @@ def init_osinfo(path=None):
     :param path: libosinfo distro data
     :return: an osinfo.Db instance
     """
+    if osinfo is None:
+        return None
+
     loader = osinfo.Loader()
     if path is None:
         loader.process_default_path()
@@ -79,10 +87,16 @@ def get_distro_release_date(distro, version, release=0):
     """
     see also: https://access.redhat.com/articles/3078 (rhel)
 
-    >>> get_distro_release_date("rhel", 5, 4)
-    '2009-09-02'
+    >>> try:
+    ...     get_distro_release_date("rhel", 5, 4) == '2009-09-02'
+    ... except RuntimeError as exc:
+    ...     True
+    True
     """
     db = init_osinfo()
+    if db is None:
+        raise RuntimeError("Libosinfo initialization failed")
+
     osi = db.get_os(get_osid(distro, version, release))
 
     if osi is None:
