@@ -220,12 +220,6 @@ class Base(rpmkit.updateinfo.base.Base):
         :return: A dict contains lists of dicts of packages
 
         TODO: Find out better and correct ways to activate repo and sacks.
-
-        >>> import os.path
-        >>> if os.path.exists("/etc/redhat-release"):
-        ...     base = Base()
-        ...     pkgs = base.list_packages()
-        ...     assert isinstance(pkgs, list)
         """
         assert pkgnarrow in _PKG_NARROWS, "Invalid pkgnarrow: " + pkgnarrow
 
