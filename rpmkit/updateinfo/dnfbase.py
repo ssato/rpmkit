@@ -12,11 +12,15 @@ import dnf.conf
 import dnf
 import hawkey
 import itertools
+import logging
 import operator
 import os.path
 
 import rpmkit.updateinfo.base
 import rpmkit.utils
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _to_pkg(pkg, extras=[]):
@@ -82,6 +86,24 @@ def get_severity_from_hadv(hadv, default="N/A"):
     return hadv.title.split(':')[0]
 
 
+def _eref_to_pkg(eref):
+    """
+    Try to convert package info in errata references.
+
+    :eref: _hawkey.AdvisoryPkg object from errata references
+    """
+    assert eref.evr, "Not _hawkey.AdvisoryPkg ?: {}".format(eref)
+
+    (ver, rel) = eref.evr.rsplit('-')
+    if ':' in ver:
+        (epoch, ver) = ver.split(':')
+    else:
+        epoch = '0'
+
+    return dict(name=eref.name, arch=eref.arch, evr=eref.evr,
+                epoch=epoch, version=ver, release=rel)
+
+
 def hadv_to_errata(hadv):
     """
     Make an errata dict from _hawkey.Advisory object.
@@ -103,9 +125,7 @@ def hadv_to_errata(hadv):
     errata["cves"] = [dict(id=r.id, cve=r.id, url=r.url) for r
                       in hadv.references if r.type == hawkey.REFERENCE_CVE]
 
-    errata["packages"] = [dict(name=p.name, arch=p.arch, evr=p.evr) for p
-                          in hadv.packages]
-
+    errata["packages"] = [_eref_to_pkg(p) for p in hadv.packages]
     errata["package_names"] = rpmkit.utils.uniq(p.name for p in hadv.packages)
     errata["url"] = rpmkit.updateinfo.utils.errata_url(str(hadv.id))
 
