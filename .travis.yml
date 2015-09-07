@@ -10,7 +10,7 @@ services:
 #  - 2.4
 #  - 2.6
 #  - 2.7
-before_script:
+before_install:
   - docker build -t ssato/rpmkit -f pkg/Dockerfile .
   - docker run ssato/rpmkit /bin/sh -c "cd /root/rpmkit; bash -x ./pkg/runtest.sh"
 
