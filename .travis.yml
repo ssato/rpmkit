@@ -1,31 +1,23 @@
-# Ref. http://about.travis-ci.org/docs/user/languages/python/
+# References:
+# - http://about.travis-ci.org/docs/user/languages/python/
+# - http://docs.travis-ci.com/user/docker/
+sudo: required
 language: python
-python:
-  - 2.4
-  #- 2.5
-  - 2.6
-  - 2.7
-  #- 3.2
-  #- 3.3
+services:
+  - docker
+
+#python:
+#  - 2.4
+#  - 2.6
+#  - 2.7
 before_script:
-  - sudo rm /bin/sh
-  - sudo ln -s /bin/bash /bin/sh
-  - sudo apt-get install rpm python-rpm python-networkx python-matplotlib
-#  - ln -s /usr/lib/python2.4/dist-packages/rpm $VIRTUAL_ENV/lib/python2.4/site-packages/
-#  - ln -s /usr/lib/python2.6/dist-packages/rpm $VIRTUAL_ENV/lib/python2.6/site-packages/
-#  - ln -s /usr/lib/python2.7/dist-packages/rpm $VIRTUAL_ENV/lib/python2.7/site-packages/
-#  - ln -s /usr/lib/python2.4/dist-packages/networkx $VIRTUAL_ENV/lib/python2.4/site-packages/
-#  - ln -s /usr/lib/python2.6/dist-packages/networkx $VIRTUAL_ENV/lib/python2.6/site-packages/
-#  - ln -s /usr/lib/python2.7/dist-packages/networkx $VIRTUAL_ENV/lib/python2.7/site-packages/
-#  - ln -s /usr/lib/python2.4/dist-packages/matplotlib $VIRTUAL_ENV/lib/python2.4/site-packages/
-#  - ln -s /usr/lib/python2.6/dist-packages/matplotlib $VIRTUAL_ENV/lib/python2.6/site-packages/
-#  - ln -s /usr/lib/python2.7/dist-packages/matplotlib $VIRTUAL_ENV/lib/python2.7/site-packages/
-install:
-  - if [[ $TRAVIS_PYTHON_VERSION < '2.6' ]]; then pip install --use-mirrors simplejson PyYAML pep8 pylint flake8 BeautifulSoup coveralls; else pip install --use-mirrors PyYAML pep8 pylint flake8 BeautifulSoup coveralls; fi
+  - docker build -t ssato/rpmkit -f pkg/Dockerfile .
+  - docker run ssato/rpmkit /bin/sh -c "cd /root/rpmkit; bash -x ./pkg/runtest.sh"
+
 script:
   - "./pkg/runtest.sh"
+
 notifications:
   email:
     #on_success: always # default: change
     on_failure: always
-
