@@ -51,6 +51,9 @@ class Test_00_functions(unittest.TestCase):
         self.assertEquals(SH._terminate(p), 0)
 
     def test_11__terminate__terminated(self):
+        if os.environ.get("RUN_IN_DOCKER", "no") == "yes":
+            return
+
         p = subprocess.Popen("sleep 10", shell=True)
         p.poll()
         self.assertNotEquals(SH._terminate(p), 0)

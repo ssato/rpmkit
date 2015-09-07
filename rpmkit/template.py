@@ -11,7 +11,7 @@ import os
 import sys
 
 
-ENCODING = locale.getdefaultlocale()[1]
+ENCODING = locale.getdefaultlocale()[1] or "UTF-8"
 
 # pylint: disable=no-member
 reload(sys)
