@@ -11,7 +11,6 @@
 from rpmkit.globals import _
 from operator import itemgetter
 
-import rpmkit.updateinfo.yumwrapper
 import rpmkit.updateinfo.yumbase
 import rpmkit.updateinfo.dnfbase
 import rpmkit.updateinfo.utils
@@ -54,8 +53,7 @@ _RPM_LIST_FILE = "packages.json"
 _ERRATA_LIST_FILE = "errata.json"
 _UPDATES_LIST_FILE = "updates.json"
 
-BACKENDS = dict(yumwrapper=rpmkit.updateinfo.yumwrapper.Base,
-                yum=rpmkit.updateinfo.yumbase.Base,
+BACKENDS = dict(yum=rpmkit.updateinfo.yumbase.Base,
                 dnf=rpmkit.updateinfo.dnfbase.Base)
 DEFAULT_BACKEND = BACKENDS["yum"]
 
@@ -83,7 +81,6 @@ def set_loglevel(verbosity=0, backend=False):
     if not backend:
         llvl = logging.WARN
 
-    rpmkit.updateinfo.yumwrapper.LOG.setLevel(llvl)
     rpmkit.updateinfo.yumbase.LOG.setLevel(llvl)
     rpmkit.updateinfo.dnfbase.LOG.setLevel(llvl)
 

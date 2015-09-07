@@ -34,7 +34,7 @@ if RUU.is_rhel_or_fedora():
             C.cleanup_workdir(self.workdir)
 
         def test_10_run_yum_cmd(self):
-            for c in ("list-sec", "list installed"):
+            for c in ("updateinfo list", "list installed"):
                 TT.run_yum_cmd(self.workdir, c)
 
 # vim:sw=4:ts=4:et:
