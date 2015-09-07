@@ -73,7 +73,10 @@ def hostname():
 def get_username():
     """Get username.
     """
-    return os.environ.get("USER", os.getlogin())
+    try:
+        return os.environ.get("USER", os.getlogin())
+    except OSError:
+        return "root"  # It looks failed in docker env.
 
 
 @M.memoize
