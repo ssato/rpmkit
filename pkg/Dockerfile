@@ -2,7 +2,7 @@ FROM fedora:latest
 
 MAINTAINER ssato "https://github.com/ssato"
 
-RUN yum install -y dnf dnf-plugins-core && mkdir -p /etc/yum.repos.d/
+RUN dnf install -y dnf-plugins-core && mkdir -p /etc/yum.repos.d/
 RUN dnf copr enable -y ssato/python-anyconfig
 RUN dnf install -y \
   graphviz hardlink libosinfo python-BeautifulSoup python-anyconfig
