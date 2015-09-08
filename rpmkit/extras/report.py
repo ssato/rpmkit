@@ -18,16 +18,16 @@
 #
 from logging import DEBUG, INFO
 
-import rpmkit.rpmutils as RU
-import rpmkit.extras.depgraph as RD
-import rpmkit.template as RT
-import rpmkit.updateinfo.subproc as RUS
-
 import codecs
 import logging
 import optparse
 import os
 import os.path
+import subprocess
+
+import rpmkit.rpmutils as RU
+import rpmkit.extras.depgraph as RD
+import rpmkit.template as RT
 
 try:
     import json
@@ -88,7 +88,14 @@ def gen_depgraph_gv(root, workdir, template_paths=_TEMPLATE_PATHS,
     (outlog, errlog) = (os.path.join(workdir, "graphviz_out.log"),
                         os.path.join(workdir, "graphviz_err.log"))
 
-    (out, err, rc) = RUS.run("%s -Tsvg -o %s %s" % (engine, output, src))
+    cmd = "%s -Tsvg -o %s %s" % (engine, output, src)
+    proc = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    (out, err) = proc.communicate()
+    if proc.returncode != 0:
+        logging.warn("Failed to generate graphviz data: "
+                     "engine=%s, out=%s, src=%s",
+                     engine, out, src)
 
     copen(outlog, 'w').write(out)
     copen(errlog, 'w').write(err)
