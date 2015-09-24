@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013 Red Hat, Inc.
+# Copyright (C) 2013 - 2015 Red Hat, Inc.
 # Red Hat Author(s): Satoru SATOH <ssato@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -455,7 +455,9 @@ def main(argv=sys.argv):
     p = option_parser()
     (options, args) = p.parse_args(argv[1:])
 
-    logging.getLogger().setLevel(DEBUG if options.verbose else INFO)
+    fmt = "%(asctime)s %(name)s: [%(levelname)s] %(message)s"
+    logging.basicConfig(level=DEBUG if options.verbose else INFO, format=fmt)
+
     dump_graphs(options.root, options.workdir, options.tpaths, options.html)
 
     logging.info("Make dependency graph and dump it with graphviz")
