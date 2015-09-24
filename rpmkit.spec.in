@@ -91,8 +91,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/identrpm
 %{_bindir}/rpm2json
 %{_bindir}/rpmfy
-%{_bindir}/yum-surrogate
-#%{_bindir}/yum_updateinfo
 %{python_sitelib}/rpmkit/*.py*
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/updateinfo/*.py*
@@ -129,6 +127,7 @@ rm -rf $RPM_BUILD_ROOT
 * Fri Sep 25 2015 Satoru SATOH <ssato@redhat.com> - 0.2.14-999
 - [depgraph] avoid an error of 'dictionary changed size during iteration'
 - [updateinfo] deprecate rpmkit.updateinfo.yumwraper backend
+- [yum-surrogate] removed along with rpmkit.updateinfo.yumwraper backend
 - [updateinfo] use dnf instead of yum if available
 - [updateinfo] implement dnf backend
 - [updateinfo] try yum-deprecated before yum by default for yum backend
