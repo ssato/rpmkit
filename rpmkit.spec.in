@@ -126,6 +126,17 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/extras/*.py*
 
 %changelog
+* Fri Sep 25 2015 Satoru SATOH <ssato@redhat.com> - 0.2.14-999
+- [depgraph] avoid an error of 'dictionary changed size during iteration'
+- [updateinfo] deprecate rpmkit.updateinfo.yumwraper backend
+- [updateinfo] use dnf instead of yum if available
+- [updateinfo] implement dnf backend
+- [updateinfo] try yum-deprecated before yum by default for yum backend
+- remove runtime dependency to rpmkit.updateinfo.subproc and use
+  subprocess.Poepn instead
+- disable memory profile by default
+- Some other code cleanups and bug fixes
+
 * Fri Jan  9 2015 Satoru SATOH <ssato@redhat.com> - 0.2.14-1
 - [swapi] return [] even if an error occurred during API calls
 - [extras.updateinfo] refactoring and fixes around CVE/CVSS code
