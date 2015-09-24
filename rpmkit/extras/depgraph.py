@@ -178,7 +178,7 @@ def make_dependencies_dag(root, reqs=None, rreqs=None):
     g = make_dependency_graph(root, rreqs=rreqs)
 
     # Degenerate strongly connected components:
-    for scc in NX.strongly_connected_components(g):
+    for scc in list(NX.strongly_connected_components(g)):
         scc = sorted(U.uniq(scc))  # TODO: Is this needed?
 
         if len(scc) == 1:  # Ignore sccs of which length is 1.
