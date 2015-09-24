@@ -2,7 +2,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <script type="text/javascript" src="js/jquery.js"></script>
+    {# jquery_path: js/jquery.js -#}
+    <script type="text/javascript" src="{{ jquery_path|default('http://code.jquery.com/jquery-1.11.3.min.js' }}"></script>
     <script type="text/javascript" src="js/graphviz-svg.js"></script>
     <style>
 #wrap { margin: 3em; }
