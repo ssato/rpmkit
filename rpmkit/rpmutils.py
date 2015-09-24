@@ -124,8 +124,7 @@ def _yum_list_installed(root=None, cachedir=None, persistdir=None):
     :param root: RPM DB root dir
     :return: List of yum.rpmsack.RPMInstalledPackage objects
     """
-    if root is None:
-        root = "/var/lib/rpm"
+    root = '/' if root is None else os.path.abspath(root)
 
     if persistdir is None:
         persistdir = root
