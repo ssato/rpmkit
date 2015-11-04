@@ -180,12 +180,12 @@ def main(hosts_datadir, workdir=None, repos=[], score=-1,
         hsdata = [(h, score, keywords, rpms, period, refdir) for h, _hrest
                   in hset]
 
-        if multiproc:
-            pool = multiprocessing.Pool(multiprocessing.cpu_count())
-            pool.map(analyze, hsdata)
-        else:
-            for args in hsdata:
-                analyze(args)
+        # Disabled until fixing bugs:
+        # if multiproc:
+        #    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+        #    pool.map(analyze, hsdata)
+        for args in hsdata:
+            analyze(args)
 
         for h, hsrest in hset:
             if hsrest:
