@@ -293,7 +293,7 @@ _RHSA_SEVERITIES = collections.defaultdict(int,
                                            dict(Low=2, Moderate=4,
                                                 Important=6, Critical=8))
 _E2I_REG = re.compile(r"^RH(?P<echar>(E|B|S))A-(?P<year>\d{4}):"
-                      "(?P<seq>\d{4})(?:-(?P<rev>\d+))?$")
+                      "(?P<seq>\d{4,5})(?:-(?P<rev>\d+))?$")
 
 
 def errata_to_int(errata, echars=_ERRATA_CHARS, severities=_RHSA_SEVERITIES,
