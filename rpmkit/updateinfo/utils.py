@@ -142,7 +142,7 @@ def check_rpmdb_root(root, readonly=True, dbnames=_RPM_DB_FILENAMES):
     return True
 
 
-RHERRATA_RE = re.compile(r"^RH[SBE]A-\d{4}[:-]\d{4}(?:-\d+)?$")
+RHERRATA_RE = re.compile(r"^RH[SBE]A-\d{4}[:-]\d{4,5}(?:-\d+)?$")
 
 
 def errata_url(advisory):
