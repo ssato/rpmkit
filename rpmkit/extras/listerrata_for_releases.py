@@ -6,6 +6,8 @@
 from __future__ import print_function
 
 try:
+    import gi
+    gi.require_version('Libosinfo', '1.0')
     from gi.repository import Libosinfo as osinfo
 except ImportError:
     osinfo = None
