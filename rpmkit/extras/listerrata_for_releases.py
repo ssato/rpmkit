@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014 Red Hat, Inc.
+# Copyright (C) 2014, 2015 Red Hat, Inc.
 # Author: Satoru SATOH <ssato@redhat.com>
 # License: GPLv3+
 #
@@ -14,21 +14,38 @@ except ImportError:
 
 from logging import DEBUG, INFO
 
-import rpmkit.swapi
-import rpmkit.rpmutils
-import rpmkit.utils
-
 import anyconfig
 import collections
 import datetime
 import exceptions
+import gzip
 import itertools
 import logging
+import operator
 import optparse
 import os.path
 import re
 import sys
 import tempfile
+
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
+
+try:
+    # First, try lxml which is compatible with elementtree and looks faster a
+    # lot. See also: http://getpython3.com/diveintopython3/xml.html
+    from lxml2 import etree as ET
+except ImportError:
+    try:
+        import xml.etree.ElementTree as ET
+    except ImportError:
+        import elementtree.ElementTree as ET
+
+import rpmkit.swapi
+import rpmkit.rpmutils
+import rpmkit.utils
 
 
 _TODAY = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -166,6 +183,60 @@ def get_errata_list_from_rhns(channel, period, details=False, list_pkgs=False,
         es = [errata_add_relevant_package_list(e, rps, swopts) for e in es]
 
     return es
+
+
+_UPD_BASICS = "id title severity rights summary description".split()
+
+
+def update_from_updateinfo_xml_s_itr(updateinfo):
+    """
+    :param updateinfo: the content of updateinfo.xml :: str
+    """
+    root = ET.ElementTree(ET.fromstring(updateinfo)).getroot()
+    for upd in root.findall("update"):
+        uinfo = upd.attrib
+        for k in _UPD_BASICS:
+            elem = upd.find(k)
+            if elem is not None:
+                uinfo[k] = elem.text
+
+        for k in "issued updated".split():
+            uinfo[k] = upd.find(k).attrib["date"]
+        uinfo["refs"] = [r.attrib for r in upd.findall(".//reference")]
+        uinfo["pkgs"] = [dict(filename=p.find("filename").text, **p.attrib)
+                         for p in upd.findall(".//package")]
+        yield uinfo
+
+
+def get_errata_list_from_updateinfo(repo, period=None, list_pkgs=False,
+                                    **opts):
+    """
+    Very dirty hack!
+
+    :param repo: ID of the repo from RH CDN, ex. rhel-7-server-rpms
+    :param period: Range of date to get errata list within,
+        ex. ["2014-01-01"], ["2009-01-31", "2010-02-01"]
+    :param list_pkgs:
+        Get package info relevant to each errata additionally if True
+    :param opts: Optional keyword arguments such as baseurl
+
+    .. todo::
+       baseurl should be detected from yum .repo files
+    """
+    # baseurl must be in opts.
+    repomd_url = os.path.join(opts["baseurl"], repo, "repodata/repomd.xml")
+    repomd = rpmkit.swapi.urlread(repomd_url)  # IOError, etc. may be raised.
+    root = ET.ElementTree(ET.fromstring(repomd)).getroot()
+    es = root.findall(".//{http://linux.duke.edu/metadata/repo}location")
+    us = [e.attrib["href"] for e in es if "updateinfo.xml" in e.attrib["href"]]
+    if not us:
+        raise RuntimeError("Failed to find the url of updateinfo.xml from %s" %
+                           repomd_url)
+    upd_url = os.path.join(opts["baseurl"], repo, us[0])
+    updgz = rpmkit.swapi.urlread(upd_url)  # raises ...
+    updateinfo = gzip.GzipFile(fileobj=StringIO.StringIO(updgz)).read()
+    return sorted(update_from_updateinfo_xml_s_itr(updateinfo),
+                  key=operator.itemgetter("issued"))
 
 
 def dicts_eq(lhs, rhs, strict=False):
