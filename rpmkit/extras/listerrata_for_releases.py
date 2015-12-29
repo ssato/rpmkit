@@ -193,29 +193,6 @@ def get_errata_list_from_rhns(channel, period, details=False, list_pkgs=False,
     return es
 
 
-_UPD_BASICS = "id title severity rights summary description".split()
-
-
-def updateinfo_xml_itr(updateinfo):
-    """
-    :param updateinfo: the content of updateinfo.xml :: str
-    """
-    root = ET.ElementTree(ET.fromstring(updateinfo)).getroot()
-    for upd in root.findall("update"):
-        uinfo = upd.attrib
-        for k in _UPD_BASICS:
-            elem = upd.find(k)
-            if elem is not None:
-                uinfo[k] = elem.text
-
-        for k in "issued updated".split():
-            uinfo[k] = upd.find(k).attrib["date"]
-        uinfo["refs"] = [r.attrib for r in upd.findall(".//reference")]
-        uinfo["pkgs"] = [dict(filename=p.find("filename").text, **p.attrib)
-                         for p in upd.findall(".//package")]
-        yield uinfo
-
-
 def expand_baseurl_in_repofile(baseurl, relver=None, yumvars=_YUMVARS):
     """
     Expand yum variables in baseurl string from yum .repo files.
@@ -229,7 +206,27 @@ def expand_baseurl_in_repofile(baseurl, relver=None, yumvars=_YUMVARS):
                   re.sub(r"\$releasever", relver, baseurl))
 
 
-def get_errata_list_from_updateinfo_by_repofile(rid):
+def updateinfo_xml_itr(updateinfo):
+    """
+    :param updateinfo: the content of updateinfo.xml :: str
+    """
+    root = ET.ElementTree(ET.fromstring(updateinfo)).getroot()
+    for upd in root.findall("update"):
+        uinfo = upd.attrib
+        for k in "id title severity rights summary description".split():
+            elem = upd.find(k)
+            if elem is not None:
+                uinfo[k] = elem.text
+
+        for k in "issued updated".split():
+            uinfo[k] = upd.find(k).attrib["date"]
+        uinfo["refs"] = [r.attrib for r in upd.findall(".//reference")]
+        uinfo["packages"] = [dict(filename=p.find("filename").text, **p.attrib)
+                             for p in upd.findall(".//package")]
+        yield uinfo
+
+
+def get_errata_list_from_updateinfo_by_repofile(rid, basearch="x86_64"):
     """
     Try to fetch the content of given repo metadata xml from remote.
 
@@ -488,7 +485,7 @@ def guess_rhns_channels_by_distro(distro):
     return []
 
 
-def distro_new(distro_s, arch="x86_64", channels=[]):
+def distro_new_by_rhns(distro_s, arch="x86_64", channels=[]):
     """
     :param distro_s: A string represents distribution,
         ex. 'rhel-6.5-x86_64', 'fedora-20'
@@ -506,6 +503,20 @@ def distro_new(distro_s, arch="x86_64", channels=[]):
     distro["checksum_type"] = distro_guess_checksum_type(distro)
     distro["period"] = distro_resolve_release_dates(distro)
 
+    return distro
+
+
+def distro_new(distro_s, arch="x86_64"):
+    """
+    :param distro_s: A string represents distribution,
+        ex. 'rhel-6.5-x86_64', 'fedora-20'
+    :param arch: Default architecture
+    """
+    distro = parse_distro(distro_s, arch)
+    distro["period"] = distro_resolve_release_dates(distro)
+    distro["repoid"] = "rhel-%(version)d-server-rpms" % distro
+    distro["channels"] = [distro["repoid"]]
+    distro["checksum_type"] = "sha256"
     return distro
 
 
@@ -605,17 +616,19 @@ def output_results(errata, packages, updates, distro, workdir):
 
     with open(os.path.join(workdir, "updates.txt"), 'w') as f:
         for u in updates:
-            f.write(u["path"] + '\n')
+            f.write(u.get("path", u.get("filename", "N/A")) + '\n')
 
     with open(os.path.join(workdir, "errata.csv"), 'w') as f:
         f.write("advisory,synopsis,issue_date,url\n")
         for e in errata:
-            adv = e["advisory"]
+            adv = e.get("advisory", e.get("id"))
             adv_s = adv.replace(':', '-')
             url = "https://rhn.redhat.com/errata/{}.html".format(adv_s)
 
-            f.write("{},{},{},{}\n".format(adv, e["synopsis"],
-                                           e["issue_date"], url))
+            f.write("{},{},{},{}\n".format(adv,
+                                           e.get("synopsis", e.get("title")),
+                                           e.get("issue_date",
+                                                 e.get("issued")), url))
 
     fn = os.path.join(workdir, "geniso.sh")
     with open(fn, 'w') as f:
@@ -635,11 +648,14 @@ def option_parser():
                    "rhel-5.4..5-x86_64" means "from rhel-5.4-x86_64 to
                    rhel-5.5-x86_64"."""
     defaults = dict(download=False, workdir=None, channels=[], arch="x86_64",
-                    all_versions=False, swopts=[], verbose=False)
+                    all_versions=False, swopts=[], rhns=False,
+                    verbose=False)
 
     p = optparse.OptionParser(usage)
     p.set_defaults(**defaults)
 
+    p.add_option("-R", "--rhns", action="store_true",
+                 help="Use classic RHN / Satellite API to fetch info")
     p.add_option("-d", "--download", action="store_true",
                  help="Download errata packages (Not implemented yet)")
     p.add_option("-w", "--workdir", help="Working dir to save results")
@@ -666,10 +682,17 @@ def main():
         p.print_help()
         sys.exit(1)
 
-    distro = distro_new(args[0], options.arch, options.channels)
-    errata = list_errata_from_rhns(distro, options.swopts)
-    packages = list_errata_packages(errata, options.swopts)
-    updates = rpmkit.rpmutils.find_latests(packages, ("name", "arch_label"))
+    if options.rhns:
+        distro = distro_new_by_rhns(args[0], options.arch, options.channels)
+        errata = list_errata_from_rhns(distro, options.swopts)
+        packages = list_errata_packages(errata, options.swopts)
+        updates = rpmkit.rpmutils.find_latests(packages, ("name", "arch_label"))
+    else:
+        distro = distro_new(args[0], options.arch)
+        # basearch = distro["arch"]  # TBD.
+        errata = get_errata_list_from_updateinfo_by_repofile(distro["repoid"])
+        packages = list_errata_packages(errata)
+        updates = rpmkit.rpmutils.find_latests(packages, ("name", "arch"))
 
     if options.workdir:
         workdir = options.workdir
