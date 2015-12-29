@@ -25,6 +25,7 @@ import operator
 import optparse
 import os.path
 import re
+import requests
 import sys
 import tempfile
 
@@ -43,6 +44,12 @@ except ImportError:
     except ImportError:
         import elementtree.ElementTree as ET
 
+try:
+    import yum
+    _YUMVARS = yum.YumBase().conf.yumvar
+except ImportError:
+    _YUMVARS = dict(releasever=None, basearch="x86_64")
+
 import rpmkit.swapi
 import rpmkit.rpmutils
 import rpmkit.utils
@@ -50,6 +57,7 @@ import rpmkit.utils
 
 _TODAY = datetime.datetime.now().strftime("%Y-%m-%d")
 _ES_FMT = "%(advisory)s,%(synopsis)s,%(issue_date)s"
+LOG = logging.getLogger(__name__)
 
 
 def prev_date(date_s):
@@ -188,7 +196,7 @@ def get_errata_list_from_rhns(channel, period, details=False, list_pkgs=False,
 _UPD_BASICS = "id title severity rights summary description".split()
 
 
-def update_from_updateinfo_xml_s_itr(updateinfo):
+def updateinfo_xml_itr(updateinfo):
     """
     :param updateinfo: the content of updateinfo.xml :: str
     """
@@ -208,6 +216,83 @@ def update_from_updateinfo_xml_s_itr(updateinfo):
         yield uinfo
 
 
+def expand_baseurl_in_repofile(baseurl, relver=None, yumvars=_YUMVARS):
+    """
+    Expand yum variables in baseurl string from yum .repo files.
+    """
+    relver = yumvars.get("releasever", relver)
+    if not relver:
+        relver = "7Server"  # FIXME
+    basearch = yumvars.get("basearch", "x86_64")
+
+    return re.sub(r"\$basearch", basearch,
+                  re.sub(r"\$releasever", relver, baseurl))
+
+
+def get_errata_list_from_updateinfo_by_repofile(rid):
+    """
+    Try to fetch the content of given repo metadata xml from remote.
+
+    :param rid: ID of the repo from RH CDN, ex. rhel-7-server-rpms
+    """
+    timeout = 60 * 5
+    try:
+        repos = anyconfig.load("/etc/yum.repos.d/*.repo", ac_parser="ini")
+        repo = repos.get(rid, None)
+        if repo is None:
+            LOG.error("Failed to get repo info: %r", rid)
+            return None
+
+        rparams = dict(timeout=timeout)
+        if "sslclientcert" in repo and "sslclientkey" in repo:
+            rparams["cert"] = (repo["sslclientcert"], repo["sslclientkey"])
+
+        if "sslcacert" in repo:
+            rparams["verify"] = repo["sslcacert"]
+
+        try:
+            m = re.match(r"Red Hat Enterprise Linux (\d+) .*", repo["name"])
+            relver = "%dServer" % int(m.groups()[0]) if m else "7Server"
+        except (AttributeError, IndexError):
+            relver = None
+
+        baseurl = expand_baseurl_in_repofile(repo["baseurl"], relver)
+        repomd_xml_url = os.path.join(baseurl, "repodata/repomd.xml")
+
+        LOG.info("Try to fetch repomd.xml: %s", repomd_xml_url)
+        resp = requests.get(repomd_xml_url, **rparams)
+        if not resp.ok:
+            LOG.error("Failed to get repomd.xml from %s", baseurl)
+            return None
+
+        LOG.debug("Try to parse repomd.xml...")
+        root = ET.ElementTree(ET.fromstring(resp.text)).getroot()
+
+        ns = "http://linux.duke.edu/metadata/repo"
+        es = root.findall(".//{%s}location" % ns)
+        us = [e.attrib["href"] for e in es if "updateinfo.xml"
+              in e.attrib["href"]]
+        if not us:
+            LOG.error("Failed to find the url %s", repomd_xml_url)
+            return None
+
+        upd_url = os.path.join(baseurl, us[0])
+
+        LOG.debug("Try to fetch updateinfo.xml: %s", upd_url)
+        resp = requests.get(upd_url, **rparams)
+
+        if not resp.ok:
+            LOG.error("Failed to get updateinfo.xml from %s", upd_url)
+            return None
+
+        updgz = resp.content
+        uinfo = gzip.GzipFile(fileobj=StringIO.StringIO(updgz)).read()
+        return sorted(updateinfo_xml_itr(uinfo),
+                      key=operator.itemgetter("issued"))
+    except Exception as exc:
+        raise RuntimeError("Failed: exc=%r" % exc)
+
+
 def get_errata_list_from_updateinfo(repo, period=None, list_pkgs=False,
                                     **opts):
     """
@@ -223,7 +308,6 @@ def get_errata_list_from_updateinfo(repo, period=None, list_pkgs=False,
     .. todo::
        baseurl should be detected from yum .repo files
     """
-    # baseurl must be in opts.
     repomd_url = os.path.join(opts["baseurl"], repo, "repodata/repomd.xml")
     repomd = rpmkit.swapi.urlread(repomd_url)  # IOError, etc. may be raised.
     root = ET.ElementTree(ET.fromstring(repomd)).getroot()
@@ -235,7 +319,7 @@ def get_errata_list_from_updateinfo(repo, period=None, list_pkgs=False,
     upd_url = os.path.join(opts["baseurl"], repo, us[0])
     updgz = rpmkit.swapi.urlread(upd_url)  # raises ...
     updateinfo = gzip.GzipFile(fileobj=StringIO.StringIO(updgz)).read()
-    return sorted(update_from_updateinfo_xml_s_itr(updateinfo),
+    return sorted(updateinfo_xml_itr(updateinfo),
                   key=operator.itemgetter("issued"))
 
 
