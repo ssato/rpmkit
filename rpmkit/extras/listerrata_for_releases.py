@@ -15,6 +15,7 @@ except ImportError:
 from logging import DEBUG, INFO
 
 import anyconfig
+import bisect
 import collections
 import datetime
 import exceptions
@@ -290,36 +291,6 @@ def get_errata_list_from_updateinfo_by_repofile(rid, basearch="x86_64"):
         raise RuntimeError("Failed: exc=%r" % exc)
 
 
-def get_errata_list_from_updateinfo(repo, period=None, list_pkgs=False,
-                                    **opts):
-    """
-    Very dirty hack!
-
-    :param repo: ID of the repo from RH CDN, ex. rhel-7-server-rpms
-    :param period: Range of date to get errata list within,
-        ex. ["2014-01-01"], ["2009-01-31", "2010-02-01"]
-    :param list_pkgs:
-        Get package info relevant to each errata additionally if True
-    :param opts: Optional keyword arguments such as baseurl
-
-    .. todo::
-       baseurl should be detected from yum .repo files
-    """
-    repomd_url = os.path.join(opts["baseurl"], repo, "repodata/repomd.xml")
-    repomd = rpmkit.swapi.urlread(repomd_url)  # IOError, etc. may be raised.
-    root = ET.ElementTree(ET.fromstring(repomd)).getroot()
-    es = root.findall(".//{http://linux.duke.edu/metadata/repo}location")
-    us = [e.attrib["href"] for e in es if "updateinfo.xml" in e.attrib["href"]]
-    if not us:
-        raise RuntimeError("Failed to find the url of updateinfo.xml from %s" %
-                           repomd_url)
-    upd_url = os.path.join(opts["baseurl"], repo, us[0])
-    updgz = rpmkit.swapi.urlread(upd_url)  # raises ...
-    updateinfo = gzip.GzipFile(fileobj=StringIO.StringIO(updgz)).read()
-    return sorted(updateinfo_xml_itr(updateinfo),
-                  key=operator.itemgetter("issued"))
-
-
 def dicts_eq(lhs, rhs, strict=False):
     """
     >>> dicts_eq({}, {})
@@ -445,7 +416,7 @@ def distro_guess_checksum_type(distro):
         return "sha256"
 
 
-def distro_resolve_release_dates(distro):
+def distro_resolve_release_dates(distro, prev=True):
     """
     :param distro: A dict represents OS distribution
     """
@@ -461,7 +432,8 @@ def distro_resolve_release_dates(distro):
                                                       distro["releases"][1],
                                                       distro["arch"],
                                                       end))
-        period.append(prev_date(end))
+        # No need to compute prev. date if bisect.bisect_left is used.
+        period.append(prev_date(end) if prev else end)
         logging.info("period: {}..{}".format(*period))
 
     return period
@@ -513,7 +485,7 @@ def distro_new(distro_s, arch="x86_64"):
     :param arch: Default architecture
     """
     distro = parse_distro(distro_s, arch)
-    distro["period"] = distro_resolve_release_dates(distro)
+    distro["period"] = distro_resolve_release_dates(distro, prev=False)
     distro["repoid"] = "rhel-%(version)d-server-rpms" % distro
     distro["channels"] = [distro["repoid"]]
     distro["checksum_type"] = "sha256"
@@ -690,7 +662,17 @@ def main():
     else:
         distro = distro_new(args[0], options.arch)
         # basearch = distro["arch"]  # TBD.
-        errata = get_errata_list_from_updateinfo_by_repofile(distro["repoid"])
+        aes = get_errata_list_from_updateinfo_by_repofile(distro["repoid"])
+
+        LOG.info("Filter errata in the period: %s", "~".join(distro["period"]))
+        edates = [e["issued"] for e in aes]
+        ebegin = bisect.bisect_left(edates, distro["period"][0])
+        if len(distro["period"]) > 1:
+            eend = bisect.bisect_left(edates, distro["period"][1], ebegin)
+            errata = aes[ebegin:eend]
+        else:
+            errata = aes[ebegin:]
+
         packages = list_errata_packages(errata)
         updates = rpmkit.rpmutils.find_latests(packages, ("name", "arch"))
 
