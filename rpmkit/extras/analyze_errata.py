@@ -142,7 +142,7 @@ def make_corpus(docs, workdir):
     return corpus
 
 
-def make_models(workdir):
+def make_topic_models(workdir):
     """
     :param workdir: Working dir in which corpus, dict files are saved
     """
