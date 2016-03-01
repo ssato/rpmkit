@@ -45,6 +45,12 @@ except ImportError:
     except ImportError:
         import elementtree.ElementTree as ET
 
+try:
+    import nltk.sentiment
+except ImportError:
+    print("nltk.sentiment module is not available (maybe nltk < 3.1)",
+          file=sys.stderr)
+
 
 _TODAY = datetime.datetime.now().strftime("%Y-%m-%d")
 _ES_FMT = "%(advisory)s,%(synopsis)s,%(issue_date)s"
@@ -73,6 +79,12 @@ def _setup_workdir(workdir=None):
     return workdir
 
 
+def normalize(txt):
+    """Normalize given text.
+    """
+    return txt.translate(None, string.punctuation).lower()
+
+
 def tokenize(text, stopwords=None):
     """Tokenize given text.
     """
@@ -87,21 +99,31 @@ def analyze(errata):
     """
     :param errata: A list of dicts each represents basic errata info :: dict
     """
+    edocs = [(e["id"], normalize(e["description"])) for e in errata]
+
+    # NLTK: (Naive) TF counts, etc.
+    freqs = [(k, nltk.FreqDist(w for w in tokenize(v))) for k, v in edocs]
+
+    # Scikit-Learn: TF/IDF
     cls = sklearn.feature_extraction.text.TfidfVectorizer
     vectorizer = cls(tokenizer=tokenize,
                      stop_words=nltk.corpus.stopwords.words("english"))
 
-    edocs = {e["id"]: e["description"].translate(None, string.punctuation)
-            for e in errata}
-
-    tfidfs = vectorizer.fit_transform(edocs.values())
+    tfidfs = vectorizer.fit_transform(v for _k, v in edocs)
     fnames = vectorizer.get_feature_names()
 
     words = [sorted(itertools.izip_longest(fnames, tfidf.toarray()[0]),
                     key=operator.itemgetter(1), reverse=True)
              for tfidf in tfidfs]
 
-    return (edocs, tfidfs, fnames, words)
+    # Requirements: NLTK >= 3.1
+    try:
+        analyzer = nltk.sentiment.vader.SentimentIntensityAnalyzer()
+        sentiments = [(k, analyzer.polarity_scores(v)) for k, v in edocs]
+    except (NameError, AttributeError):  # N/A
+        sentiments = None
+
+    return (edocs, tfidfs, fnames, words, sentiments)
 
 
 # https://radimrehurek.com/gensim/tut1.html#corpus-formats
