@@ -15,7 +15,12 @@ Design Doc:
   - Text Normalization:
   
     - Normalize to lower cases
-    - Remove punctations,
+    - Remove punctations, etc.
+
+  - TF: nltk.FreqDist, etc.
+  - TF/IDF: sklearn.feature_extraction.text.TfidfVectorizer
+  - Sentiment analysys: nltk.sentiment.vader.SentimentIntensityAnalyzer
+  - [M]C-Value, FLR, etc.: https://goo.gl/aXdrbc
 
 """
 from __future__ import print_function
