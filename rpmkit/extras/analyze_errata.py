@@ -21,6 +21,7 @@ Design Doc:
   - TF/IDF: sklearn.feature_extraction.text.TfidfVectorizer
   - Sentiment analysys: nltk.sentiment.vader.SentimentIntensityAnalyzer
   - [M]C-Value, FLR, etc.: https://goo.gl/aXdrbc
+  - {k-means, k-medoids} clustering: sklearn.cluster.KMeans, ...
 
 """
 from __future__ import print_function
