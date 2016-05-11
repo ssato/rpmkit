@@ -88,7 +88,8 @@ def _setup_workdir(workdir=None):
 def normalize(txt):
     """Normalize given text.
     """
-    return txt.translate(None, string.punctuation).lower()
+    # return txt.translate(None, string.punctuation).lower()
+    return txt.lower()
 
 
 def tokenize(text, stopwords=None):
