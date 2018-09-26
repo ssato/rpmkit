@@ -43,8 +43,8 @@ data_files = [
     ("share/rpmkit/templates", list_files("data/templates/")),
     ("share/rpmkit/templates/css", list_files("data/templates/css")),
     ("share/rpmkit/templates/js", list_files("data/templates/js")),
-    (os.path.join(get_python_lib(), "rpmkit/locale/ja/LC_MESSAGES"),
-     ["rpmkit/locale/ja/LC_MESSAGES/rpmkit.mo"]),
+#    (os.path.join(get_python_lib(), "rpmkit/locale/ja/LC_MESSAGES"),
+#     ["rpmkit/locale/ja/LC_MESSAGES/rpmkit.mo"]),
 ]
 
 

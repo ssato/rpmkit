@@ -95,7 +95,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/rpmkit/tests/*.py*
 %{python_sitelib}/rpmkit/updateinfo/*.py*
 %{python_sitelib}/rpmkit/updateinfo/tests/*.py*
-%{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
+#%{python_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
 
 %files          ylc
 %{_bindir}/yum_makelistcache
