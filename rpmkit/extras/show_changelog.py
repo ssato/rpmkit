@@ -56,7 +56,7 @@ def _changelog_itr(elems):
     """
     for clog in elems:
         cinfo = clog.attrib
-        cinfo["text"] = clog.text
+        cinfo["text"] = clog.text.splitlines()
         yield cinfo
 
 
