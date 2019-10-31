@@ -69,16 +69,24 @@ def pkgdata_from_primary_xml_itr(filepath):
 
 
 _SUMMARY = """
-# of RPMs (names): %d
-# of unique RPMs: %d
+Number of RPMs (names): %d
+Number of unique RPMs: %d
 Total size of RPMs: %d [GB]
 """
+
+
+def _repoid_by_primary_xml(filepath):
+    """
+    :param filepath: Path to primary.xml[.gz]
+    """
+    return os.path.split(filepath)
 
 
 def anaylize_and_show_results(filepath, summary=_SUMMARY):
     """
     :param filepath: Path to primary.xml[.gz]
     """
+    LOG.info("Analyze %s...", filepath)
     pkgs = list(pkgdata_from_primary_xml_itr(filepath))
     unit = 1024 * 1024 * 1024  # (byte) -> kbyte -> MByte -> GByte
 
