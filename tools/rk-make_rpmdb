@@ -1,3 +1,0 @@
-#! /usr/bin/python
-import rpmkit.extras.make_rpmdb as M
-M.main()

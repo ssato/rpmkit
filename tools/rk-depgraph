@@ -1,7 +1,0 @@
-#! /usr/bin/python
-#
-from rpmkit.extras.depgraph import main
-
-main()
-
-# vim:sw=4:ts=4:et:

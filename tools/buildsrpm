@@ -1,9 +1,0 @@
-#! /usr/bin/python
-#
-import rpmkit.buildsrpm
-import sys
-
-rpmkit.buildsrpm.main(sys.argv)
-
-
-# vim:sw=4:ts=4:et:

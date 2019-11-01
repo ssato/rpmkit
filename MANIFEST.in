@@ -1,7 +1,5 @@
 include MANIFEST.in
 include README.rst
-include rpmkit.spec.in
-include rpmkit.spec.el5.in
 include setup.py
 include pkg/*
 include tools/*

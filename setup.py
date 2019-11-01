@@ -1,147 +1,53 @@
-from distutils.core import setup, Command
-from distutils.sysconfig import get_python_lib
-from glob import glob
+from __future__ import absolute_import
 
+import glob
 import os
-import os.path
-import sys
+import re
+import setuptools
+import setuptools.command.bdist_rpm
 
-curdir = os.getcwd()
-sys.path.append(curdir)
 
-PACKAGE = "rpmkit"
-VERSION = "0.2.14"
-SNAPSHOT_BUILD_MODE = False
-RHEL_5_BUILD = False
+VERSION = False
+for pyf in glob.glob("*/__init__.py"):
+    matches = [m.groups() for m in (re.match(r'__version__ = "([0-9.]+)"', l)
+                                    for l in open(pyf).readlines()) if m]
+    if matches:
+        VERSION = matches[0][0]
+
+assert VERSION
 
 # For daily snapshot versioning mode:
+RELEASE = "1"
 if os.environ.get("_SNAPSHOT_BUILD", None) is not None:
     import datetime
-    SNAPSHOT_BUILD_MODE = True
-    VERSION = VERSION + datetime.datetime.now().strftime(".%Y%m%d")
-
-if os.environ.get("_RHEL_5_BUILD", None) is not None:
-    RHEL_5_BUILD = True
+    RELEASE = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
 
-def list_files(tdir):
-    return [f for f in glob(os.path.join(tdir, '*')) if os.path.isfile(f)]
-
-
-data_files = [
-    ("share/rpmkit/optimizer/pgroups.d/rhel-6-x86_64",
-     list_files("data/optimizer/pgroups.d/rhel-6-x86_64/")),
-    ("/var/lib/yum_makelistcache/root.d/",
-     list_files("data/yum_makelistcache/root.d/")),
-    ("/etc/yum_makelistcache.d/", list_files("etc/yum_makelistcache.d/")),
-    ("/etc/cron.daily/", list_files("etc/cron.daily/")),
-    ("/etc/sysconfig/", list_files("etc/sysconfig/")),
-    ("/etc/httpd/conf.d/", list_files("etc/httpd/conf.d/")),
-    ("/etc/httpd/passwd.d/", list_files("etc/httpd/passwd.d/")),
-    ("/etc/rpmkit/optimizer.d/rhel-6-x86_64",
-     list_files("etc/optimizer.d/rhel-6-x86_64/")),
-    ("share/rpmkit/templates", list_files("data/templates/")),
-    ("share/rpmkit/templates/css", list_files("data/templates/css")),
-    ("share/rpmkit/templates/js", list_files("data/templates/js")),
-#    (os.path.join(get_python_lib(), "rpmkit/locale/ja/LC_MESSAGES"),
-#     ["rpmkit/locale/ja/LC_MESSAGES/rpmkit.mo"]),
-]
-
-
-def multi_replace(s, replaces):
+class bdist_rpm(setuptools.command.bdist_rpm.bdist_rpm):
+    """Override the default content of the RPM SPEC.
     """
-    >>> multi_replace("abc def", [("abc", "ABC"), ("def", "DEF")])
-    'ABC DEF'
-    """
-    if replaces:
-        for src, dst in replaces:
-            s = s.replace(src, dst)
+    spec_tmpl = os.path.join(os.path.abspath(os.curdir),
+                             "pkg/package.spec.in")
 
-    return s
+    def _replace(self, line):
+        """Replace some strings in the RPM SPEC template"""
+        if "@VERSION@" in line:
+            return line.replace("@VERSION@", VERSION)
 
+        if "@RELEASE@" in line:
+            return line.replace("@RELEASE@", RELEASE)
 
-class SrpmCommand(Command):
+        if "Source0:" in line:  # Dirty hack
+            return "Source0: %{pkgname}-%{version}.tar.gz"
 
-    user_options = []
+        return line
 
-    build_stage = "s"
-    cmd_fmt = """rpmbuild -b%(build_stage)s \
-        --define \"_topdir %(rpmdir)s\" \
-        --define \"_sourcedir %(rpmdir)s\" \
-        --define \"_buildroot %(BUILDROOT)s\" \
-        %(rpmspec)s """
-
-    if RHEL_5_BUILD:
-        cmd_fmt += ("--define '_source_filedigest_algorithm md5' "
-                    "--define '_binary_filedigest_algorithm md5'")
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        if not SNAPSHOT_BUILD_MODE:
-            self.update_mo()
-        self.run_command('sdist')
-        self.build_rpm()
-
-    def update_mo(self):
-        os.system("./pkg/update-po.sh")
-
-    def build_rpm(self):
-        params = dict()
-
-        params["build_stage"] = self.build_stage
-        rpmdir = params["rpmdir"] = os.path.join(
-            os.path.abspath(os.curdir), "dist"
-        )
-        rpmspec = params["rpmspec"] = os.path.join(
-            rpmdir, "../%s.spec" % PACKAGE
-        )
-
-        for subdir in ("SRPMS", "RPMS", "BUILD", "BUILDROOT"):
-            sdir = params[subdir] = os.path.join(rpmdir, subdir)
-
-            if not os.path.exists(sdir):
-                os.makedirs(sdir, 0755)
-
-        if RHEL_5_BUILD:
-            replaces = [("@VERSION@", VERSION),
-                        ("yum-plugin-downloadonly", "yum-downloadonly"),
-                        ("yum-plugin-security", "yum-security")]
-        else:
-            replaces = [("@VERSION@", VERSION), ]
-
-        c = open(rpmspec + ".in").read()
-        open(rpmspec, "w").write(multi_replace(c, replaces))
-
-        cmd = self.cmd_fmt % params
-        sys.stdout.write("[Info] run cmd: %s w/ %s\n" % (cmd, rpmspec))
-        os.system(cmd)
+    def _make_spec_file(self):
+        return [self._replace(l.rstrip()) for l
+                in open(self.spec_tmpl).readlines()]
 
 
-class RpmCommand(SrpmCommand):
-
-    build_stage = "b"
-
-
-setup(name=PACKAGE,
-      version=VERSION,
-      description="RPM toolKit",
-      author="Satoru SATOH",
-      author_email="ssato@redhat.com",
-      license="GPLv3+",
-      url="https://github.com/ssato/rpmkit",
-      packages=["rpmkit",
-                "rpmkit.extras",
-                "rpmkit.tests",
-                "rpmkit.updateinfo",
-                "rpmkit.updateinfo.tests"],
-      scripts=glob("tools/*"),
-      data_files=data_files,
-      cmdclass={"srpm": SrpmCommand,
-                "rpm":  RpmCommand})
+setuptools.setup(version=VERSION,
+                 cmdclass=dict(bdist_rpm=bdist_rpm))
 
 # vim:sw=4:ts=4:et:
