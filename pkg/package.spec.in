@@ -126,7 +126,7 @@ rm -rf $RPM_BUILD_ROOT
 %{python2_sitelib}/rpmkit/extras/*.py*
 
 %changelog
-* Fri Sep 25 2015 Satoru SATOH <ssato@redhat.com> - 0.2.14-999
+* Sat Nov  2 2019 Satoru SATOH <satoru.satoh@gmail.com> - 0.3.0-1
 - [depgraph] avoid an error of 'dictionary changed size during iteration'
 - [updateinfo] deprecate rpmkit.updateinfo.yumwraper backend
 - [yum-surrogate] removed along with rpmkit.updateinfo.yumwraper backend
@@ -136,6 +136,7 @@ rm -rf $RPM_BUILD_ROOT
 - remove runtime dependency to rpmkit.updateinfo.subproc and use
   subprocess.Poepn instead
 - disable memory profile by default
+- utilize setup.cfg and remove dirty hacks in setup.py
 - Some other code cleanups and bug fixes
 
 * Fri Jan  9 2015 Satoru SATOH <ssato@redhat.com> - 0.2.14-1
