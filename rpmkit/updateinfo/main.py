@@ -11,13 +11,11 @@
 from rpmkit.globals import _
 from operator import itemgetter
 
-import rpmkit.updateinfo.yumbase
 import rpmkit.updateinfo.dnfbase
 import rpmkit.updateinfo.utils
 import rpmkit.memoize
 import rpmkit.rpmutils
 import rpmkit.utils as U
-import rpmkit.swapi
 
 # It looks available in EPEL for RHELs:
 #   https://apps.fedoraproject.org/packages/python-bunch
@@ -53,9 +51,8 @@ _RPM_LIST_FILE = "packages.json"
 _ERRATA_LIST_FILE = "errata.json"
 _UPDATES_LIST_FILE = "updates.json"
 
-BACKENDS = dict(yum=rpmkit.updateinfo.yumbase.Base,
-                dnf=rpmkit.updateinfo.dnfbase.Base)
-DEFAULT_BACKEND = BACKENDS["yum"]
+BACKENDS = dict(dnf=rpmkit.updateinfo.dnfbase.Base, )
+DEFAULT_BACKEND = BACKENDS["dnf"]
 
 NEVRA_KEYS = ["name", "epoch", "version", "release", "arch"]
 
@@ -81,7 +78,6 @@ def set_loglevel(verbosity=0, backend=False):
     if not backend:
         llvl = logging.WARN
 
-    rpmkit.updateinfo.yumbase.LOG.setLevel(llvl)
     rpmkit.updateinfo.dnfbase.LOG.setLevel(llvl)
 
 
@@ -108,16 +104,6 @@ def updates_file_path(workdir, filename=_UPDATES_LIST_FILE):
     return os.path.join(workdir, filename)
 
 
-def mk_cve_vs_cvss_map():
-    """
-    Make up CVE vs. CVSS map w/ using swapi's virtual APIs.
-
-    :return: A list of CVE details :: {cve: {cve, url, score, metrics}, }
-    """
-    return dict((c["cve"], c) for c in
-                rpmkit.swapi.call("swapi.cve.getAll") if c)
-
-
 def fetch_cve_details(cve, cve_cvss_map={}):
     """
     :param cve: A dict represents CVE :: {id:, url:, ...}
@@ -129,20 +115,6 @@ def fetch_cve_details(cve, cve_cvss_map={}):
     dcve = cve_cvss_map.get(cveid)
     if dcve:
         cve.update(**dcve)
-        return cve
-
-    try:
-        dcve = rpmkit.swapi.call("swapi.cve.getCvss", [cveid])
-        if dcve:
-            dcve = dcve[0]  # :: dict
-            dcve["nvd_url"] = dcve["url"]
-            dcve["url"] = cve["url"]
-            cve.update(**dcve)
-
-    except Exception as e:
-        LOG.warn(_("Could not fetch CVSS metrics of %s, err=%s"),
-                 cveid, str(e))
-        dcve = dict(cve=cveid, )
 
     return cve
 
@@ -885,10 +857,9 @@ def dump_results(workdir, rpms, errata, updates, score=0,
         dump_xls(dds, os.path.join(workdir, "errata_details.xls"))
 
 
-def get_backend(backend, fallback=rpmkit.updateinfo.yumbase.Base,
-                backends=BACKENDS):
+def get_backend(backend, backends=BACKENDS):
     LOG.info("Using the backend: %s", backend)
-    return backends.get(backend, fallback)
+    return backends.get(backend, DEFAULT_BACKEND)
 
 
 @profile

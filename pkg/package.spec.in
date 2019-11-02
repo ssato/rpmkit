@@ -14,34 +14,9 @@ BuildRequires:  python2-devel
 BuildRequires:  python2-setuptools
 BuildRequires:  /usr/bin/pygettext.py
 Requires:       rpm-python
-# To support 'list-sec' sub command in yum via yum-surrogate:
-Requires:       yum-plugin-security
 
 %description
 RpmKit (Rpm toolkit) contains miscellaneous rpm and yum related utilities.
-
-%package        ylc
-Summary:        Yum list cache
-Group:          Development/Tools
-Requires:       %{name} = %{version}-%{release}
-Requires:       hardlink
-Requires:       httpd
-Requires:       yum-plugin-downloadonly
-Requires(post): /sbin/service
-Requires:       httpd
-Requires:       chkconfig
-
-%description    ylc
-This package provides yum_makelistcache, its configuration and data files.
-
-%package        swapi
-Summary:        Cli frontend for SpaceWalk API
-Group:          Development/Tools
-Requires:       %{name} = %{version}-%{release}
-Requires:       python-BeautifulSoup
-
-%description    swapi
-This package provides swapi, cli frontend for SpaceWalk API.
 
 %package        extras
 Summary:        Extra and experimental modules and tools in %{name}
@@ -68,14 +43,10 @@ This package provides experimental modules and tools of %{name}.
 
 %install
 %{py2_install}
-mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/cache/swapi
 
 install -d %buildroot/%{_bindir}
 for f in tools/*.sh; do install -m 755 $f %buildroot/%{_bindir}/; done
 
-# Dirty hack:
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/{default,rhel-6-x86_64}
-(cd $RPM_BUILD_ROOT%{_sysconfdir}/rpmkit/optimizer.d/default && ln -s ../rhel-6-x86_64/00_server.yml ./)
 rm -rf $RPM_BUILD_ROOT/%{python2_sitelib}/*.egg-info
 
 %if 0%{?rhel} && 0%{?rhel} <= 5
@@ -83,14 +54,10 @@ rm -rf $RPM_BUILD_ROOT/%{python2_sitelib}/*.egg-info
 rm -rf $RPM_BUILD_ROOT
 %endif
 
-%post           ylc
-/sbin/service httpd reload >/dev/null 2>&1 || :
-
 %files
 %defattr(-,root,root,-)
 %doc README.rst
 %{_bindir}/buildsrpm
-%{_bindir}/identrpm
 %{_bindir}/rpm2json
 %{_bindir}/rpmfy
 %{python2_sitelib}/rpmkit/*.py*
@@ -99,33 +66,20 @@ rm -rf $RPM_BUILD_ROOT
 %{python2_sitelib}/rpmkit/updateinfo/tests/*.py*
 #%%{python2_sitelib}/rpmkit/locale/*/LC_MESSAGES/*.mo
 
-%files          ylc
-%{_bindir}/yum_makelistcache
-%attr(0755,root,root) %{_sysconfdir}/cron.daily/yum_makelistcache.cron
-%config(noreplace) %{_sysconfdir}/sysconfig/yum_makelistcache
-%config(noreplace) %{_sysconfdir}/httpd/conf.d/yum_makelistcache.conf
-%config(noreplace) %{_sysconfdir}/httpd/passwd.d/yum_makelistcache
-%{_bindir}/rpmkit-ylc-initial-setup.sh
-%{_sysconfdir}/yum_makelistcache.d/*.ini*
-%{_localstatedir}/lib/yum_makelistcache/root.d/README
-
-%files          swapi
-%doc README.rst
-%{_bindir}/swapi
-%{_localstatedir}/cache/swapi
-
 %files          extras
 %doc README.rst examples
 %{_bindir}/rk-*
 %{_bindir}/rpmdb_migrate.sh
-%{_sysconfdir}/rpmkit/optimizer.d/*/*.yml
-%{_datadir}/rpmkit/optimizer/*/*/*.yml
 %{_datadir}/rpmkit/templates/*.j2
 %{_datadir}/rpmkit/templates/css/*
 %{_datadir}/rpmkit/templates/js/*
 %{python2_sitelib}/rpmkit/extras/*.py*
 
 %changelog
+* Sun Nov  3 2019 Satoru SATOH <satoru.satoh@gmail.com> - 0.3.99-1
+- Drop modules and command utilizing yum which cannot run with python 3
+- Drop modules and command utilizing RHN Classic APIs
+
 * Sat Nov  2 2019 Satoru SATOH <satoru.satoh@gmail.com> - 0.3.0-1
 - [depgraph] avoid an error of 'dictionary changed size during iteration'
 - [updateinfo] deprecate rpmkit.updateinfo.yumwraper backend

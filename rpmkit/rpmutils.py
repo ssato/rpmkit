@@ -25,8 +25,6 @@ import operator
 import os
 import re
 import rpm
-import yum
-import yum.rpmsack
 
 
 RPM_BASIC_KEYS = ("name", "version", "release", "epoch", "arch")
@@ -119,23 +117,6 @@ def h2nvrea(h, keys=RPM_BASIC_KEYS):
     return dict(zip(keys, [h[k] for k in keys]))
 
 
-def _yum_list_installed(root=None, cachedir=None, persistdir=None):
-    """
-    :param root: RPM DB root dir
-    :return: List of yum.rpmsack.RPMInstalledPackage objects
-    """
-    root = '/' if root is None else os.path.abspath(root)
-
-    if persistdir is None:
-        persistdir = root
-
-    sack = yum.rpmsack.RPMDBPackageSack(root,
-                                        cachedir=os.path.join(root, "cache"),
-                                        persistdir=persistdir)
-
-    return sack.returnPackages()  # NOTE: 'gpg-pubkey' is not in this list.
-
-
 def rpm_transactionset(root='/', readonly=True):
     """
     Return rpm.TransactionSet object.
@@ -182,7 +163,6 @@ def _list_installed_rpms(root='/', keys=RPM_BASIC_KEYS, yum=False):
         return sorted(ps, key=itemgetter(*keys))
 
 
-yum_list_installed = RM.memoize(_yum_list_installed)
 list_installed_rpms = RM.memoize(_list_installed_rpms)
 
 
@@ -271,6 +251,21 @@ def guess_rhel_version_simple(root):
 
     return osver
 
+def _compare_evr(evr1, evr2):
+    """Stolen from yum (rpmUtils.miscutils.compareEVR) (yum: GPLv2+).
+
+    :param evr1: A tuple of (Epoch, Version, Release)
+    :param evr2: Likewise
+    :return:
+        1 if evr1 is newer than evr2, 0 if these are same version and -1 if
+        evr2 is newer than evr1.
+    """
+    epoch1 = '0' if evr1[0] is None else str(evr1[0])
+    epoch2 = '0' if evr2[0] is None else str(evr2[0])
+
+    return rpm.labelCompare((epoch1, str(evr1[1]), str(evr1[2])),
+                             (epoch2, str(evr2[1]), str(evr2[2])))
+
 
 def pcmp(p1, p2):
     """Compare packages by NVRAEs.
@@ -309,9 +304,8 @@ def pcmp(p1, p2):
     True
     """
     p2evr = itemgetter("epoch", "version", "release")
-
     assert p1["name"] == p2["name"], "Trying to compare different packages!"
-    return yum.compareEVR(p2evr(p1), p2evr(p2))
+    return _compare_evr(p2evr(p1), p2evr(p2))
 
 
 def find_latest(packages):
@@ -426,309 +420,6 @@ def list_to_dict_keyed_by_names(xs):
     :param xs: [dict(name, ...)]
     """
     return dict((name, ys) for name, ys in group_by_names_g(xs))
-
-
-def find_updates_g(all_packages, packages):
-    """Find all updates relevant to given (installed) packages.
-
-    :param all_packages: all packages including latest updates
-    :param packages: (installed) packages
-
-    Both types are same [dict(name, version, release, epoch, arch)].
-    """
-    def is_newer(p1, p2):
-        return pcmp(p1, p2) > 0  # p1 is newer than p2.
-
-    ref_packages = list_to_dict_keyed_by_names(all_packages)
-
-    for p in find_latests(packages):  # filter out older ones.
-        candidates = ref_packages.get(p["name"], [])
-
-        if candidates:
-            cs = [normalize(c) for c in candidates]
-            logging.debug(
-                " update candidates for %s: %s" % (p2s(p), ps2s(cs))
-            )
-
-            updates = [c for c in cs if is_newer(c, p)]
-
-            if updates:
-                logging.debug(
-                    " updates for %s: %s" % (p2s(p), ps2s(updates))
-                )
-                yield sorted(updates)
-
-
-def _make_requires_dict(root=None, reversed=False, use_yum=True):
-    """
-    Returns RPM dependency relations map.
-
-    :param root: RPM Database root dir or None (use /var/lib/rpm).
-    :param reversed: Returns a dict such
-        {required_RPM: [RPM_requires]} instead of a dict such
-        {RPM: [RPM_required]} if True.
-    :param use_yum: Use yum to get the installed RPMs list
-
-    :return: Requirements relation map, {p: [required]} or {required: [p]}
-
-    NOTEs:
-     * X.required_packages returns RPMs required to install it (X instance).
-       e.g. gc (X) requires libgcc
-
-       where X = yum.rpmsack.RPMInstalledPackage
-
-     * X.requiring_packages returns RPMs requiring it (X instance).
-       e.g. libgcc (X) is required by gc
-
-     * yum.rpmsack.RPMInstalledPackage goes away in DNF so that
-       I have to find similar function in DNF.
-
-       (see also: http://fedoraproject.org/wiki/Features/DNF)
-    """
-    def list_reqs(p):
-        fn = "requiring_packages" if reversed else "required_packages"
-        return sorted(x.name for x in getattr(p, fn)())
-
-    assert use_yum, "Not implemented w/o yum yet!"
-
-    list_installed = yum_list_installed if use_yum else list_installed_rpms
-    return dict((p.name, list_reqs(p)) for p in list_installed(root))
-
-
-make_requires_dict = RM.memoize(_make_requires_dict)
-
-
-def make_reversed_requires_dict(root):
-    """
-    An alias to make_requires_dict(..., reversed=True).
-
-    :param root: root dir of RPM Database
-    :return: {name_required: [name_requires]}
-    """
-    return make_requires_dict(root, True)
-
-
-def make_adjacency_list_of_dependency_graph(root, reversed=False):
-    """
-    Make adjacency list of RPM dependency relations graph.
-
-    :param root: RPM Database root dir or None (use /var/lib/rpm).
-    :param reversed: Returns a dict such
-        {required_RPM: [RPM_requires]} instead of a dict such
-        {RPM: [RPM_required]} if True.
-
-    :return: Requirements relation map, {p: [required]} or {required: [p]}
-    """
-    return [dict(k=v) for k, v in make_requires_dict(root, reversed)]
-
-
-def _get_leaves(root=None):
-    """
-    Get leaves which is required by no other RPMs.
-
-    :param root: root dir of RPM Database
-    :return: List of RPM names which is not required by any other RPMs
-    """
-    rreqs = make_reversed_requires_dict(root)  # required -> [p]
-    return [r for r, ps in rreqs.iteritems() if not ps]
-
-
-get_leaves = RM.memoize(_get_leaves)
-
-
-def _list_standalones_1_g(name, reqs, rreqs, nrpms=1, excludes=[]):
-    """
-    List the RPMs no other RPMs require nor no required by.
-
-    :param name: Name of the RPM to start to find RPMs
-    :param reqs: RPM Dependency relation map
-    :param rreqs: Reversed RPM Dependency relation map
-    :param nrpms: number of RPMs considered as standalones
-    :param excludes: RPMs which should be skipped and excluded from results
-    """
-    if name in excludes:
-        logging.info("%s is in the excluded list" % name)
-        return
-
-    ps = rreqs.get(name, [])
-    if ps:
-        if any(e in ps for e in excludes):
-            logging.debug("%s is required by RPM[s] in the excluded list"
-                          % name)
-        elif len(ps) >= nrpms:
-            logging.debug("%s is required by more than %d RPMs" %
-                          (name, len(ps)))
-        else:
-            logging.debug("%s is required by %d RPMs: %s" %
-                          (name, len(ps), ' '.join(ps)))
-            for p in ps:
-                for x in _list_standalones_1_g(p, reqs, rreqs, nrpms - 1,
-                                               excludes):
-                    yield x
-    else:
-        ps = reqs.get(name, [])
-        if not ps or len(ps) < nrpms:
-            logging.debug("%s requires %d RPMs: %s" %
-                          (name, len(ps), ' '.join(ps)))
-            yield name
-
-
-def list_standalones_g(root=None, nrpms=1, excludes=[]):
-    """
-    List the RPMs no other RPMs require nor no required by.
-
-    :param root: root dir of RPM Database
-    :param nrpms: number of RPMs considered as standalones
-    :param excludes: RPMs which should be skipped and excluded from results
-    """
-    all_rpms = [p["name"] for p in list_installed_rpms(root)]
-    reqs = make_requires_dict(root)
-    rreqs = make_reversed_requires_dict(root)
-
-    for r in all_rpms:
-        for x in _list_standalones_1_g(r, reqs, rreqs, nrpms, excludes):
-            yield x
-
-
-def list_standalones(root=None, nrpms=1, excludes=[]):
-    """
-    List the RPMs no other RPMs require nor no required by.
-
-    :param root: root dir of RPM Database
-    :param nrpms: number of RPMs considered as standalones
-    :param excludes: RPMs which should be skipped and excluded from results
-
-    :return: List of RPM names which is not required by any other RPMs
-    """
-    return list(list_standalones_g(root, nrpms, excludes))
-
-
-def list_required_rpms_not_required_by_others(rpmname, root=None):
-    """
-    List RPMs required by given RPM ``rpmname`` which is not required by other
-    RPMs have no relationship (dependency) to that RPM and listed RPMs.
-
-    Examples:
-
-    * [A, B, C] if given X is required by no any RPMs and A, B, C have no RPMs
-      requiring these RPMs other than themselves.
-
-    * [] if given X is required by any RPMs.
-
-    It works like a safe but greedy version of 'yum remove ``rpmname``'.
-
-    :param rpmname: Name of target RPM to get result
-    :param root: RPM Database root dir
-    :return: List of result RPMs
-    """
-    result = [rpmname]
-    targets = [rpmname]
-
-    reqs = make_requires_dict(root)  # p -> [required]
-    rreqs = make_reversed_requires_dict(root)  # r -> [requires]
-
-    def get_cs(p, seen=[]):
-        if p not in seen:
-            seen.append(p)
-
-        return [r for r in reqs.get(p, []) if r not in seen and
-                all(x in seen for x in rreqs.get(r, []))]
-
-    if not all(y in result for y in rreqs.get(rpmname, [])):
-        return []  # Given RPM is not a leaf.
-
-    while targets:
-        targets = ucat(get_cs(p, result) for p in targets)
-        logging.debug("targets=%s, result=%s" % (str(targets), str(result)))
-
-        if targets:
-            result += targets
-
-    return result
-
-
-def _compute_removed_1(remove, rreqs, acc=[]):
-    """
-    Recursively, it will traverse dependency tree and Return a list of RPMs if
-    given ``remove`` RPM was uninstalled such like yum does with 'remove
-    (uninstall)' sub command.
-
-    :param remove: The name of RPM to remove (uninstall).
-    :param rreqs: Reversed RPM Dependency relation map
-    :param acc: Accumulator
-
-    :return: [pname], a list of RPM names to be uninstalled along with
-        ``removes`` RPMs.
-    """
-    removes_next = sorted(p for p in rreqs.get(remove, []) if p not in acc)
-    logging.debug("Resolved requires: "
-                  "%s -> %s" % (remove, ' '.join(removes_next) or 'none'))
-
-    if removes_next:
-        for r in removes_next:
-            acc.extend(x for x in _compute_removed_1(r, rreqs, acc + [r])
-                       if x not in acc)
-
-    return acc
-
-
-# :note: This function should not be memoized as argument ``acc`` may be
-# changed everytime it's called.
-compute_removed_1 = _compute_removed_1
-
-
-def compute_removed_g(removes, rreqs, acc=[], excludes=[]):
-    """
-    This is a derived version of :function:``compute_removed_1`` which accepts
-    multiple RPMs as ``removes`` parameter.
-
-    It will return a list of RPMs if given list of RPMs ``removes`` was
-    uninstalled such like yum does with 'remove (uninstall)' sub command.
-
-    :param removes: The list of name of RPMs to remove (uninstall).
-    :param rreqs: Reversed RPM Dependency relation map
-    :param acc: Accumulator
-    :param excludes: RPMs which should not be removed and excluded from the
-        RPMs to be removed
-
-    :yield: [pname], a list of RPM names to be uninstalled along with
-        ``removes`` RPMs one by one.
-    """
-    for r in removes:
-        if r in excludes:
-            logging.info("Excluded and not resolve requires: " + r)
-            continue
-
-        xs = compute_removed_1(r, rreqs, acc + [r])
-
-        if any(x in excludes for x in xs):
-            logging.info("Excluded as some of requires are so: " + r)
-            excludes.extend([r] + xs)
-            continue
-
-        acc.extend([r] + xs)
-        yield acc
-
-
-def compute_removed(removes, root=None, rreqs=None, acc=[], excludes=[]):
-    """
-    Returns a list of RPMs if given list of RPMs ``removes`` was uninstalled
-    such like yum does with 'remove (uninstall)' sub command.
-
-    :param removes: The list of name of RPMs to remove (uninstall).
-    :param root: RPM Database root dir or None (use /var/lib/rpm).
-    :param rreqs: Reversed RPM Dependency relation map
-    :param acc: Accumulator
-    :param excludes: RPMs which should not be removed and excluded from the
-        RPMs to be removed
-
-    :return: [pname], a list of RPM names to be uninstalled along with
-        ``removes`` RPMs.
-    """
-    if not rreqs:
-        rreqs = make_reversed_requires_dict(root)
-
-    return ucat(compute_removed_g(removes, rreqs, acc, excludes))
 
 
 def guess_os_version_from_rpmfile(rpmfile):
