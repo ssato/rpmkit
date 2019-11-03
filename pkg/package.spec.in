@@ -25,7 +25,7 @@ Requires:       python3-requests
 
 %package     -n python3-%{pkgname}-extras
 Summary:        %{summary} - Extra libs
-Requires:       python3-%{pkgname}} = %{version}-%{release}
+Requires:       python3-%{pkgname} = %{version}-%{release}
 Requires:       dnf
 Requires:       python3-anyconfig
 Requires:       graphviz
