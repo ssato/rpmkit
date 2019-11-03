@@ -8,15 +8,15 @@
 #
 from logging import DEBUG, INFO
 
-import rpmkit.utils as RU
 import logging
 import optparse
 import os.path
 import os
 import re
+import requests
 import rpm
+import subprocess
 import sys
-import urllib2
 
 
 def get_source0_url_from_rpmspec(rpmspec):
@@ -50,20 +50,23 @@ def get_source0_url_from_rpmspec(rpmspec):
     return url_src0
 
 
-def download(url, out, data=None, headers={}):
+def download(url, outpath, headers={}):
     """
     Download file from given URL and save as ``out``.
 
-    :param url: URL of the file
-    :param out: Output file path
-    :param data: Data to send to when requesting the file
+    :param url: A local file path or an URL of the file
+    :param outpath: Output file path
     :param headers: Extra headers to send to
     """
-    req = urllib2.Request(url=url, data=data, headers=headers)
-    f = urllib2.urlopen(req)
+    if url.startswith(os.path.sep):  # Local file path
+        inp = open(url)
+        content = inp.read()
+    else:
+        req = requests.get(url, headers=headers)
+        content = req.content
 
-    with open(out, "wb") as o:
-        o.write(f.read())
+    with open(outpath, "wb") as out:
+        out.write(content)
 
 
 def download_src0(rpmspec, url, out):
@@ -75,13 +78,19 @@ def download_src0(rpmspec, url, out):
     try:
         download(url, out)
 
-    except urllib2.HTTPError as e:
+    except requests.exceptions.RequestException as exc:
         logging.warn("Could not download source0 from "
-                     "%s: err=%s" % (url, str(e)))
+                     "%s: err=%r" % (url, exc))
         url = raw_input("Input the correct URL of source0 > ")
 
         download(url, out)
 
+
+_RPM_BUILD_FMT = ("rpmbuild",
+                  "--define", "_srcrpmdir %(workdir)s",
+                  "--define", "_sourcedir %(workdir)s",
+                  "--define", "_buildroot %(workdir)s",
+                  "-bs", "%(spec)s")
 
 def do_buildsrpm(rpmspec, workdir, timeout=None):
     """
@@ -92,15 +101,16 @@ def do_buildsrpm(rpmspec, workdir, timeout=None):
     :param timeout: Timeout in seconds to wait for the completion of build job.
         None means it will wait forever.
     """
-    cs = ["rpmbuild", "--define \"_srcrpmdir %(workdir)s\"",
-          "--define \"_sourcedir %(workdir)s\"",
-          "--define \"_buildroot %(workdir)s\"",
-          "-bs %(spec)s"]
-    cmd = ' '.join(cs) % dict(workdir=workdir, spec=rpmspec)
+    args = [c % dict(workdir=workdir, spec=rpmspec) for c in _RPM_BUILD_FMT]
 
     logging.info("Creating src.rpm from %s in %s" % (rpmspec, workdir))
-    proc = RU.run_cmd_async(cmd, workdir)
-    proc.join(timeout)
+    proc = subprocess.Popen(args, cwd=workdir, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    (out, err) = proc.communicate(timeout=timeout)
+
+    if proc.returncode != 0:
+        raise RuntimeError("rc=%d, out=%s, err=%s", proc.returncode,
+                           out, err)
 
 
 def main(argv=sys.argv):
