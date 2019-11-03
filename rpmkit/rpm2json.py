@@ -65,8 +65,8 @@ def rpm_tag_values(rpmfile, tags):
     for tag in tags:
         try:
             p[tag] = h[tag]
-        except Exception, e:
-            print str(e)
+        except Exception as exc:
+            print(repr(exc))
 
     return p
 
@@ -81,7 +81,7 @@ def show_all_tags():
     tags_text = "Tags: " + ", ".join(rpmtags())
 
     for l in textwrap.wrap(tags_text, width, subsequent_indent='  '):
-        print l
+        print(l)
 
 
 def main():
@@ -141,7 +141,7 @@ Examples:
 
     x = json_dumps(rpmdata, options.human_readable)
 
-    print >> output, x
+    print(x, file=output)
 
 
 if __name__ == '__main__':

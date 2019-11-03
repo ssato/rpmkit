@@ -87,8 +87,8 @@ def get_email():
                 "git config --get user.email 2>/dev/null", shell=True
             )
             return email.rstrip()
-        except Exception, e:
-            logging.warn("get_email: " + str(e))
+        except Exception as exc:
+            logging.warn("get_email: " + str(exc))
             pass
 
     return get_username() + "@%(server)s"
@@ -104,8 +104,8 @@ def get_fullname():
                 "git config --get user.name 2>/dev/null", shell=True
             )
             return fullname.rstrip()
-        except Exception, e:
-            logging.warn("get_fullname: " + str(e))
+        except Exception as exc:
+            logging.warn("get_fullname: " + str(exc))
             pass
 
     return os.environ.get("FULLNAME", get_username())
