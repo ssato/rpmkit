@@ -109,8 +109,9 @@ def do_buildsrpm(rpmspec, workdir, timeout=None):
     (out, err) = proc.communicate(timeout=timeout)
 
     if proc.returncode != 0:
-        raise RuntimeError("rc=%d, out=%s, err=%s", proc.returncode,
-                           out, err)
+        (sout, serr) = (out.decode('utf-8'), err.decode('utf-8'))
+        raise RuntimeError("rc=%d, out=%s, err=%s" % (proc.returncode,
+                                                      sout, serr))
 
 
 def main(argv=sys.argv):
